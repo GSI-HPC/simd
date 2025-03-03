@@ -1,6 +1,7 @@
 # C++26 Data-parallel types (simd)
 
 [![REUSE status](https://github.com/GSI-HPC/simd/actions/workflows/reuse.yml/badge.svg)](https://github.com/GSI-HPC/simd/actions/workflows/reuse.yml)
+[![fair-software.eu](https://img.shields.io/badge/fair--software.eu-%E2%97%8F%20%20%E2%97%8B%20%20%E2%97%8B%20%20%E2%97%8B%20%20%E2%97%8B-red)](https://fair-software.eu)
 
 ## Implementation status
 
@@ -50,11 +51,6 @@ The default on precondition violation otherwise is hard UB, which you can
 detect reliably with UBsan. You can change that to a 'trap' if 
 `_GLIBCXX_HARDEN` is `>= 3`, or to a more verbose assertion failure by defining 
 `_GLIBCXX_ASSERTIONS`.
-
-### `-D SIMD_IN_STD=1`
-
-Per default the `simd` namespace is nested into the `cpp26` namespace. With 
-this flag it's `std::simd` instead.
 
 ### `-D SIMD_HAS_SUBSCRIPT_GATHER=1`
 
