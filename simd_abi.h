@@ -809,6 +809,14 @@ namespace std
           _S_submask(basic_simd_mask<_Bs, abi_type> const& __masks, int __i)
           { return {__private_init, __data(__masks)[__i]}; }
 
+        // TODO: The reduction strategy here depends a lot on use case and implementation of the
+        // reduction on the register level. If compare + reduction on a register can e.g. be
+        // contracted into a single ptest instruction then using short-circuiting 'or' seems like
+        // the best implementation in almost every use case. If the reduction on a register is
+        // expensive (NEON?) then it might be a better strategy to reduce on SIMD registers first
+        // before doing a final reduction to bool.
+        // In all cases in between it is dependent on the algorithm/data. Profile-guided
+        // optimization that can turn this inside out would be super cool.
         template <size_t _Bs>
           _GLIBCXX_SIMD_INTRINSIC
           static constexpr bool
