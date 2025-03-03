@@ -1,3 +1,9 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later WITH GCC-exception-3.1 */
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
+/* Copyright © 2024–2025 GSI Helmholtzzentrum fuer Schwerionenforschung GmbH
+ *                       Matthias Kretz <m.kretz@gsi.de>
+ */
+
 /* Reference Proxy (simd_index::reference)
  * =======================================
  *

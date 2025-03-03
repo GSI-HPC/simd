@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright © 2025      GSI Helmholtzzentrum fuer Schwerionenforschung GmbH
+#                       Matthias Kretz <m.kretz@gsi.de>
+
 CXXFLAGS+=-std=c++26 -Wall -Wextra -Wno-psabi -Werror -O2 -g0 -Wno-attributes -D_GLIBCXX_ASSERTIONS=1 $(FLAGS)
 CXXFLAGS_clang := -Wno-unknown-pragmas --gcc-toolchain=/home/mkretz/.local/gcc-master
 CXXFLAGS_gcc := -fconcepts-diagnostics-depth=3 -fconstexpr-ops-limit=67108864

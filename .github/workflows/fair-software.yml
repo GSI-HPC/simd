@@ -1,0 +1,26 @@
+# SPDX-License-Identifier: CC0-1.0
+# SPDX-FileCopyrightText: 2023–2025 GSI Helmholtzzentrum fuer Schwerionenforschung GmbH / Matthias Kretz <m.kretz@gsi.de>
+
+name: fair-software
+
+on:
+  push:
+    branches: [ master, main ]
+
+jobs:
+  verify:
+    name: "fair-software"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: mattkretz/howfairis
+          path: howfairis
+
+      - name: Install mattkretz/howfairis
+        run: pipx install ./howfairis
+
+      - name: Measure compliance with fair-software.eu recommendations
+        env:
+          PYCHARM_HOSTED: "Trick colorama into displaying colored output"
+        run: howfairis "https://github.com/${{ github.repository }}"

@@ -1,5 +1,7 @@
 # C++26 Data-parallel types (simd)
 
+[![REUSE status](https://github.com/GSI-HPC/simd/actions/workflows/reuse.yml/badge.svg)](https://github.com/GSI-HPC/simd/actions/workflows/reuse.yml)
+
 ## Implementation status
 
 | Feature | Status |
