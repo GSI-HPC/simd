@@ -204,162 +204,156 @@ namespace std::__detail
   } while(false)
 #endif
 
-namespace std
-{
-  namespace __detail
-  {
-    template <typename... _Args>
-      [[noreturn]] _GLIBCXX_SIMD_ALWAYS_INLINE inline void
-      __invoke_ub([[maybe_unused]] const char* __msg, [[maybe_unused]] const _Args&... __args)
-      {
-#ifdef _GLIBCXX_ASSERTIONS
-        __builtin_fprintf(stderr, __msg, __args...);
-        __builtin_fprintf(stderr, "\n");
-        __builtin_abort();
-#elif _GLIBCXX_HARDEN >= 3
-        __builtin_trap();
-#else
-        __builtin_unreachable();
-#endif
-      }
-
-    // work around __builtin_constant_p returning false unless passed a variable
-    // (__builtin_constant_p(x[0]) is false while __is_constprop(x[0]) is true)
-    _GLIBCXX_SIMD_ALWAYS_INLINE constexpr bool
-    __is_constprop(const auto& __x)
-    { return __builtin_is_constant_evaluated() or __builtin_constant_p(__x); }
-
-    struct _InvalidTraits
-    {
-      struct _Unusable
-      {
-        _Unusable() = delete;
-        _Unusable(const _Unusable&) = delete;
-        _Unusable& operator=(const _Unusable&) = delete;
-        ~_Unusable() = delete;
-      };
-
-      template <typename>
-        static constexpr bool _S_explicit_mask_conversion = true;
-
-      static constexpr int _S_size = 0;
-      static constexpr int _S_full_size = 0;
-      static constexpr bool _S_is_partial = false;
-
-      static constexpr size_t _S_simd_align = 1;
-      struct _SimdImpl;
-      using _SimdMember = _Unusable;
-      struct _SimdCastType;
-
-      static constexpr size_t _S_mask_align = 1;
-      struct _MaskImpl;
-      using _MaskMember = _Unusable;
-      struct _MaskCastType;
-    };
-
-    template <typename _Tp, typename _Abi, _BuildFlags = {}>
-      struct _SimdTraits
-      : _InvalidTraits
-      {};
-
-    template <typename _Tp, typename _Abi, _BuildFlags _Flags>
-      requires (_Abi::template _IsValid<_Tp>::value)
-      struct _SimdTraits<_Tp, _Abi, _Flags>
-      : _Abi::template __traits<_Tp>
-      {};
-
-    /**
-     * Masks need to be different for AVX without AVX2.
-     */
-    template <size_t _Bs, typename _Abi, _BuildFlags _Flags = {}>
-      struct _SimdMaskTraits
-      : _SimdTraits<__mask_integer_from<_Bs>, _Abi, _Flags>
-      {};
-
-    template <__vectorizable _Tp,
-              _SimdSizeType _Np = std::datapar::__simd_size_v<_Tp, _NativeAbi<_Tp>>>
-      requires (not is_same_v<typename __deduce_t<_Tp, _Np>::template __traits<_Tp>,
-                              _InvalidTraits>)
-      using __deduced_traits = typename __deduce_t<_Tp, _Np>::template __traits<_Tp>;
-
-    template <typename _Rg>
-      constexpr size_t
-      __static_range_size(_Rg&& __r)
-      {
-        if consteval
-          {
-#if 0 // PR117849
-            if constexpr (requires {
-                            typename integral_constant<size_t, ranges::size(__r2)>;
-                          })
-              return ranges::size(__r);
-            else
-              return dynamic_extent;
-#else
-            return decltype(span(__r))::extent;
-#endif
-          }
-      }
-
-    _GLIBCXX_SIMD_INTRINSIC _SimdSizeType
-    __lowest_bit(std::integral auto __bits)
-    {
-      if constexpr (sizeof(__bits) <= sizeof(int))
-        return __builtin_ctz(__bits);
-      else if constexpr (sizeof(__bits) <= sizeof(long))
-        return __builtin_ctzl(__bits);
-      else if constexpr (sizeof(__bits) <= sizeof(long long))
-        return __builtin_ctzll(__bits);
-      else
-        __assert_unreachable<decltype(__bits)>();
-    }
-
-    _GLIBCXX_SIMD_INTRINSIC _SimdSizeType
-    __highest_bit(std::integral auto __bits)
-    {
-      if constexpr (sizeof(__bits) <= sizeof(int))
-        return sizeof(int) * __CHAR_BIT__ - 1 - __builtin_clz(__bits);
-      else if constexpr (sizeof(__bits) <= sizeof(long))
-        return sizeof(long) * __CHAR_BIT__ - 1 - __builtin_clzl(__bits);
-      else if constexpr (sizeof(__bits) <= sizeof(long long))
-        return sizeof(long long) * __CHAR_BIT__ - 1 - __builtin_clzll(__bits);
-      else
-        __assert_unreachable<decltype(__bits)>();
-    }
-
-    // std::common_type but without integral promotions
-    template <typename _T0, typename _T1>
-      struct __nopromot_common_type : std::common_type<_T0, _T1>
-      {};
-
-    template <typename _Tp>
-      struct __nopromot_common_type<_Tp, _Tp>
-      { using type = _Tp; };
-
-    template <typename _T0, typename _T1>
-      requires __higher_integer_rank_than<int, _T0> and __higher_integer_rank_than<int, _T1>
-        and (std::is_signed_v<_T0> == std::is_signed_v<_T1>)
-      struct __nopromot_common_type<_T0, _T1>
-      : std::conditional<__higher_integer_rank_than<_T0, _T1>, _T0, _T1>
-      {};
-
-    template <typename _T0, typename _T1>
-      requires __higher_integer_rank_than<int, _T0> and __higher_integer_rank_than<int, _T1>
-        and (std::is_signed_v<_T0> != std::is_signed_v<_T1>)
-      struct __nopromot_common_type<_T0, _T1>
-      {
-        using _Up = std::conditional_t<std::is_signed_v<_T0>, _T1, _T0>;
-        using _Sp = std::conditional_t<std::is_signed_v<_T0>, _T0, _T1>;
-        using type = std::conditional_t<(sizeof(_Up) >= sizeof(_Sp)), _Up, _Sp>;
-      };
-
-    template <typename _T0, typename _T1>
-      using __nopromot_common_type_t = typename __nopromot_common_type<_T0, _T1>::type;
-  }
-}
-
 namespace std::__detail
 {
+  template <typename... _Args>
+    [[noreturn]] _GLIBCXX_SIMD_ALWAYS_INLINE inline void
+    __invoke_ub([[maybe_unused]] const char* __msg, [[maybe_unused]] const _Args&... __args)
+    {
+#ifdef _GLIBCXX_ASSERTIONS
+      __builtin_fprintf(stderr, __msg, __args...);
+      __builtin_fprintf(stderr, "\n");
+      __builtin_abort();
+#elif _GLIBCXX_HARDEN >= 3
+      __builtin_trap();
+#else
+      __builtin_unreachable();
+#endif
+    }
+
+  // work around __builtin_constant_p returning false unless passed a variable
+  // (__builtin_constant_p(x[0]) is false while __is_constprop(x[0]) is true)
+  _GLIBCXX_SIMD_ALWAYS_INLINE constexpr bool
+  __is_constprop(const auto& __x)
+  { return __builtin_is_constant_evaluated() or __builtin_constant_p(__x); }
+
+  struct _InvalidTraits
+  {
+    struct _Unusable
+    {
+      _Unusable() = delete;
+      _Unusable(const _Unusable&) = delete;
+      _Unusable& operator=(const _Unusable&) = delete;
+      ~_Unusable() = delete;
+    };
+
+    template <typename>
+      static constexpr bool _S_explicit_mask_conversion = true;
+
+    static constexpr int _S_size = 0;
+    static constexpr int _S_full_size = 0;
+    static constexpr bool _S_is_partial = false;
+
+    static constexpr size_t _S_simd_align = 1;
+    struct _SimdImpl;
+    using _SimdMember = _Unusable;
+    struct _SimdCastType;
+
+    static constexpr size_t _S_mask_align = 1;
+    struct _MaskImpl;
+    using _MaskMember = _Unusable;
+    struct _MaskCastType;
+  };
+
+  template <typename _Tp, typename _Abi, _BuildFlags = {}>
+    struct _SimdTraits
+    : _InvalidTraits
+    {};
+
+  template <typename _Tp, typename _Abi, _BuildFlags _Flags>
+    requires (_Abi::template _IsValid<_Tp>::value)
+    struct _SimdTraits<_Tp, _Abi, _Flags>
+    : _Abi::template __traits<_Tp>
+    {};
+
+  /**
+   * Masks need to be different for AVX without AVX2.
+   */
+  template <size_t _Bs, typename _Abi, _BuildFlags _Flags = {}>
+    struct _SimdMaskTraits
+    : _SimdTraits<__mask_integer_from<_Bs>, _Abi, _Flags>
+    {};
+
+  template <__vectorizable _Tp,
+            _SimdSizeType _Np = std::datapar::__simd_size_v<_Tp, _NativeAbi<_Tp>>>
+    requires (not is_same_v<typename __deduce_t<_Tp, _Np>::template __traits<_Tp>,
+                            _InvalidTraits>)
+    using __deduced_traits = typename __deduce_t<_Tp, _Np>::template __traits<_Tp>;
+
+  template <typename _Rg>
+    constexpr size_t
+    __static_range_size(_Rg&& __r)
+    {
+      if consteval
+        {
+#if 0 // PR117849
+          if constexpr (requires {
+                          typename integral_constant<size_t, ranges::size(__r2)>;
+                        })
+            return ranges::size(__r);
+          else
+            return dynamic_extent;
+#else
+          return decltype(span(__r))::extent;
+#endif
+        }
+    }
+
+  _GLIBCXX_SIMD_INTRINSIC _SimdSizeType
+  __lowest_bit(std::integral auto __bits)
+  {
+    if constexpr (sizeof(__bits) <= sizeof(int))
+      return __builtin_ctz(__bits);
+    else if constexpr (sizeof(__bits) <= sizeof(long))
+      return __builtin_ctzl(__bits);
+    else if constexpr (sizeof(__bits) <= sizeof(long long))
+      return __builtin_ctzll(__bits);
+    else
+      __assert_unreachable<decltype(__bits)>();
+  }
+
+  _GLIBCXX_SIMD_INTRINSIC _SimdSizeType
+  __highest_bit(std::integral auto __bits)
+  {
+    if constexpr (sizeof(__bits) <= sizeof(int))
+      return sizeof(int) * __CHAR_BIT__ - 1 - __builtin_clz(__bits);
+    else if constexpr (sizeof(__bits) <= sizeof(long))
+      return sizeof(long) * __CHAR_BIT__ - 1 - __builtin_clzl(__bits);
+    else if constexpr (sizeof(__bits) <= sizeof(long long))
+      return sizeof(long long) * __CHAR_BIT__ - 1 - __builtin_clzll(__bits);
+    else
+      __assert_unreachable<decltype(__bits)>();
+  }
+
+  // std::common_type but without integral promotions
+  template <typename _T0, typename _T1>
+    struct __nopromot_common_type : std::common_type<_T0, _T1>
+    {};
+
+  template <typename _Tp>
+    struct __nopromot_common_type<_Tp, _Tp>
+    { using type = _Tp; };
+
+  template <typename _T0, typename _T1>
+    requires __higher_integer_rank_than<int, _T0> and __higher_integer_rank_than<int, _T1>
+      and (std::is_signed_v<_T0> == std::is_signed_v<_T1>)
+    struct __nopromot_common_type<_T0, _T1>
+    : std::conditional<__higher_integer_rank_than<_T0, _T1>, _T0, _T1>
+    {};
+
+  template <typename _T0, typename _T1>
+    requires __higher_integer_rank_than<int, _T0> and __higher_integer_rank_than<int, _T1>
+      and (std::is_signed_v<_T0> != std::is_signed_v<_T1>)
+    struct __nopromot_common_type<_T0, _T1>
+    {
+      using _Up = std::conditional_t<std::is_signed_v<_T0>, _T1, _T0>;
+      using _Sp = std::conditional_t<std::is_signed_v<_T0>, _T0, _T1>;
+      using type = std::conditional_t<(sizeof(_Up) >= sizeof(_Sp)), _Up, _Sp>;
+    };
+
+  template <typename _T0, typename _T1>
+    using __nopromot_common_type_t = typename __nopromot_common_type<_T0, _T1>::type;
+
   template <typename _Up, typename _Accessor = _Up,
             typename _ValueType = typename _Up::value_type>
     class _SmartReference
