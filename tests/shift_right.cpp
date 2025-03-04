@@ -56,7 +56,7 @@ template <typename V>
     ADD_TEST(unknown_shift, std::is_integral_v<T>) {
       std::tuple {test_iota<V>},
       [](auto& t, const V x) {
-        for (int shift : dp::iota<dp::simd<int, max>>)
+        for (int shift = 0; shift < max; ++shift)
           {
             constexpr T tmax = std::numeric_limits<T>::max();
             const V vshift = T(shift);

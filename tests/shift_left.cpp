@@ -40,7 +40,7 @@ template <typename V>
       [](auto& t, const V x) {
         if not consteval
         {
-          for (int shift : dp::iota<dp::simd<int, max>>)
+          for (int shift = 0; shift < max; ++shift)
             {
               const auto y = ~x;
               shift = make_value_unknown(shift);
