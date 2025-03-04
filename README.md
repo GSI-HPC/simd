@@ -34,12 +34,12 @@ random-access ranges.
 
 ### `-D RANGES_TO_SIMD=1`
 
-`std::array{1, 2, 3} | std::ranges::to<simd::basic_vec>()` works without this, 
-and constructs a `vec<int, 3>`. However, ranges without static extent and 
+`std::array{1, 2, 3} | std::ranges::to<dp::basic_simd>()` works without this, 
+and constructs a `simd<int, 3>`. However, ranges without static extent and 
 non-contiguous ranges are not supported without this feature.
 
-Enables `any_rg | std::ranges::to<simd::basic_vec>()`. Precondition: 
-`std::ranges::size(any_rg)` is equal to the width of the `simd::vec`.
+Enables `any_rg | std::ranges::to<dp::simd<T, N>>()`. Precondition: 
+`std::ranges::size(any_rg)` is equal to `N`.
 
 ### `-D IFNDR_SIMD_PRECONDITIONS=0`
 
@@ -54,5 +54,5 @@ detect reliably with UBsan. You can change that to a 'trap' if
 
 ### `-D SIMD_HAS_SUBSCRIPT_GATHER=1`
 
-Adds a subscript operator to `basic_vec` with integral `basic_vec` argument. 
+Adds a subscript operator to `basic_simd` with integral `basic_simd` argument. 
 The operator provides a permute/gather operation.
