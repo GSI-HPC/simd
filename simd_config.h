@@ -7,7 +7,9 @@
 #ifndef PROTOTYPE_SIMD_CONFIG_H_
 #define PROTOTYPE_SIMD_CONFIG_H_
 
+#ifndef __clang__
 #include <bits/c++config.h>
+#endif
 
 #ifndef SIMD_IS_A_RANGE
 // FIXME: not conforming to P1928
