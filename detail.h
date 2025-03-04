@@ -287,22 +287,19 @@ namespace std::__detail
     using __deduced_traits = typename __deduce_t<_Tp, _Np>::template __traits<_Tp>;
 
   template <typename _Rg>
-    constexpr size_t
+    consteval size_t
     __static_range_size(_Rg&& __r)
     {
-      if consteval
-        {
 #if 0 // PR117849
-          if constexpr (requires {
-                          typename integral_constant<size_t, ranges::size(__r2)>;
-                        })
-            return ranges::size(__r);
-          else
-            return dynamic_extent;
+      if constexpr (requires {
+                      typename integral_constant<size_t, ranges::size(__r2)>;
+                    })
+        return ranges::size(__r);
+      else
+        return dynamic_extent;
 #else
-          return decltype(span(__r))::extent;
+      return decltype(span(__r))::extent;
 #endif
-        }
     }
 
   _GLIBCXX_SIMD_INTRINSIC _SimdSizeType

@@ -18,7 +18,7 @@ namespace std::datapar
 
   template <typename _Tp, typename _Abi>
     constexpr basic_simd<_Tp, _Abi>
-    iota<basic_simd<_Tp, _Abi>>([](_Tp __i) -> _Tp {
+    iota<basic_simd<_Tp, _Abi>> = basic_simd<_Tp, _Abi>([](_Tp __i) -> _Tp {
       static_assert (__detail::__simd_size_v<_Tp, _Abi> - 1 <= numeric_limits<_Tp>::max(),
                      "iota object would overflow");
       return __i;
