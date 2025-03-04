@@ -110,8 +110,10 @@ template <typename V, typename T = typename V::value_type>
         and std::is_nothrow_default_constructible_v<V>
         and std::is_trivially_copyable_v<V>
         and std::is_standard_layout_v<V>
+#if SIMD_IS_A_RANGE
         and std::ranges::random_access_range<V&>
         and not std::ranges::output_range<V&, T>
+#endif
         and std::constructible_from<V, V> // broadcast
         and ext::simd_integral<V> == std::integral<T>
         and ext::simd_floating_point<V> == std::floating_point<T>
@@ -227,6 +229,7 @@ static_assert(all_of((dp::simd<int, 4>([](int i) { return i << 10; }) >> 10)
 
 // simd iterators /////////////////////
 
+#if SIMD_IS_A_RANGE
 static_assert([] { dp::simd<float> x = {}; return x.begin() == x.begin(); }());
 static_assert([] { dp::simd<float> x = {}; return x.begin() == x.cbegin(); }());
 static_assert([] { dp::simd<float> x = {}; return x.cbegin() == x.begin(); }());
@@ -246,6 +249,7 @@ static_assert([] { dp::simd<float> x = {}; return x.begin() - x.end(); }() == -d
 static_assert([] { dp::simd<float> x = {}; return x.begin() - x.begin(); }() == 0);
 static_assert([] { dp::simd<float> x = {}; return x.begin() + 1 - x.begin(); }() == 1);
 static_assert([] { dp::simd<float> x = {}; return x.begin() + 1 - x.cbegin(); }() == 1);
+#endif
 
 // mask to simd ///////////////////////
 
