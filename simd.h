@@ -131,7 +131,8 @@ namespace std::datapar
 
       // type conversion constructor
       template <typename _Up, typename _UAbi>
-        requires(__simd_size_v<_Up, _UAbi> == size() and std::constructible_from<_Tp, _Up>)
+        requires(__detail::__simd_size_v<_Up, _UAbi> == size()
+                   and std::constructible_from<_Tp, _Up>)
         _GLIBCXX_SIMD_ALWAYS_INLINE constexpr
         explicit(not __detail::__value_preserving_convertible_to<_Up, value_type>
                    || __detail::__higher_rank_than<_Up, value_type>)
@@ -488,12 +489,12 @@ namespace std::datapar
 #if SIMD_HAS_SUBSCRIPT_GATHER
       template <std::integral _Up, typename _Ap>
         constexpr
-        resize_t<__simd_size_v<_Up, _Ap>, basic_simd>
+        resize_t<__detail::__simd_size_v<_Up, _Ap>, basic_simd>
         operator[](basic_simd<_Up, _Ap> const& __idx) const
         {
           __glibcxx_simd_precondition(is_unsigned_v<_Up> or all_of(__idx >= 0), "out-of-bounds");
           __glibcxx_simd_precondition(all_of(__idx < _Up(size)), "out-of-bounds");
-          using _Rp = resize_t<__simd_size_v<_Up, _Ap>, basic_simd>;
+          using _Rp = resize_t<__detail::__simd_size_v<_Up, _Ap>, basic_simd>;
           return _Rp(__detail::__private_init,
                      _Rp::_Impl::template _S_generator<_Tcanon>([&](int __i) {
                        return _Impl::_S_get(_M_data, __idx[__i]);
@@ -518,11 +519,6 @@ namespace std::datapar
           return __builtin_constant_p(_M_data);
       }
     };
-
-  template <typename _Tp, typename _Abi>
-    struct __is_simd<basic_simd<_Tp, _Abi>>
-    : is_default_constructible<basic_simd<_Tp, _Abi>>
-    {};
 
   template <__detail::__static_sized_range _Rg, typename... _Other>
     basic_simd(_Rg&& __r, _Other...)
@@ -576,6 +572,15 @@ namespace std::datapar
                                                   basic_simd_mask<_Bs, _Abi>::size()>)>
     {};
 }
+
+namespace std::__detail
+{
+  template <typename _Tp, typename _Abi>
+    struct __is_simd<std::datapar::basic_simd<_Tp, _Abi>>
+    : is_default_constructible<std::datapar::basic_simd<_Tp, _Abi>>
+    {};
+}
+
 
 #endif  // PROTOTYPE_SIMD2_H_
 // vim: et ts=8 sw=2 tw=100 cc=101

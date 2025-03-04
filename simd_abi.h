@@ -121,7 +121,7 @@ namespace std::__detail
     struct _NextAbiTuple
     {
       using _Native = _AllNativeAbis::_BestPartialAbi<_Tp, _Np>;
-      static constexpr int _S_native_size = std::datapar::__simd_size_v<_Tp, _Native>;
+      static constexpr int _S_native_size = __simd_size_v<_Tp, _Native>;
       static constexpr int _S_array_size = _Np / _S_native_size;
       using type
         = std::conditional_t<_S_array_size >= 2, _AbiArray<_Native, _S_array_size>, _Native>;
@@ -129,7 +129,7 @@ namespace std::__detail
 
   template <typename _Tp, int _Np, typename _Tuple,
             typename _Next = typename _NextAbiTuple<_Tp, _Np>::type,
-            int _Remain = _Np - int(std::datapar::__simd_size_v<_Tp, _Next>)>
+            int _Remain = _Np - int(__simd_size_v<_Tp, _Next>)>
     struct __fixed_size_storage_builder;
 
   template <typename _Tp, int _Np, typename... _As, typename _Next>
@@ -1045,7 +1045,7 @@ namespace std::__detail
       using _MaskMember = typename _Traits::_MaskMember;
       static constexpr auto _S_offset = vir::cw<__offset>;
       static constexpr auto _S_size
-        = vir::cw<_SimdSizeType(std::datapar::__simd_size_v<_Tp, _Abi>)>;
+        = vir::cw<_SimdSizeType(__simd_size_v<_Tp, _Abi>)>;
       static constexpr _MaskImpl _S_mask_impl = {};
 
       template <size_t _Np, bool _Sanitized>
@@ -1104,8 +1104,7 @@ namespace std::__detail
             __valid_abi_tag<_Tp>... _As>
     struct _SimdTupleData<_Tp, _A0, _A1, _As...>
     {
-      using _AbiTail = _AbiCombine<(std::datapar::__simd_size_v<_Tp, _A1> + ...
-                                      + std::datapar::__simd_size_v<_Tp, _As>), _A1>;
+      using _AbiTail = _AbiCombine<(__simd_size_v<_Tp, _A1> + ... + __simd_size_v<_Tp, _As>), _A1>;
 
       typename _A0::template _SimdMember<_Tp> _M_x;
 
@@ -1137,11 +1136,10 @@ namespace std::__detail
 
       static constexpr bool _S_recurse = sizeof...(_As) != 0;
 
-      static constexpr auto _S_size = vir::cw<(std::datapar::__simd_size_v<_Tp, _A0>)>;
+      static constexpr auto _S_size = vir::cw<(__simd_size_v<_Tp, _A0>)>;
 
       static constexpr auto _S_total_size
-        = vir::cw<(std::datapar::__simd_size_v<_Tp, _A0> + ...
-                     + std::datapar::__simd_size_v<_Tp, _As>)>;
+        = vir::cw<(__simd_size_v<_Tp, _A0> + ... + __simd_size_v<_Tp, _As>)>;
 
       static constexpr auto _S_size0 = _A0::_S_size;
       static constexpr auto _S_tail_size = _SimdTuple<_Tp, _As...>::_S_size;

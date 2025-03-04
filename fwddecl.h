@@ -157,19 +157,6 @@ namespace std::__detail
 
   template <typename _Tp, _SimdSizeType _Np>
     using __deduce_t = typename _DeduceAbi<_Tp, _Np>::type;
-}
-
-namespace std::datapar
-{
-  template <typename _Tp, typename _Abi = __detail::_NativeAbi<_Tp>>
-    class basic_simd;
-
-  template <size_t _Bytes,
-            typename _Abi = __detail::_NativeAbi<__detail::__mask_integer_from<_Bytes>>>
-    class basic_simd_mask;
-
-  template <typename... _Flags>
-    struct flags;
 
   template <typename _Tp>
     struct __is_simd
@@ -193,6 +180,19 @@ namespace std::datapar
 
   template <typename _Tp, typename _Abi>
     inline constexpr __detail::_SimdSizeType __simd_size_v = __simd_size<_Tp, _Abi>::value;
+}
+
+namespace std::datapar
+{
+  template <typename _Tp, typename _Abi = __detail::_NativeAbi<_Tp>>
+    class basic_simd;
+
+  template <size_t _Bytes,
+            typename _Abi = __detail::_NativeAbi<__detail::__mask_integer_from<_Bytes>>>
+    class basic_simd_mask;
+
+  template <typename... _Flags>
+    struct flags;
 
   template <typename _Tp, typename _Up = typename _Tp::value_type>
     struct alignment
@@ -216,11 +216,11 @@ namespace std::datapar
     using resize_t = typename resize<_Np, _Vp>::type;
 
   template <typename _Tp,
-            __detail::_SimdSizeType _Np = __simd_size_v<_Tp, __detail::_NativeAbi<_Tp>>>
+            __detail::_SimdSizeType _Np = __detail::__simd_size_v<_Tp, __detail::_NativeAbi<_Tp>>>
     using simd = basic_simd<_Tp, __detail::__deduce_t<_Tp, _Np>>;
 
   template <typename _Tp,
-            __detail::_SimdSizeType _Np = __simd_size_v<_Tp, __detail::_NativeAbi<_Tp>>>
+            __detail::_SimdSizeType _Np = __detail::__simd_size_v<_Tp, __detail::_NativeAbi<_Tp>>>
     using simd_mask = basic_simd_mask<sizeof(_Tp), __detail::__deduce_t<_Tp, _Np>>;
 
   // mask_reductions.h
@@ -284,7 +284,7 @@ namespace std::datapar
 
   template <typename _Tp, typename... _Abis>
     _GLIBCXX_SIMD_ALWAYS_INLINE constexpr
-    simd<_Tp, (__simd_size_v<_Tp, _Abis> + ...)>
+    simd<_Tp, (__detail::__simd_size_v<_Tp, _Abis> + ...)>
     cat(const basic_simd<_Tp, _Abis>&... __xs) noexcept;
 
   template <size_t _Bs, typename... _Abis>

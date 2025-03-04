@@ -183,12 +183,12 @@ namespace std::datapar
 #if SIMD_HAS_SUBSCRIPT_GATHER
       template <std::integral _Up, typename _Ap>
         _GLIBCXX_SIMD_ALWAYS_INLINE constexpr
-        resize_t<__simd_size_v<_Up, _Ap>, basic_simd_mask>
+        resize_t<__detail::__simd_size_v<_Up, _Ap>, basic_simd_mask>
         operator[](basic_simd<_Up, _Ap> const& __idx) const
         {
           __glibcxx_simd_precondition(is_unsigned_v<_Up> or all_of(__idx >= 0), "out-of-bounds");
           __glibcxx_simd_precondition(all_of(__idx < _Up(size)), "out-of-bounds");
-          using _Rp = resize_t<__simd_size_v<_Up, _Ap>, basic_simd_mask>;
+          using _Rp = resize_t<__detail::__simd_size_v<_Up, _Ap>, basic_simd_mask>;
           return _Rp([&](int __i) {
                    return _Impl::_S_get(_M_data, __idx[__i]);
                  }));
@@ -232,7 +232,7 @@ namespace std::datapar
 
       // [simd.mask.conv]
       template <typename _Up, typename _UAbi>
-        requires (__simd_size_v<_Up, _UAbi> == size.value)
+        requires (__detail::__simd_size_v<_Up, _UAbi> == size.value)
         _GLIBCXX_SIMD_ALWAYS_INLINE constexpr explicit(sizeof(_Up) != _Bytes)
         operator basic_simd<_Up, _UAbi>() const noexcept
         {
@@ -372,10 +372,13 @@ namespace std::datapar
           return __builtin_constant_p(_M_data);
       }
     };
+}
 
+namespace std::__detail
+{
   template <size_t _Bs, typename _Abi>
-    struct __is_mask<basic_simd_mask<_Bs, _Abi>>
-    : is_default_constructible<basic_simd_mask<_Bs, _Abi>>
+    struct __is_mask<std::datapar::basic_simd_mask<_Bs, _Abi>>
+    : is_default_constructible<std::datapar::basic_simd_mask<_Bs, _Abi>>
     {};
 }
 

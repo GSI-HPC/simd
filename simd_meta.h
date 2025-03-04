@@ -29,12 +29,12 @@ namespace std::__detail
       = __simd_abi_tag<_Abi> and _Abi::template _IsValid<_Tp>::value;
 
   template <typename _Vp, _SimdSizeType _Width = 0>
-    concept __simd_type = std::datapar::__is_simd_v<_Vp> // implies __vectorizable
+    concept __simd_type = __is_simd_v<_Vp> // implies __vectorizable
                             && __simd_abi_tag<typename _Vp::abi_type>
                             && (_Width == 0 || _Vp::size() == _Width);
 
   template <typename _Vp, _SimdSizeType _Width = 0>
-    concept __mask_type = std::datapar::__is_mask_v<_Vp>
+    concept __mask_type = __is_mask_v<_Vp>
                             && __simd_abi_tag<typename _Vp::abi_type>
                             && (_Width == 0 || _Vp::size() == _Width);
 
@@ -165,10 +165,10 @@ namespace std::__detail
     { return (__a + __b - 1) / __b; }
 
   template <typename _Tp>
-    concept __valid_simd = std::datapar::__is_simd_v<_Tp>;
+    concept __valid_simd = __is_simd_v<_Tp>;
 
   template <typename _Tp>
-    concept __valid_mask = std::datapar::__is_mask_v<_Tp>;
+    concept __valid_mask = __is_mask_v<_Tp>;
 
   template <typename T>
     concept __boolean_reducable_impl = requires(T&& x)

@@ -33,7 +33,7 @@ namespace std::datapar
     _GLIBCXX_SIMD_ALWAYS_INLINE constexpr auto
     chunk(const basic_simd<_Tp, _Abi>& __x) noexcept
     {
-      constexpr int __in = __simd_size_v<_Tp, _Abi>;
+      constexpr int __in = __detail::__simd_size_v<_Tp, _Abi>;
       constexpr int __out = _V::size();
       constexpr int __rem = __in % __out;
       if constexpr (__rem == 0)
@@ -155,16 +155,16 @@ namespace std::datapar
 {
   template <typename _Tp, typename... _Abis>
     _GLIBCXX_SIMD_ALWAYS_INLINE constexpr
-    simd<_Tp, (__simd_size_v<_Tp, _Abis> + ...)>
+    simd<_Tp, (__detail::__simd_size_v<_Tp, _Abis> + ...)>
     cat(const basic_simd<_Tp, _Abis>&... __xs) noexcept
     {
-      constexpr int __size = (__simd_size_v<_Tp, _Abis> + ...);
+      constexpr int __size = (__detail::__simd_size_v<_Tp, _Abis> + ...);
       if constexpr (sizeof...(_Abis) == 1)
         return simd<_Tp, __size>(__xs...);
-      else if constexpr (__size <= __simd_size_v<_Tp, __detail::_NativeAbi<_Tp>>)
+      else if constexpr (__size <= __detail::__simd_size_v<_Tp, __detail::_NativeAbi<_Tp>>)
         return __detail::__cat_recursive(__xs...);
       else
-        return simd<_Tp, (__simd_size_v<_Tp, _Abis> + ...)>(
+        return simd<_Tp, (__detail::__simd_size_v<_Tp, _Abis> + ...)>(
                  [&] [[__gnu__::__always_inline__]] (auto __i) {
                    return __detail::__get_simd_element_from_pack(__i, __xs...);
                  });

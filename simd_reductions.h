@@ -39,7 +39,7 @@ namespace std::__detail
     { return __identity_element_for<_Tp, _BinaryOperation>; }
 
   template <typename _Tp, typename _Abi, typename _BinaryOperation>
-    constexpr std::datapar::resize_t<std::datapar::__simd_size_v<_Tp, _Abi> / 2,
+    constexpr std::datapar::resize_t<__simd_size_v<_Tp, _Abi> / 2,
                                      std::datapar::basic_simd<_Tp, _Abi>>
     __split_and_invoke_once(const std::datapar::basic_simd<_Tp, _Abi>& __x,
                             _BinaryOperation __binary_op)

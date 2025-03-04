@@ -274,8 +274,7 @@ namespace std::__detail
     : _SimdTraits<__mask_integer_from<_Bs>, _Abi, _Flags>
     {};
 
-  template <__vectorizable _Tp,
-            _SimdSizeType _Np = std::datapar::__simd_size_v<_Tp, _NativeAbi<_Tp>>>
+  template <__vectorizable _Tp, _SimdSizeType _Np = __simd_size_v<_Tp, _NativeAbi<_Tp>>>
     requires (not is_same_v<typename __deduce_t<_Tp, _Np>::template __traits<_Tp>,
                             _InvalidTraits>)
     using __deduced_traits = typename __deduce_t<_Tp, _Np>::template __traits<_Tp>;
@@ -486,14 +485,11 @@ namespace std::__detail
         __b = std::move(__tmp);
       }
     };
-}
 
-namespace std::datapar
-{
-  template <__detail::__vectorizable _Tp, __detail::__simd_abi_tag _Abi>
+  template <__vectorizable _Tp, __simd_abi_tag _Abi>
     requires requires { _Abi::_S_size; }
     struct __simd_size<_Tp, _Abi>
-    : integral_constant<__detail::_SimdSizeType, _Abi::_S_size>
+    : integral_constant<_SimdSizeType, _Abi::_S_size>
     {};
 }
 
