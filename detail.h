@@ -16,6 +16,9 @@
 #include <limits>
 #include <ranges>
 #include <span>
+#if defined _GLIBCXX_ASSERTIONS and __GNUC__ < 15
+#include <iostream>
+#endif
 
 namespace std::__detail
 {
