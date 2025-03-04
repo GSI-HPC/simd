@@ -650,7 +650,7 @@ template <auto test_ref>
       { /* call for each element */
         [&]<std::size_t... Is>(std::index_sequence<Is...>) {
           ([&] {
-            std::string tmp_name = name + std::to_string(Is);
+            std::string tmp_name = std::string(name) + std::to_string(Is);
             test_name = tmp_name;
             ((std::cout << "Testing '" << test_name) << ... << (' ' + std::to_string(is)))
               << ' ' << args[Is] << "'\n";
