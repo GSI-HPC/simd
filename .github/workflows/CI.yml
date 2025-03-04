@@ -1,0 +1,56 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright © 2025      GSI Helmholtzzentrum fuer Schwerionenforschung GmbH
+#                       Matthias Kretz <m.kretz@gsi.de>
+
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  gcc:
+    strategy:
+      fail-fast: false
+      matrix:
+        version: [14]
+
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install GCC ${{ matrix.version }}
+        run: |
+          sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+          sudo apt-get update
+          sudo apt-get install -y gcc-${{ matrix.version }} g++-${{ matrix.version }}
+
+      - name: Run test suite
+        env:
+          CXX: g++-${{ matrix.version }}
+        run: make check-constexpr -j2
+
+  clang:
+    strategy:
+      fail-fast: false
+      matrix:
+        version: [20]
+
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Clang ${{ matrix.version }}
+        run: |
+          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
+          sudo add-apt-repository 'deb http://apt.llvm.org/noble/ llvm-toolchain-noble-${{ matrix.version }} main'
+          sudo apt-get update
+          sudo apt-get install -y clang-${{ matrix.version }}
+
+      - name: Run test suite
+        env:
+          CXX: clang++-${{ matrix.version }}
+        run: make check-constexpr -j2
