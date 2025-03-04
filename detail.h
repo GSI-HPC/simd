@@ -211,8 +211,12 @@ namespace std::__detail
     __invoke_ub([[maybe_unused]] const char* __msg, [[maybe_unused]] const _Args&... __args)
     {
 #ifdef _GLIBCXX_ASSERTIONS
+#if __GNUC__ < 15
+      ((std::cerr << __msg) << ... << __args) << '\n';
+#else
       __builtin_fprintf(stderr, __msg, __args...);
       __builtin_fprintf(stderr, "\n");
+#endif
       __builtin_abort();
 #elif _GLIBCXX_HARDEN >= 3
       __builtin_trap();
