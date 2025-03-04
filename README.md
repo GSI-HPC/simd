@@ -7,7 +7,7 @@
 
 | Feature | Status |
 | ------- | ------ |
-| P1928R15 std::simd — merge data-parallel types from the Parallelism TS 2 | in progress |
+| P1928R15 std::simd — merge data-parallel types from the Parallelism TS 2 | done |
 | P3430R3 simd issues: explicit, unsequenced, identity-element position, and members of disabled simd | done |
 | P3441R2 Rename simd_split to simd_chunk                           | done        |
 | P3287R3 Exploration of namespaces for std::simd                   | done        |
@@ -26,11 +26,11 @@ all of them.
 
 ## Optional/exploratory features:
 
-### `-D SIMD_IS_A_RANGE=0`
+### `-D SIMD_IS_A_RANGE=1`
 
-The default setting makes `simd::vec` and `simd::mask` read-only random-access 
-ranges. That's not part of P1928, so you can turn it off. However, that breaks 
-`simd::iota_v`.
+If you turn this on you get an implementation of 
+[P3480](https://wg21.link/p3480) which makes `simd` and `simd_mask` read-only 
+random-access ranges.
 
 ### `-D RANGES_TO_SIMD=1`
 

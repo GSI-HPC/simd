@@ -9,10 +9,6 @@
 
 #include "simd.h"
 
-#if not SIMD_IS_A_RANGE
-#error "iota is implemented such that it requires simd to be a range"
-#endif
-
 namespace std::datapar
 {
   template <typename _Tp>

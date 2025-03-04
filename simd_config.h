@@ -11,7 +11,7 @@
 
 #ifndef SIMD_IS_A_RANGE
 // FIXME: not conforming to P1928
-#define SIMD_IS_A_RANGE 1
+#define SIMD_IS_A_RANGE 0
 #endif
 
 #ifndef IFNDR_SIMD_PRECONDITIONS
