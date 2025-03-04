@@ -48,6 +48,11 @@ namespace std::__detail
           and bool_constant<T() == T::value>::value
           and bool_constant<static_cast<decltype(T::value)>(T()) == T::value>::value;
 
+#ifdef __clang__
+  template <typename _Tp>
+    static constexpr remove_cvref_t<_Tp> __static_sized_range_obj = {};
+#endif
+
   template <typename _Tp, size_t _Np = 0>
     concept __static_sized_range
       = ranges::contiguous_range<_Tp> and ranges::sized_range<_Tp>
@@ -57,7 +62,11 @@ namespace std::__detail
 #else
             requires (decltype(std::span(__r))::extent != dynamic_extent);
 #endif
+#ifdef __clang__
+            requires (_Np == 0 or ranges::size(__static_sized_range_obj<_Tp>) == _Np);
+#else
             requires (_Np == 0 or ranges::size(__r) == _Np);
+#endif
           };
 
   template <typename _From, typename _To>

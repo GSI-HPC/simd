@@ -19,6 +19,8 @@ namespace test01
   static_assert(__static_range_size(std::span<int>(carr4, 4)) == std::dynamic_extent);
   static_assert(__static_range_size(std::vector<int>()) == std::dynamic_extent);
 
+  static_assert(__static_sized_range<std::array<int, 4>, 4>);
+
   static_assert(std::same_as<__nopromot_common_type_t<short, signed char>, short>);
   static_assert(std::same_as<__nopromot_common_type_t<short, unsigned char>, short>);
   static_assert(std::same_as<__nopromot_common_type_t<short, unsigned short>, unsigned short>);
