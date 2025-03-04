@@ -54,6 +54,12 @@ namespace std::__detail
 
   inline constexpr _PrivateInit __private_init = _PrivateInit{};
 
+  template <size_t _Np, bool _Sanitized = false>
+    struct _BitMask;
+
+  template <size_t _Np>
+    using _SanitizedBitMask = _BitMask<_Np, true>;
+
   template <std::integral _Tp, typename _Fp>
     _GLIBCXX_SIMD_INTRINSIC static void
     _S_bit_iteration(_Tp __mask, _Fp&& __f)
