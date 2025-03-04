@@ -10,11 +10,12 @@
 #include "detail.h"
 #include "simd_meta.h"
 
+#if 0
 namespace std::simd_generic::scalar
 {
   template <__detail::__vectorizable _Tp, ranges::contiguous_range _Rg, typename... _Flags>
     constexpr _Tp
-    simd_unchecked_load(_Rg&& __range, simd_flags<_Flags...> __flags = {})
+    simd_unchecked_load(_Rg&& __range, flags<_Flags...> __flags = {})
     {
       static_assert(__detail::__loadstore_convertible_to<std::ranges::range_value_t<_Rg>,
                                                          _Tp, _Flags...>,
@@ -57,17 +58,17 @@ namespace std::simd_generic::scalar
   template <__detail::__vectorizable _Tp, contiguous_iterator _First, sentinel_for<_First> _Last,
             typename... _Flags>
     constexpr auto
-    simd_unchecked_load(_First __first, _Last __last, simd_flags<_Flags...> __flags = {})
+    simd_unchecked_load(_First __first, _Last __last, flags<_Flags...> __flags = {})
     { return simd_unchecked_load<_Tp>(std::span(__first, __last), __flags); }
 
   template <__detail::__vectorizable _Tp, contiguous_iterator _First, typename... _Flags>
     constexpr auto
-    simd_unchecked_load(_First __first, size_t __size, simd_flags<_Flags...> __flags = {})
+    simd_unchecked_load(_First __first, size_t __size, flags<_Flags...> __flags = {})
     { return simd_unchecked_load<_Tp>(std::span(__first, __size), __flags); }
 
   template <__detail::__vectorizable _Tp, ranges::contiguous_range _Rg, typename... _Flags>
     constexpr void
-    simd_unchecked_store(const _Tp& __x, _Rg&& __range, simd_flags<_Flags...> __flags = {})
+    simd_unchecked_store(const _Tp& __x, _Rg&& __range, flags<_Flags...> __flags = {})
     {
       static_assert(__detail::__loadstore_convertible_to<
                       _Tp, std::ranges::range_value_t<_Rg>, _Flags...>,
@@ -123,39 +124,39 @@ namespace std::simd_generic
 
 
   template <typename _Tp, typename _Vp>
-    struct rebind_simd : std::rebind_simd<_Tp, _Vp>
+    struct rebind : std::rebind<_Tp, _Vp>
     {};
 
   template <__detail::__vectorizable _Tp, __detail::__vectorizable _Up>
-    struct rebind_simd<_Tp, _Up>
+    struct rebind<_Tp, _Up>
     { using type = _Tp; };
 
   template <__detail::__vectorizable _Tp>
-    struct rebind_simd<_Tp, bool>
+    struct rebind<_Tp, bool>
     { using type = bool; };
 
   template <typename _Tp, typename _Vp>
-    using rebind_simd_t = typename rebind_simd<_Tp, _Vp>::type;
+    using rebind_t = typename rebind<_Tp, _Vp>::type;
 
 
   template <__detail::_SimdSizeType _Np, typename _Vp>
-    struct resize_simd : std::resize_simd<_Np, _Vp>
+    struct resize : std::resize<_Np, _Vp>
     {};
 
   template <__detail::_SimdSizeType _Np, __detail::__vectorizable _Tp>
-    struct resize_simd<_Np, _Tp>
+    struct resize<_Np, _Tp>
     { using type = std::simd<_Tp, _Np>; };
 
   template <__detail::__vectorizable _Tp>
-    struct resize_simd<1, _Tp>
+    struct resize<1, _Tp>
     { using type = _Tp; };
 
   template <>
-    struct resize_simd<1, bool>
+    struct resize<1, bool>
     { using type = bool; };
 
   template <__detail::_SimdSizeType _Np, typename _Vp>
-    using resize_simd_t = typename resize_simd<_Np, _Vp>::type;
+    using resize_t = typename resize<_Np, _Vp>::type;
 
 
   template <typename _Tp>
@@ -176,5 +177,6 @@ namespace std::simd_generic
   template <typename _Tp>
     concept regular = std::regular<_Tp> or ext::simd_regular<_Tp>;
 }
+#endif
 
 #endif  // PROTOTYPE_SIMD_GENERIC_H_

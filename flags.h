@@ -50,7 +50,8 @@ namespace std::__detail
           }
         else
           {
-            return static_cast<_Up*>(__builtin_assume_aligned(__ptr, simd_alignment_v<_Tp, _Up>));
+            return static_cast<_Up*>(__builtin_assume_aligned(
+                                       __ptr, std::datapar::alignment_v<_Tp, _Up>));
           }
       }
   };
@@ -110,94 +111,94 @@ namespace std::__detail
     concept __loadstore_tag = std::is_base_of_v<_LoadStoreTag, _Tp>;
 } // namespace __detail
 
-namespace std
+namespace std::datapar
 {
 
   template <typename... _Flags>
     requires (__detail::__loadstore_tag<_Flags> and ...)
-    struct simd_flags<_Flags...>
+    struct flags<_Flags...>
     {
       consteval bool
-      _M_is_equal(simd_flags) const
+      _M_is_equal(flags) const
       { return true; }
 
       template <typename... _Other>
         consteval bool
-        _M_is_equal(simd_flags<_Other...> __y) const
-        { return std::same_as<simd_flags<>, decltype(_M_xor(__y))>; }
+        _M_is_equal(flags<_Other...> __y) const
+        { return std::same_as<flags<>, decltype(_M_xor(__y))>; }
 
       template <typename... _Other>
         consteval bool
-        _M_test(simd_flags<_Other...> __x) const noexcept
+        _M_test(flags<_Other...> __x) const noexcept
         { return __x._M_is_equal(_M_and(__x)); }
 
       friend consteval auto
-      operator|(simd_flags, simd_flags<>)
-      { return simd_flags{}; }
+      operator|(flags, flags<>)
+      { return flags{}; }
 
       template <typename _T0, typename... _More>
         friend consteval auto
-        operator|(simd_flags, simd_flags<_T0, _More...>)
+        operator|(flags, flags<_T0, _More...>)
         {
           if constexpr ((std::same_as<_Flags, _T0> or ...))
-            return simd_flags<_Flags...>{} | simd_flags<_More...>{};
+            return flags<_Flags...>{} | flags<_More...>{};
           else
-            return simd_flags<_Flags..., _T0>{} | simd_flags<_More...>{};
+            return flags<_Flags..., _T0>{} | flags<_More...>{};
         }
 
       consteval auto
-      _M_and(simd_flags<>) const
-      { return simd_flags<>{}; }
+      _M_and(flags<>) const
+      { return flags<>{}; }
 
       template <typename _T0, typename... _More>
         consteval auto
-        _M_and(simd_flags<_T0, _More...>) const
+        _M_and(flags<_T0, _More...>) const
         {
           if constexpr ((std::same_as<_Flags, _T0> or ...))
-            return simd_flags<_T0>{} | (simd_flags{}._M_and(simd_flags<_More...>{}));
+            return flags<_T0>{} | (flags{}._M_and(flags<_More...>{}));
           else
-            return simd_flags{}._M_and(simd_flags<_More...>{});
+            return flags{}._M_and(flags<_More...>{});
         }
 
       consteval auto
-      _M_xor(simd_flags<>) const
-      { return simd_flags{}; }
+      _M_xor(flags<>) const
+      { return flags{}; }
 
       template <typename _T0, typename... _More>
         consteval auto
-        _M_xor(simd_flags<_T0, _More...>) const
+        _M_xor(flags<_T0, _More...>) const
         {
           if constexpr ((std::same_as<_Flags, _T0> or ...))
             {
               constexpr auto __removed
-                = (std::conditional_t<std::same_as<_Flags, _T0>, simd_flags<>,
-                                      simd_flags<_Flags>>{} | ...);
-              return __removed._M_xor(simd_flags<_More...>{});
+                = (std::conditional_t<std::same_as<_Flags, _T0>, flags<>,
+                                      flags<_Flags>>{} | ...);
+              return __removed._M_xor(flags<_More...>{});
             }
           else
-            return (simd_flags{} | simd_flags<_T0>{})._M_xor(simd_flags<_More...>{});
+            return (flags{} | flags<_T0>{})._M_xor(flags<_More...>{});
         }
 
       // LEWG took this out
 #if LEWG_WANTS_FLAGS_WITH_FULL_API
       template <typename... _Other>
         consteval bool
-        test(simd_flags<_Other...> __x) const noexcept
+        test(flags<_Other...> __x) const noexcept
         { return _M_test(__x); }
 
       template <typename... _Other>
         friend consteval bool
-        operator==(simd_flags __x, simd_flags<_Other...> __y)
+        operator==(flags __x, flags<_Other...> __y)
         { return __x._M_is_equal(__y); }
 
       template <typename... _Other>
         friend consteval auto
-        operator&(simd_flags __lhs, simd_flags<_Other...> __rhs)
+        operator&(flags __lhs, flags<_Other...> __rhs)
         { return __lhs._M_and(__rhs); }
 
       template <typename... _Other>
         friend consteval auto
-        operator^(simd_flags __lhs, simd_flags<_Other...> __rhs)
+        operator^(flags __lhs, flags<_Other...> __rhs)
         { return __lhs._M_xor(__rhs); }
 #endif
 
@@ -218,39 +219,39 @@ namespace std
         }
     };
 
-  // [simd.simd_flags]
-  inline constexpr simd_flags<> simd_flag_default;
+  // [simd.flags]
+  inline constexpr flags<> flag_default;
 
-  inline constexpr simd_flags<__detail::_Convert> simd_flag_convert;
+  inline constexpr flags<__detail::_Convert> flag_convert;
 
-  inline constexpr simd_flags<__detail::_Aligned> simd_flag_aligned;
+  inline constexpr flags<__detail::_Aligned> flag_aligned;
 
   template <std::size_t _Np>
     requires(std::has_single_bit(_Np))
-    inline constexpr simd_flags<__detail::_Overaligned<_Np>> simd_flag_overaligned;
+    inline constexpr flags<__detail::_Overaligned<_Np>> flag_overaligned;
 
   // extensions
   template <typename _To>
-    inline constexpr simd_flags<__detail::_ConvertTo<_To>> flag_convert_to;
+    inline constexpr flags<__detail::_ConvertTo<_To>> flag_convert_to;
 
-  inline constexpr simd_flags<__detail::_AllowPartialLoadStore> __allow_partial_loadstore;
+  inline constexpr flags<__detail::_AllowPartialLoadStore> __allow_partial_loadstore;
 
-  inline constexpr simd_flags<__detail::_Throw> __flag_throw;
+  inline constexpr flags<__detail::_Throw> __flag_throw;
 
-  inline constexpr std::simd_flags<__detail::_Streaming> __flag_streaming;
+  inline constexpr flags<__detail::_Streaming> __flag_streaming;
 
   template <int _L1, int _L2>
-    inline constexpr std::simd_flags<__detail::_Prefetch<_L1, _L2>> __flag_prefetch;
+    inline constexpr flags<__detail::_Prefetch<_L1, _L2>> __flag_prefetch;
 
-  [[deprecated("use simd_flag_default")]]
-  inline constexpr auto element_aligned = simd_flag_default;
+  [[deprecated("use flag_default")]]
+  inline constexpr auto element_aligned = flag_default;
 
-  [[deprecated("use simd_flag_aligned")]]
-  inline constexpr auto vector_aligned = simd_flag_aligned;
+  [[deprecated("use flag_aligned")]]
+  inline constexpr auto vector_aligned = flag_aligned;
 
   template <size_t _Np>
-    [[deprecated("use simd_flag_overaligned")]]
-    inline constexpr auto overaligned = simd_flag_overaligned<_Np>;
+    [[deprecated("use flag_overaligned")]]
+    inline constexpr auto overaligned = flag_overaligned<_Np>;
 } // namespace std
 
 #endif  // PROTOTYPE_FLAGS_H_

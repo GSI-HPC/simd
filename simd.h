@@ -14,7 +14,7 @@
 #include "loadstore.h"
 #include <span>
 
-namespace std
+namespace std::datapar
 {
   // not supported:
   // - deleted: dctor, dtor, cctor, cassign
@@ -29,8 +29,7 @@ namespace std
 
       using abi_type = _Abi;
 
-      using mask_type = std::basic_simd_mask<
-                          sizeof(conditional_t<is_void_v<_Tp>, int, _Tp>), _Abi>;
+      using mask_type = basic_simd_mask<sizeof(conditional_t<is_void_v<_Tp>, int, _Tp>), _Abi>;
 
       basic_simd() = delete;
 
@@ -64,13 +63,13 @@ namespace std
 
       using abi_type = _Abi;
 
-      using mask_type = std::basic_simd_mask<sizeof(_Tp), _Abi>;
+      using mask_type = basic_simd_mask<sizeof(_Tp), _Abi>;
 
       static constexpr auto size = __detail::__ic<_Traits::_S_size>;
 
 #if SIMD_IS_A_RANGE
-      using iterator = __simd_iterator<basic_simd>;
-      using const_iterator = __simd_iterator<const basic_simd>;
+      using iterator = __iterator<basic_simd>;
+      using const_iterator = __iterator<const basic_simd>;
 
       //static_assert(std::random_access_iterator<iterator>);
       //static_assert(std::sentinel_for<std::default_sentinel_t, iterator>);
@@ -163,7 +162,7 @@ namespace std
       // conversion constructor.
       template <__detail::__static_sized_range<size.value> _Rg, typename... _Flags>
         constexpr // implicit!
-        basic_simd(_Rg&& __range, simd_flags<_Flags...> __flags = {})
+        basic_simd(_Rg&& __range, flags<_Flags...> __flags = {})
         : _M_data(_Impl::_S_load(__flags.template _S_adjust_pointer<basic_simd>(
                                    std::ranges::data(__range)), _S_type_tag))
         {
@@ -176,7 +175,7 @@ namespace std
       template <std::ranges::contiguous_range _Rg, typename... _Flags>
         requires std::ranges::sized_range<_Rg>
         constexpr explicit
-        basic_simd(std::from_range_t, _Rg&& __range, simd_flags<_Flags...> __flags = {})
+        basic_simd(std::from_range_t, _Rg&& __range, flags<_Flags...> __flags = {})
         : _M_data(__data(std::load<basic_simd>(__range, __flags)))
         {
           static_assert(__detail::__loadstore_convertible_to<std::ranges::range_value_t<_Rg>,
@@ -192,7 +191,7 @@ namespace std
         requires __detail::__loadstore_convertible_to<std::ranges::range_value_t<_Rg>,
                                                       value_type, _Flags...>
         constexpr explicit
-        basic_simd(std::from_range_t, _Rg&& __range, simd_flags<_Flags...> __flags = {})
+        basic_simd(std::from_range_t, _Rg&& __range, flags<_Flags...> __flags = {})
         : _M_data(_Impl::template _S_generator<_Tcanon>(
                     [&__range, __it = std::ranges::begin(__range)] (int __i) mutable {
                       __glibcxx_simd_precondition(__it != std::ranges::end(__range),
@@ -209,11 +208,11 @@ namespace std
 
       // and give a better error message when the user might have expected `ranges::to` to work
       template <std::ranges::range _Rg, typename... _Flags>
-        basic_simd(std::from_range_t, _Rg&&, simd_flags<_Flags...> = {})
+        basic_simd(std::from_range_t, _Rg&&, flags<_Flags...> = {})
         : _M_data{}
         {
           static_assert(false, "'ranges::to<basic_simd>()' requires a value-preserving conversion. "
-                               "Call 'ranges::to<basic_simd>(simd_flag_convert)' to allow all "
+                               "Call 'ranges::to<basic_simd>(flag_convert)' to allow all "
                                "implicit conversions.");
         }
 #endif
@@ -462,7 +461,7 @@ namespace std
       _M_to_array() const noexcept
       {
         std::array<_Tp, size()> __r = {};
-        std::simd_unchecked_store(*this, __r);
+        std::datapar::unchecked_store(*this, __r);
         return __r;
       }
 
@@ -489,12 +488,12 @@ namespace std
 #if SIMD_HAS_SUBSCRIPT_GATHER
       template <std::integral _Up, typename _Ap>
         constexpr
-        resize_simd_t<__simd_size_v<_Up, _Ap>, basic_simd>
+        resize_t<__simd_size_v<_Up, _Ap>, basic_simd>
         operator[](basic_simd<_Up, _Ap> const& __idx) const
         {
           __glibcxx_simd_precondition(is_unsigned_v<_Up> or all_of(__idx >= 0), "out-of-bounds");
           __glibcxx_simd_precondition(all_of(__idx < _Up(size)), "out-of-bounds");
-          using _Rp = resize_simd_t<__simd_size_v<_Up, _Ap>, basic_simd>;
+          using _Rp = resize_t<__simd_size_v<_Up, _Ap>, basic_simd>;
           return _Rp(__detail::__private_init,
                      _Rp::_Impl::template _S_generator<_Tcanon>([&](int __i) {
                        return _Impl::_S_get(_M_data, __idx[__i]);
@@ -521,7 +520,7 @@ namespace std
     };
 
   template <typename _Tp, typename _Abi>
-    struct is_simd<basic_simd<_Tp, _Abi>>
+    struct __is_simd<basic_simd<_Tp, _Abi>>
     : is_default_constructible<basic_simd<_Tp, _Abi>>
     {};
 
@@ -541,38 +540,38 @@ namespace std
     -> basic_simd<std::ranges::range_value_t<_Rg>>;
 
   template <std::ranges::input_range _Rg, typename... _Flags>
-    basic_simd(std::from_range_t, _Rg&& x, simd_flags<_Flags...>)
+    basic_simd(std::from_range_t, _Rg&& x, flags<_Flags...>)
     -> basic_simd<std::ranges::range_value_t<_Rg>>;
 #endif
 
   template <size_t _Bs, typename _Abi>
-    basic_simd(std::basic_simd_mask<_Bs, _Abi>)
+    basic_simd(basic_simd_mask<_Bs, _Abi>)
     -> basic_simd<__detail::__mask_integer_from<_Bs>,
                   __detail::__simd_abi_for_mask_t<_Bs, _Abi>>;
 
   template <__detail::__vectorizable _Tp, __detail::__simd_type _Simd>
-    struct rebind_simd<_Tp, _Simd>
+    struct rebind<_Tp, _Simd>
     { using type = simd<_Tp, _Simd::size()>; };
 
   template <__detail::__vectorizable _Tp, __detail::__mask_type _Mask>
-    struct rebind_simd<_Tp, _Mask>
+    struct rebind<_Tp, _Mask>
     { using type = simd_mask<_Tp, _Mask::size()>; };
 
   template <__detail::_SimdSizeType _Np, __detail::__simd_type _Simd>
-    struct resize_simd<_Np, _Simd>
+    struct resize<_Np, _Simd>
     { using type = simd<typename _Simd::value_type, _Np>; };
 
   template <__detail::_SimdSizeType _Np, __detail::__mask_type _Mask>
-    struct resize_simd<_Np, _Mask>
+    struct resize<_Np, _Mask>
     { using type = simd_mask<typename decltype(+_Mask())::value_type, _Np>; };
 
   template <typename _Tp, typename _Abi, __detail::__vectorizable _Up>
-    struct simd_alignment<basic_simd<_Tp, _Abi>, _Up>
-    : std::integral_constant<size_t, alignof(rebind_simd_t<_Up, basic_simd<_Tp, _Abi>>)>
+    struct alignment<basic_simd<_Tp, _Abi>, _Up>
+    : std::integral_constant<size_t, alignof(rebind_t<_Up, basic_simd<_Tp, _Abi>>)>
     {};
 
   template <size_t _Bs, typename _Abi>
-    struct simd_alignment<basic_simd_mask<_Bs, _Abi>, bool>
+    struct alignment<basic_simd_mask<_Bs, _Abi>, bool>
     : std::integral_constant<size_t, alignof(simd<__detail::__make_unsigned_int_t<bool>,
                                                   basic_simd_mask<_Bs, _Abi>::size()>)>
     {};

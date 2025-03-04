@@ -16,17 +16,17 @@
 
 #include <experimental/bits/numeric_traits.h>
 
+namespace std::__detail
+{
+  template <typename _Abi, _BuildFlags = {}>
+    struct _ImplBuiltinBase;
+
+  template <typename _Abi, _BuildFlags = {}>
+    struct _ImplBuiltin;
+}
+
 namespace std
 {
-  namespace __detail
-  {
-    template <typename _Abi, _BuildFlags = {}>
-      struct _ImplBuiltinBase;
-
-    template <typename _Abi, _BuildFlags = {}>
-      struct _ImplBuiltin;
-  }
-
   template <int _Width>
     struct _VecAbi
     {
@@ -239,7 +239,8 @@ namespace std::__detail
       using _SuperImpl = typename _Abi::_Impl;
 
       template <__vec_builtin _TV>
-        _GLIBCXX_SIMD_INTRINSIC static constexpr basic_simd<__value_type_of<_TV>, _Abi>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr
+        std::datapar::basic_simd<__value_type_of<_TV>, _Abi>
         _M_make_simd(_TV __x)
         { return __x; }
 
@@ -1058,7 +1059,7 @@ namespace std::__detail
 
       template <typename _Tp, size_t _Bs, typename _UAbi>
         _GLIBCXX_SIMD_INTRINSIC static constexpr auto
-        _S_convert(basic_simd_mask<_Bs, _UAbi> __x)
+        _S_convert(std::datapar::basic_simd_mask<_Bs, _UAbi> __x)
         { return _SuperImpl::template _S_convert_mask<_MaskMember<_Tp>>(__data(__x)); }
 
       template <__vec_builtin _TV>
@@ -1132,27 +1133,27 @@ namespace std::__detail
 
       template <size_t _Bs>
         _GLIBCXX_SIMD_INTRINSIC static constexpr bool
-        _S_all_of(basic_simd_mask<_Bs, abi_type> __k)
+        _S_all_of(std::datapar::basic_simd_mask<_Bs, abi_type> __k)
         { return _GLIBCXX_SIMD_INT_PACK(_S_size, _Is, { return (... and (__k[_Is] != 0)); }); }
 
       template <size_t _Bs>
         _GLIBCXX_SIMD_INTRINSIC static constexpr bool
-        _S_any_of(basic_simd_mask<_Bs, abi_type> __k)
+        _S_any_of(std::datapar::basic_simd_mask<_Bs, abi_type> __k)
         { return _GLIBCXX_SIMD_INT_PACK(_S_size, _Is, { return (... or (__k[_Is] != 0)); }); }
 
       template <size_t _Bs>
         _GLIBCXX_SIMD_INTRINSIC static constexpr bool
-        _S_none_of(basic_simd_mask<_Bs, abi_type> __k)
+        _S_none_of(std::datapar::basic_simd_mask<_Bs, abi_type> __k)
         { return _GLIBCXX_SIMD_INT_PACK(_S_size, _Is, { return (... and (__k[_Is] == 0)); }); }
 
       template <size_t _Bs>
         _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdSizeType
-        _S_reduce_min_index(basic_simd_mask<_Bs, abi_type> __k)
+        _S_reduce_min_index(std::datapar::basic_simd_mask<_Bs, abi_type> __k)
         { return __lowest_bit(_SuperImpl::_S_to_bits(__data(__k))._M_to_bits()); }
 
       template <size_t _Bs>
         _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdSizeType
-        _S_reduce_max_index(basic_simd_mask<_Bs, abi_type> __k)
+        _S_reduce_max_index(std::datapar::basic_simd_mask<_Bs, abi_type> __k)
         { return __highest_bit(_SuperImpl::_S_to_bits(__data(__k))._M_sanitized()._M_to_bits()); }
 
       template <__vectorizable_canon _Tp>

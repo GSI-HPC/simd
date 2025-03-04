@@ -4,7 +4,7 @@
  */
 
 #include "../simd"
-namespace simd = std;
+namespace dp = std::datapar;
 
 /* codegen
 ^f0(
@@ -16,7 +16,7 @@ vmovd	eax
 ret
  */
 auto
-f0(simd::simd<int, 4> x)
+f0(dp::simd<int, 4> x)
 { return reduce(x); }
 
 /* codegen
@@ -28,7 +28,7 @@ vaddss	xmm0
 ret
  */
 auto
-f1(simd::simd<float, 4> x)
+f1(dp::simd<float, 4> x)
 { return reduce(x); }
 
 /* codegen
@@ -38,7 +38,7 @@ vaddsd	xmm0
 ret
  */
 auto
-f2(simd::simd<double, 2> x)
+f2(dp::simd<double, 2> x)
 { return reduce(x); }
 
 /* codegen
@@ -53,7 +53,7 @@ vpextrw	eax, xmm., 0
 ret
  */
 auto
-f3(simd::simd<unsigned short, 8> x)
+f3(dp::simd<unsigned short, 8> x)
 { return reduce(x); }
 
 /* codegen
@@ -67,7 +67,7 @@ vpextrw	eax, xmm., 0
 ret
  */
 auto
-f4(simd::simd<unsigned short, 4> x)
+f4(dp::simd<unsigned short, 4> x)
 { return reduce(x); }
 
 /* codegen
@@ -85,7 +85,7 @@ vpextrw	eax, xmm0, 0
 ret
  */
 auto
-f5(simd::simd<signed char, 16> x)
+f5(dp::simd<signed char, 16> x)
 { return reduce(x); }
 
 /* codegen
@@ -103,7 +103,7 @@ vpextrw	eax, xmm0, 0
 ret
  */
 auto
-f6(simd::simd<unsigned char, 16> x)
+f6(dp::simd<unsigned char, 16> x)
 { return reduce(x); }
 
 /* codegen
@@ -114,5 +114,5 @@ vmovq	rax, xmm.
 ret
  */
 auto
-f7(simd::simd<long long, 2> x)
+f7(dp::simd<long long, 2> x)
 { return reduce(x); }

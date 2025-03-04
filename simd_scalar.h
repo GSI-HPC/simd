@@ -177,7 +177,7 @@ namespace std::__detail
 
     template <typename _Tp, typename _BinaryOperation>
       _GLIBCXX_SIMD_INTRINSIC static constexpr _Tp
-      _S_reduce(const basic_simd<_Tp, _ScalarAbi>& __x, const _BinaryOperation&)
+      _S_reduce(const std::datapar::basic_simd<_Tp, _ScalarAbi>& __x, const _BinaryOperation&)
       { return __x._M_data; }
 
     template <typename _Tp>
@@ -714,7 +714,7 @@ namespace std::__detail
 
     template <typename, size_t _Bs, typename _UAbi>
       _GLIBCXX_SIMD_INTRINSIC static constexpr bool
-      _S_convert(basic_simd_mask<_Bs, _UAbi> __x)
+      _S_convert(std::datapar::basic_simd_mask<_Bs, _UAbi> __x)
       { return __x[0]; }
 
     _GLIBCXX_SIMD_INTRINSIC static constexpr bool
@@ -766,32 +766,32 @@ namespace std::__detail
 
     template <size_t _Bs>
       _GLIBCXX_SIMD_INTRINSIC static constexpr bool
-      _S_all_of(basic_simd_mask<_Bs, abi_type> __k)
+      _S_all_of(std::datapar::basic_simd_mask<_Bs, abi_type> __k)
       { return __data(__k); }
 
     template <size_t _Bs>
       _GLIBCXX_SIMD_INTRINSIC static constexpr bool
-      _S_any_of(basic_simd_mask<_Bs, abi_type> __k)
+      _S_any_of(std::datapar::basic_simd_mask<_Bs, abi_type> __k)
       { return __data(__k); }
 
     template <size_t _Bs>
       _GLIBCXX_SIMD_INTRINSIC static constexpr bool
-      _S_none_of(basic_simd_mask<_Bs, abi_type> __k)
+      _S_none_of(std::datapar::basic_simd_mask<_Bs, abi_type> __k)
       { return !__data(__k); }
 
     template <size_t _Bs>
       _GLIBCXX_SIMD_INTRINSIC static constexpr bool
-      _S_popcount(basic_simd_mask<_Bs, abi_type> __k)
+      _S_popcount(std::datapar::basic_simd_mask<_Bs, abi_type> __k)
       { return __data(__k); }
 
     template <size_t _Bs>
       _GLIBCXX_SIMD_INTRINSIC static constexpr int
-      _S_reduce_min_index(basic_simd_mask<_Bs, abi_type>)
+      _S_reduce_min_index(std::datapar::basic_simd_mask<_Bs, abi_type>)
       { return 0; }
 
     template <size_t _Bs>
       _GLIBCXX_SIMD_INTRINSIC static constexpr int
-      _S_reduce_max_index(basic_simd_mask<_Bs, abi_type>)
+      _S_reduce_max_index(std::datapar::basic_simd_mask<_Bs, abi_type>)
       { return 0; }
   };
 }

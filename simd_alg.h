@@ -12,7 +12,7 @@
 #include "simd.h"
 #include "simd_mask.h"
 
-namespace std
+namespace std::datapar
 {
   template<totally_ordered _Tp, typename _Abi>
     constexpr basic_simd<_Tp, _Abi>
@@ -45,13 +45,13 @@ namespace std
 
   template <typename _Tp, typename _Up>
     _GLIBCXX_SIMD_ALWAYS_INLINE constexpr auto
-    simd_select(bool __c, const _Tp& __a, const _Up& __b)
+    select(bool __c, const _Tp& __a, const _Up& __b)
     -> remove_cvref_t<decltype(__c ? __a : __b)>
     { return __c ? __a : __b; }
 
   template <size_t _Bytes, typename _Abi, typename _Tp, typename _Up>
     _GLIBCXX_SIMD_ALWAYS_INLINE constexpr auto
-    simd_select(const basic_simd_mask<_Bytes, _Abi>& __k, const _Tp& __a, const _Up& __b) noexcept
+    select(const basic_simd_mask<_Bytes, _Abi>& __k, const _Tp& __a, const _Up& __b) noexcept
     -> decltype(__select_impl(__k, __a, __b))
     { return __select_impl(__k, __a, __b); }
 }

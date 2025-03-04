@@ -86,12 +86,12 @@ template <class T>
     {
       if (max < std::__finite_max_v<unsigned>) [[likely]]
         {
-          auto iota = stdx::rebind_simd_t<unsigned, simd_type>([&](unsigned j) { return j; });
+          auto iota = stdx::rebind_t<unsigned, simd_type>([&](unsigned j) { return j; });
           return stdx::static_simd_cast<mask_type>(iota + unsigned(m_first) < unsigned(max));
         }
       else
         {
-          auto iota = stdx::rebind_simd_t<std::size_t, simd_type>([&](auto j) { return j; });
+          auto iota = stdx::rebind_t<std::size_t, simd_type>([&](auto j) { return j; });
           return stdx::static_simd_cast<mask_type>(iota + m_first < max);
         }
     }
@@ -148,7 +148,7 @@ template <class T>
         if constexpr (size() >= 2)
           {
             constexpr std::size_t next_vsize = std::bit_ceil(size() / 2);
-            simd_index<stdx::resize_simd_t<next_vsize, simd_type>> j = front();
+            simd_index<stdx::resize_t<next_vsize, simd_type>> j = front();
             if (j < range_size)
               fn(j++);
             j.epilogue(range_size, std::forward<F>(fn));

@@ -10,54 +10,55 @@
 #include "simd.h"
 #include "simd_chunk.h"
 
-namespace std
+namespace std::__detail
 {
-  namespace __detail
-  {
-    template <typename _Tp, typename _BinaryOperation>
-      inline constexpr auto
-      __identity_element_for = [] {
-        if constexpr (same_as<_BinaryOperation, plus<>>)
-          return _Tp(0);
-        else if constexpr (same_as<_BinaryOperation, multiplies<>>)
-          return _Tp(1);
-        else if constexpr (same_as<_BinaryOperation, bit_and<>>)
-          return _Tp(~_Tp());
-        else if constexpr (same_as<_BinaryOperation, bit_or<>>)
-          return _Tp(0);
-        else if constexpr (same_as<_BinaryOperation, bit_xor<>>)
-          return _Tp(0);
-        else
-          return nullptr;
-      }();
+  template <typename _Tp, typename _BinaryOperation>
+    inline constexpr auto
+    __identity_element_for = [] {
+      if constexpr (same_as<_BinaryOperation, plus<>>)
+        return _Tp(0);
+      else if constexpr (same_as<_BinaryOperation, multiplies<>>)
+        return _Tp(1);
+      else if constexpr (same_as<_BinaryOperation, bit_and<>>)
+        return _Tp(~_Tp());
+      else if constexpr (same_as<_BinaryOperation, bit_or<>>)
+        return _Tp(0);
+      else if constexpr (same_as<_BinaryOperation, bit_xor<>>)
+        return _Tp(0);
+      else
+        return nullptr;
+    }();
 
-    template <typename _Tp, typename _BinaryOperation>
-      requires same_as<_BinaryOperation, plus<>>
-        or same_as<_BinaryOperation, multiplies<>>
-        or same_as<_BinaryOperation, bit_and<>>
-        or same_as<_BinaryOperation, bit_or<>>
-        or same_as<_BinaryOperation, bit_xor<>>
-      constexpr _Tp __default_identity_element()
-      { return __identity_element_for<_Tp, _BinaryOperation>; }
+  template <typename _Tp, typename _BinaryOperation>
+    requires same_as<_BinaryOperation, plus<>>
+      or same_as<_BinaryOperation, multiplies<>>
+      or same_as<_BinaryOperation, bit_and<>>
+      or same_as<_BinaryOperation, bit_or<>>
+      or same_as<_BinaryOperation, bit_xor<>>
+    constexpr _Tp __default_identity_element()
+    { return __identity_element_for<_Tp, _BinaryOperation>; }
 
-    template <typename _Tp, typename _Abi, typename _BinaryOperation>
-      constexpr std::resize_simd_t<std::__simd_size_v<_Tp, _Abi> / 2,
-                                         basic_simd<_Tp, _Abi>>
-      __split_and_invoke_once(const basic_simd<_Tp, _Abi>& __x, _BinaryOperation __binary_op)
-      {
-        using _V1 = basic_simd<_Tp, _Abi>;
-        static_assert(std::__has_single_bit(unsigned(_V1::size.value)));
-        using _V2 = std::resize_simd_t<_V1::size.value / 2, _V1>;
-        const auto [__x0, __x1] = std::simd_chunk<_V2>(__x);
-        // Mandates: binary_op can be invoked with two arguments of type basic_simd<_Tp, A1>
-        // returning basic_simd<_Tp, A1> for every A1 that is an ABI tag type.
-        static_assert(requires {
-          { __binary_op(__x0, __x1) } -> same_as<_V2>;
-        });
-        return __binary_op(__x0, __x1);
-      }
-  }
+  template <typename _Tp, typename _Abi, typename _BinaryOperation>
+    constexpr std::datapar::resize_t<std::datapar::__simd_size_v<_Tp, _Abi> / 2,
+                                     std::datapar::basic_simd<_Tp, _Abi>>
+    __split_and_invoke_once(const std::datapar::basic_simd<_Tp, _Abi>& __x,
+                            _BinaryOperation __binary_op)
+    {
+      using _V1 = std::datapar::basic_simd<_Tp, _Abi>;
+      static_assert(std::__has_single_bit(unsigned(_V1::size.value)));
+      using _V2 = std::datapar::resize_t<_V1::size.value / 2, _V1>;
+      const auto [__x0, __x1] = std::datapar::chunk<_V2>(__x);
+      // Mandates: binary_op can be invoked with two arguments of type basic_simd<_Tp, A1>
+      // returning basic_simd<_Tp, A1> for every A1 that is an ABI tag type.
+      static_assert(requires {
+        { __binary_op(__x0, __x1) } -> same_as<_V2>;
+      });
+      return __binary_op(__x0, __x1);
+    }
+}
 
+namespace std::datapar
+{
   template <typename _Tp, typename _Abi, __detail::__binary_operation<_Tp> _BinaryOperation>
     constexpr _Tp
     reduce(const basic_simd<_Tp, _Abi>& __x, _BinaryOperation __binary_op)
@@ -78,7 +79,7 @@ namespace std
         return __binary_op(__x, _V1([&](auto __i) { return __x[__i ^ 1]; }))[0];
 
       else if constexpr (std::__has_single_bit(_V1::size.value))
-        return std::reduce(__detail::__split_and_invoke_once(__x, __binary_op), __binary_op);
+        return reduce(__detail::__split_and_invoke_once(__x, __binary_op), __binary_op);
 
       else
         {
@@ -86,23 +87,22 @@ namespace std
           constexpr int __right_size = _V1::size.value - __left_size;
           constexpr int __max_size = std::__bit_ceil(_V1::size.value);
           constexpr int __missing = __max_size - _V1::size.value;
-          if constexpr (sizeof(_V1) == sizeof(std::resize_simd_t<__max_size, _V1>)
+          if constexpr (sizeof(_V1) == sizeof(resize_t<__max_size, _V1>)
                           and (__missing < __right_size)
                           and not same_as<decltype(__detail::__identity_element_for
                                                      <_Tp, _BinaryOperation>), nullptr_t>)
             {
-              using _V2 = std::resize_simd_t<__max_size, _V1>;
-              constexpr std::simd<_Tp, __missing> __padding
+              using _V2 = resize_t<__max_size, _V1>;
+              constexpr simd<_Tp, __missing> __padding
                 = __detail::__identity_element_for<_Tp, _BinaryOperation>;
-              const _V2 __y = std::simd_cat(__x, __padding);
-              return std::reduce(__detail::__split_and_invoke_once(__y, __binary_op), __binary_op);
+              const _V2 __y = cat(__x, __padding);
+              return reduce(__detail::__split_and_invoke_once(__y, __binary_op), __binary_op);
             }
 
-          using _V2 = std::resize_simd_t<__left_size, _V1>;
-          const auto [__x0, __x1] = std::simd_chunk<_V2>(__x);
-          return std::reduce(
-                   std::simd_cat(__detail::__split_and_invoke_once(__x0, __binary_op), __x1),
-                   __binary_op);
+          using _V2 = resize_t<__left_size, _V1>;
+          const auto [__x0, __x1] = chunk<_V2>(__x);
+          return reduce(cat(__detail::__split_and_invoke_once(__x0, __binary_op), __x1),
+                        __binary_op);
         }
     }
 
@@ -120,7 +120,7 @@ namespace std
                                     == _Tp(2),
                                   "The given identity_element needs to preserve identity over the "
                                   "given binary operation.");
-      return reduce(simd_select(__k, __x, __identity_element), __binary_op);
+      return reduce(select(__k, __x, __identity_element), __binary_op);
     }
 
   // NaN inputs are precondition violations (_Tp satisfies and models totally_ordered)
@@ -129,7 +129,7 @@ namespace std
     reduce_min(const basic_simd<_Tp, _Abi>& __x) noexcept
     {
       return reduce(__x, []<totally_ordered _UV>(const _UV& __a, const _UV& __b) {
-               return simd_select(__a < __b, __a, __b);
+               return select(__a < __b, __a, __b);
              });
     }
 
@@ -138,9 +138,9 @@ namespace std
     reduce_min(const basic_simd<_Tp, _Abi>& __x,
                const typename basic_simd<_Tp, _Abi>::mask_type& __k) noexcept
     {
-      return reduce(simd_select(__k, __x, std::__finite_max_v<_Tp>),
+      return reduce(select(__k, __x, std::__finite_max_v<_Tp>),
                     []<totally_ordered _UV>(const _UV& __a, const _UV& __b) {
-                      return simd_select(__a < __b, __a, __b);
+                      return select(__a < __b, __a, __b);
                     });
     }
 
@@ -149,7 +149,7 @@ namespace std
     reduce_max(const basic_simd<_Tp, _Abi>& __x) noexcept
     {
       return reduce(__x, []<totally_ordered _UV>(const _UV& __a, const _UV& __b) {
-               return simd_select(__a < __b, __b, __a);
+               return select(__a < __b, __b, __a);
              });
     }
 
@@ -158,9 +158,9 @@ namespace std
     reduce_max(const basic_simd<_Tp, _Abi>& __x,
                const typename basic_simd<_Tp, _Abi>::mask_type& __k) noexcept
     {
-      return reduce(simd_select(__k, __x, std::__finite_min_v<_Tp>),
+      return reduce(select(__k, __x, std::__finite_min_v<_Tp>),
                     []<totally_ordered _UV>(const _UV& __a, const _UV& __b) {
-                      return simd_select(__a < __b, __b, __a);
+                      return select(__a < __b, __b, __a);
                     });
     }
 }

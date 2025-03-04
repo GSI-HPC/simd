@@ -10,7 +10,7 @@
 #include "simd.h"
 #include "iota.h"
 
-namespace std
+namespace std::datapar
 {
   template <size_t _Offset, typename _Tp>
     constexpr const _Tp&

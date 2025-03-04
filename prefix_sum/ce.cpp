@@ -8,35 +8,36 @@
 #include <numeric>
 #include <bit>
 
-namespace std
+namespace std::__detail
 {
-  namespace __detail
+  template <unsigned __n>
+    requires(std::has_single_bit(__n))
+    struct __prefix_sum_permutation
+    {
+      constexpr unsigned
+      operator()(unsigned __i) const
+      { return __i & __n ? (__i ^ __n) | (__n - 1) : __i; }
+    };
+
+  constexpr void
+  __for_template(auto __begin, auto __end, auto&& __f)
   {
-    template <unsigned __n>
-      requires(std::has_single_bit(__n))
-      struct __prefix_sum_permutation
-      {
-        constexpr unsigned
-        operator()(unsigned __i) const
-        { return __i & __n ? (__i ^ __n) | (__n - 1) : __i; }
-      };
-
-    constexpr void
-    __for_template(auto __begin, auto __end, auto&& __f)
-    {
-      [&]<int... _Is>(std::integer_sequence<int, _Is...>) {
-        (__f(simd::__detail::__ic<__begin + _Is>), ...);
-      }(std::make_integer_sequence<int, __end - __begin>());
-    }
-
-    constexpr void
-    __for_template(auto __end, auto&& __f)
-    {
-      [&]<int... _Is>(std::integer_sequence<int, _Is...>) {
-        (__f(simd::__detail::__ic<_Is>), ...);
-      }(std::make_integer_sequence<int, __end>());
-    }
+    [&]<int... _Is>(std::integer_sequence<int, _Is...>) {
+      (__f(__ic<__begin + _Is>), ...);
+    }(std::make_integer_sequence<int, __end - __begin>());
   }
+
+  constexpr void
+  __for_template(auto __end, auto&& __f)
+  {
+    [&]<int... _Is>(std::integer_sequence<int, _Is...>) {
+      (__f(__ic<_Is>), ...);
+    }(std::make_integer_sequence<int, __end>());
+  }
+}
+
+namespace std::datapar
+{
 
   template <typename _Tp, typename _Abi>
     constexpr basic_simd<_Tp, _Abi>
@@ -45,11 +46,11 @@ namespace std
       using _V = basic_simd<_Tp, _Abi>;
       using _M = typename _V::mask_type;
       using _Ip = __detail::__make_signed_int_t<_Tp>;
-      using _IV = rebind_simd_t<_Ip, _V>;
+      using _IV = rebind_t<_Ip, _V>;
       __detail::__for_template(
         __detail::__ic<std::bit_width(__v.size()) - 1>, [&](auto __i) {
           constexpr int __n = 1 << __i;
-          const _M __k = std::bit_cast<_M>((simd_iota<_IV> & _IV(__n)) != 0);
+          const _M __k = std::bit_cast<_M>((iota<_IV> & _IV(__n)) != 0);
           const _V __permuted = permute(__v, __detail::__prefix_sum_permutation<__n>{});
           __v = __k ? __binary_op(__v, __permuted) : __v;
         });
@@ -68,12 +69,12 @@ namespace std
       using _V = basic_simd<_Tp, _Abi>;
       using _M = typename _V::mask_type;
       using _Ip = __detail::__make_signed_int_t<_Tp>;
-      using _IV = rebind_simd_t<_Ip, _V>;
+      using _IV = rebind_t<_Ip, _V>;
       _V __factor = __a;
       __detail::__for_template(
         __detail::__ic<std::bit_width(__v.size()) - 1>, [&](auto __i) {
           constexpr int __n = 1 << __i;
-          const _M __k = std::bit_cast<_M>((simd_iota<_IV> & _IV(__n)) != 0);
+          const _M __k = std::bit_cast<_M>((iota<_IV> & _IV(__n)) != 0);
           const _V __permuted = permute(__v, __detail::__prefix_sum_permutation<__n>{});
           __v = __k ? __binary_op(__v, __factor * __permuted) : __v;
           __factor = __k ? __a * __factor : __factor;
@@ -89,7 +90,7 @@ namespace std
 
 } // namespace std
 
-namespace simd = std;
+namespace simd = std::datapar;
 
 auto f(float last, std::span<float> data)
 {
@@ -100,7 +101,7 @@ auto f(float last, std::span<float> data)
   for (std::size_t i = 0; i < 1024; i += V::size)
     {
       __asm volatile("# LLVM-MCA-BEGIN simd":::"memory");
-      auto x = simd::simd_unchecked_load<V>(data.begin() + i, data.end());
+      auto x = simd::unchecked_load<V>(data.begin() + i, data.end());
       V y = aa * last + scaled_inclusive_scan(b * x, a);
       last = y[V::size - 1];
       store(y, data.begin() + i, data.end());

@@ -37,16 +37,16 @@ auto f5(std::simd<int> x)
 #else
 auto f0(std::simd<int> x)
 {
-  return simd_select(x > 0 , 2 * x , x);
+  return select(x > 0 , 2 * x , x);
 }
 
 auto f1(std::simd<int> x)
 {
-  return std::simd_select(x > 0 , 1 , 0.f);
+  return std::datapar::select(x > 0 , 1 , 0.f);
 }
 auto f1(int x)
 {
-  return std::simd_select(x > 0 , ++x , 0.f);
+  return std::datapar::select(x > 0 , ++x , 0.f);
 }
 auto f1x(int x)
 {
@@ -59,7 +59,7 @@ int count_positive(const std::vector<std::simd<float>>& x)
   if (x.size() == 0)
     std::unreachable();
   using floatv = std::simd<float>;
-  using intv = std::rebind_simd_t<int, floatv>;
+  using intv = std::rebind_t<int, floatv>;
   intv counter = {};
   for (std::simd v : x)
     counter += v > 0;
@@ -71,7 +71,7 @@ int count_positive_where(const std::vector<std::experimental::native_simd<float>
   if (x.size() == 0)
     std::unreachable();
   using floatv = std::experimental::native_simd<float>;
-  using intv = std::experimental::rebind_simd_t<int, floatv>;
+  using intv = std::experimental::rebind_t<int, floatv>;
   intv counter = {};
   for (std::experimental::simd v : x)
     ++where(std::experimental::__proposed::static_simd_cast<intv::mask_type>(v > 0), counter);

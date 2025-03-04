@@ -152,12 +152,12 @@ template <typename V>
         V b = 2_cw;
         V ref([&](int i) { return a[i] / 2; });
         t.verify_equal_to_ulp(a / b, ref, 1);
-        a = simd_select(a == 0_cw, T(1), a);
+        a = select(a == 0_cw, T(1), a);
         // -freciprocal-math together with flush-to-zero makes
         // the following range restriction necessary (i.e.
         // 1/|a| must be >= min). Intel vrcpps and vrcp14ps
         // need some extra slack (use 1.1 instead of 1).
-        a = simd_select(fabs(a) >= T(1.1) / norm_min, T(1), a);
+        a = select(fabs(a) >= T(1.1) / norm_min, T(1), a);
         t.verify_equal_to_ulp(a / a, V(1), 1)("\na = ", a);
         ref = V([&](int i) { return 2 / a[i]; });
         t.verify_equal_to_ulp(b / a, ref, 1)("\na = ", a);

@@ -11,7 +11,7 @@
 #include "simd_reductions.h"
 #include "x86_detail.h"
 
-namespace std
+namespace std::datapar
 {
   template <size_t _Bs, typename _Abi>
     _GLIBCXX_SIMD_ALWAYS_INLINE constexpr bool

@@ -13,89 +13,89 @@
 #include <bits/iterator_concepts.h>
 #include <bits/ranges_base.h>
 
-namespace std
+namespace std::__detail
 {
-  namespace __detail
-  {
-    template <typename _Vp, typename _Tp>
-      struct __simd_load_return;
+  template <typename _Vp, typename _Tp>
+    struct __simd_load_return;
 
-    template <typename _Tp>
-      struct __simd_load_return<void, _Tp>
-      { using type = basic_simd<_Tp>; };
+  template <typename _Tp>
+    struct __simd_load_return<void, _Tp>
+    { using type = std::datapar::basic_simd<_Tp>; };
 
-    template <typename _Up, typename _Abi, typename _Tp>
-      struct __simd_load_return<basic_simd<_Up, _Abi>, _Tp>
-      { using type = basic_simd<_Up, _Abi>; };
+  template <typename _Up, typename _Abi, typename _Tp>
+    struct __simd_load_return<std::datapar::basic_simd<_Up, _Abi>, _Tp>
+    { using type = std::datapar::basic_simd<_Up, _Abi>; };
 
-    template <typename _Vp, typename _Tp>
-      using __simd_load_return_t = typename __simd_load_return<_Vp, _Tp>::type;
+  template <typename _Vp, typename _Tp>
+    using __simd_load_return_t = typename __simd_load_return<_Vp, _Tp>::type;
 
-    template <typename _Tp>
-      concept __sized_contiguous_range
-        = ranges::contiguous_range<_Tp> and ranges::sized_range<_Tp>;
+  template <typename _Tp>
+    concept __sized_contiguous_range
+      = ranges::contiguous_range<_Tp> and ranges::sized_range<_Tp>;
 
-    template <typename _Vp, typename _Tp>
-      using __load_mask_type_t = typename __simd_load_return_t<_Vp, _Tp>::mask_type;
-  }
+  template <typename _Vp, typename _Tp>
+    using __load_mask_type_t = typename __simd_load_return_t<_Vp, _Tp>::mask_type;
+}
 
+namespace std::datapar
+{
   template <class _Vp = void, ranges::range _Rg, typename... _Flags>
     requires (not __detail::__sized_contiguous_range<_Rg>)
     constexpr void
-    simd_unchecked_load(_Rg&&, simd_flags<_Flags...> = {})
+    unchecked_load(_Rg&&, flags<_Flags...> = {})
       = _GLIBCXX_DELETE_MSG(
-          "std::simd_unchecked_load(range, flags = {}) requires a contiguous and sized range.");
+          "unchecked_load(range, flags = {}) requires a contiguous and sized range.");
 
   template <class _Vp = void, input_or_output_iterator _It, typename... _Flags>
     requires (not contiguous_iterator<_It>)
     constexpr void
-    simd_unchecked_load(_It, iter_difference_t<_It>, simd_flags<_Flags...> = {})
+    unchecked_load(_It, iter_difference_t<_It>, flags<_Flags...> = {})
       = _GLIBCXX_DELETE_MSG(
-          "std::simd_unchecked_load(first, size, flags = {}) requires a contiguous iterator.");
+          "unchecked_load(first, size, flags = {}) requires a contiguous iterator.");
 
   template <class _Vp = void, input_or_output_iterator _It, sentinel_for<_It> _Sp,
             typename... _Flags>
     requires (not contiguous_iterator<_It> or not sized_sentinel_for<_It, _Sp>)
     constexpr void
-    simd_unchecked_load(_It, _Sp, simd_flags<_Flags...> = {})
+    unchecked_load(_It, _Sp, flags<_Flags...> = {})
       = _GLIBCXX_DELETE_MSG(
-          "std::simd_unchecked_load(first, last, flags = {}) requires a contiguous iterator and a"
+          "unchecked_load(first, last, flags = {}) requires a contiguous iterator and a"
           " sized sentinel.");
 
   template <class _Vp = void, ranges::range _Rg, typename... _Flags>
     requires (not __detail::__sized_contiguous_range<_Rg>)
     constexpr void
-    simd_partial_load(_Rg&&, simd_flags<_Flags...> = {})
+    partial_load(_Rg&&, flags<_Flags...> = {})
       = _GLIBCXX_DELETE_MSG(
-          "std::simd_partial_load(range, flags = {}) requires a contiguous and sized range.");
+          "partial_load(range, flags = {}) requires a contiguous and sized range.");
 
   template <class _Vp = void, input_or_output_iterator _It, typename... _Flags>
     requires (not contiguous_iterator<_It>)
     constexpr void
-    simd_partial_load(_It, iter_difference_t<_It>, simd_flags<_Flags...> = {})
+    partial_load(_It, iter_difference_t<_It>, flags<_Flags...> = {})
       = _GLIBCXX_DELETE_MSG(
-          "std::simd_partial_load(first, size, flags = {}) requires a contiguous iterator.");
+          "partial_load(first, size, flags = {}) requires a contiguous iterator.");
 
   template <class _Vp = void, input_or_output_iterator _It, sentinel_for<_It> _Sp,
             typename... _Flags>
     requires (not contiguous_iterator<_It> or not sized_sentinel_for<_It, _Sp>)
     constexpr void
-    simd_partial_load(_It, _Sp, simd_flags<_Flags...> = {})
+    partial_load(_It, _Sp, flags<_Flags...> = {})
       = _GLIBCXX_DELETE_MSG(
-          "std::simd_partial_load(first, last, flags = {}) requires a contiguous iterator and a"
+          "partial_load(first, last, flags = {}) requires a contiguous iterator and a"
           " sized sentinel.");
 
   template <class _Vp = void, __detail::__sized_contiguous_range _Rg, typename... _Flags>
     _GLIBCXX_SIMD_ALWAYS_INLINE
     constexpr __detail::__simd_load_return_t<_Vp, ranges::range_value_t<_Rg>>
-    simd_unchecked_load(_Rg&& __r, simd_flags<_Flags...> __f = {})
+    unchecked_load(_Rg&& __r, flags<_Flags...> __f = {})
     {
       using _RV = __detail::__simd_load_return_t<_Vp, ranges::range_value_t<_Rg>>;
       using _Rp = typename _RV::value_type;
       static_assert(__detail::__loadstore_convertible_to<
                       ranges::range_value_t<_Rg>, _Rp, _Flags...>,
                     "The converting load is not value-preserving. "
-                    "Pass 'std::simd_flag_convert' if lossy conversion matches the intent.");
+                    "Pass 'flag_convert' if lossy conversion matches the intent.");
 
       constexpr bool __throw_on_out_of_bounds = (is_same_v<_Flags, __detail::_Throw> or ...);
       constexpr bool __allow_out_of_bounds
@@ -112,12 +112,12 @@ namespace std
       if constexpr (not __allow_out_of_bounds)
         __glibcxx_simd_precondition(
           std::ranges::size(__r) >= _RV::size(),
-          "Input range is too small. Did you mean to use 'std::simd_partial_load'?");
+          "Input range is too small. Did you mean to use 'partial_load'?");
 
       if constexpr (__throw_on_out_of_bounds)
         {
           if (__rg_size < _RV::size())
-            throw std::out_of_range("std::simd_unchecked_load: Input range is too small.");
+            throw std::out_of_range("unchecked_load: Input range is too small.");
         }
 
       if consteval
@@ -140,107 +140,107 @@ namespace std
   template <class _Vp = void, contiguous_iterator _It, typename... _Flags>
     _GLIBCXX_SIMD_ALWAYS_INLINE
     constexpr __detail::__simd_load_return_t<_Vp, iter_value_t<_It>>
-    simd_unchecked_load(_It __first, iter_difference_t<_It> __n, simd_flags<_Flags...> __f = {})
-    { return simd_unchecked_load<_Vp>(span<const iter_value_t<_It>>(__first, __n), __f); }
+    unchecked_load(_It __first, iter_difference_t<_It> __n, flags<_Flags...> __f = {})
+    { return unchecked_load<_Vp>(span<const iter_value_t<_It>>(__first, __n), __f); }
 
   template <class _Vp = void, contiguous_iterator _It, sized_sentinel_for<_It> _Sp,
             typename... _Flags>
     _GLIBCXX_SIMD_ALWAYS_INLINE
     constexpr __detail::__simd_load_return_t<_Vp, iter_value_t<_It>>
-    simd_unchecked_load(_It __first, _Sp __last, simd_flags<_Flags...> __f = {})
-    { return simd_unchecked_load<_Vp>(span<const iter_value_t<_It>>(__first, __last), __f); }
+    unchecked_load(_It __first, _Sp __last, flags<_Flags...> __f = {})
+    { return unchecked_load<_Vp>(span<const iter_value_t<_It>>(__first, __last), __f); }
 
   template <class _Vp = void, __detail::__sized_contiguous_range _Rg, typename... _Flags>
     _GLIBCXX_SIMD_ALWAYS_INLINE
     constexpr __detail::__simd_load_return_t<_Vp, ranges::range_value_t<_Rg>>
-    simd_partial_load(_Rg&& __r, simd_flags<_Flags...> __f = {})
-    { return simd_unchecked_load<_Vp>(__r, __f | __allow_partial_loadstore); }
+    partial_load(_Rg&& __r, flags<_Flags...> __f = {})
+    { return unchecked_load<_Vp>(__r, __f | __allow_partial_loadstore); }
 
   template <class _Vp = void, contiguous_iterator _It, typename... _Flags>
     _GLIBCXX_SIMD_ALWAYS_INLINE
     constexpr __detail::__simd_load_return_t<_Vp, iter_value_t<_It>>
-    simd_partial_load(_It __first, iter_difference_t<_It> __n, simd_flags<_Flags...> __f = {})
-    { return simd_partial_load<_Vp>(span<const iter_value_t<_It>>(__first, __n), __f); }
+    partial_load(_It __first, iter_difference_t<_It> __n, flags<_Flags...> __f = {})
+    { return partial_load<_Vp>(span<const iter_value_t<_It>>(__first, __n), __f); }
 
   template <class _Vp = void, contiguous_iterator _It, sized_sentinel_for<_It> _Sp,
             typename... _Flags>
     _GLIBCXX_SIMD_ALWAYS_INLINE
     constexpr __detail::__simd_load_return_t<_Vp, iter_value_t<_It>>
-    simd_partial_load(_It __first, _Sp __last, simd_flags<_Flags...> __f = {})
-    { return simd_partial_load<_Vp>(span<const iter_value_t<_It>>(__first, __last), __f); }
+    partial_load(_It __first, _Sp __last, flags<_Flags...> __f = {})
+    { return partial_load<_Vp>(span<const iter_value_t<_It>>(__first, __last), __f); }
 
   // masked loads
   template <class _Vp = void, ranges::range _Rg, typename... _Flags>
     requires (not __detail::__sized_contiguous_range<_Rg>)
     constexpr void
-    simd_unchecked_load(_Rg&&,
+    unchecked_load(_Rg&&,
                         const __detail::__load_mask_type_t<_Vp, ranges::range_value_t<_Rg>>& __k,
-                        simd_flags<_Flags...> = {})
+                        flags<_Flags...> = {})
       = _GLIBCXX_DELETE_MSG(
-          "std::simd_unchecked_load(range, flags = {}) requires a contiguous and sized range.");
+          "unchecked_load(range, flags = {}) requires a contiguous and sized range.");
 
   template <class _Vp = void, input_or_output_iterator _It, typename... _Flags>
     requires (not contiguous_iterator<_It>)
     constexpr void
-    simd_unchecked_load(_It, iter_difference_t<_It>,
+    unchecked_load(_It, iter_difference_t<_It>,
                         const __detail::__load_mask_type_t<_Vp, iter_value_t<_It>>& __k,
-                        simd_flags<_Flags...> = {})
+                        flags<_Flags...> = {})
       = _GLIBCXX_DELETE_MSG(
-          "std::simd_unchecked_load(first, size, flags = {}) requires a contiguous iterator.");
+          "unchecked_load(first, size, flags = {}) requires a contiguous iterator.");
 
   template <class _Vp = void, input_or_output_iterator _It, sentinel_for<_It> _Sp,
             typename... _Flags>
     requires (not contiguous_iterator<_It> or not sized_sentinel_for<_It, _Sp>)
     constexpr void
-    simd_unchecked_load(_It, _Sp,
+    unchecked_load(_It, _Sp,
                         const __detail::__load_mask_type_t<_Vp, iter_value_t<_It>>& __k,
-                        simd_flags<_Flags...> = {})
+                        flags<_Flags...> = {})
       = _GLIBCXX_DELETE_MSG(
-          "std::simd_unchecked_load(first, last, flags = {}) requires a contiguous iterator and a"
+          "unchecked_load(first, last, flags = {}) requires a contiguous iterator and a"
           " sized sentinel.");
 
   template <class _Vp = void, ranges::range _Rg, typename... _Flags>
     requires (not __detail::__sized_contiguous_range<_Rg>)
     constexpr void
-    simd_partial_load(_Rg&&,
+    partial_load(_Rg&&,
                       const __detail::__load_mask_type_t<_Vp, ranges::range_value_t<_Rg>>& __k,
-                      simd_flags<_Flags...> = {})
+                      flags<_Flags...> = {})
       = _GLIBCXX_DELETE_MSG(
-          "std::simd_partial_load(range, flags = {}) requires a contiguous and sized range.");
+          "partial_load(range, flags = {}) requires a contiguous and sized range.");
 
   template <class _Vp = void, input_or_output_iterator _It, typename... _Flags>
     requires (not contiguous_iterator<_It>)
     constexpr void
-    simd_partial_load(_It, iter_difference_t<_It>,
+    partial_load(_It, iter_difference_t<_It>,
                       const __detail::__load_mask_type_t<_Vp, iter_value_t<_It>>& __k,
-                      simd_flags<_Flags...> = {})
+                      flags<_Flags...> = {})
       = _GLIBCXX_DELETE_MSG(
-          "std::simd_partial_load(first, size, flags = {}) requires a contiguous iterator.");
+          "partial_load(first, size, flags = {}) requires a contiguous iterator.");
 
   template <class _Vp = void, input_or_output_iterator _It, sentinel_for<_It> _Sp,
             typename... _Flags>
     requires (not contiguous_iterator<_It> or not sized_sentinel_for<_It, _Sp>)
     constexpr void
-    simd_partial_load(_It, _Sp,
+    partial_load(_It, _Sp,
                       const __detail::__load_mask_type_t<_Vp, iter_value_t<_It>>& __k,
-                      simd_flags<_Flags...> = {})
+                      flags<_Flags...> = {})
       = _GLIBCXX_DELETE_MSG(
-          "std::simd_partial_load(first, last, flags = {}) requires a contiguous iterator and a"
+          "partial_load(first, last, flags = {}) requires a contiguous iterator and a"
           " sized sentinel.");
 
   template <class _Vp = void, __detail::__sized_contiguous_range _Rg, typename... _Flags>
     _GLIBCXX_SIMD_ALWAYS_INLINE
     constexpr __detail::__simd_load_return_t<_Vp, ranges::range_value_t<_Rg>>
-    simd_unchecked_load(_Rg&& __r,
+    unchecked_load(_Rg&& __r,
                         const __detail::__load_mask_type_t<_Vp, ranges::range_value_t<_Rg>>& __k,
-                        simd_flags<_Flags...> __f = {})
+                        flags<_Flags...> __f = {})
     {
       using _RV = __detail::__simd_load_return_t<_Vp, ranges::range_value_t<_Rg>>;
       using _Rp = typename _RV::value_type;
       static_assert(__detail::__loadstore_convertible_to<
                       ranges::range_value_t<_Rg>, _Rp, _Flags...>,
                     "The converting load is not value-preserving. "
-                    "Pass 'std::simd_flag_convert' if lossy conversion matches the intent.");
+                    "Pass 'flag_convert' if lossy conversion matches the intent.");
 
       constexpr bool __throw_on_out_of_bounds = (is_same_v<_Flags, __detail::_Throw> or ...);
       constexpr bool __allow_out_of_bounds
@@ -256,13 +256,13 @@ namespace std
       if constexpr (not __allow_out_of_bounds)
         __glibcxx_simd_precondition(
           ranges::size(__r) >= _RV::size(),
-          "Input range is too small. Did you mean to use 'std::simd_partial_load'?");
+          "Input range is too small. Did you mean to use 'partial_load'?");
 
       const auto __rg_size = ranges::size(__r);
       if constexpr (__throw_on_out_of_bounds)
         {
           if (__rg_size < _RV::size())
-            throw out_of_range("std::simd_unchecked_load: Input range is too small.");
+            throw out_of_range("unchecked_load: Input range is too small.");
         }
 
       if (__builtin_is_constant_evaluated())
@@ -289,44 +289,44 @@ namespace std
   template <class _Vp = void, contiguous_iterator _It, typename... _Flags>
     _GLIBCXX_SIMD_ALWAYS_INLINE
     constexpr __detail::__simd_load_return_t<_Vp, iter_value_t<_It>>
-    simd_unchecked_load(_It __first, iter_difference_t<_It> __n,
+    unchecked_load(_It __first, iter_difference_t<_It> __n,
                         const __detail::__load_mask_type_t<_Vp, iter_value_t<_It>>& __k,
-                        simd_flags<_Flags...> __f = {})
-    { return simd_unchecked_load<_Vp>(span<const iter_value_t<_It>>(__first, __n), __k, __f); }
+                        flags<_Flags...> __f = {})
+    { return unchecked_load<_Vp>(span<const iter_value_t<_It>>(__first, __n), __k, __f); }
 
   template <class _Vp = void, contiguous_iterator _It, sized_sentinel_for<_It> _Sp,
             typename... _Flags>
     _GLIBCXX_SIMD_ALWAYS_INLINE
     constexpr __detail::__simd_load_return_t<_Vp, iter_value_t<_It>>
-    simd_unchecked_load(_It __first, _Sp __last,
+    unchecked_load(_It __first, _Sp __last,
                         const __detail::__load_mask_type_t<_Vp, iter_value_t<_It>>& __k,
-                        simd_flags<_Flags...> __f = {})
-    { return simd_unchecked_load<_Vp>(span<const iter_value_t<_It>>(__first, __last), __k, __f); }
+                        flags<_Flags...> __f = {})
+    { return unchecked_load<_Vp>(span<const iter_value_t<_It>>(__first, __last), __k, __f); }
 
   template <class _Vp = void, __detail::__sized_contiguous_range _Rg, typename... _Flags>
     _GLIBCXX_SIMD_ALWAYS_INLINE
     constexpr __detail::__simd_load_return_t<_Vp, ranges::range_value_t<_Rg>>
-    simd_partial_load(_Rg&& __r,
+    partial_load(_Rg&& __r,
                       const __detail::__load_mask_type_t<_Vp, ranges::range_value_t<_Rg>>& __k,
-                      simd_flags<_Flags...> __f = {})
-    { return simd_unchecked_load<_Vp>(__r, __k, __f | __allow_partial_loadstore); }
+                      flags<_Flags...> __f = {})
+    { return unchecked_load<_Vp>(__r, __k, __f | __allow_partial_loadstore); }
 
   template <class _Vp = void, contiguous_iterator _It, typename... _Flags>
     _GLIBCXX_SIMD_ALWAYS_INLINE
     constexpr __detail::__simd_load_return_t<_Vp, iter_value_t<_It>>
-    simd_partial_load(_It __first, iter_difference_t<_It> __n,
+    partial_load(_It __first, iter_difference_t<_It> __n,
                       const __detail::__load_mask_type_t<_Vp, iter_value_t<_It>>& __k,
-                      simd_flags<_Flags...> __f = {})
-    { return simd_partial_load<_Vp>(span<const iter_value_t<_It>>(__first, __n), __k, __f); }
+                      flags<_Flags...> __f = {})
+    { return partial_load<_Vp>(span<const iter_value_t<_It>>(__first, __n), __k, __f); }
 
   template <class _Vp = void, contiguous_iterator _It, sized_sentinel_for<_It> _Sp,
             typename... _Flags>
     _GLIBCXX_SIMD_ALWAYS_INLINE
     constexpr __detail::__simd_load_return_t<_Vp, iter_value_t<_It>>
-    simd_partial_load(_It __first, _Sp __last,
+    partial_load(_It __first, _Sp __last,
                       const __detail::__load_mask_type_t<_Vp, iter_value_t<_It>>& __k,
-                      simd_flags<_Flags...> __f = {})
-    { return simd_partial_load<_Vp>(span<const iter_value_t<_It>>(__first, __last), __k, __f); }
+                      flags<_Flags...> __f = {})
+    { return partial_load<_Vp>(span<const iter_value_t<_It>>(__first, __last), __k, __f); }
 
   // stores ///////////////////////////////////////////////////////////////////////////////////////
 
@@ -334,15 +334,15 @@ namespace std
     requires indirectly_writable<ranges::iterator_t<_Rg>, _Tp>
     _GLIBCXX_SIMD_ALWAYS_INLINE
     constexpr void
-    simd_unchecked_store(const basic_simd<_Tp, _Abi>& __v, _Rg&& __r,
-                         simd_flags<_Flags...> __f = {})
+    unchecked_store(const basic_simd<_Tp, _Abi>& __v, _Rg&& __r,
+                         flags<_Flags...> __f = {})
     {
       using _TV = basic_simd<_Tp, _Abi>;
       static_assert(destructible<_TV>);
       static_assert(__detail::__loadstore_convertible_to<
                       _Tp, ranges::range_value_t<_Rg>, _Flags...>,
                     "The converting store is not value-preserving. "
-                    "Pass 'std::simd_flag_convert' if lossy conversion matches the intent.");
+                    "Pass 'flag_convert' if lossy conversion matches the intent.");
 
       constexpr bool __throw_on_out_of_bounds = (is_same_v<_Flags, __detail::_Throw> or ...);
       constexpr bool __allow_out_of_bounds
@@ -359,12 +359,12 @@ namespace std
       if constexpr (not __allow_out_of_bounds)
         __glibcxx_simd_precondition(
           ranges::size(__r) >= _TV::size(),
-          "output range is too small. Did you mean to use 'std::simd_partial_store'?");
+          "output range is too small. Did you mean to use 'partial_store'?");
 
       if constexpr (__throw_on_out_of_bounds)
         {
           if (__rg_size < _TV::size())
-            throw std::out_of_range("std::simd_unchecked_store: Output range is too small.");
+            throw std::out_of_range("unchecked_store: Output range is too small.");
         }
 
       if (__builtin_is_constant_evaluated())
@@ -397,40 +397,40 @@ namespace std
     requires indirectly_writable<_It, _Tp>
     _GLIBCXX_SIMD_ALWAYS_INLINE
     constexpr void
-    simd_unchecked_store(const basic_simd<_Tp, _Abi>& __v, _It __first, iter_difference_t<_It> __n,
-                         simd_flags<_Flags...> __f = {})
-    { simd_unchecked_store(__v, std::span<iter_value_t<_It>>(__first, __n), __f); }
+    unchecked_store(const basic_simd<_Tp, _Abi>& __v, _It __first, iter_difference_t<_It> __n,
+                         flags<_Flags...> __f = {})
+    { unchecked_store(__v, std::span<iter_value_t<_It>>(__first, __n), __f); }
 
   template <typename _Tp, typename _Abi, contiguous_iterator _It, sized_sentinel_for<_It> _Sp,
             typename... _Flags>
     requires indirectly_writable<_It, _Tp>
     constexpr void
-    simd_unchecked_store(const basic_simd<_Tp, _Abi>& __v, _It __first, _Sp __last,
-                         simd_flags<_Flags...> __f = {})
-    { simd_unchecked_store(__v, std::span<iter_value_t<_It>>(__first, __last), __f); }
+    unchecked_store(const basic_simd<_Tp, _Abi>& __v, _It __first, _Sp __last,
+                         flags<_Flags...> __f = {})
+    { unchecked_store(__v, std::span<iter_value_t<_It>>(__first, __last), __f); }
 
   template <typename _Tp, typename _Abi, __detail::__sized_contiguous_range _Rg, typename... _Flags>
     requires indirectly_writable<ranges::iterator_t<_Rg>, _Tp>
     _GLIBCXX_SIMD_ALWAYS_INLINE
     constexpr void
-    simd_partial_store(const basic_simd<_Tp, _Abi>& __v, _Rg&& __r, simd_flags<_Flags...> __f = {})
-    { simd_unchecked_store(__v, __r, __f | __allow_partial_loadstore); }
+    partial_store(const basic_simd<_Tp, _Abi>& __v, _Rg&& __r, flags<_Flags...> __f = {})
+    { unchecked_store(__v, __r, __f | __allow_partial_loadstore); }
 
   template <typename _Tp, typename _Abi, contiguous_iterator _It, typename... _Flags>
     requires indirectly_writable<_It, _Tp>
     _GLIBCXX_SIMD_ALWAYS_INLINE
     constexpr void
-    simd_partial_store(const basic_simd<_Tp, _Abi>& __v, _It __first, iter_difference_t<_It> __n,
-                       simd_flags<_Flags...> __f = {})
-    { simd_partial_store(__v, std::span<iter_value_t<_It>>(__first, __n), __f); }
+    partial_store(const basic_simd<_Tp, _Abi>& __v, _It __first, iter_difference_t<_It> __n,
+                       flags<_Flags...> __f = {})
+    { partial_store(__v, std::span<iter_value_t<_It>>(__first, __n), __f); }
 
   template <typename _Tp, typename _Abi, contiguous_iterator _It, sized_sentinel_for<_It> _Sp,
             typename... _Flags>
     requires indirectly_writable<_It, _Tp>
     constexpr void
-    simd_partial_store(const basic_simd<_Tp, _Abi>& __v, _It __first, _Sp __last,
-                       simd_flags<_Flags...> __f = {})
-    { simd_partial_store(__v, std::span<iter_value_t<_It>>(__first, __last), __f); }
+    partial_store(const basic_simd<_Tp, _Abi>& __v, _It __first, _Sp __last,
+                       flags<_Flags...> __f = {})
+    { partial_store(__v, std::span<iter_value_t<_It>>(__first, __last), __f); }
 
   // masked stores ////////////////////////////////////////////////////////////////////////////////
 
@@ -438,15 +438,15 @@ namespace std
     requires indirectly_writable<ranges::iterator_t<_Rg>, _Tp>
     _GLIBCXX_SIMD_ALWAYS_INLINE
     constexpr void
-    simd_unchecked_store(const basic_simd<_Tp, _Abi>& __v, _Rg&& __r,
+    unchecked_store(const basic_simd<_Tp, _Abi>& __v, _Rg&& __r,
                          const typename basic_simd<_Tp, _Abi>::mask_type& __k,
-                         simd_flags<_Flags...> __f = {})
+                         flags<_Flags...> __f = {})
     {
       using _TV = basic_simd<_Tp, _Abi>;
       static_assert(__detail::__loadstore_convertible_to<
                       _Tp, ranges::range_value_t<_Rg>, _Flags...>,
                     "The converting store is not value-preserving. "
-                    "Pass 'std::simd_flag_convert' if lossy conversion matches the intent.");
+                    "Pass 'flag_convert' if lossy conversion matches the intent.");
 
       constexpr bool __throw_on_out_of_bounds = (is_same_v<_Flags, __detail::_Throw> or ...);
       constexpr bool __allow_out_of_bounds
@@ -461,13 +461,13 @@ namespace std
       if constexpr (not __allow_out_of_bounds)
         __glibcxx_simd_precondition(
           ranges::size(__r) >= _TV::size(),
-          "output range is too small. Did you mean to use 'std::simd_partial_store'?");
+          "output range is too small. Did you mean to use 'partial_store'?");
 
       const auto __rg_size = ranges::size(__r);
       if constexpr (__throw_on_out_of_bounds)
         {
           if (__rg_size < _TV::size())
-            throw out_of_range("std::simd_unchecked_store: Output range is too small.");
+            throw out_of_range("unchecked_store: Output range is too small.");
         }
 
       if (__builtin_is_constant_evaluated())
@@ -493,48 +493,48 @@ namespace std
     requires indirectly_writable<_It, _Tp>
     _GLIBCXX_SIMD_ALWAYS_INLINE
     constexpr void
-    simd_unchecked_store(const basic_simd<_Tp, _Abi>& __v, _It __first, iter_difference_t<_It> __n,
+    unchecked_store(const basic_simd<_Tp, _Abi>& __v, _It __first, iter_difference_t<_It> __n,
                          const typename basic_simd<_Tp, _Abi>::mask_type& __k,
-                         simd_flags<_Flags...> __f = {})
-    { simd_unchecked_store(__v, span(__first, __n), __k, __f); }
+                         flags<_Flags...> __f = {})
+    { unchecked_store(__v, span(__first, __n), __k, __f); }
 
   template <typename _Tp, typename _Abi, contiguous_iterator _It, sized_sentinel_for<_It> _Sp,
             typename... _Flags>
     requires indirectly_writable<_It, _Tp>
     _GLIBCXX_SIMD_ALWAYS_INLINE
     constexpr void
-    simd_unchecked_store(const basic_simd<_Tp, _Abi>& __v, _It __first, _Sp __last,
+    unchecked_store(const basic_simd<_Tp, _Abi>& __v, _It __first, _Sp __last,
                          const typename basic_simd<_Tp, _Abi>::mask_type& __k,
-                         simd_flags<_Flags...> __f = {})
-    { simd_unchecked_store(__v, span(__first, __last), __k, __f); }
+                         flags<_Flags...> __f = {})
+    { unchecked_store(__v, span(__first, __last), __k, __f); }
 
 
   template <typename _Tp, typename _Abi, __detail::__sized_contiguous_range _Rg, typename... _Flags>
     requires indirectly_writable<ranges::iterator_t<_Rg>, _Tp>
     _GLIBCXX_SIMD_ALWAYS_INLINE
     constexpr void
-    simd_partial_store(const basic_simd<_Tp, _Abi>& __v, _Rg&& __r,
+    partial_store(const basic_simd<_Tp, _Abi>& __v, _Rg&& __r,
                          const typename basic_simd<_Tp, _Abi>::mask_type& __k,
-                         simd_flags<_Flags...> __f = {})
-    { return simd_unchecked_store(__v, __r, __k, __f | __allow_partial_loadstore); }
+                         flags<_Flags...> __f = {})
+    { return unchecked_store(__v, __r, __k, __f | __allow_partial_loadstore); }
 
   template <typename _Tp, typename _Abi, contiguous_iterator _It, typename... _Flags>
     requires indirectly_writable<_It, _Tp>
     _GLIBCXX_SIMD_ALWAYS_INLINE
     constexpr void
-    simd_partial_store(const basic_simd<_Tp, _Abi>& __v, _It __first, iter_difference_t<_It> __n,
+    partial_store(const basic_simd<_Tp, _Abi>& __v, _It __first, iter_difference_t<_It> __n,
                          const typename basic_simd<_Tp, _Abi>::mask_type& __k,
-                       simd_flags<_Flags...> __f = {})
-    { simd_partial_store(__v, span(__first, __n), __k, __f); }
+                       flags<_Flags...> __f = {})
+    { partial_store(__v, span(__first, __n), __k, __f); }
 
   template <typename _Tp, typename _Abi, contiguous_iterator _It, sized_sentinel_for<_It> _Sp,
             typename... _Flags>
     requires indirectly_writable<_It, _Tp>
     _GLIBCXX_SIMD_ALWAYS_INLINE
     constexpr void
-    simd_partial_store(const basic_simd<_Tp, _Abi>& __v, _It __first, _Sp __last,
+    partial_store(const basic_simd<_Tp, _Abi>& __v, _It __first, _Sp __last,
                          const typename basic_simd<_Tp, _Abi>::mask_type& __k,
-                       simd_flags<_Flags...> __f = {})
-    { simd_partial_store(__v, span(__first, __last), __k, __f); }
+                       flags<_Flags...> __f = {})
+    { partial_store(__v, span(__first, __last), __k, __f); }
 }
 #endif  // SIMD_LOADSTORE_H_

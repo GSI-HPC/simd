@@ -14,27 +14,27 @@
 #include <concepts>
 #include <climits>
 
-namespace std
+namespace std::__detail
 {
-  namespace __detail
-  {
-    // Deducing the right ABI tag for basic_simd_mask -> basic_simd is tricky for the AVX w/o AVX2
-    // case, where basic_simd<T, Abi> might be unusable and we therefore need to deduce another ABI
-    // tag.
-    template <size_t _Bytes, typename _Abi>
-      struct __simd_abi_for_mask
-      { using type = __deduce_t<__mask_integer_from<_Bytes>, _Abi::_S_size>; };
+  // Deducing the right ABI tag for basic_simd_mask -> basic_simd is tricky for the AVX w/o AVX2
+  // case, where basic_simd<T, Abi> might be unusable and we therefore need to deduce another ABI
+  // tag.
+  template <size_t _Bytes, typename _Abi>
+    struct __simd_abi_for_mask
+    { using type = __deduce_t<__mask_integer_from<_Bytes>, _Abi::_S_size>; };
 
-    template <size_t _Bytes, typename _Abi>
-      requires (std::destructible<std::basic_simd<__mask_integer_from<_Bytes>, _Abi>>
-                  or not __simd_abi_tag<_Abi>)
-      struct __simd_abi_for_mask<_Bytes, _Abi>
-      { using type = _Abi; };
+  template <size_t _Bytes, typename _Abi>
+    requires (std::destructible<std::datapar::basic_simd<__mask_integer_from<_Bytes>, _Abi>>
+                or not __simd_abi_tag<_Abi>)
+    struct __simd_abi_for_mask<_Bytes, _Abi>
+    { using type = _Abi; };
 
-    template <size_t _Bytes, typename _Abi>
-      using __simd_abi_for_mask_t = typename __simd_abi_for_mask<_Bytes, _Abi>::type;
-  }
+  template <size_t _Bytes, typename _Abi>
+    using __simd_abi_for_mask_t = typename __simd_abi_for_mask<_Bytes, _Abi>::type;
+}
 
+namespace std::datapar
+{
   // not supported:
   // - deleted: dctor, dtor, cctor, cassign
   // - no members except value_type and abi_type
@@ -65,7 +65,7 @@ namespace std
 
       using _MemberType = typename _Traits::_MaskMember;
 
-      using _SimdType = std::basic_simd<_Tp, __detail::__simd_abi_for_mask_t<_Bytes, _Abi>>;
+      using _SimdType = basic_simd<_Tp, __detail::__simd_abi_for_mask_t<_Bytes, _Abi>>;
 
     public:
       // the only non-static data member
@@ -84,8 +84,8 @@ namespace std
       static constexpr auto size = __detail::__ic<_Traits::_S_size>;
 
 #if SIMD_IS_A_RANGE
-      using iterator = __simd_iterator<basic_simd_mask>;
-      using const_iterator = __simd_iterator<const basic_simd_mask>;
+      using iterator = __iterator<basic_simd_mask>;
+      using const_iterator = __iterator<const basic_simd_mask>;
 
       static_assert(std::random_access_iterator<iterator>);
       static_assert(std::sentinel_for<std::default_sentinel_t, iterator>);
@@ -183,12 +183,12 @@ namespace std
 #if SIMD_HAS_SUBSCRIPT_GATHER
       template <std::integral _Up, typename _Ap>
         _GLIBCXX_SIMD_ALWAYS_INLINE constexpr
-        resize_simd_t<__simd_size_v<_Up, _Ap>, basic_simd_mask>
+        resize_t<__simd_size_v<_Up, _Ap>, basic_simd_mask>
         operator[](basic_simd<_Up, _Ap> const& __idx) const
         {
           __glibcxx_simd_precondition(is_unsigned_v<_Up> or all_of(__idx >= 0), "out-of-bounds");
           __glibcxx_simd_precondition(all_of(__idx < _Up(size)), "out-of-bounds");
-          using _Rp = resize_simd_t<__simd_size_v<_Up, _Ap>, basic_simd_mask>;
+          using _Rp = resize_t<__simd_size_v<_Up, _Ap>, basic_simd_mask>;
           return _Rp([&](int __i) {
                    return _Impl::_S_get(_M_data, __idx[__i]);
                  }));
@@ -374,7 +374,7 @@ namespace std
     };
 
   template <size_t _Bs, typename _Abi>
-    struct is_mask<basic_simd_mask<_Bs, _Abi>>
+    struct __is_mask<basic_simd_mask<_Bs, _Abi>>
     : is_default_constructible<basic_simd_mask<_Bs, _Abi>>
     {};
 }

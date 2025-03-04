@@ -98,11 +98,11 @@ template <typename V>
       std::tuple{test_iota<V, 0, 63>, T(64)},
       [](auto& t, V x, V y) {
         y -= x;
-        t.verify_equal(simd_select(M(true), x, y), x);
-        t.verify_equal(simd_select(M(false), x, y), y);
-        t.verify_equal(simd_select(M(true), y, x), y);
-        t.verify_equal(simd_select(M(false), y, x), x);
-        t.verify_equal(simd_select(M([](int i) { return 1 == (i & 1); }), x, T()),
+        t.verify_equal(select(M(true), x, y), x);
+        t.verify_equal(select(M(false), x, y), y);
+        t.verify_equal(select(M(true), y, x), y);
+        t.verify_equal(select(M(false), y, x), x);
+        t.verify_equal(select(M([](int i) { return 1 == (i & 1); }), x, T()),
                        V([](int i) { return (1 == (i & 1)) ? T(i & 63) : T(); }));
       }
     };

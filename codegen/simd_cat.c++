@@ -21,22 +21,22 @@ vmovlhps	xmm0, xmm0, xmm1
 */
 
 #include "../simd"
-namespace simd = std;
+namespace dp = std::datapar;
 
 void g(auto);
 
-void f0(simd::simd<int, 4> a, simd::simd<int, 4> b) {
-  g(simd_cat(a, b));
+void f0(dp::simd<int, 4> a, dp::simd<int, 4> b) {
+  g(dp::cat(a, b));
 }
 
-void f1(simd::simd<float, 4> a, simd::simd<float, 4> b) {
-  g(simd_cat(a, b));
+void f1(dp::simd<float, 4> a, dp::simd<float, 4> b) {
+  g(dp::cat(a, b));
 }
 
-void f2(simd::simd<float, 2> a, simd::simd<float, 2> b) {
-  g(simd_cat(a, b));
+void f2(dp::simd<float, 2> a, dp::simd<float, 2> b) {
+  g(dp::cat(a, b));
 }
 
-void f3(simd::simd<float, 3> a, simd::simd<float, 1> b) {
-  g(simd_cat(a, b));
+void f3(dp::simd<float, 3> a, dp::simd<float, 1> b) {
+  g(dp::cat(a, b));
 }

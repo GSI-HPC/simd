@@ -6,10 +6,10 @@
 
 template <std::__detail::__vectorizable T, typename U = T>
   requires std::__detail::__simd_type<std::simd<U>>
-  using V = std::rebind_simd_t<T, std::simd<U>>;
+  using V = std::rebind_t<T, std::simd<U>>;
 
 template <std::__detail::__vectorizable T>
-  using V4 = std::resize_simd_t<4, std::simd<T>>;
+  using V4 = std::resize_t<4, std::simd<T>>;
 
 template <auto X>
   inline constexpr std::integral_constant<std::remove_const_t<decltype(X)>, X> c {};
@@ -24,7 +24,7 @@ template <typename Op1, typename Op2, typename RR>
   {
     using R = std::conditional_t<std::same_as<RR, LHS>,
                                  typename std::conditional_t<std::__detail::__vectorizable<Op1>,
-                                                             std::rebind_simd<Op1, Op2>,
+                                                             std::rebind<Op1, Op2>,
                                                              std::type_identity<Op1>>::type,
                                  std::conditional_t<std::same_as<RR, RHS>, Op2, RR>>;
     if constexpr (std::convertible_to<Op1, Op2> or std::convertible_to<Op2, Op1>

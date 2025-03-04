@@ -3277,7 +3277,7 @@ namespace std::__detail
                    and ((_S_have_ssse3 and is_integral_v<_Tp>)
                           or (_S_have_sse3 and is_floating_point_v<_Tp>)))
         static constexpr _Tp
-        _S_reduce(basic_simd<_Tp, _Abi> __x, const plus<>&)
+        _S_reduce(std::datapar::basic_simd<_Tp, _Abi> __x, const plus<>&)
         {
           constexpr auto _Np = _S_size;
           using _Ip = __x86_builtin_int_t<_Tp>;
@@ -3479,7 +3479,7 @@ namespace std::__detail
 
       template <size_t _Bs>
         _GLIBCXX_SIMD_INTRINSIC static bool
-        _S_all_of(const basic_simd_mask<_Bs, _Abi> __k)
+        _S_all_of(const std::datapar::basic_simd_mask<_Bs, _Abi> __k)
         {
           using _Tp = __mask_integer_from<_Bs>;
           if constexpr (_S_use_bitmasks)
@@ -3521,7 +3521,7 @@ namespace std::__detail
 
       template <size_t _Bs>
         _GLIBCXX_SIMD_INTRINSIC static bool
-        _S_any_of(const basic_simd_mask<_Bs, _Abi> __k)
+        _S_any_of(const std::datapar::basic_simd_mask<_Bs, _Abi> __k)
         {
           using _Tp = __mask_integer_from<_Bs>;
           if constexpr (_S_use_bitmasks)
@@ -3546,7 +3546,7 @@ namespace std::__detail
 
       template <size_t _Bs>
         _GLIBCXX_SIMD_INTRINSIC static bool
-        _S_none_of(const basic_simd_mask<_Bs, _Abi> __k)
+        _S_none_of(const std::datapar::basic_simd_mask<_Bs, _Abi> __k)
         {
           if constexpr (_S_use_bitmasks)
             return _Abi::_S_masked(__data(__k)) == 0;
@@ -3571,7 +3571,7 @@ namespace std::__detail
 
       template <size_t _Bs>
         _GLIBCXX_SIMD_INTRINSIC static int
-        _S_popcount(basic_simd_mask<_Bs, _Abi> __k)
+        _S_popcount(std::datapar::basic_simd_mask<_Bs, _Abi> __k)
         {
           const auto __kk = _Abi::_S_masked(__data(__k));
           if constexpr (_S_use_bitmasks)
@@ -3667,7 +3667,7 @@ namespace std::__detail
                 }
 
               else if constexpr (_Flags._M_have_sse2())
-                return -std::reduce(-__k);
+                return -std::datapar::reduce(-__k);
 
               else
                 return __builtin_popcount(__bits);
@@ -3676,7 +3676,7 @@ namespace std::__detail
 
       template <size_t _Bs>
         _GLIBCXX_SIMD_INTRINSIC static int
-        _S_reduce_min_index(basic_simd_mask<_Bs, _Abi> __k)
+        _S_reduce_min_index(std::datapar::basic_simd_mask<_Bs, _Abi> __k)
         {
           if constexpr (_S_use_bitmasks)
             return __lowest_bit(__data(__k));
@@ -3692,7 +3692,7 @@ namespace std::__detail
 
       template <size_t _Bs>
         _GLIBCXX_SIMD_INTRINSIC static int
-        _S_reduce_max_index(basic_simd_mask<_Bs, _Abi> __k)
+        _S_reduce_max_index(std::datapar::basic_simd_mask<_Bs, _Abi> __k)
         {
           if constexpr (_S_use_bitmasks)
             return __highest_bit(_Abi::_S_masked(__data(__k)));

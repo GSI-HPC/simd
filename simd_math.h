@@ -10,76 +10,73 @@
 #include "simd.h"
 #include <cmath>
 
-namespace std
+namespace std::__detail
 {
-  namespace __detail
-  {
-    template <typename _Tp>
-      constexpr bool __is_simd_specialization = false;
+  template <typename _Tp>
+    constexpr bool __is_simd_specialization = false;
 
-    template <typename _Tp, typename _Abi>
-      constexpr bool __is_simd_specialization<basic_simd<_Tp, _Abi>> = true;
+  template <typename _Tp, typename _Abi>
+    constexpr bool __is_simd_specialization<std::datapar::basic_simd<_Tp, _Abi>> = true;
 
-    template <typename _Tp>
-      using __plus_result_t = decltype(declval<const _Tp&>() + declval<const _Tp&>());
+  template <typename _Tp>
+    using __plus_result_t = decltype(declval<const _Tp&>() + declval<const _Tp&>());
 
-    template <typename _Tp>
-      struct __deduced_simd
-      { using type = void; };
+  template <typename _Tp>
+    struct __deduced_simd
+    { using type = void; };
 
-    template <typename _Tp>
-      requires __is_simd_specialization<__plus_result_t<_Tp>>
-        and is_destructible_v<__plus_result_t<_Tp>>
-      struct __deduced_simd<_Tp>
-      { using type = __plus_result_t<_Tp>; };
+  template <typename _Tp>
+    requires __is_simd_specialization<__plus_result_t<_Tp>>
+      and is_destructible_v<__plus_result_t<_Tp>>
+    struct __deduced_simd<_Tp>
+    { using type = __plus_result_t<_Tp>; };
 
-    template <typename _Tp>
-      using __deduced_simd_t = typename __deduced_simd<_Tp>::type;
+  template <typename _Tp>
+    using __deduced_simd_t = typename __deduced_simd<_Tp>::type;
 
-    template <typename... _Ts>
-      concept __math_floating_point
-        = (ext::simd_floating_point<__deduced_simd_t<_Ts>> or ...);
+  template <typename... _Ts>
+    concept __math_floating_point
+      = (ext::simd_floating_point<__deduced_simd_t<_Ts>> or ...);
 
-    template <typename... _Ts>
-      struct __math_common_simd;
+  template <typename... _Ts>
+    struct __math_common_simd;
 
-    template <typename... _Ts>
-      requires __math_floating_point<_Ts...>
-      using __math_common_simd_t = typename __math_common_simd<_Ts...>::type;
+  template <typename... _Ts>
+    requires __math_floating_point<_Ts...>
+    using __math_common_simd_t = typename __math_common_simd<_Ts...>::type;
 
-    template <typename _T0>
-      requires __math_floating_point<_T0>
-      struct __math_common_simd<_T0>
-      { using type = __deduced_simd_t<_T0>; };
+  template <typename _T0>
+    requires __math_floating_point<_T0>
+    struct __math_common_simd<_T0>
+    { using type = __deduced_simd_t<_T0>; };
 
-    template <typename _T0>
-      requires (not __math_floating_point<_T0>)
-      struct __math_common_simd<_T0>
-      { using type = _T0; };
+  template <typename _T0>
+    requires (not __math_floating_point<_T0>)
+    struct __math_common_simd<_T0>
+    { using type = _T0; };
 
-    template <typename _T0, typename _T1>
-      requires __math_floating_point<_T0, _T1>
-      struct __math_common_simd<_T0, _T1>
-      : std::common_type<typename __math_common_simd<_T0>::type,
-                         typename __math_common_simd<_T1>::type>
-      {};
+  template <typename _T0, typename _T1>
+    requires __math_floating_point<_T0, _T1>
+    struct __math_common_simd<_T0, _T1>
+    : std::common_type<typename __math_common_simd<_T0>::type,
+                       typename __math_common_simd<_T1>::type>
+    {};
 
-    template <typename _T0, typename _T1, typename _T2, typename... _Ts>
-      requires requires { typename __math_common_simd<_T0, _T1>::type; }
-      struct __math_common_simd<_T0, _T1, _T2, _Ts...>
-      : std::common_type<typename __math_common_simd<_T0, _T1>::type, _T2, _Ts...>
-      {};
+  template <typename _T0, typename _T1, typename _T2, typename... _Ts>
+    requires requires { typename __math_common_simd<_T0, _T1>::type; }
+    struct __math_common_simd<_T0, _T1, _T2, _Ts...>
+    : std::common_type<typename __math_common_simd<_T0, _T1>::type, _T2, _Ts...>
+    {};
 
-    template <typename _T0, typename _T1, typename _T2, typename... _Ts>
-      requires (not requires { typename __math_common_simd<_T0, _T1>::type; })
-      struct __math_common_simd<_T0, _T1, _T2, _Ts...>
-      : std::common_type<typename __math_common_simd<_T2, _Ts...>::type, _T0, _T1>
-      {};
-  }
+  template <typename _T0, typename _T1, typename _T2, typename... _Ts>
+    requires (not requires { typename __math_common_simd<_T0, _T1>::type; })
+    struct __math_common_simd<_T0, _T1, _T2, _Ts...>
+    : std::common_type<typename __math_common_simd<_T2, _Ts...>::type, _T0, _T1>
+    {};
 }
 
 #define _GLIBCXX_SIMD_MATH_1ARG(name)                                                              \
-namespace std                                                                                \
+namespace std::datapar                                                                             \
 {                                                                                                  \
   template <__detail::__math_floating_point _Up>                                                   \
     _GLIBCXX_ALWAYS_INLINE constexpr __detail::__deduced_simd_t<_Up>                               \
@@ -136,10 +133,14 @@ namespace std                                                                   
             }                                                                                      \
         }                                                                                          \
     }                                                                                              \
+}                                                                                                  \
+namespace std                                                                                      \
+{                                                                                                  \
+  using std::datapar::name;                                                                        \
 }
 
 #define _GLIBCXX_SIMD_MATH_2ARG(name)                                                              \
-namespace std                                                                                \
+namespace std::datapar                                                                             \
 {                                                                                                  \
   template <typename _V0, typename _V1>                                                            \
     _GLIBCXX_ALWAYS_INLINE constexpr __detail::__math_common_simd_t<_V0, _V1>                      \
@@ -199,10 +200,14 @@ namespace std                                                                   
             }                                                                                      \
         }                                                                                          \
     }                                                                                              \
+}                                                                                                  \
+namespace std                                                                                      \
+{                                                                                                  \
+  using std::datapar::name;                                                                        \
 }
 
 #define _GLIBCXX_SIMD_MATH_3ARG(name)                                                              \
-namespace std                                                                                      \
+namespace std::datapar                                                                             \
 {                                                                                                  \
   template <typename _V0, typename _V1, typename _V2>                                              \
     _GLIBCXX_ALWAYS_INLINE constexpr __detail::__math_common_simd_t<_V0, _V1, _V2>                 \
@@ -269,6 +274,10 @@ namespace std                                                                   
             }                                                                                      \
         }                                                                                          \
     }                                                                                              \
+}                                                                                                  \
+namespace std                                                                                      \
+{                                                                                                  \
+  using std::datapar::name;                                                                        \
 }
 
 _GLIBCXX_SIMD_MATH_1ARG(acos)
@@ -322,7 +331,7 @@ _GLIBCXX_SIMD_MATH_3ARG(lerp) // missing noexcept
 #undef _GLIBCXX_SIMD_MATH_3ARG
 
 #define _GLIBCXX_SIMD_MATH_CLASSIFICATION_1ARG(name)                                               \
-namespace std                                                                                      \
+namespace std::datapar                                                                             \
 {                                                                                                  \
   template <__detail::__math_floating_point _Up>                                                   \
     _GLIBCXX_ALWAYS_INLINE constexpr typename __detail::__deduced_simd_t<_Up>::mask_type           \
@@ -348,6 +357,10 @@ namespace std                                                                   
           return _Kp(__detail::__private_init, _Vp::_Impl::_S_##name(__x._M_data));                \
         }                                                                                          \
     }                                                                                              \
+}                                                                                                  \
+namespace std                                                                                      \
+{                                                                                                  \
+  using std::datapar::name;                                                                        \
 }
 
 _GLIBCXX_SIMD_MATH_CLASSIFICATION_1ARG(isfinite)
@@ -362,22 +375,22 @@ _GLIBCXX_SIMD_MATH_CLASSIFICATION_1ARG(signbit)
 // the following depend on the global rounding mode (not constexpr):
 //template<@\mathfloatingpoint@ V> @\deducedsimd@<V> nearbyint(const V& x);
 //template<@\mathfloatingpoint@ V> @\deducedsimd@<V> rint(const V& x);
-//template<@\mathfloatingpoint@ V> rebind_simd_t<long int, @\deducedsimd@<V>> lrint(const V& x);
-//template<@\mathfloatingpoint@ V> rebind_simd_t<long long int, V> llrint(const @\deducedsimd@<V>& x);
+//template<@\mathfloatingpoint@ V> rebind_t<long int, @\deducedsimd@<V>> lrint(const V& x);
+//template<@\mathfloatingpoint@ V> rebind_t<long long int, V> llrint(const @\deducedsimd@<V>& x);
 
 #if 0
-frexp(const V& value, rebind_simd_t<int, @\deducedsimd@<V>>* exp);
-constexpr rebind_simd_t<int, @\deducedsimd@<V>> ilogb(const V& x);
-constexpr @\deducedsimd@<V> ldexp(const V& x, const rebind_simd_t<int, @\deducedsimd@<V>>& exp);
+frexp(const V& value, rebind_t<int, @\deducedsimd@<V>>* exp);
+constexpr rebind_t<int, @\deducedsimd@<V>> ilogb(const V& x);
+constexpr @\deducedsimd@<V> ldexp(const V& x, const rebind_t<int, @\deducedsimd@<V>>& exp);
 constexpr basic_simd<T, Abi> modf(const type_identity_t<basic_simd<T, Abi>>& value, basic_simd<T, Abi>* iptr);
-constexpr @\deducedsimd@<V> scalbn(const V& x, const rebind_simd_t<int, @\deducedsimd@<V>>& n);
-constexpr @\deducedsimd@<V> scalbln(const V& x, const rebind_simd_t<long int, @\deducedsimd@<V>>& n);
+constexpr @\deducedsimd@<V> scalbn(const V& x, const rebind_t<int, @\deducedsimd@<V>>& n);
+constexpr @\deducedsimd@<V> scalbln(const V& x, const rebind_t<long int, @\deducedsimd@<V>>& n);
 template<signed_integral T, class Abi> constexpr basic_simd<T, Abi> abs(const basic_simd<T, Abi>& j);
 
-  template<@\mathfloatingpoint@ V> constexpr rebind_simd_t<long int, @\deducedsimd@<V>> lround(const V& x);
-  template<@\mathfloatingpoint@ V> constexpr rebind_simd_t<long long int, @\deducedsimd@<V>> llround(const V& x);
-  template<class V0, class V1> constexpr @\mathcommonsimd@<V0, V1> remquo(const V0& x, const V1& y, rebind_simd_t<int, @\mathcommonsimd@<V0, V1>>* quo);
-  template<@\mathfloatingpoint@ V> constexpr rebind_simd_t<int, @\deducedsimd@<V>> fpclassify(const V& x);
+  template<@\mathfloatingpoint@ V> constexpr rebind_t<long int, @\deducedsimd@<V>> lround(const V& x);
+  template<@\mathfloatingpoint@ V> constexpr rebind_t<long long int, @\deducedsimd@<V>> llround(const V& x);
+  template<class V0, class V1> constexpr @\mathcommonsimd@<V0, V1> remquo(const V0& x, const V1& y, rebind_t<int, @\mathcommonsimd@<V0, V1>>* quo);
+  template<@\mathfloatingpoint@ V> constexpr rebind_t<int, @\deducedsimd@<V>> fpclassify(const V& x);
   template<class V0, class V1> constexpr typename @\mathcommonsimd@<V0, V1>::mask_type isgreater(const V0& x, const V1& y);
   template<class V0, class V1> constexpr typename @\mathcommonsimd@<V0, V1>::mask_type isgreaterequal(const V0& x, const V1& y);
   template<class V0, class V1> constexpr typename @\mathcommonsimd@<V0, V1>::mask_type isless(const V0& x, const V1& y);
@@ -386,12 +399,12 @@ template<signed_integral T, class Abi> constexpr basic_simd<T, Abi> abs(const ba
   template<class V0, class V1> constexpr typename @\mathcommonsimd@<V0, V1>::mask_type isunordered(const V0& x, const V1& y);
 
   template<@\mathfloatingpoint@ V>
-    @\deducedsimd@<V> assoc_laguerre(const rebind_simd_t<unsigned, @\deducedsimd@<V>>& n, const
-      rebind_simd_t<unsigned, @\deducedsimd@<V>>& m,
+    @\deducedsimd@<V> assoc_laguerre(const rebind_t<unsigned, @\deducedsimd@<V>>& n, const
+      rebind_t<unsigned, @\deducedsimd@<V>>& m,
                      const V& x);
   template<@\mathfloatingpoint@ V>
-    @\deducedsimd@<V> assoc_legendre(const rebind_simd_t<unsigned, @\deducedsimd@<V>>& l, const
-      rebind_simd_t<unsigned, @\deducedsimd@<V>>& m,
+    @\deducedsimd@<V> assoc_legendre(const rebind_t<unsigned, @\deducedsimd@<V>>& l, const
+      rebind_t<unsigned, @\deducedsimd@<V>>& m,
                      const V& x);
   template<class V0, class V1>
     @\mathcommonsimd@<V0, V1> beta(const V0& x, const V1& y);
@@ -415,21 +428,21 @@ template<signed_integral T, class Abi> constexpr basic_simd<T, Abi> abs(const ba
     @\mathcommonsimd@<V0, V1, V2> ellint_3(const V0& k, const V1& nu, const V2& phi);
   template<@\mathfloatingpoint@ V> @\deducedsimd@<V> expint(const V& x);
   template<@\mathfloatingpoint@ V>
-    @\deducedsimd@<V> hermite(const rebind_simd_t<unsigned, @\deducedsimd@<V>>& n, const V& x);
+    @\deducedsimd@<V> hermite(const rebind_t<unsigned, @\deducedsimd@<V>>& n, const V& x);
   template<@\mathfloatingpoint@ V>
-    @\deducedsimd@<V> laguerre(const rebind_simd_t<unsigned, @\deducedsimd@<V>>& n, const V& x);
+    @\deducedsimd@<V> laguerre(const rebind_t<unsigned, @\deducedsimd@<V>>& n, const V& x);
   template<@\mathfloatingpoint@ V>
-    @\deducedsimd@<V> legendre(const rebind_simd_t<unsigned, @\deducedsimd@<V>>& l, const V& x);
+    @\deducedsimd@<V> legendre(const rebind_t<unsigned, @\deducedsimd@<V>>& l, const V& x);
   template<@\mathfloatingpoint@ V>
     @\deducedsimd@<V> riemann_zeta(const V& x);
   template<@\mathfloatingpoint@ V>
-    @\deducedsimd@<V> sph_bessel(const rebind_simd_t<unsigned, @\deducedsimd@<V>>& n, const V& x);
+    @\deducedsimd@<V> sph_bessel(const rebind_t<unsigned, @\deducedsimd@<V>>& n, const V& x);
   template<@\mathfloatingpoint@ V>
-    @\deducedsimd@<V> sph_legendre(const rebind_simd_t<unsigned, @\deducedsimd@<V>>& l,
-      const rebind_simd_t<unsigned, @\deducedsimd@<V>>& m, const V& theta);
+    @\deducedsimd@<V> sph_legendre(const rebind_t<unsigned, @\deducedsimd@<V>>& l,
+      const rebind_t<unsigned, @\deducedsimd@<V>>& m, const V& theta);
   template<@\mathfloatingpoint@ V>
     @\deducedsimd@<V>
-      sph_neumann(const rebind_simd_t<unsigned, @\deducedsimd@<V>>& n, const V& x);
+      sph_neumann(const rebind_t<unsigned, @\deducedsimd@<V>>& n, const V& x);
 #endif
 
 #endif  // PROTOTYPE_SIMD_MATH_H_

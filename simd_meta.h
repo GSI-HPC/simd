@@ -29,12 +29,12 @@ namespace std::__detail
       = __simd_abi_tag<_Abi> and _Abi::template _IsValid<_Tp>::value;
 
   template <typename _Vp, _SimdSizeType _Width = 0>
-    concept __simd_type = std::is_simd_v<_Vp> // implies __vectorizable
+    concept __simd_type = std::datapar::__is_simd_v<_Vp> // implies __vectorizable
                             && __simd_abi_tag<typename _Vp::abi_type>
                             && (_Width == 0 || _Vp::size() == _Width);
 
   template <typename _Vp, _SimdSizeType _Width = 0>
-    concept __mask_type = std::is_mask_v<_Vp>
+    concept __mask_type = std::datapar::__is_mask_v<_Vp>
                             && __simd_abi_tag<typename _Vp::abi_type>
                             && (_Width == 0 || _Vp::size() == _Width);
 
@@ -165,20 +165,20 @@ namespace std::__detail
     { return (__a + __b - 1) / __b; }
 
   template <typename _Tp>
-    concept __valid_simd = is_simd_v<_Tp>;
+    concept __valid_simd = std::datapar::__is_simd_v<_Tp>;
 
   template <typename _Tp>
-    concept __valid_mask = is_mask_v<_Tp>;
+    concept __valid_mask = std::datapar::__is_mask_v<_Tp>;
 
   template <typename T>
     concept __boolean_reducable_impl = requires(T&& x)
       {
-        { std::all_of(x) } -> std::same_as<bool>;
-        { std::none_of(x) } -> std::same_as<bool>;
-        { std::any_of(x) } -> std::same_as<bool>;
-        { std::reduce_count(x) } -> std::signed_integral;
-        { std::reduce_min_index(x) } -> std::signed_integral;
-        { std::reduce_max_index(x) } -> std::signed_integral;
+        { std::datapar::all_of(x) } -> std::same_as<bool>;
+        { std::datapar::none_of(x) } -> std::same_as<bool>;
+        { std::datapar::any_of(x) } -> std::same_as<bool>;
+        { std::datapar::reduce_count(x) } -> std::signed_integral;
+        { std::datapar::reduce_min_index(x) } -> std::signed_integral;
+        { std::datapar::reduce_max_index(x) } -> std::signed_integral;
       };
 
   template <typename T>
