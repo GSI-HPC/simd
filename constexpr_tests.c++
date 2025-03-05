@@ -368,9 +368,7 @@ namespace simd_reduction_tests
       reduce(a, a < b, BinaryOperation());
     };
 
-#ifndef AVOID_BROKEN_CLANG_FAILURES
   static_assert(not masked_reduce_works<std::minus<>>);
-#endif
 }
 
 // mask reductions ///////////////////

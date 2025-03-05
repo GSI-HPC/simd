@@ -322,11 +322,23 @@ namespace std::datapar
 
   template <typename _Tp, typename _Abi,
             __detail::__binary_operation<_Tp> _BinaryOperation = plus<>>
+    requires same_as<_BinaryOperation, plus<>>
+      or same_as<_BinaryOperation, multiplies<>>
+      or same_as<_BinaryOperation, bit_and<>>
+      or same_as<_BinaryOperation, bit_or<>>
+      or same_as<_BinaryOperation, bit_xor<>>
     constexpr _Tp
     reduce(const basic_simd<_Tp, _Abi>& __x, const typename basic_simd<_Tp, _Abi>::mask_type& __k,
-           _BinaryOperation __binary_op = {},
-           __type_identity_t<_Tp> __identity_element
-             = __detail::__default_identity_element<_Tp, _BinaryOperation>());
+           _BinaryOperation __binary_op = {})
+    {
+      return reduce(__x, __k, __binary_op,
+                    __detail::__default_identity_element<_Tp, _BinaryOperation>());
+    }
+
+  template <typename _Tp, typename _Abi, __detail::__binary_operation<_Tp> _BinaryOperation>
+    constexpr _Tp
+    reduce(const basic_simd<_Tp, _Abi>& __x, const typename basic_simd<_Tp, _Abi>::mask_type& __k,
+           _BinaryOperation __binary_op, __type_identity_t<_Tp> __identity_element);
 
   template <std::totally_ordered _Tp, typename _Abi>
     constexpr _Tp
