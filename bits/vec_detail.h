@@ -9,7 +9,6 @@
 
 #include "simd_config.h"
 #include "simd_meta.h"
-#include "constexpr_wrapper.h"
 
 #include <cstdint>
 
@@ -305,7 +304,7 @@ namespace std::__detail
     }
 
   template <int _Index, int _Total, int _Combine = 1, integral _Tp,
-            vir::constexpr_value<int> _Width = decltype(vir::cw<sizeof(_Tp) * __CHAR_BIT__>)>
+            typename _Width = decltype(__ic<sizeof(_Tp) * __CHAR_BIT__>)>
     _GLIBCXX_SIMD_INTRINSIC _GLIBCXX_CONST constexpr integral auto
     __vec_extract_part(_Tp __x, _Width __width = {})
     {
@@ -568,7 +567,7 @@ namespace std::__detail
   template <__vec_builtin _Tp, int _Width = __width_of<_Tp>>
     _GLIBCXX_SIMD_INTRINSIC constexpr _Tp
     __vec_generate(auto&& __gen)
-    { return _GLIBCXX_SIMD_VEC_GEN(_Tp, _Width, _Is, {__gen(vir::cw<_Is>)...}); }
+    { return _GLIBCXX_SIMD_VEC_GEN(_Tp, _Width, _Is, {__gen(__ic<_Is>)...}); }
 
   template <int _Width, typename _Tp>
     _GLIBCXX_SIMD_INTRINSIC constexpr __vec_builtin_type<_Tp, __bit_ceil(_Width)>

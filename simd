@@ -9,15 +9,15 @@
 
 #define __cpp_lib_simd 202402L
 
-#include "simd.h"
-#include "simd_alg.h"
-#include "mask_reductions.h"
-#include "simd_reductions.h"
-#include "interleave.h"
-#include "iota.h"
-#include "permute.h"
-#include "simd_math.h"
-#include "simd_generic.h"
+#include "bits/simd.h"
+#include "bits/simd_alg.h"
+#include "bits/mask_reductions.h"
+#include "bits/simd_reductions.h"
+#include "bits/interleave.h"
+#include "bits/iota.h"
+#include "bits/permute.h"
+#include "bits/simd_math.h"
+#include "bits/simd_generic.h"
 
 #endif  // PROTOTYPE_SIMD_
 

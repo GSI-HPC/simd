@@ -105,7 +105,8 @@ namespace std::datapar                                                          
               using _Tup = typename _Vp::abi_type::template _SimdMember<_Tp>;                      \
               return _Vp(__detail::__private_init,                                                 \
                          _Tup::_S_generate_persimd(                                                \
-                           [&] [[gnu::always_inline]] (vir::constexpr_value auto __i) {            \
+                           [&] [[gnu::always_inline]]                                              \
+                             (__detail::__constexpr_wrapper_like auto __i) {                       \
                              return __data(name(__x._M_data._M_simd_at(__i)));                     \
                            }));                                                                    \
             }                                                                                      \
@@ -170,7 +171,8 @@ namespace std::datapar                                                          
               using _Tup = typename _Vp::abi_type::template _SimdMember<_Tp>;                      \
               return _Vp(__detail::__private_init,                                                 \
                          _Tup::_S_generate_persimd(                                                \
-                           [&] [[gnu::always_inline]] (vir::constexpr_value auto __i) {            \
+                           [&] [[gnu::always_inline]]                                              \
+                             (__detail::__constexpr_wrapper_like auto __i) {                       \
                              return __data(name(__x._M_data._M_simd_at(__i),                       \
                                                 __y._M_data._M_simd_at(__i)));                     \
                            }));                                                                    \
@@ -238,7 +240,8 @@ namespace std::datapar                                                          
               using _Tup = typename _Vp::abi_type::template _SimdMember<_Tp>;                      \
               return _Vp(__detail::__private_init,                                                 \
                          _Tup::_S_generate_persimd(                                                \
-                           [&] [[gnu::always_inline]] (vir::constexpr_value auto __i) {            \
+                           [&] [[gnu::always_inline]]                                              \
+                             (__detail::__constexpr_wrapper_like auto __i) {                       \
                              return __data(name(__x._M_data._M_simd_at(__i),                       \
                                                 __y._M_data._M_simd_at(__i),                       \
                                                 __z._M_data._M_simd_at(__i)));                     \

@@ -8,7 +8,6 @@
 #define PROTOTYPE_DETAIL_BITMASK_H_
 
 #include "detail.h"
-#include "constexpr_wrapper.h"
 
 #include <type_traits>
 #include <bitset>
@@ -238,7 +237,7 @@ namespace std::__detail
       }
 
       constexpr bool
-      operator[](vir::constexpr_value auto __i) const noexcept
+      operator[](__constexpr_wrapper_like auto __i) const noexcept
       {
         static_assert(__i < _Np);
         constexpr size_t __j = __i / (sizeof(_Tp) * __CHAR_BIT__);
@@ -267,7 +266,7 @@ namespace std::__detail
       }
 
       constexpr void
-      set(vir::constexpr_value auto __i, bool __x) noexcept
+      set(__constexpr_wrapper_like auto __i, bool __x) noexcept
       {
         static_assert(__i < _Np);
         if constexpr (_Np == 1)

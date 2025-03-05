@@ -18,7 +18,8 @@ namespace std::__detail
 
   template <typename _T0, typename... _Ts>
     _GLIBCXX_SIMD_INTRINSIC constexpr typename _T0::value_type
-    __get_simd_element_from_pack(auto __i, const _T0& __x, const _Ts&... __pack)
+    __get_simd_element_from_pack(__constexpr_wrapper_like auto __i, const _T0& __x,
+                                 const _Ts&... __pack)
     {
       if constexpr (__i.value < _T0::size.value)
         return __x[__i.value];

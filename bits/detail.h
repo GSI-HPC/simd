@@ -9,7 +9,6 @@
 
 #include "fwddecl.h"
 #include "x86_detail.h"
-#include "constexpr_wrapper.h"
 
 #include <concepts>
 #include <cstdint>

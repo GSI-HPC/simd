@@ -7,6 +7,7 @@
 #define TESTS_UNITTEST_PCH_H_
 
 #include "../simd"
+#include "../constexpr_wrapper.h"
 
 #include <source_location>
 #include <iostream>

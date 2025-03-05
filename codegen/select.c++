@@ -4,6 +4,8 @@
  */
 
 #include "../simd"
+#include "../constexpr_wrapper.h"
+
 namespace dp = std::datapar;
 
 using namespace vir::literals;

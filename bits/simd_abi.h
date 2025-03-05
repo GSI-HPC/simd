@@ -100,8 +100,6 @@ namespace std::__detail
 
   using _AllNativeAbis = _AbiList<_Avx512Abi, _VecAbi, _ScalarAbiWrapper>;
 
-  using namespace vir::literals;
-
   template <typename _Abi0, _BuildFlags _Flags, size_t... _Is>
     struct _SimdImplArray;
 
@@ -1017,10 +1015,10 @@ namespace std::__detail
           else if constexpr (_S_chunk_size == 1)
             return {bool(__gen(__ic<_Is>))...};
           else
-            return {[&]<size_t... _Js>(vir::constexpr_value<int> auto __i,
+            return {[&]<size_t... _Js>(__constexpr_wrapper_like auto __i,
                                        std::index_sequence<_Js...>) {
               return _MaskMember0<_Tp>{ _Tp(-bool(__gen(__ic<__i * _S_chunk_size + _Js>)))... };
-            }(vir::cw<_Is>, std::make_index_sequence<_S_chunk_size>())...};
+            }(__ic<_Is>, std::make_index_sequence<_S_chunk_size>())...};
         }
 
       template <typename _Tp>
@@ -1043,9 +1041,8 @@ namespace std::__detail
       using _Traits = _SimdTraits<_Tp, _Abi>;
       using _MaskImpl = typename _Abi::_MaskImpl;
       using _MaskMember = typename _Traits::_MaskMember;
-      static constexpr auto _S_offset = vir::cw<__offset>;
-      static constexpr auto _S_size
-        = vir::cw<_SimdSizeType(__simd_size_v<_Tp, _Abi>)>;
+      static constexpr auto _S_offset = __ic<__offset>;
+      static constexpr auto _S_size = __ic<_SimdSizeType(__simd_size_v<_Tp, _Abi>)>;
       static constexpr _MaskImpl _S_mask_impl = {};
 
       template <size_t _Np, bool _Sanitized>
@@ -1088,9 +1085,9 @@ namespace std::__detail
     {
       static_assert(sizeof...(_As) == 0);
 
-      static constexpr auto _S_size = 0_cw;
+      static constexpr auto _S_size = __ic<0>;
 
-      static constexpr auto _S_tuple_size = 0_cw;
+      static constexpr auto _S_tuple_size = __ic<0>;
 
       _GLIBCXX_SIMD_INTRINSIC constexpr bool
       _M_is_constprop() const
@@ -1136,15 +1133,15 @@ namespace std::__detail
 
       static constexpr bool _S_recurse = sizeof...(_As) != 0;
 
-      static constexpr auto _S_size = vir::cw<(__simd_size_v<_Tp, _A0>)>;
+      static constexpr auto _S_size = __ic<(__simd_size_v<_Tp, _A0>)>;
 
       static constexpr auto _S_total_size
-        = vir::cw<(__simd_size_v<_Tp, _A0> + ... + __simd_size_v<_Tp, _As>)>;
+        = __ic<(__simd_size_v<_Tp, _A0> + ... + __simd_size_v<_Tp, _As>)>;
 
       static constexpr auto _S_size0 = _A0::_S_size;
       static constexpr auto _S_tail_size = _SimdTuple<_Tp, _As...>::_S_size;
 
-      static constexpr auto _S_tuple_size = vir::cw<_SimdSizeType(sizeof...(_As) + 1)>;
+      static constexpr auto _S_tuple_size = __ic<_SimdSizeType(sizeof...(_As) + 1)>;
 
       _GLIBCXX_SIMD_INTRINSIC constexpr bool
       _M_is_constprop() const
@@ -1178,62 +1175,62 @@ namespace std::__detail
       }
 
       _GLIBCXX_SIMD_INTRINSIC constexpr auto
-      _M_simd_at(vir::constexpr_value<int> auto __i) const
+      _M_simd_at(__constexpr_wrapper_like auto __i) const
       {
         if constexpr (__i == 0)
           return _SimdType(__private_init, _M_x);
         else if constexpr (_S_recurse)
-          return _M_tail._M_simd_at(__i - 1_cw);
+          return _M_tail._M_simd_at(__ic<__i - 1>);
       }
 
-      template <vir::constexpr_value<int> _Cv = decltype(0_cw)>
+      template <__constexpr_wrapper_like _Cv = _Ic<0>>
         _GLIBCXX_SIMD_INTRINSIC constexpr _SimdTuple&
         _M_forall(auto&& __fun, _Cv __total_offset = {})
         {
           __fun(_SimdTupleMeta<_Tp, _A0, __total_offset>(), _M_x);
           if constexpr (_S_recurse)
-            _M_tail._M_forall(__fun, __total_offset + _S_size);
+            _M_tail._M_forall(__fun, __ic<__total_offset + _S_size>);
           return *this;
         }
 
-      template <vir::constexpr_value<int> _Cv = decltype(0_cw)>
+      template <__constexpr_wrapper_like _Cv = _Ic<0>>
         _GLIBCXX_SIMD_INTRINSIC constexpr _SimdTuple&
         _M_forall(const _SimdTuple& __a, auto&& __fun, _Cv __total_offset = {})
         {
           __fun(_SimdTupleMeta<_Tp, _A0, __total_offset>(), _M_x, __a._M_x);
           if constexpr (_S_recurse)
-            _M_tail._M_forall(__a._M_tail, __fun, __total_offset + _S_size);
+            _M_tail._M_forall(__a._M_tail, __fun, __ic<__total_offset + _S_size>);
           return *this;
         }
 
-      template <vir::constexpr_value<int> _Cv = decltype(0_cw)>
+      template <__constexpr_wrapper_like _Cv = _Ic<0>>
         _GLIBCXX_SIMD_INTRINSIC constexpr _SimdTuple&
         _M_forall(const _SimdTuple& __a, const _SimdTuple& __b,
                   auto&& __fun, _Cv __total_offset = {})
         {
           __fun(_SimdTupleMeta<_Tp, _A0, __total_offset>(), _M_x, __a._M_x, __b._M_x);
           if constexpr (_S_recurse)
-            _M_tail._M_forall(__a._M_tail, __b._M_tail, __fun, __total_offset + _S_size);
+            _M_tail._M_forall(__a._M_tail, __b._M_tail, __fun, __ic<__total_offset + _S_size>);
           return *this;
         }
 
-      template <vir::constexpr_value<int> _Cv = decltype(0_cw)>
+      template <__constexpr_wrapper_like _Cv = _Ic<0>>
         _GLIBCXX_SIMD_INTRINSIC constexpr _SimdTuple&
         _M_forall(_SimdTuple& __a, auto&& __fun, _Cv __total_offset = {})
         {
           __fun(_SimdTupleMeta<_Tp, _A0, __total_offset>(), _M_x, __a._M_x);
           if constexpr (_S_recurse)
-            _M_tail._M_forall(__a._M_tail, __fun, __total_offset + _S_size);
+            _M_tail._M_forall(__a._M_tail, __fun, __ic<__total_offset + _S_size>);
           return *this;
         }
 
-      template <vir::constexpr_value<int> _Cv = decltype(0_cw)>
+      template <__constexpr_wrapper_like _Cv = _Ic<0>>
         _GLIBCXX_SIMD_INTRINSIC constexpr const _SimdTuple&
         _M_forall(auto&& __fun, _Cv __total_offset = {}) const
         {
           __fun(_SimdTupleMeta<_Tp, _A0, __total_offset>(), _M_x);
           if constexpr (_S_recurse)
-            _M_tail._M_forall(__fun, __total_offset + _S_size);
+            _M_tail._M_forall(__fun, __ic<__total_offset + _S_size>);
           return *this;
         }
 
@@ -1251,14 +1248,14 @@ namespace std::__detail
             return __first;
         }
 
-      template <vir::constexpr_value<int> _Cv = decltype(0_cw)>
+      template <__constexpr_wrapper_like _Cv = _Ic<0>>
         _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdTuple
         _S_generate_persimd(auto&& __fun, _Cv __vec_offset = {})
         {
           if constexpr (_S_recurse)
             return _SimdTuple {
               __fun(__vec_offset),
-              _SimdTuple<_Tp, _As...>::_S_generate_persimd(__fun, __vec_offset + 1_cw)
+              _SimdTuple<_Tp, _As...>::_S_generate_persimd(__fun, __ic<__vec_offset + 1>)
           };
           else
             return _SimdTuple {__fun(__vec_offset)};
@@ -1324,8 +1321,8 @@ namespace std::__detail
                                                (auto __meta, auto& __chunk) {
                    __chunk = __meta.template _S_generator<_Tp>(
                                [&] [[__gnu__::__always_inline__]]
-                                 (vir::constexpr_value<int> auto __i) {
-                                 return __gen(__i + __meta._S_offset);
+                                 (__constexpr_wrapper_like auto __i) {
+                                 return __gen(__ic<__i + __meta._S_offset>);
                                });
                  });
         }
@@ -1531,9 +1528,9 @@ namespace std::__detail
           using _Tup = _SimdMember<_Tp>;
           const _Tup& __tup = __data(__x);
           if constexpr (_Tup::_S_tuple_size == 1)
-            return std::datapar::reduce(__tup._M_simd_at(0_cw), __binary_op);
+            return std::datapar::reduce(__tup._M_simd_at(__ic<0>), __binary_op);
           else
-            return _S_reduce(__binary_op, __tup._M_simd_at(0_cw), __tup._M_simd_at(1_cw));
+            return _S_reduce(__binary_op, __tup._M_simd_at(__ic<0>), __tup._M_simd_at(__ic<1>));
         }
 
       template <typename _Tp, typename... _As>
