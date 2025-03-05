@@ -363,25 +363,32 @@ namespace std::__detail
               constexpr auto __vecbytes = sizeof(_SimdMember<_Tp>);
               const auto __kk = _S_to_bitmask(__k);
 
+#ifdef __clang__
+#define _GLIBCXX_SIMD_LOAD_CAST(type2) reinterpret_cast<const _VecT*>
+#else
+#define _GLIBCXX_SIMD_LOAD_CAST(type2) reinterpret_cast<const type2*>
+#endif
+
 #define _GLIBCXX_SIMD_MASK_LOAD(type, type2)                                                       \
+  using _VecT = __vec_builtin_type_bytes<type2, __vecbytes <= 16 ? 16 : __vecbytes>;               \
   if constexpr (__vecbytes <= 16)                                                                  \
     {                                                                                              \
       const auto __v                                                                               \
-              = __builtin_ia32_load##type##128_mask(reinterpret_cast<const type2*>(__mem),         \
-                                                     __vec_builtin_type_bytes<type2, 16>(), __kk); \
+        = __builtin_ia32_load##type##128_mask(_GLIBCXX_SIMD_LOAD_CAST(type2)(__mem),               \
+                                                    _VecT(), __kk);                                \
       if constexpr (__vecbytes < 16)                                                               \
         return reinterpret_cast<_TV>(__vec_lo<__vecbytes>(__v));                                   \
       else                                                                                         \
         return reinterpret_cast<_TV>(__v);                                                         \
     }                                                                                              \
   else if constexpr (__vecbytes == 32)                                                             \
-    return reinterpret_cast<_TV>(__builtin_ia32_load##type##256_mask(                              \
-                                   reinterpret_cast<const type2*>(__mem),                          \
-                                   __vec_builtin_type_bytes<type2, 32>(), __kk));                  \
+    return reinterpret_cast<_TV>(                                                                  \
+             __builtin_ia32_load##type##256_mask(_GLIBCXX_SIMD_LOAD_CAST(type2)(__mem),            \
+                                                 _VecT(), __kk));                                  \
   else if constexpr (__vecbytes == 64)                                                             \
-    return reinterpret_cast<_TV>(__builtin_ia32_load##type##512_mask(                              \
-                                   reinterpret_cast<const type2*>(__mem),                          \
-                                   __vec_builtin_type_bytes<type2, 64>(), __kk));                  \
+    return reinterpret_cast<_TV>(                                                                  \
+             __builtin_ia32_load##type##512_mask(reinterpret_cast<const type2*>(__mem),            \
+                                                 _VecT(), __kk));                                  \
   else                                                                                             \
     static_assert(false)
 
@@ -450,6 +457,7 @@ namespace std::__detail
                   return _Base::_S_masked_load(__k, __mem, __tag);
                 }
 #undef _GLIBCXX_SIMD_MASK_LOAD
+#undef _GLIBCXX_SIMD_LOAD_CAST
             }
         }
 
