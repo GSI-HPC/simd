@@ -18,9 +18,19 @@
 ## Build, install, use?
 
 This implementation is not intended for use yet. Nevertheless, it should be 
-usable for experimenting. There is no build system support for installation. But 
-you should be able to point your compiler's include path to this repository and 
-simply `#include <simd>`.
+usable for experimenting. There is very simple build system support for 
+installation via:
+```sh
+make prefix=~/.local install
+```
+But you can also just point your compiler's include path to this repository 
+instead.
+
+Build your own project with C++26 (latest GCC, PRs to support Clang are 
+welcome). Just include `<simd>` and you're good to go:
+```c++
+#include <simd>
+```
 
 To build the tests there are multiple targets available. `make help` will list 
 all of them.

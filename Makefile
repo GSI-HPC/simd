@@ -6,10 +6,26 @@ default: info
 
 include Makefile.common
 
+prefix = /usr
+includedir = $(prefix)/include
+
+install:
+	@echo "Installing to $(prefix)/include"
+	install -d $(includedir)/bits
+	install -m 644 -t $(includedir) simd
+	install -m 644 -t $(includedir)/bits bits/*.h
+
 info: $(check_targets)
 	@echo "This library is header-only and doesn't need to be built."
-	@echo "However, you might want to run tests. For a complete list"
-	@echo "call 'make help'."
+	@echo
+	@echo "Installation"
+	@echo "============"
+	@echo "make prefix=~/.local install"
+	@echo
+	@echo "Testing"
+	@echo "======="
+	@echo "Compile and run tests via 'make check'."
+	@echo "For all possible check targets call 'make help'."
 
 fortests := for t in $(tests); do
 fortestarchs := for a in $(testarchs); do
@@ -53,6 +69,7 @@ debug:
 	@echo "arch=$(call getarch,shift_left.core2/signed-char.34)"
 	@echo "test=$(call gettest,shift_left.core2/signed-char.34)"
 	@echo "type=$(call gettype,shift_left.core2/std--float32_t.34)"
+	@echo "prefix: $(prefix)"
 	@$(MAKE) -f Makefile.more $@
 
 more_checks := check check10 check1 check-failed check-passed check-untested check-fast-math rerun
