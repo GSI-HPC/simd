@@ -26,6 +26,10 @@
 #define SIMD_HAS_SUBSCRIPT_GATHER 0
 #endif
 
+#ifndef SIMD_CONCEPTS
+#define SIMD_CONCEPTS 1
+#endif
+
 // x86 macros {
 
 #ifdef __MMX__

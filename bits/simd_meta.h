@@ -28,19 +28,6 @@ namespace std::__detail
     concept __valid_abi_tag
       = __simd_abi_tag<_Abi> and _Abi::template _IsValid<_Tp>::value;
 
-  template <typename _Vp, _SimdSizeType _Width = 0>
-    concept __simd_type = __is_simd_v<_Vp> // implies __vectorizable
-                            && __simd_abi_tag<typename _Vp::abi_type>
-                            && (_Width == 0 || _Vp::size() == _Width);
-
-  template <typename _Vp, _SimdSizeType _Width = 0>
-    concept __mask_type = __is_mask_v<_Vp>
-                            && __simd_abi_tag<typename _Vp::abi_type>
-                            && (_Width == 0 || _Vp::size() == _Width);
-
-  template <typename _Vp, _SimdSizeType _Width = 0>
-    concept __simd_or_mask = __simd_type<_Vp, _Width> or __mask_type<_Vp, _Width>;
-
   template<class T>
     concept __constexpr_wrapper_like
       = convertible_to<T, decltype(T::value)>
@@ -173,32 +160,27 @@ namespace std::__detail
     __div_roundup(_Tp __a, _Tp __b)
     { return (__a + __b - 1) / __b; }
 
-  template <typename _Tp>
-    concept __valid_simd = __is_simd_v<_Tp>;
-
-  template <typename _Tp>
-    concept __valid_mask = __is_mask_v<_Tp>;
-
+#if SIMD_CONCEPTS
   template <typename T>
     concept __boolean_reducable_impl = requires(T&& x)
       {
-        { std::datapar::all_of(x) } -> std::same_as<bool>;
-        { std::datapar::none_of(x) } -> std::same_as<bool>;
-        { std::datapar::any_of(x) } -> std::same_as<bool>;
-        { std::datapar::reduce_count(x) } -> std::signed_integral;
-        { std::datapar::reduce_min_index(x) } -> std::signed_integral;
-        { std::datapar::reduce_max_index(x) } -> std::signed_integral;
+        { datapar::all_of(x) } -> same_as<bool>;
+        { datapar::none_of(x) } -> same_as<bool>;
+        { datapar::any_of(x) } -> same_as<bool>;
+        { datapar::reduce_count(x) } -> signed_integral;
+        { datapar::reduce_min_index(x) } -> signed_integral;
+        { datapar::reduce_max_index(x) } -> signed_integral;
       };
 
   template <typename T>
     concept __boolean_reducable = __boolean_reducable_impl<T> and requires(T&& x)
       {
-        { !std::forward<T>(x) } -> __boolean_reducable_impl;
+        { !forward<T>(x) } -> __boolean_reducable_impl;
       };
 
   template <typename T, typename U>
-    concept __simd_weakly_equality_comparable_with = requires(const std::remove_reference_t<T>& __t,
-                                                              const std::remove_reference_t<U>& __u)
+    concept __simd_weakly_equality_comparable_with = requires(const remove_reference_t<T>& __t,
+                                                              const remove_reference_t<U>& __u)
       {
         { __t == __u } -> __boolean_reducable;
         { __t != __u } -> __boolean_reducable;
@@ -207,8 +189,8 @@ namespace std::__detail
       };
 
   template <typename _Tp, typename _Up>
-    concept __simd_partially_ordered_with = requires(const std::remove_reference_t<_Tp>& __t,
-                                                     const std::remove_reference_t<_Up>& __u)
+    concept __simd_partially_ordered_with = requires(const remove_reference_t<_Tp>& __t,
+                                                     const remove_reference_t<_Up>& __u)
       {
         { __t <  __u } -> __boolean_reducable;
         { __t >  __u } -> __boolean_reducable;
@@ -226,64 +208,53 @@ namespace std::__detail
    */
   template <typename _Tp, typename _Up>
     concept __simd_comparison_common_type_with
-      = std::common_reference_with<const std::remove_reference_t<_Tp>&,
-                                   const std::remove_reference_t<_Up>&>;
+      = common_reference_with<const remove_reference_t<_Tp>&, const remove_reference_t<_Up>&>;
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// Extensions.
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// TODO: To be proposed in some form. Potentially, by splitting into simd and
-// simd_generic concepts. But doing this properly requires a split of generic non-member functions
-// into different namespaces.
-////////////////////////////////////////////////////////////////////////////////////////////////////
-namespace ext
+namespace std::datapar
 {
   template <typename _Tp>
-    concept simd_integral = (std::__detail::__valid_simd<_Tp> or std::__detail::__valid_mask<_Tp>)
-                              and std::integral<typename _Tp::value_type>;
+    concept integral = __detail::__simd_integral<_Tp>;
 
   template <typename _Tp>
-    concept simd_signed_integral
-      = simd_integral<_Tp> and std::is_signed_v<typename _Tp::value_type>;
+    concept signed_integral = __detail::__simd_signed_integral<_Tp>;
 
   template <typename _Tp>
-    concept simd_unsigned_integral
-      = simd_integral<_Tp> and not simd_signed_integral<_Tp>;
+    concept unsigned_integral = __detail::__simd_unsigned_integral<_Tp>;
 
   template <typename _Tp>
-    concept simd_floating_point
-      = std::__detail::__valid_simd<_Tp> and std::floating_point<typename _Tp::value_type>;
+    concept floating_point = __detail::__simd_floating_point<_Tp>;
 
   template <typename _Tp>
-    concept simd_arithmetic = simd_integral<_Tp> or simd_floating_point<_Tp>;
+    concept arithmetic = integral<_Tp> or floating_point<_Tp>;
 
   template <typename _Tp>
-    concept simd_equality_comparable
-      = std::__detail::__simd_weakly_equality_comparable_with<_Tp, _Tp>;
+    concept equality_comparable
+      = __detail::__simd_weakly_equality_comparable_with<_Tp, _Tp>;
 
   template <typename _Tp, typename _Up>
-    concept simd_equality_comparable_with
-      = simd_equality_comparable<_Tp> and simd_equality_comparable<_Up>
-          and std::__detail::__simd_comparison_common_type_with<_Tp, _Up>
-          and simd_equality_comparable<std::common_reference_t<const std::remove_reference_t<_Tp>&,
-                                                               const std::remove_reference_t<_Up>&>>
-          and std::__detail::__simd_weakly_equality_comparable_with<_Tp, _Up>;
+    concept equality_comparable_with
+      = equality_comparable<_Tp> and equality_comparable<_Up>
+          and __detail::__simd_comparison_common_type_with<_Tp, _Up>
+          and equality_comparable<common_reference_t<const remove_reference_t<_Tp>&,
+                                                     const remove_reference_t<_Up>&>>
+          and __detail::__simd_weakly_equality_comparable_with<_Tp, _Up>;
 
   template <typename _Tp>
-    concept simd_totally_ordered
-      = simd_equality_comparable<_Tp> and std::__detail::__simd_partially_ordered_with<_Tp, _Tp>;
+    concept totally_ordered
+      = equality_comparable<_Tp> and __detail::__simd_partially_ordered_with<_Tp, _Tp>;
 
   template <typename _Tp, typename _Up>
-    concept simd_totally_ordered_with
-      = simd_totally_ordered<_Tp> and simd_totally_ordered<_Up>
-          and simd_equality_comparable_with<_Tp, _Up>
-          and simd_totally_ordered<std::common_reference_t<const std::remove_reference_t<_Tp>&,
-                                                           const std::remove_reference_t<_Up>&>>
-          and std::__detail::__simd_partially_ordered_with<_Tp, _Up>;
+    concept totally_ordered_with
+      = totally_ordered<_Tp> and totally_ordered<_Up>
+          and equality_comparable_with<_Tp, _Up>
+          and totally_ordered<common_reference_t<const remove_reference_t<_Tp>&,
+                                                 const remove_reference_t<_Up>&>>
+          and __detail::__simd_partially_ordered_with<_Tp, _Up>;
 
   template <typename _Tp>
-    concept simd_regular = std::semiregular<_Tp> and simd_equality_comparable<_Tp>;
+    concept regular = semiregular<_Tp> and equality_comparable<_Tp>;
+#endif
 }
 
 #endif  // PROTOTYPE_SIMD_META_H_

@@ -128,7 +128,7 @@ namespace std::datapar
     constexpr _Tp
     reduce_min(const basic_simd<_Tp, _Abi>& __x) noexcept
     {
-      return reduce(__x, []<totally_ordered _UV>(const _UV& __a, const _UV& __b) {
+      return reduce(__x, []<std::totally_ordered _UV>(const _UV& __a, const _UV& __b) {
                return select(__a < __b, __a, __b);
              });
     }
@@ -139,7 +139,7 @@ namespace std::datapar
                const typename basic_simd<_Tp, _Abi>::mask_type& __k) noexcept
     {
       return reduce(select(__k, __x, std::__finite_max_v<_Tp>),
-                    []<totally_ordered _UV>(const _UV& __a, const _UV& __b) {
+                    []<std::totally_ordered _UV>(const _UV& __a, const _UV& __b) {
                       return select(__a < __b, __a, __b);
                     });
     }
@@ -148,7 +148,7 @@ namespace std::datapar
     constexpr _Tp
     reduce_max(const basic_simd<_Tp, _Abi>& __x) noexcept
     {
-      return reduce(__x, []<totally_ordered _UV>(const _UV& __a, const _UV& __b) {
+      return reduce(__x, []<std::totally_ordered _UV>(const _UV& __a, const _UV& __b) {
                return select(__a < __b, __b, __a);
              });
     }
@@ -159,7 +159,7 @@ namespace std::datapar
                const typename basic_simd<_Tp, _Abi>::mask_type& __k) noexcept
     {
       return reduce(select(__k, __x, std::__finite_min_v<_Tp>),
-                    []<totally_ordered _UV>(const _UV& __a, const _UV& __b) {
+                    []<std::totally_ordered _UV>(const _UV& __a, const _UV& __b) {
                       return select(__a < __b, __b, __a);
                     });
     }

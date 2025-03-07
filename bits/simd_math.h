@@ -36,7 +36,7 @@ namespace std::__detail
 
   template <typename... _Ts>
     concept __math_floating_point
-      = (ext::simd_floating_point<__deduced_simd_t<_Ts>> or ...);
+      = (__simd_floating_point<__deduced_simd_t<_Ts>> or ...);
 
   template <typename... _Ts>
     struct __math_common_simd;

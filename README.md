@@ -67,3 +67,9 @@ detect reliably with UBsan. You can change that to a 'trap' if
 
 Adds a subscript operator to `basic_simd` with integral `basic_simd` argument. 
 The operator provides a permute/gather operation.
+
+### `-D SIMD_CONCEPTS=0`
+
+This implementation defines several concepts in the `std::datapar` namespace 
+with the same names, but extended to data-parallel types, as corresponding 
+concepts from `std`. That's non-conforming and can be disabled.

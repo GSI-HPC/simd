@@ -14,17 +14,17 @@
 
 namespace std::datapar
 {
-  template<totally_ordered _Tp, typename _Abi>
+  template<std::totally_ordered _Tp, typename _Abi>
     constexpr basic_simd<_Tp, _Abi>
     min(const basic_simd<_Tp, _Abi>& __a, const basic_simd<_Tp, _Abi>& __b) noexcept
     { return {__detail::__private_init, _Abi::_SimdImpl::_S_min(__a._M_data, __b._M_data)}; }
 
-  template<totally_ordered _Tp, typename _Abi>
+  template<std::totally_ordered _Tp, typename _Abi>
     constexpr basic_simd<_Tp, _Abi>
     max(const basic_simd<_Tp, _Abi>& __a, const basic_simd<_Tp, _Abi>& __b) noexcept
     { return {__detail::__private_init, _Abi::_SimdImpl::_S_max(__a._M_data, __b._M_data)}; }
 
-  template<totally_ordered _Tp, typename _Abi>
+  template<std::totally_ordered _Tp, typename _Abi>
     constexpr pair<basic_simd<_Tp, _Abi>, basic_simd<_Tp, _Abi>>
     minmax(const basic_simd<_Tp, _Abi>& __a, const basic_simd<_Tp, _Abi>& __b) noexcept
     {
@@ -33,7 +33,7 @@ namespace std::datapar
       return __r;
     }
 
-  template<totally_ordered _Tp, typename _Abi>
+  template<std::totally_ordered _Tp, typename _Abi>
     constexpr basic_simd<_Tp, _Abi>
     clamp(const basic_simd<_Tp, _Abi>& __v, const basic_simd<_Tp, _Abi>& __lo,
           const basic_simd<_Tp, _Abi>& __hi)

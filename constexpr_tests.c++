@@ -117,10 +117,11 @@ template <typename V, typename T = typename V::value_type>
         and not std::ranges::output_range<V&, T>
 #endif
         and std::constructible_from<V, V> // broadcast
-        and ext::simd_integral<V> == std::integral<T>
-        and ext::simd_floating_point<V> == std::floating_point<T>
-        and ext::simd_regular<V>
-        and ext::simd_equality_comparable<V>
+        and std::__detail::__simd_floating_point<V> == std::floating_point<T>
+#if SIMD_CONCEPTS
+        and std::datapar::regular<V>
+        and std::datapar::equality_comparable<V>
+#endif
         and has_static_size<V>
       ;
 
@@ -129,9 +130,14 @@ template <typename V, typename T = typename V::value_type>
     = usable_simd_or_mask<V, T>
         and std::convertible_to<V, std::array<T, V::size()>>
         and std::convertible_to<std::array<T, V::size()>, V>
+#if SIMD_CONCEPTS
+      // Not for masks because std::integral<bool> is true but datapar::integral looks for a
+      // basic_simd specialization.
+        and std::datapar::integral<V> == std::integral<T>
       // Not for masks because no implicit conversion from bool -> mask
-        and ext::simd_equality_comparable_with<V, T>
-        and ext::simd_equality_comparable_with<T, V>
+        and std::datapar::equality_comparable_with<V, T>
+        and std::datapar::equality_comparable_with<T, V>
+#endif
       ;
 
 template <typename T>

@@ -13,7 +13,7 @@ namespace std::datapar
 {
   template <typename _Tp>
     requires is_arithmetic_v<_Tp>
-      or (__detail::__valid_simd<_Tp> and is_arithmetic_v<typename _Tp::value_type>)
+      or (__detail::__simd_type<_Tp> and is_arithmetic_v<typename _Tp::value_type>)
     constexpr _Tp iota = _Tp();
 
   template <typename _Tp, typename _Abi>

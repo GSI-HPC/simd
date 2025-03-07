@@ -180,6 +180,31 @@ namespace std::__detail
 
   template <typename _Tp, typename _Abi>
     inline constexpr __detail::_SimdSizeType __simd_size_v = __simd_size<_Tp, _Abi>::value;
+
+  template <typename _Tp>
+    concept __simd_type = __is_simd_v<_Tp>;
+
+  template <typename _Tp>
+    concept __mask_type = __is_mask_v<_Tp>;
+
+  template <typename _Vp>
+    concept __simd_or_mask = __simd_type<_Vp> or __mask_type<_Vp>;
+
+  template <typename _Tp>
+    concept __simd_integral
+      = __simd_type<_Tp> and integral<typename _Tp::value_type>;
+
+  template <typename _Tp>
+    concept __simd_signed_integral
+      = __simd_integral<_Tp> and is_signed_v<typename _Tp::value_type>;
+
+  template <typename _Tp>
+    concept __simd_unsigned_integral
+      = __simd_integral<_Tp> and not __simd_signed_integral<_Tp>;
+
+  template <typename _Tp>
+    concept __simd_floating_point
+      = __simd_type<_Tp> and floating_point<typename _Tp::value_type>;
 }
 
 namespace std::datapar
@@ -359,19 +384,19 @@ namespace std::datapar
                const typename basic_simd<_Tp, _Abi>::mask_type& __k) noexcept;
 
   // [simd.alg], Algorithms
-  template <totally_ordered _Tp, typename _Abi>
+  template <std::totally_ordered _Tp, typename _Abi>
     constexpr basic_simd<_Tp, _Abi>
     min(const basic_simd<_Tp, _Abi>& __a, const basic_simd<_Tp, _Abi>& __b) noexcept;
 
-  template <totally_ordered _Tp, typename _Abi>
+  template <std::totally_ordered _Tp, typename _Abi>
     constexpr basic_simd<_Tp, _Abi>
     max(const basic_simd<_Tp, _Abi>& __a, const basic_simd<_Tp, _Abi>& __b) noexcept;
 
-  template <totally_ordered _Tp, typename _Abi>
+  template <std::totally_ordered _Tp, typename _Abi>
     constexpr pair<basic_simd<_Tp, _Abi>, basic_simd<_Tp, _Abi>>
     minmax(const basic_simd<_Tp, _Abi>& __a, const basic_simd<_Tp, _Abi>& __b) noexcept;
 
-  template <totally_ordered _Tp, typename _Abi>
+  template <std::totally_ordered _Tp, typename _Abi>
     constexpr basic_simd<_Tp, _Abi>
     clamp(const basic_simd<_Tp, _Abi>& __v, const basic_simd<_Tp, _Abi>& __lo,
           const basic_simd<_Tp, _Abi>& __hi);
