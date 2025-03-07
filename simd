@@ -17,6 +17,7 @@
 #include "bits/iota.h"
 #include "bits/permute.h"
 #include "bits/simd_math.h"
+#include "bits/simd_bit.h"
 #include "bits/simd_generic.h"
 
 #endif  // PROTOTYPE_SIMD_

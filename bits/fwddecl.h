@@ -203,8 +203,17 @@ namespace std::__detail
       = __simd_integral<_Tp> and not __simd_signed_integral<_Tp>;
 
   template <typename _Tp>
+    concept __simd_unsigned_integer
+      = __simd_type<_Tp> and std::__unsigned_integer<typename _Tp::value_type>;
+
+  template <typename _Tp>
     concept __simd_floating_point
       = __simd_type<_Tp> and floating_point<typename _Tp::value_type>;
+
+  template <typename _T0, typename _T1>
+    concept __simd_matching_width
+      = __simd_type<_T0> and __simd_type<_T1> and (_T0::size() == _T1::size())
+          and (sizeof(typename _T0::value_type) == sizeof(typename _T1::value_type));
 }
 
 namespace std::datapar
@@ -410,6 +419,65 @@ namespace std::datapar
     constexpr auto
     select(const basic_simd_mask<_Bytes, _Abi>& __k, const _Tp& __a, const _Up& __b) noexcept
     -> decltype(__select_impl(__k, __a, __b));
+
+  // [simd.bit]
+  template<__detail::__simd_integral _Vp>
+    constexpr _Vp
+    byteswap(const _Vp& __v) noexcept;
+
+  template<__detail::__simd_unsigned_integer _Vp>
+    constexpr _Vp
+    bit_ceil(const _Vp& __v);
+
+  template<__detail::__simd_unsigned_integer _Vp>
+    constexpr _Vp
+    bit_floor(const _Vp& __v) noexcept;
+
+  template<__detail::__simd_unsigned_integer _Vp>
+    constexpr typename _Vp::mask_type
+    has_single_bit(const _Vp& __v) noexcept;
+
+  template<__detail::__simd_unsigned_integer _V0, __detail::__simd_integral _V1>
+    requires __detail::__simd_matching_width<_V0, _V1>
+    constexpr _V0
+    rotl(const _V0& __v, const _V1& __s) noexcept;
+
+  template<__detail::__simd_unsigned_integer _Vp>
+    constexpr _Vp
+    rotl(const _Vp& __v, int __s) noexcept;
+
+  template<__detail::__simd_unsigned_integer _V0, __detail::__simd_integral _V1>
+    requires __detail::__simd_matching_width<_V0, _V1>
+    constexpr _V0
+    rotr(const _V0& __v, const _V1& __s) noexcept;
+
+  template<__detail::__simd_unsigned_integer _Vp>
+    constexpr _Vp
+    rotr(const _Vp& __v, int __s) noexcept;
+
+  template<__detail::__simd_unsigned_integer _Vp>
+    constexpr rebind_t<make_signed_t<typename _Vp::value_type>, _Vp>
+    bit_width(const _Vp& __v) noexcept;
+
+  template<__detail::__simd_unsigned_integer _Vp>
+    constexpr rebind_t<make_signed_t<typename _Vp::value_type>, _Vp>
+    countl_zero(const _Vp& __v) noexcept;
+
+  template<__detail::__simd_unsigned_integer _Vp>
+    constexpr rebind_t<make_signed_t<typename _Vp::value_type>, _Vp>
+    countl_one(const _Vp& __v) noexcept;
+
+  template<__detail::__simd_unsigned_integer _Vp>
+    constexpr rebind_t<make_signed_t<typename _Vp::value_type>, _Vp>
+    countr_zero(const _Vp& __v) noexcept;
+
+  template<__detail::__simd_unsigned_integer _Vp>
+    constexpr rebind_t<make_signed_t<typename _Vp::value_type>, _Vp>
+    countr_one(const _Vp& __v) noexcept;
+
+  template<__detail::__simd_unsigned_integer _Vp>
+    constexpr rebind_t<make_signed_t<typename _Vp::value_type>, _Vp>
+    popcount(const _Vp& __v) noexcept;
 }
 
 namespace std
@@ -418,6 +486,19 @@ namespace std
   using datapar::max;
   using datapar::minmax;
   using datapar::clamp;
+
+  using datapar::byteswap;
+  using datapar::bit_ceil;
+  using datapar::bit_floor;
+  using datapar::has_single_bit;
+  using datapar::rotl;
+  using datapar::rotr;
+  using datapar::bit_width;
+  using datapar::countl_zero;
+  using datapar::countl_one;
+  using datapar::countr_zero;
+  using datapar::countr_one;
+  using datapar::popcount;
 }
 
 #endif  // PROTOTYPE_FWDDECL_H_

@@ -6,6 +6,22 @@
 #ifndef TESTS_UNITTEST_PCH_H_
 #define TESTS_UNITTEST_PCH_H_
 
+#include "../bits/detail.h"
+
+namespace test
+{
+  struct precondition_failure
+  { std::string_view msg; };
+
+#undef __glibcxx_simd_precondition
+
+#define __glibcxx_simd_precondition(expr, msg, ...) \
+  do {                                              \
+    if (__builtin_expect(!bool(expr), false))       \
+      throw test::precondition_failure{msg};        \
+  } while(false)
+}
+
 #include "../simd"
 #include "../constexpr_wrapper.h"
 
@@ -233,6 +249,23 @@ struct constexpr_verifier
   bool okay = true;
 
   constexpr ignore_the_rest
+  verify_precondition_failure(std::string_view /*expected_msg*/, auto&& /*f*/) &
+  {
+#if 0 // This is waiting for constexpr exceptions to be implemented
+    try
+      {
+        f();
+        okay = false;
+      }
+    catch (const test::precondition_failure& failure)
+      { okay = okay and failure.msg == expected_msg; }
+    catch (...)
+      { okay = false; }
+#endif
+    return {};
+  }
+
+  constexpr ignore_the_rest
   verify(const auto& k) &
   {
     okay = okay and std::datapar::all_of(k);
@@ -276,18 +309,14 @@ struct constexpr_verifier
   constexpr_verifier(constexpr_verifier&&) = delete;
 };
 
-template <auto... Init>
-  [[nodiscard]]
-  consteval bool
-  constexpr_test(auto&& fun, auto&&... args)
-  {
-    constexpr_verifier t;
-    if constexpr (sizeof...(Init) == 0)
-      fun(t, args...);
-    else
-      (fun(t, Init, args...), ...);
-    return t.okay;
-  }
+[[nodiscard]]
+consteval bool
+constexpr_test(auto&& fun, auto&&... args)
+{
+  constexpr_verifier t;
+  fun(t, args...);
+  return t.okay;
+}
 
 template <typename T>
   T
@@ -347,6 +376,39 @@ struct runtime_verifier
     asm volatile("adr %0,." : "=r"(_ip));
 #endif
     return _ip;
+  }
+
+  [[gnu::always_inline]]
+  additional_info
+  verify_precondition_failure(std::string_view expected_msg, auto&& f,
+                              std::source_location loc = std::source_location::current()) &
+  {
+    const auto ip = determine_ip();
+    try
+      {
+        f();
+        ++failed_tests;
+        return log_failure(log_novalue(), log_novalue(), loc, ip,
+                           "precondition failure not detected");
+      }
+    catch (const test::precondition_failure& failure)
+      {
+        if (failure.msg != expected_msg)
+          {
+            ++failed_tests;
+            return log_failure(failure.msg, expected_msg, loc, ip, "unexpected exception");
+          }
+        else
+          {
+            ++passed_tests;
+            return {};
+          }
+      }
+    catch (...)
+      {
+        ++failed_tests;
+        return log_failure(log_novalue(), log_novalue(), loc, ip, "unexpected exception");
+      }
   }
 
   [[gnu::always_inline]]

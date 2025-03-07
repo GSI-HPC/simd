@@ -104,8 +104,10 @@ msg_run   := Run :)
 msg_runf  := Run :(
 endif
 
+diag_transform := sed -e 's/\(, \)\?std::__detail::__build_flags{[^,]*,[^}]*}//g' -e 's/\<std::datapar::/dp::/g' -e 's/\<std::__detail::/🙈/g'
+
 define call_compiler
-{ { $(CXX) $(1) 2>&1; echo $$?>&2; } | sed -e 's/\(, \)\?std::__detail::__build_flags{[^,]*,[^}]*}//g' -e 's/\<std:://g' -e 's/\<__detail:://g'; } 3>&2 2>&1 1>&3 | { read s; [ $$s -gt 0 ] && echo Build command was: $(CXX) $(1); exit $$s; }
+{ { $(CXX) $(1) 2>&1; echo $$?>&2; } | $(diag_transform); } 3>&2 2>&1 1>&3 | { read s; [ $$s -gt 0 ] && echo Build command was: $(CXX) $(1); exit $$s; }
 endef
 
 print_progress := true
@@ -116,7 +118,7 @@ obj/%.fast-math.hpp: obj/%.hpp
 define pch_template
 obj/$(1).hpp: tests/unittest*.h tests/*.cpp | obj
 	@echo "Generate $$@"
-	@grep -h '^ *# *include ' tests/unittest*.h tests/*.cpp|grep -v unittest.h|sort -u|sed 's,","$(PWD)/tests/,' > $$@
+	@grep -h '^ *# *include ' tests/unittest*.h tests/*.cpp|grep -v unittest.h|sed 's,","$(PWD)/tests/,' > $$@
 
 obj/$(1).depend: obj/$(1).hpp
 	@echo "Update $(1) dependencies"
