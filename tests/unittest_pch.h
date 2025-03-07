@@ -327,6 +327,11 @@ template <typename T>
     return y;
   }
 
+template <typename T>
+  concept pair_specialization
+    = std::same_as<std::remove_cvref_t<T>, std::pair<typename std::remove_cvref_t<T>::first_type,
+                                                     typename std::remove_cvref_t<T>::second_type>>;
+
 struct runtime_verifier
 {
   const std::string_view test_kind;
@@ -429,10 +434,14 @@ struct runtime_verifier
   additional_info
   verify_equal(auto&& x, auto&& y,
                std::source_location loc = std::source_location::current())
-    requires requires { {std::datapar::all_of(x == y)} -> std::same_as<bool>; }
   {
     const auto ip = determine_ip();
-    if (std::datapar::all_of(x == y))
+    bool ok;
+    if constexpr (pair_specialization<decltype(x)> and pair_specialization<decltype(y)>)
+      ok = std::datapar::all_of(x.first == y.first) and std::datapar::all_of(x.second == y.second);
+    else
+      ok = std::datapar::all_of(x == y);
+    if (ok)
       {
         ++passed_tests;
         return {};
@@ -440,22 +449,6 @@ struct runtime_verifier
     else
       return log_failure(x, y, loc, ip, "verify_equal");
   }
-
-  template <typename T, typename U>
-    [[gnu::always_inline]]
-    additional_info
-    verify_equal(const std::pair<T, U>& x, const std::pair<T, U>& y,
-                 std::source_location loc = std::source_location::current())
-    {
-      const auto ip = determine_ip();
-      if (std::datapar::all_of(x.first == y.first) and std::datapar::all_of(x.second == y.second))
-        {
-          ++passed_tests;
-          return {};
-        }
-      else
-        return log_failure(x, y, loc, ip, "verify_equal");
-    }
 
   [[gnu::always_inline]]
   additional_info
