@@ -35,6 +35,14 @@ namespace std::__detail
           and bool_constant<T() == T::value>::value
           and bool_constant<static_cast<decltype(T::value)>(T()) == T::value>::value;
 
+  template <typename _Tp, typename _Up>
+    concept __bitcast_convertible
+      = __vectorizable<_Tp> and __vectorizable<_Up> and not std::same_as<_Tp, _Up>
+          and sizeof(_Tp) == sizeof(_Up)
+          and ((integral<_Tp> and integral<_Up>)
+                 or (floating_point<_Tp> and floating_point<_Up>));
+
+
 #ifdef __clang__
   template <typename _Tp>
     static constexpr remove_cvref_t<_Tp> __static_sized_range_obj = {};

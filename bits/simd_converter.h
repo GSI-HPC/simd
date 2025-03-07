@@ -26,7 +26,7 @@ namespace std::__detail
     };
 
   template <__vectorizable_canon _From, __vectorizable_canon _To, int _Width>
-    requires (not std::is_same_v<_To, _From>)
+    requires (not std::is_same_v<_To, _From>) and (not __bitcast_convertible<_From, _To>)
     struct _SimdConverter<_From, _VecAbi<_Width>, _To, _VecAbi<_Width>>
     {
       using _FromV = typename _VecAbi<_Width>::template _SimdMember<_From>;
@@ -35,6 +35,18 @@ namespace std::__detail
       _GLIBCXX_SIMD_INTRINSIC constexpr _ToV
       operator()(_FromV __from) const
       { return __vec_convert<_ToV>(__from); }
+    };
+
+  template <__vectorizable_canon _From, __vectorizable_canon _To, __simd_abi_tag _Abi>
+    requires __bitcast_convertible<_From, _To>
+    struct _SimdConverter<_From, _Abi, _To, _Abi>
+    {
+      using _FromV = typename _Abi::template _SimdMember<_From>;
+      using _ToV = typename _Abi::template _SimdMember<_To>;
+
+      _GLIBCXX_SIMD_INTRINSIC constexpr _ToV
+      operator()(_FromV __from) const
+      { return __builtin_bit_cast(_ToV, __from); }
     };
 
   template <__vectorizable_canon _From, __vectorizable_canon _To, int _Width, int _Np>
