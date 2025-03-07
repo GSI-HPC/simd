@@ -72,8 +72,6 @@ testtypes ::= signed-char \
 	     unsigned-short \
 	     signed-int \
 	     unsigned-int \
-	     signed-long \
-	     unsigned-long \
 	     signed-long-long \
 	     unsigned-long-long \
 	     float \
@@ -102,8 +100,8 @@ msg_runf  := \e[31;1mRun❌\e[0m
 else
 msg_build := Build:
 msg_link  := Link :
-msg_run   := Run (:
-msg_runf  := Run ):
+msg_run   := Run :)
+msg_runf  := Run :(
 endif
 
 define call_compiler

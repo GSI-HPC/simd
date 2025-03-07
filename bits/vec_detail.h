@@ -26,6 +26,26 @@ namespace std::__detail
     struct __canonical_vec_type
     { using type = _Tp; };
 
+  template <same_as<long> _Tp>
+    requires (sizeof(_Tp) == sizeof(int))
+    struct __canonical_vec_type<_Tp>
+    { using type = int; };
+
+  template <same_as<long> _Tp>
+    requires (sizeof(_Tp) == sizeof(long long))
+    struct __canonical_vec_type<_Tp>
+    { using type = long long; };
+
+  template <same_as<unsigned long> _Tp>
+    requires (sizeof(_Tp) == sizeof(unsigned int))
+    struct __canonical_vec_type<_Tp>
+    { using type = unsigned int; };
+
+  template <same_as<unsigned long> _Tp>
+    requires (sizeof(_Tp) == sizeof(unsigned long long))
+    struct __canonical_vec_type<_Tp>
+    { using type = unsigned long long; };
+
   template <>
     struct __canonical_vec_type<char>
     { using type = conditional_t<is_signed_v<char>, signed char, unsigned char>; };

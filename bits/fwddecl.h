@@ -43,12 +43,12 @@ namespace std::__detail
 
   template <>
     struct __make_unsigned_int<sizeof(unsigned long)
-                                 + (sizeof(unsigned long) == sizeof(unsigned int))>
+                                 + (sizeof(unsigned long long) == sizeof(unsigned long))>
     { using type = unsigned long; };
 
   template <>
     struct __make_unsigned_int<sizeof(unsigned long long)
-                                 + (sizeof(unsigned long long) == sizeof(unsigned long))>
+                                 + (sizeof(unsigned long long) != sizeof(unsigned long))>
     { using type = unsigned long long; };
 
   template <>
