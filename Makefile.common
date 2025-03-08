@@ -16,6 +16,15 @@ else
 compiler:=unknown
 endif
 
+ifeq ($(file < .cxx_version),)
+$(file > .cxx_version,$(cxx_version))
+else
+ifneq ($(file < .cxx_version),$(cxx_version))
+$(info Remove PCH because the compiler changed. $(shell rm -f obj/*.hpp.gch))
+$(file > .cxx_version,$(cxx_version))
+endif
+endif
+
 print_compiler_info:
 	@echo "Compiler: $(CXX) $(ICECC_CXX)"
 	@echo "          $(cxx_version)"
