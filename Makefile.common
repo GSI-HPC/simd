@@ -3,8 +3,8 @@
 #                       Matthias Kretz <m.kretz@gsi.de>
 
 CXXFLAGS+=-std=c++26 -Wall -Wextra -Wno-psabi -Werror -O2 -g0 -Wno-attributes -D_GLIBCXX_ASSERTIONS=1 $(FLAGS)
-CXXFLAGS_clang := -Wno-unknown-pragmas
-CXXFLAGS_gcc := -fconcepts-diagnostics-depth=3 -fconstexpr-ops-limit=67108864
+CXXFLAGS_clang := -Wno-unknown-pragmas -ferror-limit=3
+CXXFLAGS_gcc := -fconcepts-diagnostics-depth=3 -fconstexpr-ops-limit=67108864 -fmax-errors=3
 
 cxx_version := $(shell $(CXX) --version | head -n1)
 
