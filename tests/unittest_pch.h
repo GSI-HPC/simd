@@ -690,58 +690,51 @@ template <typename Args = void, typename Fun = void>
 struct dummy_test
 {
   static constexpr std::array<int, 0> args = {};
-  static constexpr auto fun = [](auto&) {};
+  static constexpr auto fun = [](auto&, auto...) {};
 };
 
+template <auto test_ref, std::size_t... arg_idx>
+  void
+  invoke_test_impl(std::index_sequence<arg_idx...>, auto... is)
+  {
+    constexpr auto fun = test_ref->fun;
+    [[maybe_unused]] constexpr auto args = test_ref->args;
+    constprop_test(fun, is..., std::get<arg_idx>(args)...);
+    runtime_test(fun, is..., std::get<arg_idx>(args)...);
+    constexpr bool passed = constexpr_test(fun, is..., std::get<arg_idx>(args)...);
+    if (passed)
+      ++passed_tests;
+    else
+      {
+        ++failed_tests;
+        std::cout << "=> constexpr test of '" << test_name << "' failed.\n";
+      }
+  }
+
 template <auto test_ref>
-  constexpr void
+  void
   invoke_test(std::string_view name, auto... is)
   {
     test_name = name;
-    static constexpr auto t = *test_ref;
-    [[maybe_unused]] static constexpr auto args = t.args;
-    [[maybe_unused]] static constexpr auto fun = t.fun;
+    constexpr auto args = test_ref->args;
     using A = std::remove_const_t<decltype(args)>;
+    constexpr std::make_index_sequence<std::tuple_size_v<A>> args_idx_seq = {};
     if constexpr (array_specialization<A>)
-      { /* call for each element */
+      { // call for each element
         [&]<std::size_t... Is>(std::index_sequence<Is...>) {
           ([&] {
             std::string tmp_name = std::string(name) + std::to_string(Is);
             test_name = tmp_name;
             ((std::cout << "Testing '" << test_name) << ... << (' ' + std::to_string(is)))
               << ' ' << args[Is] << "'\n";
-            constexpr bool passed
-              = constexpr_test(fun, is..., args[Is]);
-            if (passed)
-              ++passed_tests;
-            else
-              {
-                ++failed_tests;
-                std::cout << "=> constexpr test of '" << test_name << "' failed.\n";
-              }
-            constprop_test(fun, is..., args[Is]);
-            runtime_test(fun, is..., args[Is]);
+            invoke_test_impl<test_ref>(std::index_sequence<Is>(), is...);
           }(), ...);
-        }(std::make_index_sequence<std::tuple_size_v<A>>());
+        }(args_idx_seq);
       }
     else
       {
         ((std::cout << "Testing '" << test_name) << ... << (' ' + std::to_string(is))) << "'\n";
-        constexpr bool passed
-          = std::apply([&](auto... xs) -> bool {
-              return constexpr_test(fun, is..., xs...);
-            }, args);
-        if (passed)
-          ++passed_tests;
-        else
-          {
-            ++failed_tests;
-            std::cout << "=> constexpr test of '" << test_name << "' failed.\n";
-          }
-        [&]<std::size_t... Is>(std::index_sequence<Is...>) {
-          constprop_test(fun, is..., std::get<Is>(args)...);
-          runtime_test(fun, is..., std::get<Is>(args)...);
-        }(std::make_index_sequence<std::tuple_size_v<A>>());
+        invoke_test_impl<test_ref>(args_idx_seq, is...);
       }
   }
 
@@ -749,7 +742,7 @@ template <auto test_ref>
     template <int>                                                                                 \
       static constexpr auto name##_tmpl = dummy_test {};                                           \
                                                                                                    \
-    static constexpr void                                                                          \
+    static void                                                                                    \
     name()                                                                                         \
     { invoke_test<&name##_tmpl<0>>(#name); }                                                       \
                                                                                                    \
@@ -766,7 +759,7 @@ template <auto test_ref>
     template <int>                                                                                 \
       static constexpr auto name##_tmpl = dummy_test {};                                           \
                                                                                                    \
-    static constexpr void                                                                          \
+    static void                                                                                    \
     name()                                                                                         \
     {                                                                                              \
       []<int... Is>(std::integer_sequence<int, Is...>) {                                           \
