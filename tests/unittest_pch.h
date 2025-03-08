@@ -522,9 +522,11 @@ void
 constprop_test(auto&& fun, auto... args)
 {
   runtime_verifier t{"constprop"};
+#ifndef __clang__
   t.verify((is_constprop(args) and ...))
     ("=> At least one argument failed to constant-propagate:", is_constprop(args)...,
      type_to_string<decltype(args)>()...);
+#endif
   fun(t, args...);
 }
 

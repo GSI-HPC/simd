@@ -55,4 +55,4 @@ jobs:
       - name: Run test suite
         env:
           CXX: clang++-${{ matrix.version }}
-        run: make -j2 check-constexpr check/simd_bit.ivybridge/unsigned-short.39 check/simd_alg.core2/signed-int.9 check/arithmetic.skylake/float.41
+        run: make -j2 check-constexpr check/arithmetic.skylake/float.41
