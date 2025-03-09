@@ -1,6 +1,7 @@
 # C++26 Data-parallel types (simd)
 
-[![CI](https://github.com/GSI-HPC/simd/actions/workflows/CI.yml/badge.svg)](https://github.com/GSI-HPC/simd/actions/workflows/CI.yml)
+[![GCC](https://github.com/GSI-HPC/simd/actions/workflows/GCC.yml/badge.svg)](https://github.com/GSI-HPC/simd/actions/workflows/GCC.yml)
+[![Clang](https://github.com/GSI-HPC/simd/actions/workflows/Clang.yml/badge.svg)](https://github.com/GSI-HPC/simd/actions/workflows/Clang.yml)
 [![REUSE status](https://github.com/GSI-HPC/simd/actions/workflows/reuse.yml/badge.svg)](https://github.com/GSI-HPC/simd/actions/workflows/reuse.yml)
 [![fair-software.eu](https://img.shields.io/badge/fair--software.eu-%E2%97%8F%20%20%E2%97%8B%20%20%E2%97%8B%20%20%E2%97%8B%20%20%E2%97%8B-red)](https://fair-software.eu)
 

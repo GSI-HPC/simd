@@ -2,7 +2,7 @@
 # Copyright © 2025      GSI Helmholtzzentrum fuer Schwerionenforschung GmbH
 #                       Matthias Kretz <m.kretz@gsi.de>
 
-name: CI
+name: Clang
 
 on:
   push:
@@ -10,28 +10,6 @@ on:
   pull_request:
 
 jobs:
-  gcc:
-    strategy:
-      fail-fast: false
-      matrix:
-        version: [14]
-
-    runs-on: ubuntu-24.04
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install GCC ${{ matrix.version }}
-        run: |
-          sudo add-apt-repository ppa:ubuntu-toolchain-r/test
-          sudo apt-get update
-          sudo apt-get install -y gcc-${{ matrix.version }} g++-${{ matrix.version }}
-
-      - name: Run test suite
-        env:
-          CXX: g++-${{ matrix.version }}
-        run: make -j2 check-constexpr check/simd_bit.ivybridge/unsigned-short.39 check/simd_alg.core2/signed-int.9 check/arithmetic.skylake/float.41
-
   clang:
     strategy:
       fail-fast: false
