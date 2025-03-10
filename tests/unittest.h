@@ -40,6 +40,15 @@ void test_runner()
           using std::__detail::__canonical_vec_type_t;
           static_assert(std::is_same_v<__canonical_vec_type_t<T>, T>);
 
+          if constexpr (std::is_same_v<__canonical_vec_type_t<std::byte>, T>)
+            {
+              std::cout << "Testing " << type_to_string<dp::simd<std::byte, N>>()
+                        << ':' << std::endl;
+              run_functions.clear();
+              [[maybe_unused]] Tests<dp::simd<std::byte, N>> t0 = {};
+              for (auto f : run_functions)
+                f();
+            }
           if constexpr (std::is_same_v<__canonical_vec_type_t<long>, T>)
             {
               std::cout << "Testing " << type_to_string<dp::simd<long, N>>()

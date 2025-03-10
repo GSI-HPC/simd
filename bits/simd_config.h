@@ -30,6 +30,10 @@
 #define SIMD_CONCEPTS 1
 #endif
 
+#ifndef SIMD_STD_BYTE
+#define SIMD_STD_BYTE 1
+#endif
+
 // x86 macros {
 
 #ifdef __MMX__

@@ -74,3 +74,8 @@ The operator provides a permute/gather operation.
 This implementation defines several concepts in the `std::datapar` namespace 
 with the same names, but extended to data-parallel types, as corresponding 
 concepts from `std`. That's non-conforming and can be disabled.
+
+### `-D SIMD_STD_BYTE=0`
+
+This implementation enables `std::byte` as vectorizable type. As this is not 
+conforming, you can disable it.

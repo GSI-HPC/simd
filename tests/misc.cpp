@@ -47,7 +47,7 @@ template <typename V>
       }
     };
 
-    ADD_TEST_N(mask_reductions, int(test_iota_max<V>) + 1) {
+    ADD_TEST_N(mask_reductions, int(test_iota_max<V>) + 1, requires(T x) { x + x; }) {
       std::tuple{test_iota<V>, test_iota<V> == T(0)},
       [](auto& t, auto ii, V v, M k0) {
         constexpr int i = ii;

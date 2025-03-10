@@ -84,8 +84,7 @@ testtypes ::= signed-char \
 	     signed-long-long \
 	     unsigned-long-long \
 	     float \
-	     double \
-	     std::byte
+	     double
 
 ifneq ($(compiler),clang)
 testtypes += std::float16_t

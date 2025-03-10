@@ -132,7 +132,14 @@ namespace std::datapar
       // type conversion constructor
       template <typename _Up, typename _UAbi>
         requires(__detail::__simd_size_v<_Up, _UAbi> == size()
-                   and std::constructible_from<_Tp, _Up>)
+#if SIMD_STD_BYTE
+                   and (std::constructible_from<_Tp, _Up>
+                          or ((std::is_enum_v<_Tp> or std::is_enum_v<_Up>)
+                                 and requires(_Tp __x, _Up __y) { __x = _Tp(__y); }))
+#else
+                   and std::constructible_from<_Tp, _Up>
+#endif
+                )
         _GLIBCXX_SIMD_ALWAYS_INLINE constexpr
         explicit(not __detail::__value_preserving_convertible_to<_Up, value_type>
                    || __detail::__higher_rank_than<_Up, value_type>)
@@ -483,7 +490,7 @@ namespace std::datapar
       {
         __glibcxx_simd_precondition(__i >= 0, "error: negative index");
         __glibcxx_simd_precondition(__i < size.value, "error: index out of bounds");
-        return _Impl::_S_get(_M_data, __i);
+        return static_cast<value_type>(_Impl::_S_get(_M_data, __i));
       }
 
 #if SIMD_HAS_SUBSCRIPT_GATHER

@@ -637,23 +637,31 @@ int run_check_cpu_support = [] {
  */
 template <typename V, int Init = 0, int Max = V::size() + Init - 1>
   constexpr typename V::value_type test_iota_max
-    = std::min(Max, sizeof(typename V::value_type) < sizeof(int)
+    = std::min(Max < 0 ? int(std::numeric_limits<typename V::value_type>::max()) + Max : Max,
+               sizeof(typename V::value_type) < sizeof(int)
                  ? std::min(V::size() + Init - 1,
                             int(std::numeric_limits<typename V::value_type>::max()))
                  : V::size() + Init - 1);
 
+template <typename T, typename Abi, int Init, int Max>
+  requires std::is_enum_v<T>
+  constexpr T test_iota_max<dp::basic_simd<T, Abi>, Init, Max>
+    = static_cast<T>(test_iota_max<dp::basic_simd<std::underlying_type_t<T>, Abi>, Init, Max>);
+
 /**
  * Starts iota sequence at Init.
  *
- * With `Max <= 0`: Wrap-around on overflow
+ * With `Max == 0`: Wrap-around on overflow
+ * With `Max < 0`: Subtract from numeric_limits::max (to leave room for arithmetic ops)
  * Otherwise: [Init..Max, Init..Max, ...] (inclusive)
  *
  * Use dp::iota if a non-monotonic sequence is a bug.
  */
-template <typename V, int Init = 0, int Max = int(test_iota_max<V, Init>)>
+template <typename V, int Init = 0, int MaxArg = int(test_iota_max<V, Init>)>
   constexpr V test_iota = V([](int i) {
+              constexpr int Max = MaxArg < 0 ? int(test_iota_max<V, Init, MaxArg>) : MaxArg;
+              static_assert(Max == 0 or Max > Init or V::size() == 1);
               i += Init;
-              static_assert(Max <= 0 or Max > Init or V::size() == 1);
               if constexpr (Max > Init)
                 {
                   while (i > Max)
@@ -668,7 +676,7 @@ template <typename V, int Init = 0, int Max = int(test_iota_max<V, Init>)>
 template <typename V, auto... values>
   constexpr V vec = [] {
     using T = typename V::value_type;
-    constexpr std::array<T, sizeof...(values)> arr = {values...};
+    constexpr std::array<T, sizeof...(values)> arr = {T(values)...};
     return V([&](size_t i) { return arr[i % arr.size()]; });
   }();
 

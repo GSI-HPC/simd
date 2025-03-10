@@ -15,11 +15,23 @@ template <typename V>
     using pair = std::pair<V, V>;
     static constexpr std::conditional_t<std::is_floating_point_v<T>, short, T> x_max
       = test_iota_max<V, 1>;
+    static constexpr int x_max_int = static_cast<int>(x_max);
+
+    static constexpr V
+    reverse_iota(const V x)
+    {
+      if constexpr (std::is_enum_v<T>)
+        {
+          using Vu = dp::rebind_t<std::underlying_type_t<T>, V>;
+          return static_cast<V>(std::to_underlying(x_max) - static_cast<Vu>(x));
+        }
+      else
+        return x_max - x;
+    }
 
     ADD_TEST(Min) {
-      std::tuple{test_iota<V, 1> - T(1)},
-      [](auto& t, const V x) {
-        const V y = x_max - x;
+      std::tuple{test_iota<V, 0, -1>, reverse_iota(test_iota<V, 0, -1>), test_iota<V, 1>},
+      [](auto& t, const V x, const V y, const V x1) {
         t.verify_equal(min(x, x), x);
         t.verify_equal(min(V(), x), V());
         t.verify_equal(min(x, V()), V());
@@ -28,17 +40,19 @@ template <typename V>
             t.verify_equal(min(-x, x), -x);
             t.verify_equal(min(x, -x), -x);
           }
-        t.verify_equal(min(x + T(1), x), x);
-        t.verify_equal(min(x, x + T(1)), x);
+        t.verify_equal(min(x1, x), x);
+        t.verify_equal(min(x, x1), x);
         t.verify_equal(min(x, y), min(y, x));
-        t.verify_equal(min(x, y), V([](int i) { i %= x_max; return std::min(T(x_max - i), T(i)); }));
+        t.verify_equal(min(x, y), V([](int i) {
+                                    i %= x_max_int;
+                                    return std::min(T(x_max_int - i), T(i));
+                                  }));
       }
     };
 
     ADD_TEST(Max) {
-      std::tuple{test_iota<V, 1> - T(1)},
-      [](auto& t, const V x) {
-        const V y = x_max - x;
+      std::tuple{test_iota<V, 0, -1>, reverse_iota(test_iota<V, 0, -1>), test_iota<V, 1>},
+      [](auto& t, const V x, const V y, const V x1) {
         t.verify_equal(max(x, x), x);
         t.verify_equal(max(V(), x), x);
         t.verify_equal(max(x, V()), x);
@@ -47,17 +61,19 @@ template <typename V>
             t.verify_equal(max(-x, x), x);
             t.verify_equal(max(x, -x), x);
           }
-        t.verify_equal(max(x + T(1), x), x + T(1));
-        t.verify_equal(max(x, x + T(1)), x + T(1));
+        t.verify_equal(max(x1, x), x1);
+        t.verify_equal(max(x, x1), x1);
         t.verify_equal(max(x, y), max(y, x));
-        t.verify_equal(max(x, y), V([](int i) { i %= x_max; return std::max(T(x_max - i), T(i)); }));
+        t.verify_equal(max(x, y), V([](int i) {
+                                    i %= x_max_int;
+                                    return std::max(T(x_max_int - i), T(i));
+                                  }));
       }
     };
 
     ADD_TEST(Minmax) {
-      std::tuple{test_iota<V, 1> - T(1)},
-      [](auto& t, V x) {
-        const V y = x_max - x;
+      std::tuple{test_iota<V, 0, -1>, reverse_iota(test_iota<V, 0, -1>), test_iota<V, 1>},
+      [](auto& t, const V x, const V y, const V x1) {
         t.verify_equal(minmax(x, x), pair{x, x});
         t.verify_equal(minmax(V(), x), pair{V(), x});
         t.verify_equal(minmax(x, V()), pair{V(), x});
@@ -66,19 +82,24 @@ template <typename V>
             t.verify_equal(minmax(-x, x), pair{-x, x});
             t.verify_equal(minmax(x, -x), pair{-x, x});
           }
-        t.verify_equal(minmax(x + T(1), x), pair{x, x + T(1)});
-        t.verify_equal(minmax(x, x + T(1)), pair{x, x + T(1)});
+        t.verify_equal(minmax(x1, x), pair{x, x1});
+        t.verify_equal(minmax(x, x1), pair{x, x1});
         t.verify_equal(minmax(x, y), minmax(y, x));
         t.verify_equal(minmax(x, y),
-                       pair{V([](int i) { i %= x_max; return std::min(T(x_max - i), T(i)); }),
-                            V([](int i) { i %= x_max; return std::max(T(x_max - i), T(i)); })});
+                       pair{V([](int i) {
+                              i %= x_max_int;
+                              return std::min(T(x_max_int - i), T(i));
+                            }),
+                            V([](int i) {
+                              i %= x_max_int;
+                              return std::max(T(x_max_int - i), T(i));
+                            })});
       }
     };
 
     ADD_TEST(Clamp) {
-      std::tuple{test_iota<V>},
-      [](auto& t, const V x) {
-        const V y = test_iota_max<V> - x;
+      std::tuple{test_iota<V>, reverse_iota(test_iota<V>)},
+      [](auto& t, const V x, const V y) {
         t.verify_equal(clamp(x, V(), x), x);
         t.verify_equal(clamp(x, x, x), x);
         t.verify_equal(clamp(V(), x, x), x);
@@ -95,9 +116,8 @@ template <typename V>
     };
 
     ADD_TEST(Select) {
-      std::tuple{test_iota<V, 0, 63>, T(64)},
-      [](auto& t, V x, V y) {
-        y -= x;
+      std::tuple{test_iota<V, 0, 63>, test_iota<V, 1, 64>},
+      [](auto& t, const V x, const V y) {
         t.verify_equal(select(M(true), x, y), x);
         t.verify_equal(select(M(false), x, y), y);
         t.verify_equal(select(M(true), y, x), y);

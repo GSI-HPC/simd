@@ -25,7 +25,7 @@ template <typename V>
       false;
 #endif
 
-    ADD_TEST(plus0) {
+    ADD_TEST(plus0, requires(T x) { x + x; }) {
       std::tuple{V(), vec<V, 1, 2, 3, 4, 5, 6, 7>},
       [](auto& t, V x, V y) {
         t.verify_equal(x + x, x);
@@ -40,7 +40,7 @@ template <typename V>
       }
     };
 
-    ADD_TEST(plus1) {
+    ADD_TEST(plus1, requires(T x) { x + x; }) {
       std::tuple{test_iota<V>},
       [](auto& t, V x) {
         t.verify_equal(x + 0_cw, x);
@@ -52,7 +52,7 @@ template <typename V>
       }
     };
 
-    ADD_TEST(minus0) {
+    ADD_TEST(minus0, requires(T x) { x - x; }) {
       std::tuple{T(1), T(0), vec<V, 1, 2, 3, 4, 5, 6, 7>},
       [](auto& t, V x, V y, V z) {
         t.verify_equal(x - y, x);
@@ -68,7 +68,7 @@ template <typename V>
       }
     };
 
-    ADD_TEST(minus1) {
+    ADD_TEST(minus1, requires(T x) { x - x; }) {
       std::tuple{test_iota<V>},
       [](auto& t, V x) {
         t.verify_equal(x - x, V());
@@ -79,7 +79,7 @@ template <typename V>
       }
     };
 
-    ADD_TEST(times0) {
+    ADD_TEST(times0, requires(T x) { x * x; }) {
       std::tuple{T(0), T(1), T(2)},
       [](auto& t, T v0, T v1, T v2) {
         V x = v1;
@@ -121,7 +121,7 @@ template <typename V>
       }
     };
 
-    ADD_TEST(times1) {
+    ADD_TEST(times1, requires(T x) { x * x; }) {
       std::tuple{test_iota<V, 0, 11>},
       [](auto& t, V x) {
         t.verify_equal(x * x, V([](int i) { return T(T(i % 12) * T(i % 12)); }));
@@ -166,7 +166,7 @@ template <typename V>
       }
     };
 
-    ADD_TEST(divide2, is_iec559 or not std::is_floating_point_v<T>) {
+    ADD_TEST(divide2, (is_iec559 or not std::is_floating_point_v<T>) and requires(T x) { x / x; }) {
       std::tuple{T(2), vec<V, 1, 2, 3, 4, 5, 6, 7>, vec<V, max, norm_min>, vec<V, norm_min, max>,
                  vec<V, max, T(norm_min + 1)>},
       [](auto& t, V x, V y, V z, V a, V b) {
@@ -190,7 +190,7 @@ template <typename V>
     static constexpr V from1 = test_iota<V, 1, 64>;
     static constexpr V from2 = test_iota<V, 2, 65>;
 
-    ADD_TEST(incdec) {
+    ADD_TEST(incdec, requires(T x) { ++x; x++; --x; x--; }) {
       std::tuple{from0},
       [](auto& t, V x) {
         t.verify_equal(x++, from0);

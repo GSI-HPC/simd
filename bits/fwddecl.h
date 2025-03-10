@@ -73,8 +73,9 @@ namespace std::__detail
     : bool_constant<false>
     {};
 
-  // TODO
-  //template <> struct __is_vectorizable<std::byte> : bool_constant<true> {};
+#if SIMD_STD_BYTE
+  template <> struct __is_vectorizable<std::byte> : bool_constant<true> {};
+#endif
 
   template <> struct __is_vectorizable<char> : bool_constant<true> {};
   template <> struct __is_vectorizable<wchar_t> : bool_constant<true> {};

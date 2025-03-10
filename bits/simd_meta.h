@@ -110,7 +110,11 @@ namespace std::__detail
       = same_as<_From, _To>
           or (__vectorizable<_From> and __vectorizable<_To>
                 and (__value_preserving_convertible_to<_From, _To>
+#if SIMD_STD_BYTE
+                       or (requires(_From __x) { static_cast<_To>(__x); }
+#else
                        or (std::convertible_to<_From, _To>
+#endif
                              and (std::same_as<_Flags, _Convert> or ...))));
 
   template <auto _Value>

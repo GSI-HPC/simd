@@ -46,6 +46,11 @@ namespace std::__detail
     struct __canonical_vec_type<_Tp>
     { using type = unsigned long long; };
 
+  template <typename _Tp>
+    requires std::is_enum_v<_Tp>
+    struct __canonical_vec_type<_Tp>
+    { using type = __canonical_vec_type<std::underlying_type_t<_Tp>>::type; };
+
   template <>
     struct __canonical_vec_type<char>
     { using type = conditional_t<is_signed_v<char>, signed char, unsigned char>; };
