@@ -3887,6 +3887,7 @@ namespace std::__detail
     };
 
   template <__vectorizable_canon _From, __vectorizable_canon _To, int _Width>
+    requires (not std::is_same_v<_To, _From>)
     struct _SimdConverter<_From, _Avx512Abi<_Width>, _To, _Avx512Abi<_Width>>
     : _SimdConverter<_From, _VecAbi<_Width>, _To, _VecAbi<_Width>>
     {};
