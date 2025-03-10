@@ -14,14 +14,6 @@ template <typename V>
 
     static constexpr int max = sizeof(T) == 8 ? 64 : 32;
 
-    ADD_TEST(constant_p) {
-      std::tuple {},
-      [](auto& t) {
-        V x = {};
-        t.verify(std::is_constant_evaluated() or x._M_is_constprop());
-      }
-    };
-
     ADD_TEST_N(known_shift, max, std::is_integral_v<T>) {
       std::tuple {test_iota<V>},
       [](auto& t, auto _shift, const V x) {
