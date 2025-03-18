@@ -14,8 +14,6 @@
 
 namespace std::datapar
 {
-  constexpr int permute_zero = INT_MIN;
-
   namespace permutations
   {
     struct _DuplicateEven
@@ -40,11 +38,11 @@ namespace std::datapar
       struct _SwapNeighbors
       {
         consteval unsigned
-        operator()(unsigned __i, auto __size) const
+        operator()(unsigned __i, unsigned __size) const
         {
-          static_assert(__size % (2 * _Np) == 0,
-                        "swap_neighbors<N> permutation requires a multiple of 2N elements");
-          if (std::has_single_bit(_Np))
+          if (__size % (2 * _Np) != 0)
+            abort(); // swap_neighbors<N> permutation requires a multiple of 2N elements
+          else if (std::has_single_bit(_Np))
             return __i ^ _Np;
           else if (__i % (2 * _Np) >= _Np)
             return __i - _Np;
@@ -60,8 +58,8 @@ namespace std::datapar
       struct _Broadcast
       {
         consteval int
-        operator()(int) const
-        { return _Position; }
+        operator()(int, int __size) const
+        { return _Position < 0 ? __size + _Position : _Position; }
       };
 
     template <int _Position>
@@ -74,8 +72,8 @@ namespace std::datapar
     struct _Reverse
     {
       consteval int
-      operator()(int __i) const
-      { return -1 - __i; }
+      operator()(int __i, int __size) const
+      { return __size - 1 - __i; }
     };
 
     inline constexpr _Reverse reverse {};
@@ -84,8 +82,14 @@ namespace std::datapar
       struct _Rotate
       {
         consteval int
-        operator()(int __i, auto __size) const
-        { return (__i + _Offset) % int(__size()); }
+        operator()(int __i, int __size) const
+        {
+          __i += _Offset;
+          __i %= __size;
+          if (__i < 0)
+            __i += __size;
+          return __i;
+        }
       };
 
     template <int _Offset>
@@ -95,11 +99,13 @@ namespace std::datapar
       struct _Shift
       {
         consteval int
-        operator()(int __i, auto __size) const
+        operator()(int __i, int __size) const
         {
           const int __j = __i + _Offset;
           if (__j >= __size or -__j > __size)
-            return permute_zero;
+            return zero_element;
+          else if (__j < 0)
+            return __size + __j;
           else
             return __j;
         }
@@ -116,27 +122,32 @@ namespace std::datapar
     permute(_Vp const& __v, _Fp const __idx_perm) noexcept
     {
       using _Tp = typename _Vp::value_type;
-      using _Rp = resize_t<_Np == 0 ? _Vp::size() : _Np, _Vp>;
-      return _Rp([&] [[__gnu__::__always_inline__]] (auto __i) -> _Tp {
-               constexpr int __j = [&] {
-                 if constexpr (__detail::__index_permutation_function_nosize<_Fp>)
-                   return __idx_perm(__i);
-                 else
-                   return __idx_perm(__i, _Vp::size);
-               }();
-               if constexpr (__j == permute_zero)
-                 return 0;
-               else if constexpr (__j < 0)
-                 {
-                   static_assert(-__j <= int(_Vp::size()));
-                   return __v[__v.size() + __j];
-                 }
-               else
-                 {
-                   static_assert(__j < int(_Vp::size()));
-                   return __v[__j];
-                 }
-             });
+      if constexpr ((_Np == 0 or _Np == _Vp::size())
+                      and requires { _Vp::_Impl::_S_permute(__v._M_data, __idx_perm);})
+        return {__detail::__private_init, _Vp::_Impl::_S_permute(__v._M_data, __idx_perm)};
+      else
+        return resize_t<_Np == 0 ? _Vp::size() : _Np, _Vp>(
+                 [&] [[__gnu__::__always_inline__]] (auto __i0) -> _Tp {
+                   constexpr __detail::_SimdSizeType __i = __i0;
+                   constexpr __detail::_SimdSizeType __j = [&] {
+                     if constexpr (__detail::__index_permutation_function_nosize<_Fp>)
+                       return __idx_perm(__i);
+                     else
+                       return __idx_perm(__i, _Vp::size());
+                   }();
+                   if constexpr (__j == zero_element)
+                     return 0;
+                   else if constexpr (__j < 0)
+                     {
+                       static_assert(-__j <= int(_Vp::size()));
+                       return __v[__v.size() + __j];
+                     }
+                   else
+                     {
+                       static_assert(__j < int(_Vp::size()));
+                       return __v[__j];
+                     }
+                 });
     }
 }
 

@@ -689,6 +689,23 @@ namespace std::__detail
       _GLIBCXX_SIMD_INTRINSIC static constexpr void
       _S_masked_assign(bool __k, _Tp& __lhs, __type_identity_t<_Tp> __rhs)
       { if (__k) __lhs = __rhs; }
+
+    template <typename _Tp, typename _Fp>
+      _GLIBCXX_SIMD_INTRINSIC static constexpr _Tp
+      _S_permute(_Tp __x, const _Fp __idx_perm) noexcept
+      {
+        constexpr _SimdSizeType __j = [&] consteval {
+          if constexpr (__detail::__index_permutation_function_nosize<_Fp>)
+            return __idx_perm(0);
+          else
+            return __idx_perm(0, 1);
+        }();
+        if constexpr (__j == datapar::zero_element or __j == datapar::uninit_element)
+          return _Tp();
+        else
+          static_assert(__j == 0);
+        return __x;
+      }
   };
 
   struct _MaskImplScalar

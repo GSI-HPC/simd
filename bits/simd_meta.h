@@ -160,7 +160,7 @@ namespace std::__detail
   template <typename _Fp, typename _Simd>
     concept __index_permutation_function_size = requires(_Fp const& __f)
       {
-        { __f(0, _Simd::size) } -> std::integral;
+        { __f(0, 0) } -> std::integral;
       };
 
   template <typename _Fp, typename _Simd>

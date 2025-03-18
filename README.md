@@ -16,6 +16,14 @@
 | P2933R4 Extend ⟨bit⟩ header function with overloads for std::simd | done        |
 | P2663R7 Interleaved complex values support in std::simd           | not started |
 
+### Design approved, but not in the WD yet
+
+| Feature | Status |
+| ------- | ------ |
+| P3319R4 Add an iota object for simd (and more)                    | done        |
+| P2664R9 Proposal to extend std::simd with permutation API         | in progress |
+| P2876R1 Proposal to extend std::simd with more constructors and accessors | not started |
+
 ## Missing features
 
 - `simd<std::float16_t>` is currently disabled / not implemented

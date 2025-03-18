@@ -479,6 +479,9 @@ namespace std::datapar
   template<__detail::__simd_unsigned_integer _Vp>
     constexpr rebind_t<make_signed_t<typename _Vp::value_type>, _Vp>
     popcount(const _Vp& __v) noexcept;
+
+  constexpr int zero_element = -1 << (sizeof(int) * __CHAR_BIT__ - 1);
+  constexpr int uninit_element = zero_element + 1;
 }
 
 namespace std

@@ -1163,6 +1163,41 @@ namespace std::__detail
           return _SuperImpl::_S_less(_S_vec_iota<_SimdMember<_Tp>>,
                                      __vec_broadcast<_S_full_size>(__n));
         }
+
+      // can permute to a size different to _S_size; __x must always be of _S_size, though
+      template <_SimdSizeType _RetSize = _S_size, _SimdSizeType _IndexOffset = 0,
+                __vec_builtin _TV, typename _Fp>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr
+        __vec_builtin_type<__value_type_of<_TV>, __bit_ceil(_RetSize)>
+        _S_permute(_TV __x, const _Fp __idx_perm) noexcept
+        {
+          static_assert(is_same_v<_TV, _SimdMember<__value_type_of<_TV>>>);
+          constexpr auto __idx
+            = [](const auto __idx_perm, _SimdSizeType __i) consteval -> _SimdSizeType {
+              _SimdSizeType __j = 0;
+              if constexpr (__detail::__index_permutation_function_nosize<_Fp>)
+                __j = __idx_perm(_IndexOffset + __i);
+              else if (__i >= _S_size)
+                return -1;
+              else
+                __j = __idx_perm(_IndexOffset + __i, _S_size);
+
+              if (__j == datapar::zero_element)
+                return _S_full_size;
+              else if (__j == datapar::uninit_element)
+                return -1;
+              else if (__i >= _S_size)
+                return  __j >= 0 and __j < _S_full_size ? __j : -1;
+              else if (__j < 0 or __j >= _S_size)
+                __builtin_unreachable(); // invalid index
+              else
+                return __j;
+            };
+          return _GLIBCXX_SIMD_INT_PACK(_S_full_size, _Is, {
+                   constexpr int __idxs[_S_full_size] = {__idx(__idx_perm, _Is)...};
+                   return __builtin_shufflevector(__x, _TV(), __idxs[_Is]...);
+                 });
+        }
     };
 }
 
