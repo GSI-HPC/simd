@@ -37,6 +37,9 @@ namespace std
 
       static constexpr bool _S_is_partial = false;
 
+      template <typename>
+        static constexpr bool _S_defer_to_scalar_abi = true;
+
       template <typename _Tp>
         struct __traits
         : __detail::_InvalidTraits
@@ -132,10 +135,8 @@ namespace std
 
       using _MaskImpl = _Impl;
 
-      template <__detail::__vectorizable_canon _Up>
-        using _Rebind = std::conditional_t<
-                          _Avx512Abi<_S_size>::template _IsValid<_Up>::value,
-                          _Avx512Abi<_S_size>, __detail::__deduce_t<_Up, _S_size>>;
+      template <__detail::__vectorizable_canon _Up, _SimdSizeType _NewW = _S_size>
+        using _Rebind = __detail::__deduce_t<_Up, _NewW, _Avx512Abi>;
 
       template <typename _Tp>
         using _SimdMember = __traits<_Tp>::_SimdMember;

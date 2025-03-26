@@ -48,6 +48,9 @@ namespace std
 
     static constexpr bool _S_is_partial = false;
 
+    template <typename>
+      static constexpr bool _S_defer_to_scalar_abi = false;
+
     struct _IsValidAbiTag
     : true_type
     {};
@@ -109,6 +112,9 @@ namespace std
 
         struct _MaskCastType { _MaskCastType() = delete; };
       };
+
+      template <__detail::__vectorizable_canon _Up, __detail::_SimdSizeType _NewW = 1>
+        using _Rebind = __detail::__deduce_t<_Up, _NewW>;
   };
 }
 

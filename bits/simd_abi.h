@@ -33,7 +33,8 @@ namespace std::__detail
     {
       template <typename _Tp, int _Np>
         static constexpr bool _S_A0_is_valid
-          = _A0<_Np>::template _IsValid<_Tp>::value and _A0<_Np>::_S_size == _Np;
+          = _A0<_Np>::template _IsValid<_Tp>::value and _A0<_Np>::_S_size == _Np
+              and not _A0<_Np>::template _S_defer_to_scalar_abi<_Tp>;
 
       template <typename _Tp, int _Np>
         static constexpr bool _S_has_valid_abi
@@ -234,6 +235,9 @@ namespace std
           class _SimdCastType
           {};
         };
+
+      template <__detail::__vectorizable_canon _Up, __detail::_SimdSizeType _Width = _S_size>
+        using _Rebind = typename _Abi0::template _Rebind<_Up, _Width>;
     };
 
   template <__detail::_SimdSizeType _Np, typename _Tag>
@@ -334,6 +338,9 @@ namespace std
             _MaskCastType() = delete;
           };
         };
+
+      template <__detail::__vectorizable_canon _Up, __detail::_SimdSizeType _Width = _S_size>
+        using _Rebind = __detail::__deduce_t<_Up, _Width>;
     };
 }
 
@@ -1991,28 +1998,81 @@ namespace std::__detail
         }
     };
 
-  // try all native ABIs (including scalar) first
-  template <__vectorizable _Tp, _SimdSizeType _Np>
+  // _AbiMaxSize::value is the maximum valid template argument to _PrefAbi for the given value type
+  template <__vectorizable_canon _Tp, template<_SimdSizeType> class _PrefAbi, _SimdSizeType _Np = 1>
+    struct _AbiMaxSize : _Ic<_PrefAbi<_Np>::template _IsValidSizeFor<_Tp>::value ? _Np : 0>
+    { static_assert(not _PrefAbi<2 * _Np>::template _IsValidSizeFor<_Tp>::value); };
+
+  template <__vectorizable_canon _Tp, template<_SimdSizeType> class _PrefAbi, _SimdSizeType _Np>
+    requires _PrefAbi<2 * _Np>::template _IsValidSizeFor<_Tp>::value
+    struct _AbiMaxSize<_Tp, _PrefAbi, _Np>
+    : _AbiMaxSize<_Tp, _PrefAbi, 2 * _Np>
+    {};
+
+  template <template <_SimdSizeType> class _PrefAbi, _SimdSizeType _Np, typename _Tp>
+    constexpr bool __is_valid_preferred_abi
+      = _PrefAbi<_Np>::template _IsValid<_Tp>::value
+          and not _PrefAbi<_Np>::template _S_defer_to_scalar_abi<_Tp>;
+
+  // _DeduceAbi:
+  // ABI deduction from <T, N> and an optional preferred ABI tag template
+  // ====================================================================
+  // - The preferred ABI tag allows ABI tag deduction to choose e.g. _VecAbi even though _Avx512Abi
+  // is valid. Therefore, 'rebind_t<double, basic_simd<int, _VecAbi<4>>>' will deduce _VecAbi<2>
+  // rather than _Avx512Abi<2>.
+  // - _VecAbi (and derivatives) are valid for a single element (because of complex<T> support) but
+  // for every value_type that isn't complex _ScalarAbi should be preferred.
+
+  // try preferred ABI first
+  template <__vectorizable_canon _Tp, _SimdSizeType _Np, template<_SimdSizeType> class _PrefAbi>
+    struct _DeduceAbi<_Tp, _Np, _PrefAbi>
+    {
+      static auto _S_eval()
+      {
+        if constexpr (__is_valid_preferred_abi<_PrefAbi, _Np, _Tp>)
+          return _PrefAbi<_Np> {};
+        else if constexpr (_Np == 1)
+          return _ScalarAbi {};
+        else
+          {
+            constexpr _SimdSizeType _N0 = _AbiMaxSize<_Tp, _PrefAbi>::value;
+            if constexpr (__is_valid_preferred_abi<_PrefAbi, _N0, _Tp>)
+              {
+                if constexpr (_Np % _N0 == 0)
+                  return _AbiArray<_PrefAbi<_N0>, _Np / _N0> {};
+                else
+                  return _AbiCombine<_Np, _PrefAbi<_N0>> {};
+              }
+            else
+              return typename _DeduceAbi<_Tp, _Np, _NoAbiPreference>::type {};
+          }
+      }
+
+      using type = decltype(_S_eval());
+    };
+
+  // without preferred ABI or if it failed, try all native ABIs (including scalar) next
+  template <__vectorizable_canon _Tp, _SimdSizeType _Np>
     requires (_AllNativeAbis::template _S_has_valid_abi<_Tp, _Np>)
-    struct _DeduceAbi<_Tp, _Np>
+    struct _DeduceAbi<_Tp, _Np, _NoAbiPreference>
     { using type = _AllNativeAbis::_FirstValidAbi<_Tp, _Np>; };
 
   // next try _AbiArray of _NativeAbi
-  template <__vectorizable _Tp, _SimdSizeType _Np>
+  template <__vectorizable_canon _Tp, _SimdSizeType _Np>
     requires (not _AllNativeAbis::template _S_has_valid_abi<_Tp, _Np>
                 and _Np % _NativeAbi<_Tp>::_S_size == 0)
-    struct _DeduceAbi<_Tp, _Np>
+    struct _DeduceAbi<_Tp, _Np, _NoAbiPreference>
     { using type = _AbiArray<_NativeAbi<_Tp>, _Np / _NativeAbi<_Tp>::_S_size>; };
 
   // fall back to _AbiCombine of inhomogenous ABI tags
-  template <__vectorizable _Tp, _SimdSizeType _Np>
+  template <__vectorizable_canon _Tp, _SimdSizeType _Np>
     requires (not _AllNativeAbis::template _S_has_valid_abi<_Tp, _Np>
                 and _Np % _NativeAbi<_Tp>::_S_size != 0
                 and _AbiCombine<_Np, _NativeAbi<_Tp>>::template _IsValid<_Tp>::value)
-    struct _DeduceAbi<_Tp, _Np>
+    struct _DeduceAbi<_Tp, _Np, _NoAbiPreference>
     { using type = _AbiCombine<_Np, _NativeAbi<_Tp>>; };
 
-  template <typename _Tp, _SimdSizeType _Np>
+  template <typename _Tp, _SimdSizeType _Np, template<_SimdSizeType> class _PrefAbi>
     struct _DeduceAbi
     { using type = _InvalidAbi; };
 }

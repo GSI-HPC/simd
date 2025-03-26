@@ -19,13 +19,11 @@ namespace std::__detail
   ///////////////////////////////////////////////////////////////////////////////////////////////
 
   /**
-   * Reduce template instantiations for internal code by folding all _Float64 and _Float32
-   * implementations to double and float.
+   * Reduce template instantiations for internal code by folding different types with same value
+   * representation and semantics to a single common type.
+   *
+   * The primary template is in fwddecl.h.
    */
-  template <typename _Tp>
-    struct __canonical_vec_type
-    { using type = _Tp; };
-
   template <same_as<long> _Tp>
     requires (sizeof(_Tp) == sizeof(int))
     struct __canonical_vec_type<_Tp>
@@ -82,8 +80,6 @@ namespace std::__detail
     struct __canonical_vec_type<_Float32>
     { using type = float; };
 
-  template <typename _Tp>
-    using __canonical_vec_type_t = typename __canonical_vec_type<_Tp>::type;
 
   /**
    * For use in implementation code in place of __vectorizable. This ensures the implementation code

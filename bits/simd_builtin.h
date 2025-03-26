@@ -35,6 +35,9 @@ namespace std
       static constexpr _SimdSizeType _S_size = _Width;
 
       template <typename _Tp>
+        static constexpr bool _S_defer_to_scalar_abi = (_Width == 1);
+
+      template <typename _Tp>
         using _Vp = __detail::__vec_builtin_type<_Tp, std::__bit_ceil(_Width)>;
 
       struct _IsValidAbiTag
@@ -155,10 +158,8 @@ namespace std
 
       static constexpr bool _S_is_partial = _S_full_size > _S_size;
 
-      template <__detail::__vectorizable_canon _Up>
-        using _Rebind = std::conditional_t<
-                          _VecAbi<_S_size>::template _IsValid<_Up>::value,
-                          _VecAbi<_S_size>, __detail::__deduce_t<_Up, _S_size>>;
+      template <__detail::__vectorizable_canon _Up, _SimdSizeType _NewW = _S_size>
+        using _Rebind = __detail::__deduce_t<_Up, _NewW, _VecAbi>;
 
       template <__detail::__vectorizable_canon _Tp>
         using _SimdMember = _Vp<_Tp>;

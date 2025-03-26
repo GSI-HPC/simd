@@ -153,11 +153,23 @@ namespace std::__detail
 
   using _SimdSizeType = int;
 
-  template <typename _Tp, _SimdSizeType _Np>
+  template <typename _Tp>
+    struct __canonical_vec_type
+    { using type = _Tp; };
+
+  template <typename _Tp>
+    using __canonical_vec_type_t = typename __canonical_vec_type<_Tp>::type;
+
+  template <_SimdSizeType>
+    class _NoAbiPreference;
+
+  template <typename _Tp, _SimdSizeType _Np,
+            template<_SimdSizeType> class _PrefAbi = _NoAbiPreference>
     struct _DeduceAbi;
 
-  template <typename _Tp, _SimdSizeType _Np>
-    using __deduce_t = typename _DeduceAbi<_Tp, _Np>::type;
+  template <typename _Tp, _SimdSizeType _Np,
+            template<_SimdSizeType> class _PrefAbi = _NoAbiPreference>
+    using __deduce_t = typename _DeduceAbi<__canonical_vec_type_t<_Tp>, _Np, _PrefAbi>::type;
 
   template <typename _Tp>
     struct __is_simd

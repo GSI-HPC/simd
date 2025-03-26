@@ -77,6 +77,32 @@ namespace test01
 #endif
 }
 
+namespace test02
+{
+  using namespace std;
+  using namespace std::__detail;
+  using std::datapar::simd;
+  using std::datapar::simd_mask;
+
+  static_assert(_AbiMaxSize<float, _VecAbi>::value == simd<float>::size());
+  static_assert(_AbiMaxSize<double, _VecAbi>::value == simd<double>::size());
+
+  template <_SimdSizeType N>
+    using expected_abi
+#ifdef __AVX512F__
+      = _Avx512Abi<N>;
+#else
+      = _VecAbi<N>;
+#endif
+
+  static_assert(same_as<__deduce_t<int, 1>, _ScalarAbi>);
+  static_assert(same_as<__deduce_t<float, 1>, _ScalarAbi>);
+
+  static_assert(same_as<simd<int>::mask_type, simd_mask<int>>);
+  static_assert(same_as<simd<float>::mask_type, simd_mask<float>>);
+  static_assert(same_as<simd<float, 1>::mask_type, simd_mask<float, 1>>);
+}
+
 #if defined __AVX__ and not defined __AVX2__
 static_assert(alignof(dp::simd_mask<int, 8>) == 16);
 static_assert(alignof(dp::simd_mask<float, 8>) == 32);

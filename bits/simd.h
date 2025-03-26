@@ -552,21 +552,38 @@ namespace std::datapar
     -> basic_simd<__detail::__mask_integer_from<_Bs>,
                   __detail::__simd_abi_for_mask_t<_Bs, _Abi>>;
 
-  template <__detail::__vectorizable _Tp, __detail::__simd_type _Simd>
-    struct rebind<_Tp, _Simd>
-    { using type = simd<_Tp, _Simd::size()>; };
+  template <__detail::__vectorizable _Tp, __detail::__vectorizable _Up,
+            __detail::__valid_abi_tag<_Up> _Abi>
+    struct rebind<_Tp, basic_simd<_Up, _Abi>>
+    {
+      using _Abi1 = typename _Abi::template _Rebind<__detail::__canonical_vec_type_t<_Tp>>;
+      using type = basic_simd<_Tp, _Abi1>;
+    };
 
-  template <__detail::__vectorizable _Tp, __detail::__mask_type _Mask>
-    struct rebind<_Tp, _Mask>
-    { using type = simd_mask<_Tp, _Mask::size()>; };
+  template <__detail::__vectorizable _Tp, size_t _Bytes,
+            __detail::__valid_abi_tag<__detail::__mask_integer_from<_Bytes>> _Abi>
+    struct rebind<_Tp, basic_simd_mask<_Bytes, _Abi>>
+    {
+      using _Abi1 = typename _Abi::template _Rebind<__detail::__canonical_vec_type_t<_Tp>>;
+      using type = basic_simd_mask<_Bytes, _Abi1>;
+    };
 
-  template <__detail::_SimdSizeType _Np, __detail::__simd_type _Simd>
-    struct resize<_Np, _Simd>
-    { using type = simd<typename _Simd::value_type, _Np>; };
+  template <__detail::_SimdSizeType _Np, __detail::__vectorizable _Up,
+            __detail::__valid_abi_tag<_Up> _Abi>
+    struct resize<_Np, basic_simd<_Up, _Abi>>
+    {
+      using _Abi1 = typename _Abi::template _Rebind<_Up, _Np>;
+      using type = basic_simd<_Up, _Abi1>;
+    };
 
-  template <__detail::_SimdSizeType _Np, __detail::__mask_type _Mask>
-    struct resize<_Np, _Mask>
-    { using type = simd_mask<typename decltype(+_Mask())::value_type, _Np>; };
+  template <__detail::_SimdSizeType _Np, size_t _Bytes,
+            __detail::__valid_abi_tag<__detail::__mask_integer_from<_Bytes>> _Abi>
+    struct resize<_Np, basic_simd_mask<_Bytes, _Abi>>
+    {
+      using _Up = __detail::__mask_integer_from<_Bytes>;
+      using _Abi1 = typename _Abi::template _Rebind<_Up, _Np>;
+      using type = basic_simd_mask<_Bytes, _Abi1>;
+    };
 
   template <typename _Tp, typename _Abi, __detail::__vectorizable _Up>
     struct alignment<basic_simd<_Tp, _Abi>, _Up>
