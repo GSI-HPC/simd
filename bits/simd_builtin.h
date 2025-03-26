@@ -1131,20 +1131,17 @@ namespace std::__detail
             return __vec_not(__x);
         }
 
-      template <size_t _Bs>
-        _GLIBCXX_SIMD_INTRINSIC static constexpr bool
-        _S_all_of(std::datapar::basic_simd_mask<_Bs, abi_type> __k)
-        { return _GLIBCXX_SIMD_INT_PACK(_S_size, _Is, { return (... and (__k[_Is] != 0)); }); }
+      _GLIBCXX_SIMD_INTRINSIC static constexpr bool
+      _S_all_of(__vec_builtin auto __k)
+      { return _GLIBCXX_SIMD_INT_PACK(_S_size, _Is, { return (... and (__k[_Is] != 0)); }); }
 
-      template <size_t _Bs>
-        _GLIBCXX_SIMD_INTRINSIC static constexpr bool
-        _S_any_of(std::datapar::basic_simd_mask<_Bs, abi_type> __k)
-        { return _GLIBCXX_SIMD_INT_PACK(_S_size, _Is, { return (... or (__k[_Is] != 0)); }); }
+      _GLIBCXX_SIMD_INTRINSIC static constexpr bool
+      _S_any_of(__vec_builtin auto __k)
+      { return _GLIBCXX_SIMD_INT_PACK(_S_size, _Is, { return (... or (__k[_Is] != 0)); }); }
 
-      template <size_t _Bs>
-        _GLIBCXX_SIMD_INTRINSIC static constexpr bool
-        _S_none_of(std::datapar::basic_simd_mask<_Bs, abi_type> __k)
-        { return _GLIBCXX_SIMD_INT_PACK(_S_size, _Is, { return (... and (__k[_Is] == 0)); }); }
+      _GLIBCXX_SIMD_INTRINSIC static constexpr bool
+      _S_none_of(__vec_builtin auto __k)
+      { return _GLIBCXX_SIMD_INT_PACK(_S_size, _Is, { return (... and (__k[_Is] == 0)); }); }
 
       template <size_t _Bs>
         _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdSizeType

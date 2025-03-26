@@ -781,20 +781,17 @@ namespace std::__detail
         __lhs = __rhs;
     }
 
-    template <size_t _Bs>
-      _GLIBCXX_SIMD_INTRINSIC static constexpr bool
-      _S_all_of(std::datapar::basic_simd_mask<_Bs, abi_type> __k)
-      { return __data(__k); }
+    _GLIBCXX_SIMD_INTRINSIC static constexpr bool
+    _S_all_of(bool __k) noexcept
+    { return __k; }
 
-    template <size_t _Bs>
-      _GLIBCXX_SIMD_INTRINSIC static constexpr bool
-      _S_any_of(std::datapar::basic_simd_mask<_Bs, abi_type> __k)
-      { return __data(__k); }
+    _GLIBCXX_SIMD_INTRINSIC static constexpr bool
+    _S_any_of(bool __k) noexcept
+    { return __k; }
 
-    template <size_t _Bs>
-      _GLIBCXX_SIMD_INTRINSIC static constexpr bool
-      _S_none_of(std::datapar::basic_simd_mask<_Bs, abi_type> __k)
-      { return !__data(__k); }
+    _GLIBCXX_SIMD_INTRINSIC static constexpr bool
+    _S_none_of(bool __k) noexcept
+    { return !__k; }
 
     template <size_t _Bs>
       _GLIBCXX_SIMD_INTRINSIC static constexpr bool

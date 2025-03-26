@@ -820,23 +820,20 @@ namespace std::__detail
       // before doing a final reduction to bool.
       // In all cases in between it is dependent on the algorithm/data. Profile-guided
       // optimization that can turn this inside out would be super cool.
-      template <size_t _Bs>
-        _GLIBCXX_SIMD_INTRINSIC
-        static constexpr bool
-        _S_any_of(std::datapar::basic_simd_mask<_Bs, abi_type> const& __masks)
-        { return (std::datapar::any_of(_S_submask(__masks, _Is)) or ...); }
+      template <typename _Kp>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr bool
+        _S_all_of(const array<_Kp, _Np>& __masks)
+        { return (_Impl0::_S_all_of(__masks[_Is]) or ...); }
 
-      template <size_t _Bs>
-        _GLIBCXX_SIMD_INTRINSIC
-        static constexpr bool
-        _S_all_of(std::datapar::basic_simd_mask<_Bs, abi_type> const& __masks)
-        { return (std::datapar::all_of(_S_submask(__masks, _Is)) and ...); }
+      template <typename _Kp>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr bool
+        _S_any_of(const array<_Kp, _Np>& __masks)
+        { return (_Impl0::_S_any_of(__masks[_Is]) or ...); }
 
-      template <size_t _Bs>
-        _GLIBCXX_SIMD_INTRINSIC
-        static constexpr bool
-        _S_none_of(std::datapar::basic_simd_mask<_Bs, abi_type> const& __masks)
-        { return (std::datapar::none_of(_S_submask(__masks, _Is)) and ...); }
+      template <typename _Kp>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr bool
+        _S_none_of(const array<_Kp, _Np>& __masks)
+        { return (_Impl0::_S_none_of(__masks[_Is]) or ...); }
 
       // TODO: benchmark whether it's more efficient to do element-wise reduction of array members
       // on -__k or +__k or a sum of popcount on each sub-mask.
@@ -1957,20 +1954,17 @@ namespace std::__detail
           __lhs &= ~__k;
       }
 
-      template <size_t _Bs>
-        _GLIBCXX_SIMD_INTRINSIC static constexpr bool
-        _S_all_of(const std::datapar::basic_simd_mask<_Bs, abi_type> & __k)
-        { return __data(__k).all(); }
+      _GLIBCXX_SIMD_INTRINSIC static constexpr bool
+      _S_all_of(const _MaskMember& __k)
+      { return __k.all(); }
 
-      template <size_t _Bs>
-        _GLIBCXX_SIMD_INTRINSIC static constexpr bool
-        _S_any_of(const std::datapar::basic_simd_mask<_Bs, abi_type> & __k)
-        { return __data(__k).any(); }
+      _GLIBCXX_SIMD_INTRINSIC static constexpr bool
+      _S_any_of(const _MaskMember& __k)
+      { return __k.any(); }
 
-      template <size_t _Bs>
-        _GLIBCXX_SIMD_INTRINSIC static constexpr bool
-        _S_none_of(const std::datapar::basic_simd_mask<_Bs, abi_type> & __k)
-        { return __data(__k).none(); }
+      _GLIBCXX_SIMD_INTRINSIC static constexpr bool
+      _S_none_of(const _MaskMember& __k)
+      { return __k.none(); }
 
       template <size_t _Bs>
         _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdSizeType

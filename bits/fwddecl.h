@@ -346,6 +346,39 @@ namespace std::__detail
       static_assert(false, "You need to provide an identity element on masked reduce with custom "
                            "binary operation.");
     }();*/
+
+  template <typename _Tp>
+    constexpr bool __is_simd_specialization = false;
+
+  template <typename _Tp, typename _Abi>
+    constexpr bool __is_simd_specialization<std::datapar::basic_simd<_Tp, _Abi>> = true;
+
+  template <typename _Tp>
+    using __plus_result_t = decltype(declval<const _Tp&>() + declval<const _Tp&>());
+
+  template <typename _Tp>
+    struct __deduced_simd
+    { using type = void; };
+
+  template <typename _Tp>
+    requires __is_simd_specialization<__plus_result_t<_Tp>>
+      and is_destructible_v<__plus_result_t<_Tp>>
+    struct __deduced_simd<_Tp>
+    { using type = __plus_result_t<_Tp>; };
+
+  template <typename _Tp>
+    using __deduced_simd_t = typename __deduced_simd<_Tp>::type;
+
+  template <typename... _Ts>
+    concept __math_floating_point
+      = (__simd_floating_point<__deduced_simd_t<_Ts>> or ...);
+
+  template <typename... _Ts>
+    struct __math_common_simd;
+
+  template <typename... _Ts>
+    requires __math_floating_point<_Ts...>
+    using __math_common_simd_t = typename __math_common_simd<_Ts...>::type;
 }
 
 namespace std::datapar
@@ -392,6 +425,15 @@ namespace std::datapar
     constexpr _Tp
     reduce_max(const basic_simd<_Tp, _Abi>& __x,
                const typename basic_simd<_Tp, _Abi>::mask_type& __k) noexcept;
+
+  // [simd.math]
+  template <typename _V0>
+    constexpr typename __detail::__deduced_simd_t<_V0>::mask_type
+    isfinite(const _V0& __x0);
+
+  template <typename _V0, typename _V1>
+    constexpr typename __detail::__math_common_simd_t<_V0, _V1>::mask_type
+    isunordered(const _V0& __x, const _V1& __y);
 
   // [simd.alg], Algorithms
   template <std::totally_ordered _Tp, typename _Abi>

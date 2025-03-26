@@ -12,39 +12,6 @@
 
 namespace std::__detail
 {
-  template <typename _Tp>
-    constexpr bool __is_simd_specialization = false;
-
-  template <typename _Tp, typename _Abi>
-    constexpr bool __is_simd_specialization<std::datapar::basic_simd<_Tp, _Abi>> = true;
-
-  template <typename _Tp>
-    using __plus_result_t = decltype(declval<const _Tp&>() + declval<const _Tp&>());
-
-  template <typename _Tp>
-    struct __deduced_simd
-    { using type = void; };
-
-  template <typename _Tp>
-    requires __is_simd_specialization<__plus_result_t<_Tp>>
-      and is_destructible_v<__plus_result_t<_Tp>>
-    struct __deduced_simd<_Tp>
-    { using type = __plus_result_t<_Tp>; };
-
-  template <typename _Tp>
-    using __deduced_simd_t = typename __deduced_simd<_Tp>::type;
-
-  template <typename... _Ts>
-    concept __math_floating_point
-      = (__simd_floating_point<__deduced_simd_t<_Ts>> or ...);
-
-  template <typename... _Ts>
-    struct __math_common_simd;
-
-  template <typename... _Ts>
-    requires __math_floating_point<_Ts...>
-    using __math_common_simd_t = typename __math_common_simd<_Ts...>::type;
-
   template <typename _T0>
     requires __math_floating_point<_T0>
     struct __math_common_simd<_T0>
@@ -342,7 +309,6 @@ namespace std::datapar                                                          
     {                                                                                              \
       using _Vp = __detail::__deduced_simd_t<_Up>;                                                 \
       using _Kp = typename _Vp::mask_type;                                                         \
-      using _Tp [[maybe_unused]] = typename _Vp::value_type;                                       \
       const _Vp& __x = __xx;                                                                       \
       if consteval                                                                                 \
         {                                                                                          \
@@ -366,7 +332,6 @@ namespace std                                                                   
   using std::datapar::name;                                                                        \
 }
 
-_GLIBCXX_SIMD_MATH_CLASSIFICATION_1ARG(isfinite)
 _GLIBCXX_SIMD_MATH_CLASSIFICATION_1ARG(isinf)
 _GLIBCXX_SIMD_MATH_CLASSIFICATION_1ARG(isnan)
 _GLIBCXX_SIMD_MATH_CLASSIFICATION_1ARG(isnormal)
@@ -374,6 +339,27 @@ _GLIBCXX_SIMD_MATH_CLASSIFICATION_1ARG(signbit)
 
 #undef _GLIBCXX_SIMD_MATH_CLASSIFICATION_1ARG
 
+namespace std::datapar
+{
+  template <typename _V0>
+    _GLIBCXX_ALWAYS_INLINE constexpr typename __detail::__deduced_simd_t<_V0>::mask_type
+    isfinite(const _V0& __x0)
+    {
+      using _Vp = __detail::__deduced_simd_t<_V0>;
+      const _Vp& __x = __x0;
+      return _Vp::_Impl::_S_isfinite(__x._M_data);
+    }
+
+  template <typename _V0, typename _V1>
+    _GLIBCXX_ALWAYS_INLINE constexpr typename __detail::__math_common_simd_t<_V0, _V1>::mask_type
+    isunordered(const _V0& __x0, const _V1& __x1)
+    {
+      using _Vp = __detail::__math_common_simd_t<_V0, _V1>;
+      const _Vp& __x = __x0;
+      const _Vp& __y = __x1;
+      return _Vp::_Impl::_S_isunordered(__x._M_data, __y._M_data);
+    }
+}
 
 // the following depend on the global rounding mode (not constexpr):
 //template<@\mathfloatingpoint@ V> @\deducedsimd@<V> nearbyint(const V& x);

@@ -25,8 +25,8 @@ namespace std::datapar
       else if (__builtin_is_constant_evaluated() or __k._M_is_constprop())
         return _GLIBCXX_SIMD_INT_PACK(__size, _Is, { return (... and __k[_Is]); });
 
-      else if constexpr (requires {_Abi::_MaskImpl::_S_all_of(__k);})
-        return _Abi::_MaskImpl::_S_all_of(__k);
+      else if constexpr (requires {_Abi::_MaskImpl::_S_all_of(__k._M_data);})
+        return _Abi::_MaskImpl::_S_all_of(__k._M_data);
 
       else if constexpr (not _Kp::_S_is_bitmask and sizeof(__k) <= sizeof(int64_t))
         {
@@ -68,8 +68,8 @@ namespace std::datapar
       else if (__builtin_is_constant_evaluated() or __k._M_is_constprop())
         return _GLIBCXX_SIMD_INT_PACK(__size, _Is, { return (... or __k[_Is]); });
 
-      else if constexpr (requires {_Abi::_MaskImpl::_S_any_of(__k);})
-        return _Abi::_MaskImpl::_S_any_of(__k);
+      else if constexpr (requires {_Abi::_MaskImpl::_S_any_of(__k._M_data);})
+        return _Abi::_MaskImpl::_S_any_of(__k._M_data);
 
       else if constexpr (not _Kp::_S_is_bitmask and sizeof(__k) <= sizeof(int64_t))
         return __builtin_bit_cast(__detail::__mask_integer_from<sizeof(__k)>, __data(__k)) != 0;
@@ -100,8 +100,8 @@ namespace std::datapar
       else if (__builtin_is_constant_evaluated() or __k._M_is_constprop())
         return _GLIBCXX_SIMD_INT_PACK(__size, _Is, { return (... and not __k[_Is]); });
 
-      else if constexpr (requires {_Abi::_MaskImpl::_S_none_of(__k);})
-        return _Abi::_MaskImpl::_S_none_of(__k);
+      else if constexpr (requires {_Abi::_MaskImpl::_S_none_of(__k._M_data);})
+        return _Abi::_MaskImpl::_S_none_of(__k._M_data);
 
       else if constexpr (not _Kp::_S_is_bitmask and sizeof(__k) <= sizeof(int64_t))
         return __builtin_bit_cast(__detail::__mask_integer_from<sizeof(__k)>,
