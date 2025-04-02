@@ -1045,8 +1045,8 @@ namespace std::__detail
       using _Traits = _SimdTraits<_Tp, _Abi>;
       using _MaskImpl = typename _Abi::_MaskImpl;
       using _MaskMember = typename _Traits::_MaskMember;
-      static constexpr auto _S_offset = __ic<__offset>;
-      static constexpr auto _S_size = __ic<_SimdSizeType(__simd_size_v<_Tp, _Abi>)>;
+      static constexpr _SimdSizeType _S_offset = __offset;
+      static constexpr _SimdSizeType _S_size = __simd_size_v<_Tp, _Abi>;
       static constexpr _MaskImpl _S_mask_impl = {};
 
       template <size_t _Np, bool _Sanitized>
@@ -1089,9 +1089,9 @@ namespace std::__detail
     {
       static_assert(sizeof...(_As) == 0);
 
-      static constexpr auto _S_size = __ic<0>;
+      static constexpr _SimdSizeType _S_size = 0;
 
-      static constexpr auto _S_tuple_size = __ic<0>;
+      static constexpr _SimdSizeType _S_tuple_size = 0;
 
       _GLIBCXX_SIMD_INTRINSIC constexpr bool
       _M_is_constprop() const
@@ -1137,15 +1137,15 @@ namespace std::__detail
 
       static constexpr bool _S_recurse = sizeof...(_As) != 0;
 
-      static constexpr auto _S_size = __ic<(__simd_size_v<_Tp, _A0>)>;
+      static constexpr _SimdSizeType _S_size = __simd_size_v<_Tp, _A0>;
 
-      static constexpr auto _S_total_size
-        = __ic<(__simd_size_v<_Tp, _A0> + ... + __simd_size_v<_Tp, _As>)>;
+      static constexpr _SimdSizeType _S_total_size
+        = (__simd_size_v<_Tp, _A0> + ... + __simd_size_v<_Tp, _As>);
 
-      static constexpr auto _S_size0 = _A0::_S_size;
-      static constexpr auto _S_tail_size = _SimdTuple<_Tp, _As...>::_S_size;
+      static constexpr _SimdSizeType _S_size0 = _A0::_S_size;
+      static constexpr _SimdSizeType _S_tail_size = _SimdTuple<_Tp, _As...>::_S_size;
 
-      static constexpr auto _S_tuple_size = __ic<_SimdSizeType(sizeof...(_As) + 1)>;
+      static constexpr _SimdSizeType _S_tuple_size = sizeof...(_As) + 1;
 
       _GLIBCXX_SIMD_INTRINSIC constexpr bool
       _M_is_constprop() const
