@@ -52,7 +52,7 @@ namespace std
 
       static constexpr _SimdSizeType _S_size = _Width;
 
-      static constexpr _SimdSizeType _S_full_size = std::__bit_ceil(_Width);
+      static constexpr _SimdSizeType _S_full_size = __detail::__signed_bit_ceil(_Width);
 
       static constexpr bool _S_is_partial = _S_full_size > _S_size;
 
@@ -80,7 +80,7 @@ namespace std
 
           static constexpr _SimdSizeType _S_size = _Width;
 
-          static constexpr _SimdSizeType _S_full_size = std::__bit_ceil(_Width);
+          static constexpr _SimdSizeType _S_full_size = __detail::__signed_bit_ceil(_Width);
 
           static constexpr bool _S_is_partial = _S_full_size > _S_size;
 
@@ -144,7 +144,8 @@ namespace std
       template <typename>
         using _MaskMember = _MaskInteger;
 
-      static constexpr bool _S_mask_is_partial = _S_size < 8 or not std::__has_single_bit(_S_size);
+      static constexpr bool _S_mask_is_partial
+        = _S_size < 8 or not __detail::__signed_has_single_bit(_S_size);
 
       // The template argument exists because _VecAbi::_S_implicit_mask needs it. And _ImplBuiltin
       // below needs to work generically for _VecAbi and _Avx512Abi.
@@ -3331,7 +3332,7 @@ namespace std::__detail
 
 #ifndef __clang__
       template <typename _Tp>
-        requires(std::__has_single_bit(_S_size) and _S_size >= 2
+        requires(__signed_has_single_bit(_S_size) and _S_size >= 2
                    and _S_size * sizeof(_Tp) <= 16
                    and ((_S_have_ssse3 and is_integral_v<_Tp>)
                           or (_S_have_sse3 and is_floating_point_v<_Tp>)))

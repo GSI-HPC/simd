@@ -129,7 +129,7 @@ namespace std::__detail
                 (_SimdIndexSequence<_Is...>, _SimdIndexSequence<_Js...>,
                  _SimdIndexSequence<_Ks...>) {
 #ifdef __clang__
-                constexpr int __simd_bytes = std::__bit_ceil(__size) * sizeof(_Tp);
+                constexpr int __simd_bytes = __signed_bit_ceil(__size) * sizeof(_Tp);
                 using _Rp [[__gnu__::__vector_size__(__simd_bytes)]] = _Tp;
                 return _Rp {
                   __vec_get(__as_simd_builtin(__x0), _Is)...,
@@ -144,7 +144,7 @@ namespace std::__detail
 #endif
               }(_MakeSimdIndexSequence<_T0::size.value>(),
                 _MakeSimdIndexSequence<_T1::size.value>(),
-                _MakeSimdIndexSequence<std::__bit_ceil(__size) - __size>())};
+                _MakeSimdIndexSequence<__signed_bit_ceil(__size) - __size>())};
       if constexpr (sizeof...(_Ts) == 0)
         return __x01;
       else

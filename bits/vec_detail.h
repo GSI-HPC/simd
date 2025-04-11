@@ -12,8 +12,55 @@
 
 #include <cstdint>
 
+#define _GLIBCXX_SIMD_TOSTRING_IMPL(x) #x
+#define _GLIBCXX_SIMD_TOSTRING(x) _GLIBCXX_SIMD_TOSTRING_IMPL(x)
+#define _GLIBCXX_SIMD_LOC __FILE__ ":" _GLIBCXX_SIMD_TOSTRING(__LINE__) ": "
+
+#define __glibcxx_simd_erroneous_unless(expr)                                                      \
+  do {                                                                                             \
+    const bool __cond = !bool(expr);                                                               \
+    if (__builtin_is_constant_evaluated() && __cond)                                               \
+      __builtin_trap(); /* erroneous behavior in a constant expression */                          \
+    else if (__builtin_constant_p(__cond) && __cond)                                               \
+      []() __attribute__((__noinline__, __noipa__, __error__("erroneous behavior detected."        \
+        "\n" _GLIBCXX_SIMD_LOC "note: '" #expr "' does not hold")))                                \
+      { __builtin_unreachable(); }();                                                              \
+  } while(false)
+
 namespace std::__detail
 {
+  template <typename _Tp>
+    _GLIBCXX_SIMD_INTRINSIC constexpr bool
+    __is_power2_minus_1(_Tp __x)
+    {
+      using _Up = __make_unsigned_int_t<_Tp>;
+      const _Up __y = _Up(__x);
+      return _Up() == (__y and _Up(__y + 1u));
+    }
+
+  template <std::signed_integral _Tp>
+    constexpr bool
+    __signed_has_single_bit(_Tp __x)
+    { return __has_single_bit(make_unsigned_t<_Tp>(__x)); }
+
+  template <std::signed_integral _Tp>
+    constexpr _Tp
+    __signed_bit_ceil(_Tp __x)
+    {
+      const _Tp __r = __bit_ceil(make_unsigned_t<_Tp>(__x));
+      __glibcxx_simd_erroneous_unless(__r > 0);
+      return __r;
+    }
+
+  template <std::signed_integral _Tp>
+    constexpr _Tp
+    __signed_bit_floor(_Tp __x)
+    {
+      __glibcxx_simd_erroneous_unless(__x >= 0);
+      const _Tp __r = __bit_floor(make_unsigned_t<_Tp>(__x));
+      return __r;
+    }
+
   ///////////////////////////////////////////////////////////////////////////////////////////////
   /////////////// tools for working with gnu::vector_size types (vector builtins) ///////////////
   ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -100,7 +147,7 @@ namespace std::__detail
    * Alias for a vector builtin with given value type \p _Tp and \p _Width.
    */
   template <__vectorizable _Tp, _SimdSizeType _Width>
-    requires (__has_single_bit(_Width))
+    requires (__signed_has_single_bit(_Width))
     using __vec_builtin_type = __vec_builtin_type_bytes<_Tp, sizeof(_Tp) * _Width>;
 
   /**
@@ -591,10 +638,10 @@ namespace std::__detail
     { return _GLIBCXX_SIMD_VEC_GEN(_Tp, _Width, _Is, {__gen(__ic<_Is>)...}); }
 
   template <int _Width, typename _Tp>
-    _GLIBCXX_SIMD_INTRINSIC constexpr __vec_builtin_type<_Tp, __bit_ceil(_Width)>
+    _GLIBCXX_SIMD_INTRINSIC constexpr __vec_builtin_type<_Tp, __signed_bit_ceil(_Width)>
     __vec_broadcast(_Tp __x)
     {
-      using _Rp = __vec_builtin_type<_Tp, __bit_ceil(_Width)>;
+      using _Rp = __vec_builtin_type<_Tp, __signed_bit_ceil(_Width)>;
       return _GLIBCXX_SIMD_VEC_GEN(_Rp, _Width, __is, {(__is < _Width ? __x : _Tp())...});
     }
 

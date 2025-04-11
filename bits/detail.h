@@ -21,15 +21,6 @@
 
 namespace std::__detail
 {
-  template <typename _Tp>
-    _GLIBCXX_SIMD_INTRINSIC constexpr bool
-    __is_power2_minus_1(_Tp __x)
-    {
-      using _Ip = __make_signed_int_t<_Tp>;
-      _Ip __y = __builtin_bit_cast(_Ip, __x);
-      return __y == -1 or std::__has_single_bit(__x + 1);
-    }
-
   /**@internal
    * Helper __may_alias<_Tp> that turns _Tp into the type to be used for an
    * aliasing pointer. This adds the __may_alias attribute to _Tp (with compilers
@@ -178,10 +169,6 @@ namespace std::__detail
    */
   using __build_flags = _BuildFlags;
 }
-
-#define _GLIBCXX_SIMD_TOSTRING_IMPL(x) #x
-#define _GLIBCXX_SIMD_TOSTRING(x) _GLIBCXX_SIMD_TOSTRING_IMPL(x)
-#define _GLIBCXX_SIMD_LOC __FILE__ ":" _GLIBCXX_SIMD_TOSTRING(__LINE__) ": "
 
 #if not IFNDR_SIMD_PRECONDITIONS
 #define __glibcxx_simd_precondition(expr, msg, ...)                                                \

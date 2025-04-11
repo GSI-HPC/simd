@@ -38,7 +38,7 @@ namespace std
         static constexpr bool _S_defer_to_scalar_abi = (_Width == 1);
 
       template <typename _Tp>
-        using _Vp = __detail::__vec_builtin_type<_Tp, std::__bit_ceil(_Width)>;
+        using _Vp = __detail::__vec_builtin_type<_Tp, __detail::__signed_bit_ceil(_Width)>;
 
       struct _IsValidAbiTag
       : bool_constant<(_Width > 1)>
@@ -104,7 +104,7 @@ namespace std
 
           static constexpr _SimdSizeType _S_size = _Width;
 
-          static constexpr _SimdSizeType _S_full_size = std::__bit_ceil(_Width);
+          static constexpr _SimdSizeType _S_full_size = __detail::__signed_bit_ceil(_Width);
 
           static constexpr bool _S_is_partial = _S_full_size > _S_size;
 
@@ -154,7 +154,7 @@ namespace std
 
       using _MaskImpl = _Impl;
 
-      static constexpr _SimdSizeType _S_full_size = std::__bit_ceil(_Width);
+      static constexpr _SimdSizeType _S_full_size = __detail::__signed_bit_ceil(_Width);
 
       static constexpr bool _S_is_partial = _S_full_size > _S_size;
 
@@ -280,7 +280,7 @@ namespace std::__detail
               constexpr _SimdConverter<_Ucanon, typename _UImpl::abi_type, _Tp, abi_type> __cvt;
               return __cvt(_UImpl::_S_load(__mem, __utag));
             }
-          else if constexpr (not __has_single_bit(_S_size))
+          else if constexpr (not __signed_has_single_bit(_S_size))
             {
               static_assert(_S_size < _S_full_size);
               using _FullImpl = typename __deduced_traits<_Tp, _S_full_size>::_SimdImpl;
@@ -1166,7 +1166,7 @@ namespace std::__detail
       template <_SimdSizeType _RetSize = _S_size, _SimdSizeType _IndexOffset = 0,
                 __vec_builtin _TV, typename _Fp>
         _GLIBCXX_SIMD_INTRINSIC static constexpr
-        __vec_builtin_type<__value_type_of<_TV>, __bit_ceil(_RetSize)>
+        __vec_builtin_type<__value_type_of<_TV>, __signed_bit_ceil(_RetSize)>
         _S_permute(_TV __x, const _Fp __idx_perm) noexcept
         {
           static_assert(is_same_v<_TV, _SimdMember<__value_type_of<_TV>>>);

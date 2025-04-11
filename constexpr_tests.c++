@@ -52,8 +52,8 @@ namespace test01
   static_assert(std::_VecAbi<7>::_S_size == 7);
   static_assert(std::_VecAbi<7>::_S_full_size == 8);
   static_assert(std::_VecAbi<7>::_IsValid<float>::value == false);
-  static_assert(std::_VecAbi<std::__bit_ceil(7) / 2>::_S_is_partial == false);
-  static_assert(std::_VecAbi<std::__bit_ceil(7) / 2>::_IsValid<float>::value == true);
+  static_assert(std::_VecAbi<std::__bit_ceil(7u) / 2>::_S_is_partial == false);
+  static_assert(std::_VecAbi<std::__bit_ceil(7u) / 2>::_IsValid<float>::value == true);
   static_assert(std::same_as<_AllNativeAbis::_BestPartialAbi<float, 7>, std::_VecAbi<4>>);
   static_assert(std::same_as<__fixed_size_storage_t<float, 7>,
                              _SimdTuple<float, std::_VecAbi<4>, std::_VecAbi<3>>>);

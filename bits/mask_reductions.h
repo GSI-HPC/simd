@@ -32,7 +32,7 @@ namespace std::datapar
         {
           const auto __as_int
             = __builtin_bit_cast(__detail::__mask_integer_from<sizeof(__k)>, __data(__k));
-          if constexpr (__has_single_bit(__size))
+          if constexpr (__detail::__signed_has_single_bit(__size))
             return __as_int == -1;
           else
             return (__as_int & ((1ll << (__size * _Bs * __CHAR_BIT__)) - 1))

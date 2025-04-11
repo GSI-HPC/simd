@@ -71,10 +71,10 @@ namespace std::__detail
       operator()(const _FromV& __x) const
       {
         constexpr int __tail_size = _FromV::_S_tail_size;
-        if constexpr (sizeof(_FromV) == __bit_ceil(_Np) * sizeof(_From))
+        if constexpr (sizeof(_FromV) == __signed_bit_ceil(_Np) * sizeof(_From))
           {
-            return __vec_convert<_ToV>(__builtin_bit_cast(
-                                         __vec_builtin_type<_From, __bit_ceil(_Np)>, __x));
+            return __vec_convert<_ToV>(
+                     __builtin_bit_cast(__vec_builtin_type<_From, __signed_bit_ceil(_Np)>, __x));
           }
         else if constexpr (__tail_size == 1)
           {

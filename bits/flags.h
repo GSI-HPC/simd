@@ -60,7 +60,7 @@ namespace std::__detail
     struct _Overaligned
     : _LoadStoreTag
     {
-      static_assert(std::__has_single_bit(_Np));
+      static_assert(__has_single_bit(_Np));
 
       template <typename, typename _Up>
         _GLIBCXX_SIMD_INTRINSIC static constexpr _Up*

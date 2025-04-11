@@ -45,7 +45,7 @@ namespace std::__detail
                             _BinaryOperation __binary_op)
     {
       using _V1 = std::datapar::basic_simd<_Tp, _Abi>;
-      static_assert(std::__has_single_bit(unsigned(_V1::size.value)));
+      static_assert(__signed_has_single_bit(_V1::size.value));
       using _V2 = std::datapar::resize_t<_V1::size.value / 2, _V1>;
       const auto [__x0, __x1] = std::datapar::chunk<_V2>(__x);
       // Mandates: binary_op can be invoked with two arguments of type basic_simd<_Tp, A1>
@@ -78,14 +78,14 @@ namespace std::datapar
       else if constexpr (_V1::size.value == 2 and sizeof(__x) == 16)
         return __binary_op(__x, _V1([&](auto __i) { return __x[__i ^ 1]; }))[0];
 
-      else if constexpr (std::__has_single_bit(_V1::size.value))
+      else if constexpr (__detail::__signed_has_single_bit(_V1::size.value))
         return reduce(__detail::__split_and_invoke_once(__x, __binary_op), __binary_op);
 
       else
         {
-          constexpr int __left_size = std::__bit_floor(_V1::size.value);
+          constexpr int __left_size = __detail::__signed_bit_floor(_V1::size.value);
           constexpr int __right_size = _V1::size.value - __left_size;
-          constexpr int __max_size = std::__bit_ceil(_V1::size.value);
+          constexpr int __max_size = __detail::__signed_bit_ceil(_V1::size.value);
           constexpr int __missing = __max_size - _V1::size.value;
           if constexpr (sizeof(_V1) == sizeof(resize_t<__max_size, _V1>)
                           and (__missing < __right_size)

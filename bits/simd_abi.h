@@ -49,7 +49,7 @@ namespace std::__detail
         static consteval auto
         _S_find_next_valid_abi()
         {
-          constexpr int _Next = std::__bit_ceil(_Np) / 2;
+          constexpr int _Next = __signed_bit_ceil(_Np) / 2;
           using _NextAbi = _A0<_Next>;
           if constexpr (_Next <= 1) // break recursion
             return _A0<_Np>();
@@ -961,7 +961,7 @@ namespace std::__detail
             }
           else
             {
-              static_assert(__has_single_bit(_S_chunk_size));
+              static_assert(__signed_has_single_bit(_S_chunk_size));
               if constexpr (_Np <= 4 and _S_size <= 128) // always stays below INT8_MAX
                 {
                   constexpr auto __iota0 = _S_vec_iota<_SimdMember0<_Tp>>;
@@ -1471,7 +1471,7 @@ namespace std::__detail
             return _S_reduce(__binary_op, __binary_op(__x0, __x1), __tail...);
           else if constexpr (_X0::size.value > _X1::size.value)
             {
-              using _X2 = std::datapar::resize_t<__bit_ceil(_X0::size.value) / 2, _X0>;
+              using _X2 = std::datapar::resize_t<__signed_bit_ceil(_X0::size.value) / 2, _X0>;
               auto __x02 = std::datapar::chunk<_X2>(__x0);
               if constexpr (_X1::size.value == _X2::size.value)
                 {
@@ -1498,7 +1498,7 @@ namespace std::__detail
             }
           else
             {
-              using _X2 = std::datapar::resize_t<__bit_ceil(_X1::size.value) / 2, _X1>;
+              using _X2 = std::datapar::resize_t<__signed_bit_ceil(_X1::size.value) / 2, _X1>;
               auto __x12 = std::datapar::chunk<_X2>(__x1);
               if constexpr (_X0::size.value == _X2::size.value)
                 {
