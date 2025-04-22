@@ -13,6 +13,10 @@
 
 #include <x86intrin.h>
 
+// psabi warnings are bogus because the ABI of the internal types never leaks into user code
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpsabi"
+
 namespace std
 {
   template <int _Width>
@@ -3999,4 +4003,5 @@ namespace std::__detail
 
 }
 #endif // __x86_64__ or __i386__
+#pragma GCC diagnostic pop
 #endif // PROTOTYPE_SIMD_X86_H_

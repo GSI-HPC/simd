@@ -2,7 +2,7 @@
 # Copyright © 2025      GSI Helmholtzzentrum fuer Schwerionenforschung GmbH
 #                       Matthias Kretz <m.kretz@gsi.de>
 
-CXXFLAGS+=-std=c++26 -Wall -Wextra -Wno-psabi -Werror -O2 -g0 -Wno-attributes -D_GLIBCXX_ASSERTIONS=1 $(FLAGS)
+CXXFLAGS+=-std=c++26 -Wall -Wextra -Werror -O2 -g0 -Wno-attributes -D_GLIBCXX_ASSERTIONS=1 $(FLAGS)
 CXXFLAGS_clang := -Wno-unknown-pragmas -ferror-limit=3
 CXXFLAGS_gcc := -fconcepts-diagnostics-depth=3 -fconstexpr-ops-limit=67108864 -fmax-errors=3
 

@@ -27,6 +27,10 @@
       { __builtin_unreachable(); }();                                                              \
   } while(false)
 
+// psabi warnings are bogus because the ABI of the internal types never leaks into user code
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpsabi"
+
 namespace std::__detail
 {
   template <typename _Tp>
@@ -816,5 +820,7 @@ namespace std::__detail
       return _V{static_cast<__value_type_of<_V>>(_Is + _Offset)...};
     }(make_integer_sequence<int, __width_of<_V>>());
 }
+
+#pragma GCC diagnostic pop
 
 #endif  // PROTOTYPE_VEC_DETAIL_H_
