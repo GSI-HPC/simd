@@ -226,7 +226,7 @@ endif
 obj:
 	@echo "Set up build dir and check dir"
 	@$(make_obj_dir_rule)
-	@mkdir obj/check
+	@mkdir -p obj/check
 	@ln -s obj/check check
 
 obj/codegen.depend: obj $(codegen_files)
