@@ -47,9 +47,9 @@ namespace std::datapar
 
       using abi_type = _Abi;
 
-#define _GLIBCXX_DELETE_SIMD_MASK                                              \
-  delete("This specialization is disabled because of an invalid combination "  \
-         "of template arguments to basic_simd_mask.")
+#define _GLIBCXX_DELETE_SIMD_MASK                                                           \
+  _GLIBCXX_DELETE_MSG("This specialization is disabled because of an invalid combination "  \
+                      "of template arguments to basic_simd_mask.")
 
       basic_simd_mask() = _GLIBCXX_DELETE_SIMD_MASK;
 

@@ -31,9 +31,9 @@ namespace std::datapar
 
       using mask_type = basic_simd_mask<sizeof(conditional_t<is_void_v<_Tp>, int, _Tp>), _Abi>;
 
-#define _GLIBCXX_DELETE_SIMD                                                   \
-  delete("This specialization is disabled because of an invalid combination "  \
-         "of template arguments to basic_simd.")
+#define _GLIBCXX_DELETE_SIMD                                                                    \
+      _GLIBCXX_DELETE_MSG("This specialization is disabled because of an invalid combination "  \
+          "of template arguments to basic_simd.")
 
       basic_simd() = _GLIBCXX_DELETE_SIMD;
 
