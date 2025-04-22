@@ -637,11 +637,12 @@ int run_check_cpu_support = [] {
  */
 template <typename V, int Init = 0, int Max = V::size() + Init - 1>
   constexpr typename V::value_type test_iota_max
-    = std::min(Max < 0 ? int(std::numeric_limits<typename V::value_type>::max()) + Max : Max,
-               sizeof(typename V::value_type) < sizeof(int)
-                 ? std::min(V::size() + Init - 1,
-                            int(std::numeric_limits<typename V::value_type>::max()))
-                 : V::size() + Init - 1);
+    = sizeof(typename V::value_type) < sizeof(int)
+        ? std::min(int(std::numeric_limits<typename V::value_type>::max()),
+                   Max < 0 ? std::min(V::size() + Init - 1,
+                                      int(std::numeric_limits<typename V::value_type>::max()) + Max)
+                           : Max)
+        : V::size() + Init - 1;
 
 template <typename T, typename Abi, int Init, int Max>
   requires std::is_enum_v<T>
