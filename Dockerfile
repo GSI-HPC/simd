@@ -6,9 +6,9 @@ FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN add-apt-repository -y ppa:ubuntu-toolchain-r/test && \
+RUN dpkg --add-architecture i386 && \
     apt-get update && \
-    apt-get update && apt-get install -y --no-install-recommends \
+    apt-get install -y --no-install-recommends \
     software-properties-common \
     wget \
     curl \
@@ -22,13 +22,15 @@ RUN add-apt-repository -y ppa:ubuntu-toolchain-r/test && \
     build-essential \
     ninja-build \
     python3 \
-    python3-pip \
+    python3-pip && \
+    add-apt-repository -y ppa:ubuntu-toolchain-r/test && \
+    apt-get update && apt-get install -y --no-install-recommends \
     gcc-13 g++-13 g++-13-multilib \
     gcc-14 g++-14 g++-14-multilib \
     file m4 libtool autoconf2.69 dwz gawk lzma xz-utils libzstd-dev zlib1g-dev systemtap-sdt-dev \
     binutils:native binutils-hppa64-linux-gnu:native gperf bison flex gettext nvptx-tools amdgcn-tools-18 \
     texinfo locales-all sharutils procps netbase libisl-dev libmpc-dev libmpfr-dev libgmp-dev lib32z1-dev libx32z1-dev \
-    coreutils chrpath lsb-release time pkgconf && \
+    libc6-dev-i386 linux-libc-dev:i386 coreutils chrpath time pkgconf && \
     update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 140 --slave /usr/bin/g++ g++ /usr/bin/g++-14 && \
     wget https://apt.llvm.org/llvm.sh && \
     chmod +x llvm.sh && \
