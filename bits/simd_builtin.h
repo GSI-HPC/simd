@@ -16,6 +16,10 @@
 
 #include <experimental/bits/numeric_traits.h>
 
+// psabi warnings are bogus because the ABI of the internal types never leaks into user code
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpsabi"
+
 namespace std::__detail
 {
   template <typename _Abi, _BuildFlags = {}>
@@ -1198,6 +1202,8 @@ namespace std::__detail
         }
     };
 }
+
+#pragma GCC diagnostic pop
 
 #endif // PROTOTYPE_SIMD_BUILTIN_H_
 
