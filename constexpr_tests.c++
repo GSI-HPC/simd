@@ -84,8 +84,14 @@ namespace test02
   using std::datapar::simd;
   using std::datapar::simd_mask;
 
+  static_assert(not destructible<dp::basic_simd_mask<7>>);
+
+  static_assert(    __complex_like<complex<float>>);
+  static_assert(not __complex_like<simd<complex<float>>>);
+
   static_assert(_AbiMaxSize<float, _VecAbi>::value == simd<float>::size());
   static_assert(_AbiMaxSize<double, _VecAbi>::value == simd<double>::size());
+  static_assert(_AbiMaxSize<complex<double>, _VecAbi>::value == simd<complex<double>>::size());
 
   template <_SimdSizeType N>
     using expected_abi
@@ -97,10 +103,67 @@ namespace test02
 
   static_assert(same_as<__deduce_t<int, 1>, _ScalarAbi>);
   static_assert(same_as<__deduce_t<float, 1>, _ScalarAbi>);
+  static_assert(same_as<__deduce_t<complex<float>, 1>, expected_abi<1>>);
+  static_assert(same_as<__deduce_t<complex<double>, 1>, expected_abi<1>>);
 
   static_assert(same_as<simd<int>::mask_type, simd_mask<int>>);
   static_assert(same_as<simd<float>::mask_type, simd_mask<float>>);
   static_assert(same_as<simd<float, 1>::mask_type, simd_mask<float, 1>>);
+  static_assert(same_as<simd<complex<float>>::mask_type, simd_mask<complex<float>>>);
+  static_assert(same_as<simd<complex<float>, 1>::mask_type, simd_mask<complex<float>, 1>>);
+  static_assert(same_as<simd<complex<double>>::mask_type::abi_type,
+                        expected_abi<simd<complex<double>>::size()>>);
+
+  // not the same because of the __deduce_t difference above
+  static_assert(not same_as<simd<complex<float>, 1>::mask_type, simd<double, 1>::mask_type>);
+
+  static_assert(    __value_preserving_convertible_to<float, double>);
+  static_assert(not __value_preserving_convertible_to<double, float>);
+  static_assert(    __value_preserving_convertible_to<float, complex<float>>);
+  static_assert(    __value_preserving_convertible_to<float, complex<double>>);
+  static_assert(    __value_preserving_convertible_to<double, complex<double>>);
+  static_assert(not __value_preserving_convertible_to<double, complex<float>>);
+
+  static_assert(not __broadcast_constructible<int, float>);
+  static_assert(not __broadcast_constructible<int&, float>);
+  static_assert(not __broadcast_constructible<int&&, float>);
+  static_assert(not __broadcast_constructible<const int&, float>);
+  static_assert(not __broadcast_constructible<const int, float>);
+
+  static_assert(    __broadcast_constructible<complex<float>, complex<float>>);
+  static_assert(    __broadcast_constructible<complex<float>, complex<double>>);
+  static_assert(not __broadcast_constructible<complex<double>, complex<float>>);
+
+  static_assert(not __math_floating_point<int>);
+  static_assert(not __math_floating_point<float>);
+  static_assert(not __math_floating_point<simd<int>>);
+  static_assert(    __math_floating_point<simd<float>>);
+
+  template <typename T>
+    concept has_type_member = requires { typename T::type; };
+  static_assert(not has_type_member<common_type<int, simd<float>>>);
+
+#if __AVX__
+  static_assert(_VecAbi<2>::_IsValid<complex<double>>::value);
+  static_assert(same_as<_VecAbi<2>::_Rebind<complex<double>>, _VecAbi<2>>);
+#endif
+
+#if __AVX512F__
+  static_assert(__valid_abi_tag<_Avx512Abi<2>, complex<double>>);
+  static_assert(same_as<_NativeAbi<complex<double>>, _Avx512Abi<4>>);
+  static_assert(__simd_size_v<complex<double>, _NativeAbi<complex<double>>> == 4);
+  static_assert(same_as<__deduce_t<complex<double>, 4>, _Avx512Abi<4>>);
+  static_assert(same_as<simd<complex<double>>::abi_type, _Avx512Abi<4>>);
+  static_assert(same_as<simd_mask<complex<double>>::abi_type, _Avx512Abi<4>>);
+  static_assert(_Avx512Abi<4>::_IsValid<complex<double>>::value);
+  static_assert(same_as<_Avx512Abi<4>::_Rebind<complex<double>>, _Avx512Abi<4>>);
+  static_assert(same_as<simd<complex<double>>::mask_type::abi_type, _Avx512Abi<4>>);
+#endif
+
+  static_assert(__why_is_it_disabled<simd<complex<double>>::mask_type>());
+  static_assert(__why_is_it_disabled<simd_mask<complex<double>, 3>>());
+  static_assert(__why_is_it_disabled<simd<complex<double>, 3>::mask_type>());
+  constexpr simd<complex<double>>::mask_type k = {};
 }
 
 #if defined __AVX__ and not defined __AVX2__
@@ -122,6 +185,7 @@ static_assert(    std::convertible_to<Ic<1>, dp::simd<float>>);
 static_assert(not std::convertible_to<Ic<1.1>, dp::simd<float>>);
 static_assert(not std::convertible_to<dp::simd<int, 4>, dp::simd<float, 4>>);
 static_assert(not std::convertible_to<dp::simd<float, 4>, dp::simd<int, 4>>);
+static_assert(not std::convertible_to<int, dp::simd<float>>);
 static_assert(    std::convertible_to<dp::simd<int, 4>, dp::simd<double, 4>>);
 
 template <typename V>
@@ -224,9 +288,30 @@ template <template <typename> class Tpl>
 #ifdef __STDCPP_FLOAT64_T__
     Tpl<std::float64_t> s;
 #endif
+#if SIMD_STD_BYTE
+    Tpl<std::byte> t;
+#endif
+    Tpl<std::complex<float>> u;
+    Tpl<std::complex<double>> v;
   };
 
 template struct instantiate_all_vectorizable<test_usable_simd>;
+
+// simd broadcast ctor ///////////////
+namespace test_broadcast
+{
+  using std::constructible_from;
+  using std::complex;
+  using std::datapar::simd;
+
+  static_assert(constructible_from<simd<complex<float>>, complex<float>>);
+  static_assert(constructible_from<simd<complex<double>>, complex<float>>);
+
+  constexpr simd<complex<double>, 2> cd2 = 1.f; // broadcast real from float
+  static_assert(all_of(cd2.real() == 1));
+  static_assert(all_of(cd2.imag() == 0));
+  static_assert(all_of(cd2 == complex{1.f, 0.f}));
+}
 
 // simd generator ctor ///////////////
 
@@ -240,10 +325,11 @@ namespace test_generator
   static_assert(not std::constructible_from<dp::simd<float>, int (&)(int)>);
   static_assert(not std::constructible_from<dp::simd<float>, double (&)(int)>);
   static_assert(    std::constructible_from<dp::simd<float>, short (&)(int)>);
-  // should be invalid with wording update:
-  static_assert(    std::constructible_from<dp::simd<float>, long double (&)(int)>);
+  static_assert(not std::constructible_from<dp::simd<float>, long double (&)(int)>);
   static_assert(    std::constructible_from<dp::simd<float>,
                                             udt_convertible_to_float (&)(int)>);
+  static_assert(    std::constructible_from<dp::simd<std::complex<double>>, std::complex<double> (&)(int)>);
+  static_assert(    std::constructible_from<dp::simd<std::complex<double>>, std::complex<float> (&)(int)>);
 }
 
 // mask generator ctor ///////////////
@@ -333,7 +419,9 @@ static_assert([] constexpr {
   static_assert(b[2] == 1);
   static_assert(b[3] == 1);
   static_assert(b[4] == 1);
+#if SIMD_MASK_IMPLICIT_CONVERSIONS or defined __AVX2__ or not defined __AVX__
   static_assert(all_of((b == 1) == a));
+#endif
   constexpr dp::simd_mask<float, 8> a8([](int i) -> bool { return i <= 4; });
   constexpr dp::basic_simd b8 = a8;
   static_assert(b8[0] == 1);
@@ -344,7 +432,9 @@ static_assert([] constexpr {
   static_assert(b8[5] == 0);
   static_assert(b8[6] == 0);
   static_assert(b8[7] == 0);
+#if SIMD_MASK_IMPLICIT_CONVERSIONS or defined __AVX2__ or not defined __AVX__
   static_assert(all_of((b8 == 1) == a8));
+#endif
   constexpr dp::simd_mask<float, 15> a15([](int i) -> bool { return i <= 4; });
   constexpr dp::basic_simd b15 = a15;
   static_assert(b15[0] == 1);
@@ -371,6 +461,102 @@ static_assert([] constexpr {
   return all_of(b == dp::simd<int, 4>([](int i) { return ~int(i < 2); }));
 }());
 #endif
+
+// mask conversions //////////////////
+namespace mask_conversion_tests
+{
+  using std::complex;
+  using std::datapar::simd_mask;
+
+  struct TestResult
+  {
+    int state;
+    unsigned long long a, b;
+  };
+
+  template <auto Res>
+    consteval void
+    check()
+    {
+      if constexpr (Res.state != 0 and Res.a != Res.b)
+        static_assert(Res.a == Res.b);
+      else
+        static_assert(Res.state == 0);
+    }
+
+  template <typename U>
+    consteval TestResult
+    do_test(const auto& k)
+    {
+      using M = simd_mask<U, k.size()>;
+      if constexpr (std::is_destructible_v<M>)
+        {
+          if (not std::ranges::equal(M(k), k))
+            {
+              if constexpr (k.size() <= 64)
+                return {1, M(k)._M_to_int(), k._M_to_int()};
+              else
+                return {1, 0, 0};
+            }
+          else
+            return {0, 0, 0};
+        }
+      else
+        return {0, 0, 0};
+    }
+
+  template <typename T, int N, int P = 0>
+    consteval void
+    do_test()
+    {
+      if constexpr (std::is_destructible_v<simd_mask<T, N>>)
+        {
+          constexpr simd_mask<T, N> k([](int i) {
+                      if constexpr (P == 2)
+                        return std::has_single_bit(unsigned(i));
+                      else if constexpr (P == 3)
+                        return not std::has_single_bit(unsigned(i));
+                      else
+                        return (i & 1) == P;
+                    });
+          check<do_test<char>(    k)>();
+          check<do_test<char>(not k)>();
+          check<do_test<short>(    k)>();
+          check<do_test<short>(not k)>();
+          check<do_test<int>(    k)>();
+          check<do_test<int>(not k)>();
+          check<do_test<double>(    k)>();
+          check<do_test<double>(not k)>();
+          check<do_test<complex<double>>(    k)>();
+          check<do_test<complex<double>>(not k)>();
+          if constexpr (P <= 2)
+            do_test<T, N, P + 1>();
+        }
+    }
+
+  template <typename T>
+    consteval bool
+    test()
+    {
+      using V = simd_mask<T>;
+      do_test<T, V::size()>();
+      do_test<T, 2 * V::size()>();
+      do_test<T, 4 * V::size()>();
+      do_test<T, 5 * V::size()>();
+      do_test<T, 2 * V::size() + 1>();
+      do_test<T, 2 * V::size() - 1>();
+      do_test<T, V::size() / 2>();
+      do_test<T, V::size() / 3>();
+      do_test<T, V::size() / 5>();
+      return true;
+    }
+
+  static_assert(test<char>());
+  static_assert(test<short>());
+  static_assert(test<float>());
+  static_assert(test<double>());
+  static_assert(test<complex<double>>());
+}
 
 // simd reductions ///////////////////
 
@@ -595,7 +781,7 @@ namespace math_tests
   { return float(x); }
 
   template <typename... Ts>
-    concept hypot_invocable = requires(Ts... xs) {
+    concept not_hypot_invocable = not requires(Ts... xs) {
       dp::hypot(xs...);
     };
 
@@ -650,8 +836,8 @@ namespace math_tests
   static_assert(dp::hypot(holder {1.f}, 1.2_f1)[0] == std::hypot(1.f, 1.2f));
 #endif
   // the following must not be valid. if you want simd<double> be explicit about it:
-  static_assert(not hypot_invocable<int, dp::simd<float, 1>>);
-  static_assert(not hypot_invocable<int, dp::simd<float, 1>, dp::simd<float, 1>>);
+  static_assert(not_hypot_invocable<int, dp::simd<float, 1>>);
+  static_assert(not_hypot_invocable<int, dp::simd<float, 1>, dp::simd<float, 1>>);
 
   static_assert(hypot_invocable_r<dp::simd<float, 1>, holder<float>,
                                   vir::constexpr_wrapper<2>, dp::simd<float, 1>>);

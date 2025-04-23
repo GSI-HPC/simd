@@ -14,7 +14,7 @@
 | P3441R2 Rename simd_split to simd_chunk                           | done        |
 | P3287R3 Exploration of namespaces for std::simd                   | done        |
 | P2933R4 Extend ⟨bit⟩ header function with overloads for std::simd | done        |
-| P2663R7 Interleaved complex values support in std::simd           | not started |
+| P2663R7 Interleaved complex values support in std::simd           | in progress |
 
 ### Design approved, but not in the WD yet
 

@@ -19,6 +19,10 @@ namespace std::__detail
   template <typename _Tp>
     concept __arithmetic = integral<_Tp> || floating_point<_Tp>;
 
+  template <typename _Tp, size_t _Np = 0>
+    concept __array_type
+      = same_as<_Tp, array<typename _Tp::value_type, _Np == 0 ? tuple_size_v<_Tp> : _Np>>;
+
   template <typename _Abi>
     concept __simd_abi_tag
       = not _Abi::template _IsValid<void>::value
@@ -27,6 +31,8 @@ namespace std::__detail
   template <typename _Abi, typename _Tp>
     concept __valid_abi_tag
       = __simd_abi_tag<_Abi> and _Abi::template _IsValid<_Tp>::value;
+
+  static_assert(not __valid_abi_tag<int, int>);
 
   template<class T>
     concept __constexpr_wrapper_like
@@ -65,14 +71,18 @@ namespace std::__detail
           };
 
   template <typename _From, typename _To>
+    concept __arithmetic_only_value_preserving_convertible_to
+      = convertible_to<_From, _To> and __arithmetic<_From> and __arithmetic<_To>
+          and not (is_signed_v<_From> and is_unsigned_v<_To>)
+          and numeric_limits<_From>::digits <= numeric_limits<_To>::digits
+          and numeric_limits<_From>::max() <= numeric_limits<_To>::max()
+          and numeric_limits<_From>::lowest() >= numeric_limits<_To>::lowest();
+
+  template <typename _From, typename _To>
     concept __value_preserving_convertible_to
-      = convertible_to<_From, _To>
-          and (same_as<_From, _To> or not __vectorizable<_From> or not __arithmetic<_To>
-                 or (__vectorizable<_From>
-                       and not (is_signed_v<_From> and is_unsigned_v<_To>)
-                       and numeric_limits<_From>::digits <= numeric_limits<_To>::digits
-                       and numeric_limits<_From>::max() <= numeric_limits<_To>::max()
-                       and numeric_limits<_From>::lowest() >= numeric_limits<_To>::lowest()));
+      = __arithmetic_only_value_preserving_convertible_to<_From, _To>
+          or (__complex_like<_To> and __arithmetic_only_value_preserving_convertible_to<
+                                        _From, typename _To::value_type>);
 
   template <typename _From, typename _To>
     concept __non_narrowing_constexpr_conversion
@@ -85,9 +95,11 @@ namespace std::__detail
 
   template <typename _From, typename _To>
     concept __broadcast_constructible
-      = (__value_preserving_convertible_to<remove_cvref_t<_From>, _To>
-           and not __constexpr_wrapper_like<remove_cvref_t<_From>>)
-          or __non_narrowing_constexpr_conversion<remove_cvref_t<_From>, _To>;
+      = convertible_to<_From, _To> // 4
+          and ((not __arithmetic<remove_cvref_t<_From>>
+                  and not __constexpr_wrapper_like<remove_cvref_t<_From>>) // 4.1
+                 or __value_preserving_convertible_to<remove_cvref_t<_From>, _To> // 4.2
+                 or __non_narrowing_constexpr_conversion<remove_cvref_t<_From>, _To>); // 4.3
 
   // __higher_floating_point_rank_than<_Tp, U> (_Tp has higher or equal floating point rank than U)
   template <typename _From, typename _To>
@@ -129,8 +141,13 @@ namespace std::__detail
   template <_SimdSizeType _Np>
     using _MakeSimdIndexSequence = std::make_integer_sequence<_SimdSizeType, _Np>;
 
+  template <typename _From, typename _To>
+    concept __simd_generator_convertible_to
+      = std::convertible_to<_From, _To>
+          and (not __arithmetic<_From> or __value_preserving_convertible_to<_From, _To>);
+
   template <typename _Fp, typename _Tp, _SimdSizeType... _Is>
-    requires (__value_preserving_convertible_to<decltype(declval<_Fp>()(__ic<_Is>)), _Tp> and ...)
+    requires (__simd_generator_convertible_to<decltype(declval<_Fp>()(__ic<_Is>)), _Tp> and ...)
     constexpr void
     __simd_generator_invokable_impl(_SimdIndexSequence<_Is...>);
 
@@ -140,8 +157,7 @@ namespace std::__detail
     };
 
   template <typename _Fp, typename _Tp, _SimdSizeType... _Is>
-    requires (not __value_preserving_convertible_to<decltype(declval<_Fp>()(__ic<_Is>)), _Tp>
-                or ...)
+    requires (not __simd_generator_convertible_to<decltype(declval<_Fp>()(__ic<_Is>)), _Tp> or ...)
     constexpr void
     __almost_simd_generator_invokable_impl(_SimdIndexSequence<_Is...>);
 

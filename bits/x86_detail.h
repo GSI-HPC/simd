@@ -336,7 +336,7 @@ namespace std::__detail
             return ((__bits >> 7) & 1) | ((__bits & 0x8000) >> 14);
         }
       else
-        __assert_unreachable<decltype(__x)>();
+        static_assert(false);
     }
 
   // calling the andnot builtins inhibits some optimizations, whereas GCC seems to be perfectly able
@@ -383,6 +383,25 @@ namespace std::__detail
                }());
     }
 #endif // not __clang__
+
+  _GLIBCXX_SIMD_INTRINSIC __v2double
+  __hadd_insn(__v2double __x, __v2double __y)
+  { return __builtin_ia32_haddpd(__x, __y); }
+
+  _GLIBCXX_SIMD_INTRINSIC __v4double
+  __hadd_insn(__v4double __x, __v4double __y)
+  { return __builtin_ia32_haddpd256(__x, __y); }
+
+  _GLIBCXX_SIMD_INTRINSIC __v4float
+  __hadd_insn(__v4float __x, __v4float __y)
+  { return __builtin_ia32_haddps(__x, __y); }
+
+  _GLIBCXX_SIMD_INTRINSIC __v8float
+  __hadd_insn(__v8float __x, __v8float __y)
+  {
+    __v4double __sum = reinterpret_cast<__v4double>(__builtin_ia32_haddps256(__x, __y));
+    return reinterpret_cast<__v8float>(__builtin_shufflevector(__sum, __sum, 0, 2, 1, 3));
+  }
 }
 #pragma GCC diagnostic pop
 

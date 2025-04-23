@@ -138,21 +138,17 @@ struct additional_info
 
 struct log_novalue {};
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wattributes"
-
-#pragma GCC diagnostic pop
-
-template <typename T, typename R = typename T::value_type>
-  R
-  value_type_impl(int);
+template <typename T>
+  struct unwrap_value_types
+  { using type = T; };
 
 template <typename T>
-  T
-  value_type_impl(float);
+  requires requires { typename T::value_type; }
+  struct unwrap_value_types<T>
+  { using type = typename unwrap_value_types<typename T::value_type>::type; };
 
 template <typename T>
-  using value_type_t = decltype(value_type_impl<T>(int()));
+  using value_type_t = typename unwrap_value_types<std::remove_cvref_t<T>>::type;
 
 template <typename T>
   struct as_unsigned;
@@ -237,6 +233,85 @@ template <typename T0, typename T1>
       }
   }
 
+template <typename T>
+  constexpr bool
+  bit_equal(const T& a, const T& b)
+  {
+    using std::__detail::_UInt;
+    if constexpr (sizeof(T) <= 8)
+      return std::bit_cast<_UInt<sizeof(T)>>(a) == std::bit_cast<_UInt<sizeof(T)>>(b);
+    else if constexpr (std::__detail::__simd_or_mask<T>)
+      {
+        using TT = typename T::value_type;
+        if constexpr (sizeof(TT) <= 8)
+          {
+            struct B
+            {
+              alignas(T) dp::rebind_t<_UInt<sizeof(TT)>, T> data;
+            };
+            return all_of(std::bit_cast<B>(a).data == std::bit_cast<B>(b).data);
+          }
+        else
+          {
+            struct B
+            {
+              alignas(T) dp::rebind_t<_UInt<8>, dp::resize_t<T::size() * sizeof(TT) / 8, T>> data;
+            };
+            return all_of(std::bit_cast<B>(a).data == std::bit_cast<B>(b).data);
+          }
+      }
+    else if constexpr (std::__detail::__complex_like<T>)
+      return bit_equal(a.real(), b.real()) and bit_equal(a.imag(), b.imag());
+    else
+      static_assert(false);
+  }
+
+template <std::__detail::__complex_like T, typename Abi>
+  constexpr typename dp::basic_simd<T, Abi>::mask_type
+  my_isinf(const dp::basic_simd<T, Abi>& x)
+  {
+    using M = typename dp::basic_simd<T, Abi>::mask_type;
+    return M(isinf(x.real()) or isinf(x.imag()));
+  }
+
+template <typename V>
+  constexpr bool
+  equal_with_nan_and_inf_fixup(const V& a, const V& b)
+  {
+    auto eq = a == b;
+    if (std::datapar::all_of(eq))
+      return true;
+    else if constexpr (std::__detail::__is_simd_v<V>)
+      {
+        using M = typename V::mask_type;
+        using T = typename V::value_type;
+        if constexpr (std::__detail::__complex_like<T>)
+          { // fix up nan == nan and (inf,nan) == (inf,?)
+            eq |= M(isnan(a.real()) and isnan(a.imag()) and isnan(b.real()) and isnan(a.imag()))
+#if 0
+                      or (isinf(a.real()) and isunordered(a.imag(), b.imag())
+                            and a.real() == b.real())
+                      or (isinf(a.imag()) and isunordered(a.real(), b.real())
+                            and a.imag() == b.imag()));
+#else
+                  // a and b are "an infinity" according to C23 Annex G.3
+                    or (my_isinf(a) and my_isinf(b));
+#endif
+          }
+        else if constexpr (std::is_floating_point_v<T>)
+          { // fix up nan == nan results
+            eq |= isnan(a) and isnan(b);
+          }
+        else
+          return false;
+        return std::datapar::all_of(eq);
+      }
+    else if constexpr (std::is_floating_point_v<V>)
+      return std::isnan(a) and std::isnan(b);
+    else
+      return false;
+  }
+
 struct constexpr_verifier
 {
   struct ignore_the_rest
@@ -275,7 +350,16 @@ struct constexpr_verifier
   constexpr ignore_the_rest
   verify_equal(const auto& v, const auto& ref) &
   {
-    okay = okay and std::datapar::all_of(v == ref);
+    using V = decltype(std::datapar::select(v == ref, v, ref));
+    okay = okay and equal_with_nan_and_inf_fixup<V>(v, ref);
+    return {};
+  }
+
+  constexpr ignore_the_rest
+  verify_bit_equal(const auto& v, const auto& ref) &
+  {
+    using V = decltype(std::datapar::select(v == ref, v, ref));
+    okay = okay and bit_equal<V>(v, ref);
     return {};
   }
 
@@ -435,19 +519,36 @@ struct runtime_verifier
   verify_equal(auto&& x, auto&& y,
                std::source_location loc = std::source_location::current())
   {
+    using V = decltype(std::datapar::select(x == y, x, y));
     const auto ip = determine_ip();
     bool ok;
     if constexpr (pair_specialization<decltype(x)> and pair_specialization<decltype(y)>)
       ok = std::datapar::all_of(x.first == y.first) and std::datapar::all_of(x.second == y.second);
     else
-      ok = std::datapar::all_of(x == y);
+      ok = equal_with_nan_and_inf_fixup<V>(x, y);
     if (ok)
       {
         ++passed_tests;
         return {};
       }
     else
-      return log_failure(x, y, loc, ip, "verify_equal");
+      return log_failure(x, y, loc, ip, "verify_equal")(x == y);
+  }
+
+  [[gnu::always_inline]]
+  additional_info
+  verify_bit_equal(auto&& x, auto&& y,
+                   std::source_location loc = std::source_location::current())
+  {
+    using V = decltype(std::datapar::select(x == y, x, y));
+    const auto ip = determine_ip();
+    if (bit_equal<V>(x, y))
+      {
+        ++passed_tests;
+        return {};
+      }
+    else
+      return log_failure(x, y, loc, ip, "verify_bit_equal");
   }
 
   [[gnu::always_inline]]
@@ -517,6 +618,11 @@ template <typename T, std::size_t N>
     });
   }
 
+template <typename T>
+  [[gnu::always_inline]] inline bool
+  is_constprop(const std::complex<T>& x)
+  { return is_constprop(x.real()) and is_constprop(x.imag()); }
+
 [[gnu::always_inline, gnu::flatten]]
 void
 constprop_test(auto&& fun, auto... args)
@@ -525,7 +631,7 @@ constprop_test(auto&& fun, auto... args)
 #ifndef __clang__
   t.verify((is_constprop(args) and ...))
     ("=> At least one argument failed to constant-propagate:", is_constprop(args)...,
-     type_to_string<decltype(args)>()...);
+     type_to_string<decltype(args)>()...);//, args...);
 #endif
   fun(t, args...);
 }
@@ -636,11 +742,11 @@ int run_check_cpu_support = [] {
  * The value of the largest element in test_iota<V, Init>.
  */
 template <typename V, int Init = 0, int Max = V::size() + Init - 1>
-  constexpr typename V::value_type test_iota_max
-    = sizeof(typename V::value_type) < sizeof(int)
-        ? std::min(int(std::numeric_limits<typename V::value_type>::max()),
+  constexpr value_type_t<V> test_iota_max
+    = sizeof(value_type_t<V>) < sizeof(int)
+        ? std::min(int(std::numeric_limits<value_type_t<V>>::max()),
                    Max < 0 ? std::min(V::size() + Init - 1,
-                                      int(std::numeric_limits<typename V::value_type>::max()) + Max)
+                                      int(std::numeric_limits<value_type_t<V>>::max()) + Max)
                            : Max)
         : V::size() + Init - 1;
 
@@ -668,7 +774,11 @@ template <typename V, int Init = 0, int MaxArg = int(test_iota_max<V, Init>)>
                   while (i > Max)
                     i -= Max - Init + 1;
                 }
-              return static_cast<typename V::value_type>(i);
+              using T = value_type_t<V>;
+              if constexpr (std::__detail::__simd_complex<V>)
+                return std::complex<T>(T(i), T(i));
+              else
+                return static_cast<T>(i);
             });
 
 /**
@@ -734,7 +844,7 @@ template <auto test_ref>
       { // call for each element
         [&]<std::size_t... Is>(std::index_sequence<Is...>) {
           ([&] {
-            std::string tmp_name = std::string(name) + std::to_string(Is);
+            std::string tmp_name = std::string(name) + '|' + std::to_string(Is);
             test_name = tmp_name;
             ((std::cout << "Testing '" << test_name) << ... << (' ' + std::to_string(is)))
               << ' ' << args[Is] << "'\n";

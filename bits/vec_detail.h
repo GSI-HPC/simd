@@ -68,6 +68,49 @@ namespace std::__detail
   ///////////////////////////////////////////////////////////////////////////////////////////////
   /////////////// tools for working with gnu::vector_size types (vector builtins) ///////////////
   ///////////////////////////////////////////////////////////////////////////////////////////////
+  struct alignas(16) _MaskUInt128
+  {
+    // this is little endian; but as long as all we do is the bit-ops below it doesn't matter
+    unsigned long long _M_lo;
+    unsigned long long _M_hi;
+
+    constexpr
+    _MaskUInt128() = default;
+
+    constexpr
+    _MaskUInt128(unsigned long long __lo, unsigned long long __hi)
+    : _M_lo(__lo), _M_hi(__hi)
+    {}
+
+    constexpr
+    _MaskUInt128(int __lo)
+    : _M_lo(__lo), _M_hi(__lo < 0 ? -1 : 0)
+    {}
+
+    constexpr
+    _MaskUInt128(unsigned long long __lo)
+    : _M_lo(__lo), _M_hi(0)
+    {}
+
+    constexpr friend _MaskUInt128
+    operator&(const _MaskUInt128& __x, const _MaskUInt128& __y)
+    { return {__x._M_lo & __y._M_lo, __x._M_hi & __y._M_hi}; }
+
+    constexpr friend _MaskUInt128
+    operator|(const _MaskUInt128& __x, const _MaskUInt128& __y)
+    { return {__x._M_lo | __y._M_lo, __x._M_hi | __y._M_hi}; }
+
+    constexpr friend _MaskUInt128
+    operator^(const _MaskUInt128& __x, const _MaskUInt128& __y)
+    { return {__x._M_lo ^ __y._M_lo, __x._M_hi ^ __y._M_hi}; }
+
+    constexpr friend _MaskUInt128
+    operator~(const _MaskUInt128& __x)
+    { return {~__x._M_lo, ~__x._M_hi}; }
+
+    constexpr friend bool
+    operator==(const _MaskUInt128&, const _MaskUInt128&) = default;
+  };
 
   /**
    * Reduce template instantiations for internal code by folding different types with same value
@@ -131,6 +174,19 @@ namespace std::__detail
     struct __canonical_vec_type<_Float32>
     { using type = float; };
 
+  template <typename _Tp, __complex_like _Cp>
+    struct __rebind_complex;
+
+  template <typename _Tp, template <typename> class _ComplexTemplate, typename _Up>
+    struct __rebind_complex<_Tp, _ComplexTemplate<_Up>>
+    { using type = _ComplexTemplate<_Tp>; };
+
+  template <__complex_like _Tp>
+    struct __canonical_vec_type<_Tp>
+    {
+      using type = typename __rebind_complex<
+                     typename __canonical_vec_type<typename _Tp::value_type>::type, _Tp>::type;
+    };
 
   /**
    * For use in implementation code in place of __vectorizable. This ensures the implementation code
@@ -139,6 +195,10 @@ namespace std::__detail
   template <typename _Tp>
     concept __vectorizable_canon
       = __vectorizable<_Tp> and same_as<_Tp, __canonical_vec_type_t<_Tp>>;
+
+  template <typename _Tp>
+    concept __vectorizable_canon_no_complex
+      = __vectorizable_canon<_Tp> and not __complex_like<_Tp>;
 
   /**
    * Alias for a vector builtin with given value type and total sizeof.
@@ -192,6 +252,7 @@ namespace std::__detail
    */
   template <typename _Tp>
     requires __vec_builtin<_Tp> or __arithmetic<_Tp> or __has_value_type_member<_Tp>
+      or same_as<_Tp, _MaskUInt128>
     using __value_type_of = typename __value_type_of_impl<_Tp>::type;
 
   template <__vec_builtin _Tp>
@@ -201,6 +262,10 @@ namespace std::__detail
   template <__arithmetic _Tp>
     struct __value_type_of_impl<_Tp>
     { using type = _Tp; };
+
+  template <>
+    struct __value_type_of_impl<_MaskUInt128>
+    { using type = _MaskUInt128; };
 
   template <__has_value_type_member _Tp>
     struct __value_type_of_impl<_Tp>
@@ -218,6 +283,19 @@ namespace std::__detail
    */
   template <__vectorizable _Up, __vec_builtin _TV>
     using __rebind_vec_builtin_t = __vec_builtin_type<_Up, __width_of<_TV>>;
+
+  /**
+   * Alias for a vector builtin with equal value type and new width \p _Np.
+   */
+  template <_SimdSizeType _Np, __vec_builtin _TV>
+    using __resize_vec_builtin_t = __vec_builtin_type<__value_type_of<_TV>, _Np>;
+
+  template <__vec_builtin _TV>
+    requires (__width_of<_TV> > 1)
+    using __half_vec_builtin_t = __resize_vec_builtin_t<__width_of<_TV> / 2, _TV>;
+
+  template <__vec_builtin _TV>
+    using __double_vec_builtin_t = __resize_vec_builtin_t<__width_of<_TV> * 2, _TV>;
 
   /**
    * Alias for a vector builtin with value type of \p _TV transformed using \p _Trait and equal
@@ -251,6 +329,10 @@ namespace std::__detail
   using __v4float [[__gnu__::__vector_size__(16)]] = float;
   using __v8float [[__gnu__::__vector_size__(32)]] = float;
   using __v16float [[__gnu__::__vector_size__(64)]] = float;
+
+  using __v8float16 [[__gnu__::__vector_size__(16)]] = _Float16;
+  using __v16float16 [[__gnu__::__vector_size__(32)]] = _Float16;
+  using __v32float16 [[__gnu__::__vector_size__(64)]] = _Float16;
 
   using __v16char [[__gnu__::__vector_size__(16)]] = char;
   using __v32char [[__gnu__::__vector_size__(32)]] = char;
@@ -352,13 +434,14 @@ namespace std::__detail
    * Split \p __x into \p _Total parts and return the part at index \p _Index. Optionally combine
    * multiple parts into the return value (\p _Combine).
    */
-  template <int _Index, int _Total, int _Combine = 1, __vec_builtin _TV>
+  template <int _Index, int _Total, int _Combine = 1, __vec_builtin _TV,
+            typename _Width = _Ic<__width_of<_TV>>>
     _GLIBCXX_SIMD_INTRINSIC _GLIBCXX_CONST constexpr
-    __vec_builtin_type<__value_type_of<_TV>, __width_of<_TV> / _Total * _Combine>
-    __vec_extract_part(_TV __x)
+    __vec_builtin_type<__value_type_of<_TV>, _Width::value / _Total * _Combine>
+    __vec_extract_part(_TV __x, _Width __width = {})
     {
       using _Tp = __value_type_of<_TV>;
-      constexpr int __values_per_part = __width_of<_TV> / _Total;
+      constexpr int __values_per_part = __width / _Total;
       constexpr int __values_to_skip = _Index * __values_per_part;
       constexpr int __return_size = _Combine * __values_per_part;
       static_assert((_Index + _Combine) * __values_per_part * sizeof(_Tp) <= sizeof(__x),
@@ -710,7 +793,7 @@ namespace std::__detail
     _GLIBCXX_SIMD_INTRINSIC constexpr _TV
     __vec_not(_TV __a)
     {
-      using _UV = __vec_builtin_type<unsigned, sizeof(_TV)>;
+      using _UV = __vec_builtin_type_bytes<unsigned, sizeof(_TV)>;
       if constexpr (is_floating_point_v<__value_type_of<_TV>>)
         return __builtin_bit_cast(_TV, ~__builtin_bit_cast(_UV, __a));
       else
@@ -819,6 +902,250 @@ namespace std::__detail
     constexpr _V _S_vec_iota = []<int... _Is>(integer_sequence<int, _Is...>) {
       return _V{static_cast<__value_type_of<_V>>(_Is + _Offset)...};
     }(make_integer_sequence<int, __width_of<_V>>());
+
+  // work around __builtin_constant_p returning false unless passed a variable
+  // (__builtin_constant_p(x[0]) is false while __is_constprop(x[0]) is true)
+  _GLIBCXX_SIMD_ALWAYS_INLINE constexpr bool
+  __is_constprop(const auto& __x)
+  { return __builtin_is_constant_evaluated() or __builtin_constant_p(__x); }
+
+  _GLIBCXX_SIMD_ALWAYS_INLINE constexpr bool
+  __is_constprop(const __complex_like auto& __x)
+  {
+    return __builtin_is_constant_evaluated()
+             or (__is_constprop(__x.real()) and __is_constprop(__x.imag()));
+  }
+
+  _GLIBCXX_SIMD_INTRINSIC constexpr bool
+  __is_constprop_equal_to(const auto& __x, const auto& __expect)
+  { return (__builtin_is_constant_evaluated() or __builtin_constant_p(__x)) and __x == __expect; }
+
+  template <__vec_builtin _TV>
+    _GLIBCXX_SIMD_INTRINSIC _TV
+    __hadd_insn(_TV __x, _TV __y) = delete;
+
+  template <__vec_builtin _TV, int _Np = __width_of<_TV>,
+            typename = make_integer_sequence<int, _Np>>
+    struct _VecOps;
+
+  template <__vec_builtin _TV, int _Np, int... _Is>
+    struct _VecOps<_TV, _Np, integer_sequence<int, _Is...>>
+    {
+      static_assert(_Np <= __width_of<_TV>);
+
+      using _Tp = __value_type_of<_TV>;
+
+      using _HV = __half_vec_builtin_t<conditional_t<_Np >= 2, _TV, __double_vec_builtin_t<_TV>>>;
+
+      _GLIBCXX_SIMD_INTRINSIC static constexpr _TV
+      _S_broadcast(_Tp __init)
+      { return _TV {((void)_Is, __init)...}; }
+
+      _GLIBCXX_SIMD_INTRINSIC static constexpr _TV
+      _S_broadcast_to_even(_Tp __init)
+      { return _TV {((_Is & 1) == 0 ? __init : _Tp())...}; }
+
+      _GLIBCXX_SIMD_INTRINSIC static constexpr _TV
+      _S_broadcast_to_odd(_Tp __init)
+      { return _TV {((_Is & 1) == 1 ? __init : _Tp())...}; }
+
+      _GLIBCXX_SIMD_INTRINSIC static constexpr bool
+      _S_all_of(_TV __k) noexcept
+      { return (... and (__k[_Is] != 0)); }
+
+      template <typename _Offset = _Ic<0>>
+      _GLIBCXX_SIMD_INTRINSIC static constexpr _TV
+      _S_extract(__vec_builtin auto __x, _Offset = {})
+      { return __builtin_shufflevector(__x, __x, (_Is + _Offset::value)...); }
+
+      // swap neighboring elements
+      _GLIBCXX_SIMD_INTRINSIC static constexpr _TV
+      _S_swap_neighbors(_TV __x)
+      { return __builtin_shufflevector(__x, __x, (_Is ^ 1)...); }
+
+      _GLIBCXX_SIMD_INTRINSIC static constexpr _TV
+      _S_move_carry(_TV __x)
+      {
+        return __builtin_shufflevector(__x, _TV(), ((_Is & 1) == 0 ? __width_of<_TV>
+                                                                   : _Is - 1)...);
+      }
+
+      // duplicate each element, duplicating the vector in sizeof
+      _GLIBCXX_SIMD_INTRINSIC static constexpr _TV
+      _S_dup_each(_HV __x) requires (_Np > 1)
+      { return __builtin_shufflevector(__x, __x, (_Is >> 1)...); }
+
+      // duplicate even indexed elements, dropping the odd ones
+      _GLIBCXX_SIMD_INTRINSIC static constexpr _TV
+      _S_dup_even(_TV __x)
+      { return __builtin_shufflevector(__x, __x, (_Is & ~1)...); }
+
+      // duplicate odd indexed elements, dropping the even ones
+      _GLIBCXX_SIMD_INTRINSIC static constexpr _TV
+      _S_dup_odd(_TV __x)
+      { return __builtin_shufflevector(__x, __x, (_Is | 1)...); }
+
+      // return even indexed elements alternating from x and y
+      _GLIBCXX_SIMD_INTRINSIC static constexpr _TV
+      _S_blend_even(_TV __x, _TV __y)
+      { return __builtin_shufflevector(__x, __y, ((_Is & ~1) + __width_of<_TV> * (_Is & 1))...); }
+
+      // return odd indexed elements alternating from x and y
+      _GLIBCXX_SIMD_INTRINSIC static constexpr _TV
+      _S_blend_odd(_TV __x, _TV __y)
+      {
+        return __builtin_shufflevector(__x, __y,
+                                       ((_Is & ~1) + 1 + __width_of<_TV> * (_Is & 1))...);
+      }
+
+      _GLIBCXX_SIMD_INTRINSIC static constexpr void
+      _S_overwrite_even_elements(_TV& __x, _HV __y) requires (_Np > 1)
+      {
+        constexpr _SimdSizeType __n = __width_of<_TV>;
+        __x = __builtin_shufflevector(__x,
+#ifdef __clang__
+                                      __vec_concat(__y, __y),
+#else
+                                      __y,
+#endif
+                                      ((_Is & 1) == 0 ? __n + _Is / 2 : _Is)...);
+      }
+
+      _GLIBCXX_SIMD_INTRINSIC static constexpr void
+      _S_overwrite_even_elements(_TV& __xl, _TV& __xh, _TV __y)
+      {
+        constexpr _SimdSizeType __nl = __width_of<_TV>;
+        constexpr _SimdSizeType __nh = __nl * 3 / 2;
+        __xl = __builtin_shufflevector(__xl, __y, ((_Is & 1) == 0 ? __nl + _Is / 2 : _Is)...);
+        __xh = __builtin_shufflevector(__xh, __y, ((_Is & 1) == 0 ? __nh + _Is / 2 : _Is)...);
+      }
+
+      _GLIBCXX_SIMD_INTRINSIC static constexpr void
+      _S_overwrite_odd_elements(_TV& __x, _HV __y) requires (_Np > 1)
+      {
+        constexpr _SimdSizeType __n = __width_of<_TV>;
+        __x = __builtin_shufflevector(__x,
+#ifdef __clang__
+                                      __vec_concat(__y, __y),
+#else
+                                      __y,
+#endif
+                                      ((_Is & 1) == 1 ? __n + _Is / 2 : _Is)...);
+      }
+
+      _GLIBCXX_SIMD_INTRINSIC static constexpr void
+      _S_overwrite_odd_elements(_TV& __xl, _TV& __xh, _TV __y)
+      {
+        constexpr _SimdSizeType __nl = __width_of<_TV>;
+        constexpr _SimdSizeType __nh = __nl * 3 / 2;
+        __xl = __builtin_shufflevector(__xl, __y, ((_Is & 1) == 1 ? __nl + _Is / 2 : _Is)...);
+        __xh = __builtin_shufflevector(__xh, __y, ((_Is & 1) == 1 ? __nh + _Is / 2 : _Is)...);
+      }
+
+      // implementation in bits/detail.h
+      _GLIBCXX_SIMD_INTRINSIC static constexpr _TV
+      _S_hadd(_TV __x, _TV __y);
+
+      _GLIBCXX_SIMD_INTRINSIC static constexpr _TV
+      _S_compress_even(__double_vec_builtin_t<_TV> __x)
+      { return __builtin_shufflevector(__x, __x, (_Is * 2)...); }
+
+      _GLIBCXX_SIMD_INTRINSIC static constexpr _TV
+      _S_compress_odd(__double_vec_builtin_t<_TV> __x)
+      { return __builtin_shufflevector(__x, __x, (_Is * 2 + 1)...); }
+
+      _GLIBCXX_SIMD_INTRINSIC static constexpr _TV
+      _S_compress_even(_TV __x, _TV __y)
+      { return __builtin_shufflevector(__x, __y, (_Is * 2)...); }
+
+      _GLIBCXX_SIMD_INTRINSIC static constexpr _TV
+      _S_compress_odd(_TV __x, _TV __y)
+      { return __builtin_shufflevector(__x, __y, (_Is * 2 + 1)...); }
+
+      // negate every even element (real part of interleaved complex)
+      _GLIBCXX_SIMD_INTRINSIC static constexpr _TV
+      _S_complex_negate_real(_TV __x)
+      { return __vec_xor(_S_broadcast_to_even(_S_signmask<_TV>[0]), __x); }
+
+      // negate every odd element (imaginary part of interleaved complex)
+      _GLIBCXX_SIMD_INTRINSIC static constexpr _TV
+      _S_complex_negate_imag(_TV __x)
+      { return __vec_xor(_S_broadcast_to_odd(_S_signmask<_TV>[0]), __x); }
+
+      // Subtract elements with even index, add elements with odd index.
+      _GLIBCXX_SIMD_INTRINSIC static constexpr _TV
+      _S_addsub(_TV __x, _TV __y)
+      {
+#if 0
+        return __x + _S_complex_negate_imag(__y);
+#else
+        // GCC recognizes this pattern as addsub
+        return __builtin_shufflevector(__x - __y, __x + __y,
+                                       (_Is + (_Is & 1) * __width_of<_TV>)...);
+#endif
+      }
+
+      // true if all elements are know to be equal to __ref at compile time
+      _GLIBCXX_SIMD_INTRINSIC static constexpr bool
+      _S_is_constprop_equal_to(_TV __x, _Tp __ref)
+      { return (__is_constprop_equal_to(__x[_Is], __ref) and ...); }
+
+      _GLIBCXX_SIMD_INTRINSIC static constexpr bool
+      _S_complex_real_is_zero(_TV __x)
+      { return (((_Is & 1) == 1 or (__x[_Is] == _Tp())) and ...); }
+
+      // True iff all elements at even indexes are zero. This includes signed zeros only when
+      // -fno-signed-zeros is in effect.
+      template <__detail::_OptFlags _Flags = {}>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr bool
+        _S_complex_real_is_constprop_zero(_TV __x)
+        {
+          if constexpr (_Flags._M_conforming_to_STDC_annex_G())
+            {
+              using _Up = _UInt<sizeof(_Tp)>;
+              return (((_Is & 1) == 1 or __is_constprop_equal_to(__builtin_bit_cast(_Up, __x[_Is]),
+                                                                 _Up())) and ...);
+            }
+          else
+            return (((_Is & 1) == 1 or __is_constprop_equal_to(__x[_Is], _Tp())) and ...);
+      }
+
+      _GLIBCXX_SIMD_INTRINSIC static constexpr bool
+      _S_complex_real_is_one(_TV __x)
+      { return (((_Is & 1) == 1 or (__x[_Is] == _Tp(1))) and ...); }
+
+      _GLIBCXX_SIMD_INTRINSIC static constexpr bool
+      _S_complex_real_is_constprop_one(_TV __x)
+      { return (((_Is & 1) == 1 or __is_constprop_equal_to(__x[_Is], _Tp(1))) and ...); }
+
+      _GLIBCXX_SIMD_INTRINSIC static constexpr bool
+      _S_complex_imag_is_zero(_TV __x)
+      { return (((_Is & 1) == 0 or (__x[_Is] == _Tp())) and ...); }
+
+      // True iff all elements at odd indexes are zero. This includes signed zeros only when
+      // -fno-signed-zeros is in effect.
+      template <__detail::_OptFlags _Flags = {}>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr bool
+        _S_complex_imag_is_constprop_zero(_TV __x)
+        {
+          if constexpr (_Flags._M_conforming_to_STDC_annex_G())
+            {
+              using _Up = _UInt<sizeof(_Tp)>;
+              return (((_Is & 1) == 0 or __is_constprop_equal_to(__builtin_bit_cast(_Up, __x[_Is]),
+                                                                 _Up())) and ...);
+            }
+          else
+            return (((_Is & 1) == 0 or __is_constprop_equal_to(__x[_Is], _Tp())) and ...);
+        }
+
+      _GLIBCXX_SIMD_INTRINSIC static constexpr bool
+      _S_complex_imag_is_one(_TV __x)
+      { return (((_Is & 1) == 0 or (__x[_Is] == _Tp(1))) and ...); }
+
+      _GLIBCXX_SIMD_INTRINSIC static constexpr bool
+      _S_complex_imag_is_constprop_one(_TV __x)
+      { return (((_Is & 1) == 0 or __is_constprop_equal_to(__x[_Is], _Tp(1))) and ...); }
+    };
 }
 
 #pragma GCC diagnostic pop

@@ -20,7 +20,7 @@ namespace std::datapar
       using _Kp = basic_simd_mask<_Bs, _Abi>;
       constexpr __detail::_SimdSizeType __size = _Kp::size.value;
       if constexpr (__size == 1)
-        return __data(__k);
+        return __k[0];
 
       else if (__builtin_is_constant_evaluated() or __k._M_is_constprop())
         return _GLIBCXX_SIMD_INT_PACK(__size, _Is, { return (... and __k[_Is]); });
@@ -63,7 +63,7 @@ namespace std::datapar
       using _Kp = basic_simd_mask<_Bs, _Abi>;
       constexpr __detail::_SimdSizeType __size = _Kp::size.value;
       if constexpr (__size == 1)
-        return __data(__k);
+        return __k[0];
 
       else if (__builtin_is_constant_evaluated() or __k._M_is_constprop())
         return _GLIBCXX_SIMD_INT_PACK(__size, _Is, { return (... or __k[_Is]); });
@@ -95,7 +95,7 @@ namespace std::datapar
       using _Kp = basic_simd_mask<_Bs, _Abi>;
       constexpr __detail::_SimdSizeType __size = _Kp::size.value;
       if constexpr (__size == 1)
-        return !__data(__k);
+        return !__k[0];
 
       else if (__builtin_is_constant_evaluated() or __k._M_is_constprop())
         return _GLIBCXX_SIMD_INT_PACK(__size, _Is, { return (... and not __k[_Is]); });
@@ -128,7 +128,7 @@ namespace std::datapar
       using _Kp = basic_simd_mask<_Bs, _Abi>;
       constexpr __detail::_SimdSizeType __size = _Kp::size.value;
       if constexpr (__size == 1)
-        return +__data(__k);
+        return +__k[0];
 
       else if (__builtin_is_constant_evaluated() || __k._M_is_constprop())
         {

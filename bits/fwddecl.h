@@ -10,6 +10,7 @@
 //#include <experimental/bits/simd_detail.h>
 #include "simd_config.h"
 
+#include <complex> // needed for datapar::polar(r, theta) and nothing else!
 #include <functional>
 #include <stdfloat>
 #include <type_traits>
@@ -35,38 +36,100 @@ namespace std
 namespace std::__detail
 {
   template <size_t _Bytes>
-    struct __make_unsigned_int;
+    struct __make_unsigned_int
+    { using type = void; };
 
+#ifdef __UINT8_TYPE__
   template <>
-    struct __make_unsigned_int<sizeof(unsigned int)>
-    { using type = unsigned int; };
+    struct __make_unsigned_int<sizeof(__UINT8_TYPE__)>
+    { using type = __UINT8_TYPE__; };
+#endif
 
+#ifdef __UINT16_TYPE__
   template <>
-    struct __make_unsigned_int<sizeof(unsigned long)
-                                 + (sizeof(unsigned long long) == sizeof(unsigned long))>
-    { using type = unsigned long; };
+    struct __make_unsigned_int<sizeof(__UINT16_TYPE__)>
+    { using type = __UINT16_TYPE__; };
+#endif
 
+#ifdef __UINT32_TYPE__
   template <>
-    struct __make_unsigned_int<sizeof(unsigned long long)
-                                 + (sizeof(unsigned long long) != sizeof(unsigned long))>
+    struct __make_unsigned_int<sizeof(__UINT32_TYPE__)>
+    { using type = __UINT32_TYPE__; };
+#endif
+
+#ifdef __UINT64_TYPE__
+  template <size_t _Bytes>
+    requires (_Bytes == sizeof(__UINT64_TYPE__))
+      and (sizeof(__UINT64_TYPE__) == sizeof(unsigned long long))
+    struct __make_unsigned_int<_Bytes>
     { using type = unsigned long long; };
 
-  template <>
-    struct __make_unsigned_int<sizeof(unsigned short)>
-    { using type = unsigned short; };
+  template <size_t _Bytes>
+    requires (_Bytes == sizeof(__UINT64_TYPE__))
+      and (sizeof(__UINT64_TYPE__) != sizeof(unsigned long long)) // impossible, right?
+    struct __make_unsigned_int<_Bytes>
+    { using type = __UINT64_TYPE__; };
+#endif
+
+  // definition in vec_detail.h
+  struct alignas(16) _MaskUInt128;
 
   template <>
-    struct __make_unsigned_int<sizeof(unsigned char)>
-    { using type = unsigned char; };
+    struct __make_unsigned_int<16>
+    { using type = _MaskUInt128; };
+
+  template <size_t _Bytes>
+    using _UInt = typename __make_unsigned_int<_Bytes>::type;
 
   template <typename _Tp>
     using __make_unsigned_int_t = typename __make_unsigned_int<sizeof(_Tp)>::type;
 
   template <typename _Tp>
-    using __make_signed_int_t = make_signed_t<__make_unsigned_int_t<_Tp>>;
+    using __make_signed_int_t = typename __make_signed<__make_unsigned_int_t<_Tp>>::__type;
 
   template <size_t _Bs>
-    using __mask_integer_from = make_signed_t<typename __make_unsigned_int<_Bs>::type>;
+    using __mask_integer_from
+      = typename __make_signed<typename __make_unsigned_int<_Bs>::type>::__type;
+
+  template <typename _Cp, auto __re, auto __im, typename _Tp = typename _Cp::value_type>
+    constexpr _Cp __complex_object = _Cp {_Tp(__re), _Tp(__im)};
+
+  template <typename _Tp>
+    concept __complex_like_impl
+      = requires(_Tp __x) {
+        typename _Tp::value_type;
+        { __x.real() } -> same_as<typename _Tp::value_type>;
+        { __x.imag() } -> same_as<typename _Tp::value_type>;
+        { real(__x) } -> same_as<typename _Tp::value_type>;
+        { imag(__x) } -> same_as<typename _Tp::value_type>;
+        { +__x } -> same_as<_Tp>;
+        { -__x } -> same_as<_Tp>;
+        { __x + __x } -> same_as<_Tp>;
+        { __x - __x } -> same_as<_Tp>;
+        { __x * __x } -> same_as<_Tp>;
+        { __x / __x } -> same_as<_Tp>;
+        { __x += __x } -> same_as<_Tp&>;
+        { __x -= __x } -> same_as<_Tp&>;
+        { __x *= __x } -> same_as<_Tp&>;
+        { __x /= __x } -> same_as<_Tp&>;
+        { abs(__x) } -> same_as<typename _Tp::value_type>;
+        { arg(__x) } -> same_as<typename _Tp::value_type>;
+        { norm(__x) } -> same_as<typename _Tp::value_type>;
+        { conj(__x) } -> same_as<_Tp>;
+        { proj(__x) } -> same_as<_Tp>;
+      }
+          and (__complex_object<_Tp, 1, 2> + _Tp {} == __complex_object<_Tp, 1, 2>)
+          and (__complex_object<_Tp, -1, 5> - __complex_object<_Tp, -1, 5> == _Tp {})
+          and (__complex_object<_Tp, 2, 3> * __complex_object<_Tp, 1, 1>
+                 == __complex_object<_Tp, -1, 5>)
+          and (__complex_object<_Tp, 5, 5> / __complex_object<_Tp, 1, 2>
+                 == __complex_object<_Tp, 3, -1>)
+          and (conj(__complex_object<_Tp, 5, 3>) == __complex_object<_Tp, 5, -3>)
+          // not constexpr: and (abs(__complex_object<_Tp, 3, 4>) == typename _Tp::value_type(5))
+          and (norm(__complex_object<_Tp, 5, 5>) == typename _Tp::value_type(50));
+
+  template <typename _Tp>
+    concept __complex_like = __complex_like_impl<remove_cvref_t<_Tp>>;
 
   template <typename _Tp>
     struct __is_vectorizable
@@ -94,6 +157,10 @@ namespace std::__detail
   template <> struct __is_vectorizable<  signed long long> : bool_constant<true> {};
   template <> struct __is_vectorizable<unsigned long long> : bool_constant<true> {};
 
+  // necessary / helpful for complex<double>:
+  //template <> struct __is_vectorizable<  signed __int128> : bool_constant<true> {};
+  //template <> struct __is_vectorizable<unsigned __int128> : bool_constant<true> {};
+
   template <> struct __is_vectorizable<float> : bool_constant<true> {};
   template <> struct __is_vectorizable<double> : bool_constant<true> {};
 #ifdef __STDCPP_FLOAT16_T__
@@ -105,6 +172,14 @@ namespace std::__detail
 #ifdef __STDCPP_FLOAT64_T__
   template <> struct __is_vectorizable<std::float64_t> : bool_constant<true> {};
 #endif
+
+  // internal (for complex<double>)
+  // DO NOT USE THIS OUTSIDE OF THE SIMD IMPLEMENTATION!
+  template <> struct __is_vectorizable<_MaskUInt128> : bool_constant<true> {};
+
+  // Also allows user-defined types that implement the std::complex interface
+  template <__complex_like _Tp>
+    struct __is_vectorizable<_Tp> : __is_vectorizable<typename _Tp::value_type> {};
 
   template <typename _Tp>
     concept __vectorizable = __is_vectorizable<_Tp>::value;
@@ -219,9 +294,14 @@ namespace std::__detail
     concept __simd_unsigned_integer
       = __simd_type<_Tp> and std::__unsigned_integer<typename _Tp::value_type>;
 
-  template <typename _Tp>
+  template <typename _Tp, _SimdSizeType _Np = 0>
     concept __simd_floating_point
-      = __simd_type<_Tp> and floating_point<typename _Tp::value_type>;
+      = __simd_type<_Tp> and floating_point<typename _Tp::value_type>
+          and (_Np == 0 or _Tp::size.value == _Np);
+
+  template <typename _Tp>
+    concept __simd_complex
+      = __simd_type<_Tp> and __complex_like<typename _Tp::value_type>;
 
   template <typename _T0, typename _T1>
     concept __simd_matching_width
@@ -536,15 +616,121 @@ namespace std::datapar
 
   constexpr int zero_element = -1 << (sizeof(int) * __CHAR_BIT__ - 1);
   constexpr int uninit_element = zero_element + 1;
+
+  template <__detail::__simd_complex _Vp>
+    constexpr rebind_t<typename _Vp::value_type::value_type, _Vp>
+    real(const _Vp&) noexcept;
+
+  template <__detail::__simd_complex _Vp>
+    constexpr rebind_t<typename _Vp::value_type::value_type, _Vp>
+    imag(const _Vp&) noexcept;
+
+  template <__detail::__simd_complex _Vp>
+    constexpr rebind_t<typename _Vp::value_type::value_type, _Vp>
+    abs(const _Vp&);
+
+  template <__detail::__simd_complex _Vp>
+    constexpr rebind_t<typename _Vp::value_type::value_type, _Vp>
+    arg(const _Vp&);
+
+  template <__detail::__simd_complex _Vp>
+    constexpr rebind_t<typename _Vp::value_type::value_type, _Vp>
+    norm(const _Vp&);
+
+  template <__detail::__simd_complex _Vp>
+    constexpr _Vp
+    conj(const _Vp&);
+
+  template <__detail::__simd_complex _Vp>
+    constexpr _Vp
+    proj(const _Vp&);
+
+  template <__detail::__simd_complex _Vp>
+    constexpr _Vp
+    exp(const _Vp&);
+
+  template <__detail::__simd_complex _Vp>
+    constexpr _Vp
+    log(const _Vp&);
+
+  template <__detail::__simd_complex _Vp>
+    constexpr _Vp
+    log10(const _Vp&);
+
+  template <__detail::__simd_complex _Vp>
+    constexpr _Vp
+    sqrt(const _Vp&);
+
+  template <__detail::__simd_complex _Vp>
+    constexpr _Vp
+    sin(const _Vp&);
+
+  template <__detail::__simd_complex _Vp>
+    constexpr _Vp
+    asin(const _Vp&);
+
+  template <__detail::__simd_complex _Vp>
+    constexpr _Vp
+    cos(const _Vp&);
+
+  template <__detail::__simd_complex _Vp>
+    constexpr _Vp
+    acos(const _Vp&);
+
+  template <__detail::__simd_complex _Vp>
+    constexpr _Vp
+    tan(const _Vp&);
+
+  template <__detail::__simd_complex _Vp>
+    constexpr _Vp
+    atan(const _Vp&);
+
+  template <__detail::__simd_complex _Vp>
+    constexpr _Vp
+    sinh(const _Vp&);
+
+  template <__detail::__simd_complex _Vp>
+    constexpr _Vp
+    asinh(const _Vp&);
+
+  template <__detail::__simd_complex _Vp>
+    constexpr _Vp
+    cosh(const _Vp&);
+
+  template <__detail::__simd_complex _Vp>
+    constexpr _Vp
+    acosh(const _Vp&);
+
+  template <__detail::__simd_complex _Vp>
+    constexpr _Vp
+    tanh(const _Vp&);
+
+  template <__detail::__simd_complex _Vp>
+    constexpr _Vp
+    atanh(const _Vp&);
+
+  template <__detail::__simd_floating_point _Vp>
+    constexpr rebind_t<complex<typename _Vp::value_type>, _Vp>
+    polar(const _Vp& __r, const _Vp& __theta = {});
+
+  template <__detail::__simd_complex _Vp>
+    constexpr _Vp
+    pow(const _Vp& __x, const _Vp& __y);
 }
 
 namespace std
 {
+  // [simd.math]
+  using datapar::isfinite;
+  using datapar::isunordered;
+
+  // [simd.alg]
   using datapar::min;
   using datapar::max;
   using datapar::minmax;
   using datapar::clamp;
 
+  // [simd.bit]
   using datapar::byteswap;
   using datapar::bit_ceil;
   using datapar::bit_floor;
@@ -557,6 +743,15 @@ namespace std
   using datapar::countr_zero;
   using datapar::countr_one;
   using datapar::popcount;
+
+  // [simd.complex.math]
+  using datapar::real;
+  using datapar::imag;
+  using datapar::arg;
+  using datapar::norm;
+  using datapar::conj;
+  using datapar::proj;
+  using datapar::polar;
 }
 
 #endif  // PROTOTYPE_FWDDECL_H_

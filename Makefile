@@ -161,7 +161,9 @@ $(foreach t,$(tests),\
 $(check_targets): obj/compile_commands.json $(wildcard tests/*.cpp) Makefile Makefile.common
 	$(file >$@)
 	$(foreach t,$(tests),$(foreach w,$(testwidths),$(foreach y,$(testtypes),$(foreach a,$(testarchs),\
-		$(file >>$@,check/$t.$a/$y.$w)))))
+		$(file >>$@,check/$t.$a/$y.$w)\
+	))))
+#		$(file >>$@,check/fast-math/$t.$a/$y.$w)\
 
 REPORTFLAGS=-fmem-report -ftime-report -Q
 

@@ -13,7 +13,7 @@
 
 #ifndef SIMD_IS_A_RANGE
 // FIXME: not conforming to P1928
-#define SIMD_IS_A_RANGE 0
+#define SIMD_IS_A_RANGE 1
 #endif
 
 #ifndef IFNDR_SIMD_PRECONDITIONS
@@ -36,6 +36,17 @@
 
 #ifndef SIMD_MASK_IMPLICIT_CONVERSIONS
 #define SIMD_MASK_IMPLICIT_CONVERSIONS 0
+#endif
+
+// diagnose 0. - 0. and all variations of it. This is expensive!
+#ifndef SIMD_DIAGNOSE_INDETERMINATE_SIGNED_ZERO
+#define SIMD_DIAGNOSE_INDETERMINATE_SIGNED_ZERO 1
+#endif
+
+#if __CHAR_BIT__ != 8
+// There are simply too many constants and bit operators that currently depend on CHAR_BIT == 8.
+// Generalization to CHAR_BIT != 8 does not make sense without testability (i.e. a test target).
+#error "<simd> is not supported for CHAR_BIT != 8"
 #endif
 
 // x86 macros {
@@ -361,5 +372,111 @@
 #define _GLIBCXX_DELETE_MSG(msg) delete
 #endif
 
+namespace std::__detail
+{
+#ifdef math_errhandling
+  // Determine if math functions must raise floating-point exceptions.
+  // math_errhandling may expand to an extern symbol, in which case we must assume fp exceptions
+  // need to be considered.
+  template <int __me = math_errhandling>
+    consteval bool
+    __handle_fpexcept_impl(int)
+    { return __me & MATH_ERREXCEPT; }
+
+  // Fallback if math_errhandling doesn't work: implement correct exception behavior.
+  consteval bool
+  __handle_fpexcept_impl(float)
+  { return true; }
+#endif
+
+  struct _OptFlags
+  {
+    constexpr bool
+    _M_test(int __bit) const
+    { return ((_M_build_flags >> __bit) & 1) == 1; }
+
+    constexpr bool
+    _M_handle_fp_exceptions() const
+    { return _M_test(0); }
+
+    constexpr bool
+    _M_fast_math() const
+    { return _M_test(1); }
+
+    constexpr bool
+    _M_finite_math_only() const
+    { return _M_test(2); }
+
+    constexpr bool
+    _M_no_signed_zeros() const
+    { return _M_test(3); }
+
+    constexpr bool
+    _M_signed_zeros() const
+    { return not _M_test(3); }
+
+    constexpr bool
+    _M_reciprocal_math() const
+    { return _M_test(4); }
+
+    constexpr bool
+    _M_no_math_errno() const
+    { return _M_test(5); }
+
+    constexpr bool
+    _M_math_errno() const
+    { return not _M_test(5); }
+
+    constexpr bool
+    _M_associative_math() const
+    { return _M_test(6); }
+
+    constexpr bool
+    _M_conforming_to_STDC_annex_G() const
+    { return _M_test(10) and not _M_finite_math_only(); }
+
+    __UINT64_TYPE__ _M_build_flags
+      = 0
+#if __NO_TRAPPING_MATH__ or __FAST_MATH__
+          + (1 << 0)
+#elif defined math_errhandling
+          + (__handle_fpexcept_impl(0) << 0)
+#endif
+#if __FAST_MATH__
+          + (1 << 1)
+#endif
+#if __FINITE_MATH_ONLY__
+          + (1 << 2)
+#endif
+#if __NO_SIGNED_ZEROS__
+          + (1 << 3)
+#endif
+#if __RECIPROCAL_MATH__
+          + (1 << 4)
+#endif
+#if __NO_MATH_ERRNO__
+          + (1 << 5)
+#endif
+#if __ASSOCIATIVE_MATH__
+          + (1 << 6)
+#endif
+        // bits 7, 8, and 9 reserved for __FLT_EVAL_METHOD__
+#if __FLT_EVAL_METHOD__ == 1
+          + (1 << 7)
+#elif __FLT_EVAL_METHOD__ == 2
+          + (2 << 7)
+#elif __FLT_EVAL_METHOD__ != 0
+          + (3 << 7)
+#endif
+
+        // C Annex G defines the behavior of complex<T> where T is IEC60559 floating-point. If
+        // __STDC_IEC_60559_COMPLEX__ is defined then Annex G is implemented - and simd<complex>
+        // will do so as well. However, Clang never defines the macro.
+#if defined __STDC_IEC_60559_COMPLEX__ or defined __STDC_IEC_559_COMPLEX__ or defined __clang__
+          + (1 << 10)
+#endif
+        ;
+  };
+}
 
 #endif  // PROTOTYPE_SIMD_CONFIG_H_

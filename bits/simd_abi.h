@@ -164,6 +164,8 @@ namespace std
 
       static constexpr bool _S_is_partial = false;
 
+      static constexpr bool _S_pass_by_reference = true;
+
       // consider simd<float>::mask_type::operator- on AVX w/o AVX2:
       // This cannot be 'n * Abi0::_S_size' because otherwise mask cannot be implemented.
       static constexpr _SimdSizeType _S_max_size = 256;
@@ -249,12 +251,14 @@ namespace std
 
       static constexpr __detail::_SimdSizeType _S_full_size = _Np;
 
+      static constexpr bool _S_pass_by_reference = true;
+
       struct _IsValidAbiTag
       : public bool_constant<(_Np > 1)>
       {};
 
       template <typename _Tp>
-        static constexpr __detail::_SimdSizeType _S_max_size = 64;
+        static constexpr __detail::_SimdSizeType _S_max_size = 128;
 
       template <typename _Tp>
         struct _IsValidSizeFor
@@ -283,6 +287,8 @@ namespace std
       template <__detail::__vectorizable_canon _Tp>
         using _SimdMember = __detail::__fixed_size_storage_t<_Tp, _Np>;
 
+      // TODO: why not use a __fixed_size_storage_t equivalent for masks? This should make masked
+      // operations more efficient.
       template <__detail::__vectorizable_canon>
         using _MaskMember = __detail::_SanitizedBitMask<_Np>;
 
@@ -463,6 +469,11 @@ namespace std::__detail
 
       template <typename _Tp>
         _GLIBCXX_SIMD_INTRINSIC static constexpr _Tp
+        _S_swap_neighbors(_Tp const& __x) noexcept
+        { return {_Impl0::_S_swap_neighbors(__x[_Is])...}; }
+
+      template <typename _Tp>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr _Tp
         _S_complement(_Tp const& __x) noexcept
         { return {_Impl0::_S_complement(__x[_Is])...}; }
 
@@ -563,6 +574,76 @@ namespace std::__detail
       _GLIBCXX_SIMD_INTRINSIC static constexpr void
       _S_decrement(auto& __x)
       { (_Impl0::_S_decrement(__x[_Is]), ...); }
+
+      template <typename _Tp>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr _Tp
+        _S_complex_conj(_Tp const& __x)
+        { return {_Impl0::_S_complex_conj(__x[_Is])...}; }
+
+      template <typename _Tp>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr _Tp
+        _S_complex_multiplies(_Tp const& __x, _Tp const& __y)
+        { return {_Impl0::_S_complex_multiplies(__x[_Is], __y[_Is])...}; }
+
+      template <__vec_builtin _TV>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr void
+        _S_complex_set_real(std::array<_TV, _Np>&__c, _TV __re) noexcept
+        { _Impl0::_S_complex_set_real(__c[0], __c[1], __re); }
+
+      template <__vec_builtin _TV>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr void
+        _S_complex_set_real(std::array<_TV, _Np>&__c, const std::array<_TV, _Np / 2>& __re) noexcept
+        {
+          for (size_t __i = 0; __i < _Np / 2; ++__i)
+            _Impl0::_S_complex_set_real(__c[2 * __i], __c[2 * __i + 1], __re[__i]);
+        }
+
+      template <__vec_builtin _TV>
+        requires ((_Np & 1) == 1)
+        _GLIBCXX_SIMD_INTRINSIC static constexpr void
+        _S_complex_set_real(std::array<_TV, _Np>&__c, auto __re) noexcept
+        {
+          if constexpr (_Np == 3)
+            _Impl0::_S_complex_set_real(__c[0], __c[1], __re._M_x);
+          else
+            {
+              for (size_t __i = 0; __i < _Np / 2; ++__i)
+                _Impl0::_S_complex_set_real(__c[2 * __i], __c[2 * __i + 1], __re._M_x[__i]);
+            }
+          // allow for _SimdImplAbiCombine to call us with __re being too large
+          _Impl0::_S_complex_set_real(__c[_Np - 1], _VecOps<__half_vec_builtin_t<_TV>>::_S_extract(
+                                                      __re._M_tail._M_x));
+        }
+
+      template <__vec_builtin _TV>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr void
+        _S_complex_set_imag(std::array<_TV, _Np>&__c, _TV __re) noexcept
+        { _Impl0::_S_complex_set_imag(__c[0], __c[1], __re); }
+
+      template <__vec_builtin _TV>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr void
+        _S_complex_set_imag(std::array<_TV, _Np>&__c, const std::array<_TV, _Np / 2>& __re) noexcept
+        {
+          for (size_t __i = 0; __i < _Np / 2; ++__i)
+            _Impl0::_S_complex_set_imag(__c[2 * __i], __c[2 * __i + 1], __re[__i]);
+        }
+
+      template <__vec_builtin _TV>
+        requires ((_Np & 1) == 1)
+        _GLIBCXX_SIMD_INTRINSIC static constexpr void
+        _S_complex_set_imag(std::array<_TV, _Np>&__c, auto __re) noexcept
+        {
+          if constexpr (_Np == 3)
+            _Impl0::_S_complex_set_imag(__c[0], __c[1], __re._M_x);
+          else
+            {
+              for (size_t __i = 0; __i < _Np / 2; ++__i)
+                _Impl0::_S_complex_set_imag(__c[2 * __i], __c[2 * __i + 1], __re._M_x[__i]);
+            }
+          // allow for _SimdImplAbiCombine to call us with __re being too large
+          _Impl0::_S_complex_set_imag(__c[_Np - 1], _VecOps<__half_vec_builtin_t<_TV>>::_S_extract(
+                                                      __re._M_tail._M_x));
+        }
 
       template <typename _TV>
         _GLIBCXX_SIMD_INTRINSIC static constexpr __value_type_of<_TV>
@@ -740,6 +821,16 @@ namespace std::__detail
 
       using _Impl0 = typename _Abi0::_MaskImpl;
 
+      template <_SimdSizeType _Mp>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr auto
+        _S_compress_even(const array<_MaskVec128<_Mp>, _Np>& __x)
+        { return array {__x[_Is]._M_compress_even()...}; }
+
+      // no conversion: should be caught earlier
+      template <typename _Tp>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr _Tp
+        _S_convert_mask(const _Tp&) = delete;
+
       template <typename _Tp, bool _Sanitized>
         _GLIBCXX_SIMD_INTRINSIC static constexpr _Tp
         _S_convert_mask(_BitMask<_S_size, _Sanitized> __x)
@@ -748,18 +839,122 @@ namespace std::__detail
                     __x.template _M_extract<_S_chunk_size * _Is, _S_chunk_size>())...};
         }
 
+      template <typename _Tp, __vec_builtin _UV, size_t _UN>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr _Tp
+        _S_convert_mask(const array<_UV, _UN>& __x)
+        {
+          using _TV = typename _Tp::value_type;
+          if constexpr (_Np == _UN)
+            return {_Impl0::template _S_convert_mask<_TV>(__x[_Is])...};
+          else if constexpr (_Np < _UN)
+            {
+              constexpr int _Scale = _UN / _Np;
+              static_assert(_Np * _Scale == _UN);
+              return {
+                [&]<_SimdSizeType... _Js>(_SimdSizeType __offset, _SimdIndexSequence<_Js...>) {
+                  return _Impl0::template _S_convert_mask<_TV>(__vec_concat(__x[__offset + _Js]...));
+                }(_Is * _Scale, _MakeSimdIndexSequence<_Scale>())...};
+            }
+          else
+            {
+              constexpr int _Scale = _Np / _UN;
+              static_assert(_Np == _Scale * _UN);
+              return {_Impl0::template _S_convert_mask<_TV>(
+                        __vec_extract_part<_Is % _Scale, _Scale>(__x[_Is / _Scale]))...};
+            }
+        }
+
+      template <typename _Tp, __vec_builtin _UV>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr _Tp
+        _S_convert_mask(_UV __x)
+        {
+          return {_Impl0::template _S_convert_mask<typename _Tp::value_type>(
+                    __vec_extract_part<_Is, _Np>(__x))...};
+        }
+
+      template <typename _Tp, std::unsigned_integral _Up, size_t _UN>
+        requires std::unsigned_integral<typename _Tp::value_type>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr _Tp
+        _S_convert_mask(const array<_Up, _UN>& __x)
+        {
+          if constexpr (sizeof(__x) == sizeof(_Tp))
+            {
+              __assert_little_endian();
+              return __builtin_bit_cast(_Tp, __x);
+            }
+          else if constexpr (_S_chunk_size < __CHAR_BIT__)
+            {
+              constexpr int _U_chunk_size = sizeof(_Up) * __CHAR_BIT__;
+              static_assert(_U_chunk_size % _S_chunk_size == 0);
+              using _T0 = typename _Tp::value_type;
+              return {_T0(__x[_Is * _S_chunk_size / _U_chunk_size]
+                         >> (_Is * _S_chunk_size % _U_chunk_size))...};
+            }
+          else
+            {
+              static_assert(_UN > _Np);
+              constexpr int __x_chunk_size = _S_size / _UN; // in bits
+              static_assert(__x_chunk_size < sizeof(_Up) * __CHAR_BIT__);
+              constexpr int __x_n = sizeof(_Up) * __CHAR_BIT__ / __x_chunk_size;
+              static_assert(_UN / _Np == __x_n);
+              using _T0 = typename _Tp::value_type;
+              constexpr _T0 __mask = (1u << __x_chunk_size) - 1;
+              return {[&]<_SimdSizeType... _Js>(_SimdSizeType __off, _SimdIndexSequence<_Js...>)
+                -> _T0 {
+                  return ((_T0(__x[_Js + __off] & __mask) << (__x_chunk_size * _Js)) | ...);
+                }(_Is * __x_n, _MakeSimdIndexSequence<__x_n>())...};
+            }
+        }
+
+      template <typename _Tp, std::unsigned_integral _Up>
+        requires std::unsigned_integral<typename _Tp::value_type>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr _Tp
+        _S_convert_mask(_Up __x)
+        {
+          if constexpr (sizeof(_Tp) == sizeof(__x))
+            {
+              __assert_little_endian();
+              return __builtin_bit_cast(_Tp, __x);
+            }
+          else if constexpr (sizeof(typename _Tp::value_type) == 1 and _S_chunk_size < __CHAR_BIT__)
+            {
+              using _T0 = typename _Tp::value_type;
+              return {_T0(__x >> (_Is * _S_chunk_size))...};
+            }
+          else
+            static_assert(false);
+        }
+
+      template <typename _Tp, int _UN1, size_t _UN2>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr _Tp
+        _S_convert_mask(const array<_MaskVec128<_UN1>, _UN2>& __x)
+        {
+          return _S_convert_mask<_Tp>(
+                   _AbiArray<_VecAbi<_UN1>, _UN2>::_MaskImpl::_S_compress_even(__x));
+        }
+
+      template <same_as<_MaskMember<_MaskUInt128>> _Tp, __vec_builtin _UV>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr _Tp
+        _S_convert_mask(_UV __x)
+        {
+          return {
+            _Impl0::template _S_convert_mask<_MaskMember0<_MaskUInt128>>(
+              __vec_extract_part<_Is, _Np>(__x, __ic<_S_size>))...
+          };
+        }
+
       template <typename _Tp, size_t _Bs, typename _UAbi>
         _GLIBCXX_SIMD_INTRINSIC static constexpr _MaskMember<_Tp>
         _S_convert(std::datapar::basic_simd_mask<_Bs, _UAbi> __x)
-        { return _S_convert_mask<_MaskMember<_Tp>>(__data(__x)); }
+        { return _S_convert_mask<_MaskMember<_Tp>>(__x._M_data); }
 
       _GLIBCXX_SIMD_INTRINSIC static constexpr auto
       _S_to_bits_recursive(auto&& __part0, auto&& __part1, auto&&... __rest)
       {
         if constexpr (sizeof...(__rest))
-          return _S_to_bits_recursive(__part1._M_prepend(__part0), __rest...);
+          return _S_to_bits_recursive(__part1._M_prepend(__part0._M_sanitized()), __rest...);
         else
-          return __part1._M_prepend(__part0);
+          return __part1._M_prepend(__part0._M_sanitized());
       }
 
       template <typename _Tp>
@@ -887,6 +1082,16 @@ namespace std::__detail
             return _S_reduce_max_index<_Idx - 1, _Bs>(__masks);
         }
 
+      template <typename _Kp>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr auto
+        _S_and_neighbors(const array<_Kp, _Np>& __masks)
+        { return array{_Impl0::_S_and_neighbors(__masks[_Is])...}; }
+
+      template <typename _Kp>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr auto
+        _S_or_neighbors(const array<_Kp, _Np>& __masks)
+        { return array{_Impl0::_S_or_neighbors(__masks[_Is])...}; }
+
       template <__vectorizable_canon _Tp>
         _GLIBCXX_SIMD_INTRINSIC static _MaskMember<_Tp>
         _S_mask_with_n_true(unsigned __n)
@@ -899,13 +1104,18 @@ namespace std::__detail
               static_assert(sizeof(unsigned) == 4);
               static_assert(sizeof(unsigned long long) == 8);
               _MaskMember<_Tp> __ret;
-              if constexpr (_Flags._M_have_bmi2())
+              if constexpr (_Flags._M_have_bmi2() and (__has_builtin(__builtin_ia32_bzhi_di)
+                                                         or _S_size <= 32))
                 {
                   if constexpr (_S_size <= 32)
                     {
                       const auto __bits = __builtin_ia32_bzhi_si(~0u >> (32 - _S_size), __n);
                       __builtin_memcpy(&__ret, &__bits, sizeof(__ret));
                     }
+#if not __has_builtin(__builtin_ia32_bzhi_di)
+                  else
+                    static_assert(false);
+#else
                   else if constexpr (_S_size <= 64)
                     {
                       const auto __bits = __builtin_ia32_bzhi_di(~0ull >> (64 - _S_size), __n);
@@ -922,6 +1132,7 @@ namespace std::__detail
                         __bits[--__i] = ~0ull;
                       __builtin_memcpy(&__ret, &__bits, sizeof(__ret));
                     }
+#endif
                 }
               else
                 {
@@ -1242,6 +1453,11 @@ namespace std::__detail
         _GLIBCXX_SIMD_INTRINSIC constexpr _SanitizedBitMask<_S_total_size>
         _M_test(auto&& __fun, auto&&... __more) const
         {
+          // TODO: on x86 for sizeof(value_type) == 2 it would be more efficient to pass two
+          // arguments at the same time, packsswb them into a single register and then movemask to
+          // bits, reducing the number of _M_prepend calls.
+          // Note that using vector masks instead of bit-mask in that case would probably be more
+          // efficient anyway (see TODO on _MaskMember).
           const _SanitizedBitMask<_S_size> __first
             = _A0::_MaskImpl::_S_to_bits(__fun(_SimdTupleMeta<_Tp, _A0, __total_offset>(),
                                                _M_x, __more._M_x...));
@@ -1580,6 +1796,15 @@ namespace std::__detail
 
       template <typename _Tp, typename... _As>
         _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdTuple<_Tp, _As...>
+        _S_swap_neighbors(_SimdTuple<_Tp, _As...> __x) noexcept
+        {
+          return __x._M_forall([] [[__gnu__::__always_inline__]] (auto __meta, auto& __xx) {
+                   __xx = __meta._S_swap_neighbors(__xx);
+                 });
+        }
+
+      template <typename _Tp, typename... _As>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdTuple<_Tp, _As...>
         _S_complement(_SimdTuple<_Tp, _As...> __x) noexcept
         {
           return __x._M_forall([] [[__gnu__::__always_inline__]] (auto __meta, auto& __xx) {
@@ -1610,6 +1835,7 @@ namespace std::__detail
       _GLIBCXX_SIMD_FIXED_OP(_S_plus)
       _GLIBCXX_SIMD_FIXED_OP(_S_minus)
       _GLIBCXX_SIMD_FIXED_OP(_S_multiplies)
+      _GLIBCXX_SIMD_FIXED_OP(_S_complex_multiplies)
       _GLIBCXX_SIMD_FIXED_OP(_S_divides)
       _GLIBCXX_SIMD_FIXED_OP(_S_modulus)
       _GLIBCXX_SIMD_FIXED_OP(_S_bit_and)
@@ -1619,6 +1845,135 @@ namespace std::__detail
       _GLIBCXX_SIMD_FIXED_OP(_S_bit_shift_right)
 
 #undef _GLIBCXX_SIMD_FIXED_OP
+
+      template <typename _Tp, typename... _As>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdTuple<_Tp, _As...>
+        _S_complex_conj(_SimdTuple<_Tp, _As...> __x) noexcept
+        {
+          return __x._M_forall([] [[__gnu__::__always_inline__]] (auto __meta, auto& __xx) {
+                   __xx = __meta._S_complex_conj(__xx);
+                 });
+        }
+
+      template <typename _Tp, typename _A0, typename _A1, __vec_builtin_of<_Tp> _UV>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr void
+        _S_complex_set_real(_SimdTuple<_Tp, _A0, _A1>&__c, const _UV __re) noexcept
+        {
+          constexpr _SimdSizeType __offset = __width_of<_UV> / 2;
+          const auto __rl = _VecOps<__half_vec_builtin_t<_UV>>::_S_extract(__re);
+          _A0::_SimdImpl::_S_complex_set_real(__c._M_x, __rl);
+          if constexpr (_A1::_S_size == 2)
+            _A1::_SimdImpl::_S_complex_set_real(__c._M_tail._M_x, __re[__offset]);
+          else
+            {
+              using _U2 = __half_vec_builtin_t<typename _A1::template _SimdMember<_Tp>>;
+              const auto __rh = _VecOps<_U2>::_S_extract(__re, __ic<__offset>);
+              _A1::_SimdImpl::_S_complex_set_real(__c._M_tail._M_x, __rh);
+            }
+        }
+
+      template <typename _Tp, typename _A0, typename _A1, typename _B0, typename _B1>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr void
+        _S_complex_set_real(_SimdTuple<_Tp, _A0, _A1>&__c,
+                            const _SimdTuple<_Tp, _B0, _B1>& __re) noexcept
+        {
+#if 0
+          // This is a minor optimization (at best), that can easily make things worse because of
+          // the necessary copy introduced by __builtin_bit_cast.
+          // Needs benchmarking and tuning before turning it on.
+          constexpr _SimdSizeType _Nceil = _A0::_S_size + __bit_ceil(_A1::_S_size);
+          using _ACeil = __deduce_t<_Tp, _Nceil>;
+          using _BCeil = __deduce_t<_Tp, _Nceil / 2>;
+          using _ACeilV = typename _ACeil::template _SimdMember<_Tp>;
+          using _BCeilV = typename _BCeil::template _SimdMember<_Tp>;
+          if constexpr (sizeof(__c) == sizeof(_ACeilV) and sizeof(__re) == sizeof(_BCeilV))
+            { // e.g. 30 / 15 ([3*8]+6 / 8+7)
+              auto __tmp = __builtin_bit_cast(_ACeilV, __c);
+              _ACeil::_SimdImpl::_S_complex_set_real(__tmp, __builtin_bit_cast(_BCeilV, __re));
+              __c = __builtin_bit_cast(_SimdTuple<_Tp, _A0, _A1>, __tmp);
+            }
+          else
+#endif
+            if constexpr (_A0::_S_size == _B0::_S_size * 2)
+            {
+              _A0::_SimdImpl::_S_complex_set_real(__c._M_x, __re._M_x);
+              _A1::_SimdImpl::_S_complex_set_real(__c._M_tail._M_x, __re._M_tail._M_x);
+            }
+          else if constexpr (requires { typename _A0::_Abi0Type; })
+            { // e.g. 26 / 13 ([3*8]+2 / 8+5)
+              _A0::_SimdImpl::_S_complex_set_real(__c._M_x, __re);
+              if constexpr (_A1::_S_size == 2)
+                _A1::_SimdImpl::_S_complex_set_real(__c._M_tail._M_x,
+                                                    __re._M_tail._M_x[_B1::_S_size - 1]);
+              else
+                _A1::_SimdImpl::_S_complex_set_real(
+                  __c._M_tail._M_x, _VecOps<__half_vec_builtin_t<
+                                              typename _A1::template _SimdMember<_Tp>>>::_S_extract(
+                                      __re._M_tail._M_x));
+            }
+          else
+            static_assert(false);
+        }
+
+      template <typename _Tp, typename _A0, typename _A1, __vec_builtin_of<_Tp> _UV>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr void
+        _S_complex_set_imag(_SimdTuple<_Tp, _A0, _A1>&__c, const _UV __re) noexcept
+        {
+          constexpr _SimdSizeType __offset = __width_of<_UV> / 2;
+          const auto __rl = _VecOps<__half_vec_builtin_t<_UV>>::_S_extract(__re);
+          _A0::_SimdImpl::_S_complex_set_imag(__c._M_x, __rl);
+          if constexpr (_A1::_S_size == 2)
+            _A1::_SimdImpl::_S_complex_set_imag(__c._M_tail._M_x, __re[__offset]);
+          else
+            {
+              using _U2 = __half_vec_builtin_t<typename _A1::template _SimdMember<_Tp>>;
+              const auto __rh = _VecOps<_U2>::_S_extract(__re, __ic<__offset>);
+              _A1::_SimdImpl::_S_complex_set_imag(__c._M_tail._M_x, __rh);
+            }
+        }
+
+      template <typename _Tp, typename _A0, typename _A1, typename _B0, typename _B1>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr void
+        _S_complex_set_imag(_SimdTuple<_Tp, _A0, _A1>&__c,
+                            const _SimdTuple<_Tp, _B0, _B1>& __re) noexcept
+        {
+#if 0
+          // This is a minor optimization (at best), that can easily make things worse because of
+          // the necessary copy introduced by __builtin_bit_cast.
+          // Needs benchmarking and tuning before turning it on.
+          constexpr _SimdSizeType _Nceil = _A0::_S_size + __bit_ceil(_A1::_S_size);
+          using _ACeil = __deduce_t<_Tp, _Nceil>;
+          using _BCeil = __deduce_t<_Tp, _Nceil / 2>;
+          using _ACeilV = typename _ACeil::template _SimdMember<_Tp>;
+          using _BCeilV = typename _BCeil::template _SimdMember<_Tp>;
+          if constexpr (sizeof(__c) == sizeof(_ACeilV) and sizeof(__re) == sizeof(_BCeilV))
+            { // e.g. 30 / 15 ([3*8]+6 / 8+7)
+              auto __tmp = __builtin_bit_cast(_ACeilV, __c);
+              _ACeil::_SimdImpl::_S_complex_set_imag(__tmp, __builtin_bit_cast(_BCeilV, __re));
+              __c = __builtin_bit_cast(_SimdTuple<_Tp, _A0, _A1>, __tmp);
+            }
+          else
+#endif
+            if constexpr (_A0::_S_size == _B0::_S_size * 2)
+            {
+              _A0::_SimdImpl::_S_complex_set_imag(__c._M_x, __re._M_x);
+              _A1::_SimdImpl::_S_complex_set_imag(__c._M_tail._M_x, __re._M_tail._M_x);
+            }
+          else if constexpr (requires { typename _A0::_Abi0Type; })
+            { // e.g. 26 / 13 ([3*8]+2 / 8+5)
+              _A0::_SimdImpl::_S_complex_set_imag(__c._M_x, __re);
+              if constexpr (_A1::_S_size == 2)
+                _A1::_SimdImpl::_S_complex_set_imag(__c._M_tail._M_x,
+                                                    __re._M_tail._M_x[_B1::_S_size - 1]);
+              else
+                _A1::_SimdImpl::_S_complex_set_imag(
+                  __c._M_tail._M_x, _VecOps<__half_vec_builtin_t<
+                                              typename _A1::template _SimdMember<_Tp>>>::_S_extract(
+                                      __re._M_tail._M_x));
+            }
+          else
+            static_assert(false);
+        }
 
       template <typename _Tp, typename... _As>
         _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdTuple<_Tp, _As...>
@@ -1802,7 +2157,7 @@ namespace std::__detail
 
 #define _GLIBCXX_SIMD_CMP_OPERATIONS(__cmp)                                                      \
       template <typename _Tp, __valid_abi_tag<_Tp>... _As>                                       \
-        _GLIBCXX_SIMD_INTRINSIC static constexpr _MaskMember                                     \
+        _GLIBCXX_SIMD_INTRINSIC static constexpr _MaskMember                                                             \
         __cmp(const _SimdTuple<_Tp, _As...>& __x, const _SimdTuple<_Tp, _As...>& __y)            \
         {                                                                                        \
           return __x._M_test([]<typename _UV> [[__gnu__::__always_inline__]]                     \
@@ -1874,10 +2229,13 @@ namespace std::__detail
   template <_SimdSizeType _Np, typename _Tag, _BuildFlags _Flags>
     struct _MaskImplAbiCombine
     {
+      // TODO: Not anymore, right? Right?
+#if 0
       static_assert(
         sizeof(uint64_t) * __CHAR_BIT__ >= _Np,
         "The _AbiCombine implementation relies on one uint64_t being able to store "
         "all boolean elements."); // required in load & store
+#endif
 
       using abi_type = _AbiCombine<_Np, _Tag>;
 
@@ -1898,11 +2256,21 @@ namespace std::__detail
         _GLIBCXX_SIMD_INTRINSIC static constexpr _MaskMember
         _S_mask_generator(_Fp&& __gen)
         {
-          using _Up = unsigned long long;
-          static_assert(_Np <= sizeof(_Up) * __CHAR_BIT__);
-          return [&]<size_t... _Is>(std::index_sequence<_Is...>) {
-            return ((_Up(bool(__gen(__ic<_Is>))) << _Is) | ...);
-          }(std::make_index_sequence<_Np>());
+          using _Up = typename _MaskMember::_Tp;
+          constexpr auto __bits_per_chunk = sizeof(_Up) * __CHAR_BIT__;
+          auto __u = [&]<_SimdSizeType... _Is>(auto __offset, _SimdIndexSequence<_Is...>) -> _Up {
+            return ((_Up(bool(__gen(__ic<_Is + __offset>))) << _Is) | ...);
+          };
+          if constexpr (_Np <= __bits_per_chunk)
+            return _MaskMember(__private_init, __u(__ic<0>, _MakeSimdIndexSequence<_Np>()));
+          else
+            {
+              static_assert(_Np / __bits_per_chunk == 1);
+              return _MaskMember(__private_init,
+                                 __u(__ic<0>, _MakeSimdIndexSequence<__bits_per_chunk>()),
+                                 __u(__ic<__bits_per_chunk>,
+                                     _MakeSimdIndexSequence<_Np - __bits_per_chunk>()));
+            }
         }
 
       template <bool _Sanitized>
@@ -1988,13 +2356,31 @@ namespace std::__detail
         _S_reduce_max_index(const std::datapar::basic_simd_mask<_Bs, abi_type> & __k)
         { return __detail::__highest_bit(__data(__k)._M_to_bits()); }
 
+      _GLIBCXX_SIMD_INTRINSIC static constexpr auto
+      _S_and_neighbors(const _MaskMember& __k)
+      { return __k._M_and_neighbors(); }
+
+      _GLIBCXX_SIMD_INTRINSIC static constexpr auto
+      _S_or_neighbors(const _MaskMember& __k)
+      { return __k._M_or_neighbors(); }
+
+      _GLIBCXX_SIMD_INTRINSIC static constexpr auto
+      _S_dup_every_element(const _MaskMember& __k)
+      { return __k._M_dup_every_element(); }
+
       template <__vectorizable_canon _Tp>
         _GLIBCXX_SIMD_INTRINSIC static _MaskMember
         _S_mask_with_n_true(unsigned __n)
         {
           __glibcxx_simd_precondition(__n < _Np, "");
-          if constexpr (_Np <= 65 and _Flags._M_have_bmi2())
+          if constexpr (_Np <= 33 and _Flags._M_have_bmi2())
+            return _MaskMember::__create_unchecked(__builtin_ia32_bzhi_si(~0u, __n));
+#if __has_builtin(__builtin_ia32_bzhi_di)
+          else if constexpr (_Np <= 65 and _Flags._M_have_bmi2())
             return _MaskMember::__create_unchecked(__builtin_ia32_bzhi_di(~0ull, __n));
+#endif
+          else
+            static_assert(false);
         }
     };
 
@@ -2025,6 +2411,7 @@ namespace std::__detail
 
   // try preferred ABI first
   template <__vectorizable_canon _Tp, _SimdSizeType _Np, template<_SimdSizeType> class _PrefAbi>
+    requires (not is_same_v<_PrefAbi<1>, _NoAbiPreference<1>>)
     struct _DeduceAbi<_Tp, _Np, _PrefAbi>
     {
       static auto _S_eval()
