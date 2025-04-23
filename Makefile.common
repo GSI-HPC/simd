@@ -6,7 +6,7 @@ objdir = obj
 
 CXXFLAGS+=-std=c++26 -Wall -Wextra -Werror -O2 -g0 -Wno-attributes -D_GLIBCXX_ASSERTIONS=1 $(FLAGS)
 CXXFLAGS_clang := -Wno-unknown-pragmas -ferror-limit=3
-CXXFLAGS_gcc := -fconcepts-diagnostics-depth=3 -fconstexpr-ops-limit=67108864 -fmax-errors=3
+CXXFLAGS_gcc := -fconcepts-diagnostics-depth=3 -fconstexpr-ops-limit=67108864 -fmax-errors=1
 
 cxx_version := $(shell $(CXX) --version | head -n1)
 
@@ -89,7 +89,9 @@ testtypes ::= signed-char \
 	     signed-long-long \
 	     unsigned-long-long \
 	     float \
-	     double
+	     double \
+	     complex-float \
+	     complex-double
 
 ifneq ($(compiler),clang)
 testtypes += std::float16_t
@@ -100,7 +102,7 @@ testtypes ::= $(subst ::,--,$(testtypes))
 testwidths ::= $(shell seq 1 67)
 
 getwidth = $(subst .,,$(suffix $(1)))
-gettype = $(subst -, ,$(subst --,::,$(subst .,,$(basename $(notdir $(1))))))
+gettype = $(subst -, ,$(subst complex-double,std::complex<double>,$(subst complex-float,std::complex<float>,$(subst --,::,$(subst .,,$(basename $(notdir $(1))))))))
 getarch = $(subst .,,$(suffix $(subst /,,$(dir $(1)))))
 gettest = $(basename $(subst /,,$(dir $(1))))
 
@@ -117,7 +119,11 @@ msg_run   := Run :)
 msg_runf  := Run :(
 endif
 
-diag_transform := sed -e 's/\(, \)\?std::__detail::__build_flags{[^,]*,[^}]*}//g' -e 's/\<std::datapar::/dp::/g' -e 's/\<std::__detail::/🙈/g'
+diag_transform := sed -e 's/std::__detail::_ArchFlags{[^{}]*}/_ArchFlags/g' \
+		      -e 's/std::__detail::_OptFlags{[^{}]*}/_OptFlags/g' \
+		      -e 's/std::__detail::_BuildFlags{[^{}]*}/_BuildFlags/g' \
+		      -e 's/\<std::datapar::/dp::/g' -e 's/\<std::__detail::/🙈/g'
+#diag_transform := cat
 
 define call_compiler
 { { $(CXX) $(1) 2>&1; echo $$?>&2; } | $(diag_transform); } 3>&2 2>&1 1>&3 | { read s; [ $$s -gt 0 ] && echo Build command was: $(CXX) $(1); exit $$s; }
@@ -154,6 +160,7 @@ $(foreach arch,$(testarchs),\
 
 no_fast_math = $(shell head -n10 tests/$(1).cpp | grep -q no-fast-math && echo 1 || echo 0)
 
+#	@driver.sh $(1) $(2) $$* "$(DIRECT)" "$$(CXX)" "$$(LINK_CXX)" $$(CXXFLAGS)
 # arguments: test, arch
 define exe_template
 check/$(1).$(2)/%: tests/$(1).cpp $(objdir)/$(2).hpp.gch tests/unittest*.h
@@ -248,7 +255,7 @@ include $(objdir)/codegen.depend
 
 $(shell $(CXX) $(CXXFLAGS) -MM -MT "$(objdir)/constexpr.%.s" constexpr_tests.c++|tr -d '\\') $(objdir)/%.hpp.gch
 	@printf -- '$(msg_build) constexpr tests for $*\n'
-	@$(CXX) $(CXXFLAGS) -march=$* -include $(objdir)/$*.hpp -S -o $@ constexpr_tests.c++
+	@$(call call_compiler, $(CXXFLAGS) -march=$* -include $(objdir)/$*.hpp -S -o $@ constexpr_tests.c++)
 
 .PHONY: always-remake
 always-remake: ;

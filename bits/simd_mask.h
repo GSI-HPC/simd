@@ -30,7 +30,8 @@ namespace std::__detail
     { using type = _Abi; };
 
   template <size_t _Bytes, typename _Abi>
-    using __simd_abi_for_mask_t = typename __simd_abi_for_mask<_Bytes, _Abi>::type;
+    using __simd_abi_for_mask_t [[deprecated("replace with _Abi::_Rebind")]]
+      = typename __simd_abi_for_mask<_Bytes, _Abi>::type;
 }
 
 namespace std::datapar
@@ -39,10 +40,11 @@ namespace std::datapar
   // - deleted: dctor, dtor, cctor, cassign
   // - no members except value_type and abi_type
   template <size_t _Bytes, typename _Abi>
-    requires (__detail::_SimdMaskTraits<_Bytes, _Abi>::_S_size == 0)
-    class basic_simd_mask<_Bytes, _Abi>
+    class basic_simd_mask
     {
     public:
+      static constexpr size_t _S_bytes = _Bytes;
+
       using value_type = bool;
 
       using abi_type = _Abi;
@@ -63,7 +65,8 @@ namespace std::datapar
     };
 
   template <size_t _Bytes, typename _Abi>
-    class basic_simd_mask
+    requires (__detail::_SimdMaskTraits<_Bytes, _Abi>::_S_size > 0)
+    class basic_simd_mask<_Bytes, _Abi>
     {
       using _Tp = __detail::__mask_integer_from<_Bytes>;
 
@@ -78,6 +81,8 @@ namespace std::datapar
       alignas(_Traits::_S_mask_align) _MemberType _M_data;
 
       using _Impl = typename _Traits::_MaskImpl;
+
+      static constexpr size_t _S_bytes = _Bytes;
 
       static constexpr bool _S_is_bitmask = sizeof(_MemberType) < _Traits::_S_size;
 
@@ -142,6 +147,9 @@ namespace std::datapar
       {}
 
       // TODO bitset conversions
+      _GLIBCXX_SIMD_ALWAYS_INLINE constexpr auto
+      _M_to_int() const
+      { return _Impl::_S_to_bits(_M_data)._M_sanitized()._M_to_bits(); }
 
       // broadcast ctor
       _GLIBCXX_SIMD_ALWAYS_INLINE constexpr explicit
@@ -225,6 +233,9 @@ namespace std::datapar
             return __r;
           }
       }
+
+      _GLIBCXX_SIMD_ALWAYS_INLINE constexpr _SimdType
+      operator-() const noexcept requires (_Bytes > 8) = delete;
 
       _GLIBCXX_SIMD_ALWAYS_INLINE constexpr _SimdType
       operator~() const noexcept
@@ -380,6 +391,18 @@ namespace std::datapar
         else
           return __builtin_constant_p(_M_data);
       }
+
+      template <typename _Kp = basic_simd_mask<2 * _Bytes, typename _Abi::template _Rebind<
+                  __detail::__mask_integer_from<2 * _Bytes>, size.value / 2>>>
+        _GLIBCXX_SIMD_ALWAYS_INLINE constexpr _Kp
+        _M_and_neighbors() const
+        { return _Kp(__detail::__private_init, _Impl::_S_and_neighbors(_M_data)); }
+
+      template <typename _Kp = basic_simd_mask<2 * _Bytes, typename _Abi::template _Rebind<
+                  __detail::__mask_integer_from<2 * _Bytes>, size.value / 2>>>
+        _GLIBCXX_SIMD_ALWAYS_INLINE constexpr _Kp
+        _M_or_neighbors() const
+        { return {__detail::__private_init, _Impl::_S_or_neighbors(_M_data)}; }
     };
 }
 

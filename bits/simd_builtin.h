@@ -27,6 +27,53 @@ namespace std::__detail
 
   template <typename _Abi, _BuildFlags = {}>
     struct _ImplBuiltin;
+
+  // mask element type for simd_mask<complex<double>>
+  template <int _Np>
+    struct _MaskVec128
+    {
+      using value_type = _MaskUInt128;
+
+      static constexpr int _S_size = _Np;
+
+      using _VecType
+        = __vec_builtin_type<__mask_integer_from<sizeof(double)>, 2 * __bit_ceil(unsigned(_Np))>;
+
+      using _HalfVecType = __half_vec_builtin_t<_VecType>;
+
+      template <typename _Abi>
+        using _UnderlyingImpl = _ImplBuiltin<typename _Abi::template _Rebind<double, 2 * _Np>>;
+
+      _VecType _M_data;
+
+      _GLIBCXX_SIMD_INTRINSIC constexpr bool
+      _M_is_constprop() const
+      { return __builtin_constant_p(_M_data); }
+
+      _GLIBCXX_SIMD_INTRINSIC constexpr _HalfVecType
+      _M_compress_even() const
+      { return _VecOps<_HalfVecType>::_S_compress_even(_M_data); }
+
+      _GLIBCXX_SIMD_INTRINSIC constexpr friend _MaskVec128
+      __vec_and(const _MaskVec128& __x, const _MaskVec128& __y)
+      { return {__vec_and(__x._M_data, __y._M_data)}; }
+
+      _GLIBCXX_SIMD_INTRINSIC constexpr friend _MaskVec128
+      __vec_or(const _MaskVec128& __x, const _MaskVec128& __y)
+      { return {__vec_or(__x._M_data, __y._M_data)}; }
+
+      _GLIBCXX_SIMD_INTRINSIC constexpr friend _MaskVec128
+      __vec_xor(const _MaskVec128& __x, const _MaskVec128& __y)
+      { return {__vec_xor(__x._M_data, __y._M_data)}; }
+
+      _GLIBCXX_SIMD_INTRINSIC constexpr friend _MaskVec128
+      __vec_andnot(const _MaskVec128& __x, const _MaskVec128& __y)
+      { return {__vec_andnot(__x._M_data, __y._M_data)}; }
+
+      _GLIBCXX_SIMD_INTRINSIC constexpr friend _MaskVec128
+      __vec_not(const _MaskVec128& __x)
+      { return {__vec_not(__x._M_data)}; }
+    };
 }
 
 namespace std
@@ -38,19 +85,30 @@ namespace std
 
       static constexpr _SimdSizeType _S_size = _Width;
 
-      template <typename _Tp>
-        static constexpr bool _S_defer_to_scalar_abi = (_Width == 1);
+      static constexpr bool _S_pass_by_reference = false;
 
       template <typename _Tp>
-        using _Vp = __detail::__vec_builtin_type<_Tp, __detail::__signed_bit_ceil(_Width)>;
+        static constexpr bool _S_defer_to_scalar_abi
+          = (_Width == 1 and not __detail::__complex_like<_Tp>);
+
+      template <typename _Tp>
+        struct _ToVecBuiltin
+        { using type = __detail::__vec_builtin_type<_Tp, __detail::__signed_bit_ceil(_Width)>; };
+
+      template <same_as<__detail::_MaskUInt128> _Tp>
+        struct _ToVecBuiltin<_Tp>
+        { using type = __detail::_MaskVec128<_Width>; };
+
+      template <typename _Tp>
+        using _Vp = typename _ToVecBuiltin<_Tp>::type;
 
       struct _IsValidAbiTag
-      : bool_constant<(_Width > 1)>
+      : bool_constant<(_Width >= 1)>
       {};
 
-      template <typename _Tp, auto _Flags = __detail::__build_flags()>
+      template <typename _Tp, __detail::_BuildFlags _Flags = {}>
         struct _IsValidSizeFor
-        : bool_constant<_Width >= 2
+        : bool_constant<_Width >= 1
 #if not defined __clang__
                           and sizeof(_Vp<_Tp>) == alignof(_Vp<_Tp>)
 #else // __clang__
@@ -69,6 +127,17 @@ namespace std
                                  or sizeof(_Vp<_Tp>) <= 16 or is_floating_point_v<_Tp>)
 #endif
                        >
+        {};
+
+      template <typename _Tp, __detail::_BuildFlags _Flags>
+        requires __detail::__complex_like<_Tp>
+        struct _IsValidSizeFor<_Tp, _Flags>
+        : _VecAbi<_Width * 2>::_IsValidSizeFor<typename _Tp::value_type>
+        {};
+
+      template <__detail::_BuildFlags _Flags>
+        struct _IsValidSizeFor<__detail::_MaskUInt128, _Flags>
+        : _VecAbi<_Width * 2>::_IsValidSizeFor<double>
         {};
 
       template <typename _Tp>
@@ -179,6 +248,12 @@ namespace std
                              }(make_integer_sequence<int, _S_full_size>())
                              : ~_MaskMember<_Tp>();
 
+      template <same_as<__detail::_MaskUInt128> _Tp>
+        static constexpr _MaskMember<_Tp> _S_implicit_mask<_Tp>
+          = _S_is_partial ? _MaskMember<_Tp>{__detail::_VecOps<typename _MaskMember<_Tp>::_VecType,
+                                                               2 * _S_size>::_S_broadcast(-1)}
+                          : ~_MaskMember<_Tp>();
+
       template <__detail::__vec_builtin _TV>
         _GLIBCXX_SIMD_INTRINSIC static constexpr _TV
         _S_masked(_TV __x)
@@ -221,7 +296,7 @@ namespace std
 
 namespace std::__detail
 {
-  template <typename _Abi, _BuildFlags>
+  template <typename _Abi, _BuildFlags _Flags>
     struct _ImplBuiltinBase
     {
       using abi_type = _Abi;
@@ -422,16 +497,7 @@ namespace std::__detail
       template <__vec_builtin _TV>
         _GLIBCXX_SIMD_INTRINSIC static constexpr _TV
         _S_complement(_TV __x)
-        {
-          using _Tp = __value_type_of<_TV>;
-          if constexpr (is_floating_point_v<_Tp>)
-            {
-              using _UV = __vec_builtin_type<__make_unsigned_int_t<_Tp>, _S_full_size>;
-              return __builtin_bit_cast(_TV, ~__builtin_bit_cast(_UV, __x));
-            }
-          else
-            return ~__x;
-        }
+        { return __vec_not(__x); }
 
       template <__vec_builtin _TV>
         _GLIBCXX_SIMD_INTRINSIC static constexpr _TV
@@ -446,6 +512,14 @@ namespace std::__detail
         _GLIBCXX_SIMD_INTRINSIC static constexpr _TV
         _S_plus(_TV __x, _TV __y)
         { return __x + __y; }
+
+      template <__vec_builtin _TV>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr _TV
+        _S_add_sat(_TV __x, _TV __y) noexcept
+        {
+          // TODO
+          return __x + __y;
+        }
 
       template <__vec_builtin _TV>
         _GLIBCXX_SIMD_INTRINSIC static constexpr _TV
@@ -467,17 +541,20 @@ namespace std::__detail
         _S_modulus(_TV __x, _TV __y)
         { return __x % _Abi::__make_padding_nonzero(__y); }
 
-      template <__vec_builtin _TV>
+      template <typename _TV>
+        requires __vec_builtin<_TV> or same_as<_TV, _MaskVec128<_S_size>>
         _GLIBCXX_SIMD_INTRINSIC static constexpr _TV
         _S_bit_and(_TV __x, _TV __y)
         { return __vec_and(__x, __y); }
 
-      template <__vec_builtin _TV>
+      template <typename _TV>
+        requires __vec_builtin<_TV> or same_as<_TV, _MaskVec128<_S_size>>
         _GLIBCXX_SIMD_INTRINSIC static constexpr _TV
         _S_bit_or(_TV __x, _TV __y)
         { return __vec_or(__x, __y); }
 
-      template <__vec_builtin _TV>
+      template <typename _TV>
+        requires __vec_builtin<_TV> or same_as<_TV, _MaskVec128<_S_size>>
         _GLIBCXX_SIMD_INTRINSIC static constexpr _TV
         _S_bit_xor(_TV __x, _TV __y)
         { return __vec_xor(__x, __y); }
@@ -553,6 +630,131 @@ namespace std::__detail
         _GLIBCXX_SIMD_INTRINSIC static constexpr _MaskMember<_TV>
         _S_negate(_TV __x)
         { return !__x; }
+
+      template <__vec_builtin _TV>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr _TV
+        _S_complex_conj(_TV __x)
+        { return _VecOps<_TV>::_S_complex_negate_imag(__x); }
+
+      template <__vec_builtin _TV>
+        [[gnu::cold]] static constexpr _TV
+        _S_complex_redo_mul_on_nan(_TV __r, _TV __x, _TV __y, __vec_builtin auto __k)
+        {
+          // TODO: just implement the suggestion from C23 Annex G
+          using _T0 = __value_type_of<_TV>;
+          using _Cp = __detail::__complex_of_t<_T0>;
+          static constexpr int _Csize = sizeof(_TV) / sizeof(_Cp);
+          using _Cparray = array<_Cp, _Csize>;
+          auto __tmp = _GLIBCXX_SIMD_INT_PACK(_Csize, _Is, {
+                         return _Cparray {(__k[_Is * 2] != 0 and __k[_Is * 2 + 1] != 0
+                                             ? (__builtin_bit_cast(_Cparray, __x)[_Is]
+                                                  * __builtin_bit_cast(_Cparray, __y)[_Is])
+                                             : __builtin_bit_cast(_Cparray, __r)[_Is])...};
+                       });
+          return __builtin_bit_cast(_TV, __tmp);
+        }
+
+      template <__vec_builtin _TV>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr _TV
+        _S_complex_multiplies(_TV __x, _TV __y)
+        {
+          static_assert((_S_size & 1) == 0);
+          using _VO = _VecOps<_TV>;
+          if (_VecOps<_TV, _S_size>::_S_complex_imag_is_constprop_zero(__x))
+            {
+              if (_VecOps<_TV, _S_size>::_S_complex_imag_is_constprop_zero(__y))
+                return __x * __y;
+              else
+                {
+                  if (_Flags._M_conforming_to_STDC_annex_G())
+                    {
+                      auto __a = _VO::_S_dup_even(__x) * __y;
+                      auto __b = _TV() * _VO::_S_swap_neighbors(__y);
+#if SIMD_DIAGNOSE_INDETERMINATE_SIGNED_ZERO
+                      //if (_SuperImpl::_S_any_of(_SuperImpl::_S_equal_to(__a, 0))) // __b is ±0 by construction
+#endif
+                      return _VO::_S_addsub(__a, __b);
+                    }
+                  else
+                    return _VO::_S_dup_even(__x) * __y;
+                }
+            }
+          else if (_VecOps<_TV, _S_size>::_S_complex_imag_is_constprop_zero(__y))
+            {
+              if (_Flags._M_conforming_to_STDC_annex_G())
+                return _VO::_S_addsub(_VO::_S_dup_even(__y) * __x,
+                                      _TV() * _VO::_S_swap_neighbors(__x));
+              else
+                return _VO::_S_dup_even(__y) * __x;
+            }
+          else if (_VecOps<_TV, _S_size>::_S_complex_real_is_constprop_zero(__y))
+            {
+              if (_Flags._M_conforming_to_STDC_annex_G())
+                return _VO::_S_addsub(_TV(), _VO::_S_dup_odd(__y) * _VO::_S_swap_neighbors(__x));
+              else
+                return _VO::_S_dup_odd(__y)
+                         * _VO::_S_complex_negate_real(_VO::_S_swap_neighbors(__x));
+            }
+          else if (_VecOps<_TV, _S_size>::_S_complex_real_is_constprop_zero(__x))
+            {
+              if (_Flags._M_conforming_to_STDC_annex_G())
+                return _VO::_S_addsub(_TV(), _VO::_S_dup_odd(__x) * _VO::_S_swap_neighbors(__y));
+              else
+                return _VO::_S_dup_odd(__x)
+                         * _VO::_S_complex_negate_real(_VO::_S_swap_neighbors(__y));
+            }
+          else
+            {
+              const _TV __r = _SuperImpl::_S_complex_multiplies_impl(__x, __y);
+              const auto __k = _SuperImpl::_S_isnan(__r);
+              if (not _Flags._M_conforming_to_STDC_annex_G()
+                    or _SuperImpl::_S_none_of(__k)) [[likely]]
+                return __r;
+              else
+                return _SuperImpl::_S_complex_redo_mul_on_nan(__r, __x, __y, __k);
+            }
+        }
+
+      template <__vec_builtin _TV>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr _TV
+        _S_complex_multiplies_impl(_TV __x, _TV __y)
+        {
+          using _VO = _VecOps<_TV>;
+          return _VO::_S_addsub(_VO::_S_dup_even(__x) * __y,
+                                _VO::_S_dup_odd(__x) * _VO::_S_swap_neighbors(__y));
+        }
+
+      template <__vec_builtin _TV>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr void
+        _S_complex_set_real(_TV& __c, __value_type_of<_TV> __re) noexcept
+        { __c[0] = __re; }
+
+      template <__vec_builtin _TV>
+        requires (__width_of<_TV> >= 4)
+        _GLIBCXX_SIMD_INTRINSIC static constexpr void
+        _S_complex_set_real(_TV& __c, __half_vec_builtin_t<_TV> __re) noexcept
+        { _VecOps<_TV>::_S_overwrite_even_elements(__c, __re); }
+
+      template <__vec_builtin _TV>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr void
+        _S_complex_set_real(_TV& __cl, _TV& __ch, _TV __re) noexcept
+        { _VecOps<_TV>::_S_overwrite_even_elements(__cl, __ch, __re); }
+
+      template <__vec_builtin _TV>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr void
+        _S_complex_set_imag(_TV& __c, __value_type_of<_TV> __im) noexcept
+        { __c[1] = __im; }
+
+      template <__vec_builtin _TV>
+        requires (__width_of<_TV> >= 4)
+        _GLIBCXX_SIMD_INTRINSIC static constexpr void
+        _S_complex_set_imag(_TV& __c, __half_vec_builtin_t<_TV> __im) noexcept
+        { _VecOps<_TV>::_S_overwrite_odd_elements(__c, __im); }
+
+      template <__vec_builtin _TV>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr void
+        _S_complex_set_imag(_TV& __cl, _TV& __ch, _TV __im) noexcept
+        { _VecOps<_TV>::_S_overwrite_odd_elements(__cl, __ch, __im); }
 
       template <__vec_builtin _TV>
         _GLIBCXX_SIMD_INTRINSIC static constexpr _TV
@@ -891,6 +1093,10 @@ namespace std::__detail
         _S_get(_TV __v, _SimdSizeType __i)
         { return __vec_get(__v, __i); }
 
+      _GLIBCXX_SIMD_INTRINSIC static constexpr bool
+      _S_get(_MaskVec128<_S_size> __v, _SimdSizeType __i)
+      { return __vec_get(__v._M_data, __i * 2); }
+
       template <__vec_builtin _TV>
         _GLIBCXX_SIMD_INTRINSIC static constexpr void
         _S_set(_TV& __v, _SimdSizeType __i, __value_type_of<_TV> __x)
@@ -904,34 +1110,12 @@ namespace std::__detail
       template <__vec_builtin _TV>
         _GLIBCXX_SIMD_INTRINSIC static constexpr bool
         _S_is_constprop_none_of(_TV __k)
-        {
-          if (__builtin_constant_p(__k))
-            {
-              for (int __i = 0; __i < _S_size; ++__i)
-                {
-                  if (__k[__i] != 0)
-                    return false;
-                }
-              return true;
-            }
-          return false;
-        }
+        { return _VecOps<_TV>::_S_is_constprop_equal_to(__k, 0); }
 
       template <__vec_builtin _TV>
         _GLIBCXX_SIMD_INTRINSIC static constexpr bool
         _S_is_constprop_all_of(_TV __k)
-        {
-          if (__builtin_constant_p(__k))
-            {
-              for (int __i = 0; __i < _S_size; ++__i)
-                {
-                  if (__k[__i] == 0)
-                    return false;
-                }
-              return true;
-            }
-          return false;
-        }
+        { return _VecOps<_TV>::_S_is_constprop_equal_to(__k, -1); }
 
       template <__vec_builtin _TV>
         _GLIBCXX_SIMD_INTRINSIC static constexpr void
@@ -948,6 +1132,21 @@ namespace std::__detail
           else
             __lhs = __k ? __rhs : __lhs;
         }
+
+      _GLIBCXX_SIMD_INTRINSIC static constexpr void
+      _S_masked_assign(_MaskVec128<_S_size> __k, _MaskVec128<_S_size>& __lhs,
+                       _MaskVec128<_S_size> __rhs)
+      {
+        using _VO = _VecOps<typename _MaskVec128<_S_size>::_VecType>;
+        if (_VO::_S_is_constprop_equal_to(__k._M_data, 0))
+          return;
+        else if (_VO::_S_is_constprop_equal_to(__k._M_data, -1))
+          __lhs._M_data = __rhs._M_data;
+        else if (_VO::_S_is_constprop_equal_to(__lhs._M_data, 0))
+          __lhs._M_data = __vec_and(__k._M_data, __rhs._M_data);
+        else
+          __lhs._M_data = __k._M_data ? __rhs._M_data : __lhs._M_data;
+      }
 
       template <__vec_builtin _TV>
         _GLIBCXX_SIMD_INTRINSIC static constexpr void
@@ -1029,6 +1228,27 @@ namespace std::__detail
                                        {((_Is < _Np and __x[_Is]) ? _Tp(-1) : _Tp())...});
         }
 
+      template <same_as<_MaskVec128<_S_size>> _RV, bool _Sanitized>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr _RV
+        _S_convert_mask(_BitMask<_S_size, _Sanitized> __x)
+        {
+          if constexpr (_S_size == 1)
+            return __x[0] ? __vec_not(_RV()) : _RV();
+          else if constexpr (_S_size == 2)
+            return _RV{{__x[0] ? -1 : 0, __x[0] ? -1 : 0,
+                        __x[1] ? -1 : 0, __x[1] ? -1 : 0}};
+        }
+
+      template <same_as<unsigned char> _RV>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr _RV
+        _S_convert_mask(same_as<bool> auto __x)
+        { return __x; }
+
+      template <same_as<_MaskVec128<1>> _RV>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr _RV
+        _S_convert_mask(same_as<bool> auto __x)
+        { return __x ? __vec_not(_RV()) : _RV(); }
+
       template <__vec_builtin _RV, __vec_builtin _TV>
         _GLIBCXX_SIMD_INTRINSIC static constexpr _RV
         _S_convert_mask(_TV __x)
@@ -1044,6 +1264,40 @@ namespace std::__detail
             return __builtin_convertvector(__x, _RV);
         }
 
+      template <__vec_builtin _RV>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr _RV
+        _S_convert_mask(_MaskVec128<_S_size> __x)
+        { return _SuperImpl::template _S_convert_mask<_RV>(__x._M_compress_even()); }
+
+      template <__vec_builtin _RV, int _N0, size_t _N1>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr _RV
+        _S_convert_mask(array<_MaskVec128<_N0>, _N1> __x)
+        {
+          return _SuperImpl::template _S_convert_mask<_RV>(
+                   _GLIBCXX_SIMD_INT_PACK(_N1, _Is, {
+                     return array {__x[_Is]._M_compress_even()...};
+                   }));
+        }
+
+      template <same_as<_MaskVec128<_S_size>> _RV>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr _RV
+        _S_convert_mask(_MaskVec128<_S_size> __x)
+        { return __x; }
+
+      template <same_as<_MaskVec128<_S_size>> _RV, __vec_builtin _TV>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr _RV
+        _S_convert_mask(_TV __x)
+        {
+          using _Vp = typename _RV::_VecType;
+          using _Tp = __value_type_of<_TV>;
+          if constexpr (sizeof(_Tp) == 8)
+            return _RV{_VecOps<_Vp>::_S_dup_each(__x)};
+          else
+            return _RV{_VecOps<_Vp>::_S_dup_each(
+                         __builtin_convertvector(__x, __vec_builtin_type<__mask_integer_from<8>,
+                                                                         _S_full_size>))};
+        }
+
       template <__vec_builtin _RV, __vec_builtin _TV, size_t _TN>
         _GLIBCXX_SIMD_INTRINSIC static constexpr _RV
         _S_convert_mask(array<_TV, _TN> __x)
@@ -1051,7 +1305,8 @@ namespace std::__detail
           using _Rp = __value_type_of<_RV>;
           using _Tp = __value_type_of<_TV>;
           static_assert(is_same_v<_RV, _MaskMember<_Rp>>);
-          static_assert(__width_of<_RV> == _TN * __width_of<_TV>);
+          static_assert(__width_of<_RV> >= _TN * __width_of<_TV>
+                          and __width_of<_RV> < 2 * _TN * __width_of<_TV>);
           const auto __k = _GLIBCXX_SIMD_INT_PACK(_TN, _Is, {
                              return __vec_concat(__x[_Is]...);
                            });
@@ -1063,9 +1318,14 @@ namespace std::__detail
         }
 
       template <typename _Tp, size_t _Bs, typename _UAbi>
-        _GLIBCXX_SIMD_INTRINSIC static constexpr auto
-        _S_convert(std::datapar::basic_simd_mask<_Bs, _UAbi> __x)
-        { return _SuperImpl::template _S_convert_mask<_MaskMember<_Tp>>(__data(__x)); }
+        _GLIBCXX_SIMD_INTRINSIC static constexpr _MaskMember<_Tp>
+        _S_convert(const std::datapar::basic_simd_mask<_Bs, _UAbi>& __x)
+        {
+          if constexpr (is_same_v<decltype(__x._M_data), _MaskMember<_Tp>>)
+            return __x._M_data;
+          else
+            return _SuperImpl::template _S_convert_mask<_MaskMember<_Tp>>(__x._M_data);
+        }
 
       template <__vec_builtin _TV>
         _GLIBCXX_SIMD_INTRINSIC static constexpr _SanitizedBitMask<_S_size>
@@ -1076,6 +1336,16 @@ namespace std::__detail
                    _GLIBCXX_SIMD_INT_PACK(_S_size, _Is, {
                      return ((static_cast<unsigned long long>(-__vec_get(__x, _Is)) << _Is) | ...);
                    }));
+        }
+
+      template <same_as<_MaskVec128<_S_size>> _TV>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr _SanitizedBitMask<_S_size>
+        _S_to_bits(_TV __x)
+        {
+          if constexpr (_S_size == 1)
+            return _SanitizedBitMask<1>::__create_unchecked(__x._M_data[0] != 0);
+          else
+            return _S_to_bits(__x._M_compress_even());
         }
 
       template <typename _Tp>
@@ -1115,17 +1385,20 @@ namespace std::__detail
           return __builtin_constant_p(__all_equal) and __all_equal;
         }
 
-      template <__vec_builtin _TV>
+      template <typename _TV>
+        requires __vec_builtin<_TV> or same_as<_TV, _MaskVec128<_S_size>>
         _GLIBCXX_SIMD_INTRINSIC static constexpr _TV
         _S_logical_and(_TV __x, _TV __y)
         { return __vec_and(__x, __y); }
 
-      template <__vec_builtin _TV>
+      template <typename _TV>
+        requires __vec_builtin<_TV> or same_as<_TV, _MaskVec128<_S_size>>
         _GLIBCXX_SIMD_INTRINSIC static constexpr _TV
         _S_logical_or(_TV __x, _TV __y)
         { return __vec_or(__x, __y); }
 
-      template <__vec_builtin _TV>
+      template <typename _TV>
+        requires __vec_builtin<_TV> or same_as<_TV, _MaskVec128<_S_size>>
         _GLIBCXX_SIMD_INTRINSIC static constexpr _TV
         _S_bit_not(_TV __x)
         {
@@ -1141,12 +1414,24 @@ namespace std::__detail
       { return _GLIBCXX_SIMD_INT_PACK(_S_size, _Is, { return (... and (__k[_Is] != 0)); }); }
 
       _GLIBCXX_SIMD_INTRINSIC static constexpr bool
+      _S_all_of(_MaskVec128<_S_size> __k)
+      { return _MaskVec128<_S_size>::template _UnderlyingImpl<_Abi>::_S_all_of(__k._M_data); }
+
+      _GLIBCXX_SIMD_INTRINSIC static constexpr bool
       _S_any_of(__vec_builtin auto __k)
       { return _GLIBCXX_SIMD_INT_PACK(_S_size, _Is, { return (... or (__k[_Is] != 0)); }); }
 
       _GLIBCXX_SIMD_INTRINSIC static constexpr bool
+      _S_any_of(_MaskVec128<_S_size> __k)
+      { return _MaskVec128<_S_size>::template _UnderlyingImpl<_Abi>::_S_any_of(__k._M_data); }
+
+      _GLIBCXX_SIMD_INTRINSIC static constexpr bool
       _S_none_of(__vec_builtin auto __k)
       { return _GLIBCXX_SIMD_INT_PACK(_S_size, _Is, { return (... and (__k[_Is] == 0)); }); }
+
+      _GLIBCXX_SIMD_INTRINSIC static constexpr bool
+      _S_none_of(_MaskVec128<_S_size> __k)
+      { return _MaskVec128<_S_size>::template _UnderlyingImpl<_Abi>::_S_none_of(__k._M_data); }
 
       template <size_t _Bs>
         _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdSizeType
@@ -1158,12 +1443,51 @@ namespace std::__detail
         _S_reduce_max_index(std::datapar::basic_simd_mask<_Bs, abi_type> __k)
         { return __highest_bit(_SuperImpl::_S_to_bits(__data(__k))._M_sanitized()._M_to_bits()); }
 
+      template <__vec_builtin _TV>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr auto
+        _S_and_neighbors(_TV __k)
+        {
+          __k = __vec_and(__k, _S_swap_neighbors(__k));
+          using _Tp = __value_type_of<_TV>;
+          if constexpr (sizeof(_Tp) == 8)
+            return _MaskVec128<_S_size / 2> {__k};
+          else
+            return reinterpret_cast<__vec_builtin_type_bytes<
+                                      __mask_integer_from<sizeof(_Tp) * 2>, sizeof(_TV)>>(__k);
+        }
+
+      template <__vec_builtin _TV>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr auto
+        _S_or_neighbors(_TV __k)
+        {
+          __k = __vec_or(__k, _S_swap_neighbors(__k));
+          using _Tp = __value_type_of<_TV>;
+          if constexpr (sizeof(_Tp) == 8)
+            return _MaskVec128<_S_size / 2> {__k};
+          else
+            return reinterpret_cast<__vec_builtin_type_bytes<
+                                      __mask_integer_from<sizeof(_Tp) * 2>, sizeof(_TV)>>(__k);
+        }
+
       template <__vectorizable_canon _Tp>
         _GLIBCXX_SIMD_INTRINSIC static constexpr typename _Abi::template _MaskMember<_Tp>
         _S_mask_with_n_true(__type_identity_t<_Tp> __n)
         {
           return _SuperImpl::_S_less(_S_vec_iota<_SimdMember<_Tp>>,
                                      __vec_broadcast<_S_full_size>(__n));
+        }
+
+      template <same_as<_MaskUInt128> _Tp>
+        requires (not requires { typename _Abi::_MaskInteger; })
+        _GLIBCXX_SIMD_INTRINSIC static constexpr _MaskMember<_Tp>
+        _S_mask_generator(auto&& __gen)
+        {
+          return {_GLIBCXX_SIMD_INT_PACK(_S_size, _Is, {
+                    const bool __tmp[_S_size] = {bool(__gen(__ic<_Is>))...};
+                    return _GLIBCXX_SIMD_INT_PACK(2 * _S_size, _Js, {
+                             return typename _MaskMember<_Tp>::_VecType{(-__tmp[_Js / 2])...};
+                           });
+                  })};
         }
 
       // can permute to a size different to _S_size; __x must always be of _S_size, though
@@ -1199,6 +1523,14 @@ namespace std::__detail
           return [&]<_SimdSizeType... _Is>(_SimdIndexSequence<_Is...>) {
             return __builtin_shufflevector(__x, _TV(), __adj_idx(__idx_perm2(__ic<_Is>)).value...);
           }(_MakeSimdIndexSequence<_S_full_size>());
+        }
+
+      template <__vec_builtin _TV>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr _TV
+        _S_swap_neighbors(_TV __x) noexcept
+        {
+          static_assert((_S_size & 1) == 0);
+          return _VecOps<_TV>::_S_swap_neighbors(__x);
         }
     };
 }

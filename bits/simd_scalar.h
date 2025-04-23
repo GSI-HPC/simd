@@ -48,6 +48,8 @@ namespace std
 
     static constexpr bool _S_is_partial = false;
 
+    static constexpr bool _S_pass_by_reference = false;
+
     template <typename>
       static constexpr bool _S_defer_to_scalar_abi = false;
 
@@ -227,6 +229,11 @@ namespace std::__detail
         return static_cast<_Tp>(__promote_preserving_unsigned(__x)
                                   + __promote_preserving_unsigned(__y));
       }
+
+        /*    template <typename _Tp>
+      _GLIBCXX_SIMD_INTRINSIC static constexpr _Tp
+      _S_add_sat(_Tp __x, _Tp __y)
+      { return std::add_sat(__x, __y); }*/
 
     template <typename _Tp>
       _GLIBCXX_SIMD_INTRINSIC static constexpr _Tp
