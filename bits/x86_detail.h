@@ -19,6 +19,9 @@
 #pragma GCC target("sse2", "sse3", "ssse3", "sse4.1", "sse4.2", "avx", "avx2", "bmi", "bmi2")
 #pragma GCC pop_options
 
+// psabi warnings are bogus because the ABI of the internal types never leaks into user code
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpsabi"
 namespace std::__detail
 {
   struct _ArchFlags
@@ -381,6 +384,7 @@ namespace std::__detail
     }
 #endif // not __clang__
 }
+#pragma GCC diagnostic pop
 
 #endif  // _GLIBCXX_SIMD_HAVE_SSE
 #endif  // PROTOTYPE_X86_DETAIL_H_
