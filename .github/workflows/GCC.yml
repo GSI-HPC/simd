@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
 
     container:
-      image: ghcr.io/mattkretz/cplusplus-ci:latest
+      image: ghcr.io/mattkretz/cplusplus-ci/latest
 
     steps:
       - uses: actions/checkout@v4
