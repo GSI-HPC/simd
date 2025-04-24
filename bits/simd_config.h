@@ -34,6 +34,10 @@
 #define SIMD_STD_BYTE 1
 #endif
 
+#ifndef SIMD_MASK_IMPLICIT_CONVERSIONS
+#define SIMD_MASK_IMPLICIT_CONVERSIONS 0
+#endif
+
 // x86 macros {
 
 #ifdef __MMX__

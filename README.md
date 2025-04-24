@@ -101,3 +101,26 @@ concepts from `std`. That's non-conforming and can be disabled.
 
 This implementation enables `std::byte` as vectorizable type. As this is not 
 conforming, you can disable it.
+
+### `-D SIMD_MASK_IMPLICIT_CONVERSIONS=1`
+
+In a conforming implementation, all conversions between different 
+`basic_simd_mask` specializations must be `explicit`. In principle this could 
+be relaxed to allow conversions such as:
+
+- from `simd_mask<complex<float>, 1>` to `simd_mask<double, 1>` (conversion 
+  from `_VecAbi<1>` to `_ScalarAbi`)
+
+- from `basic_simd_mask<4, _VecAbi<8>>` to `basic_simd_mask<4, _Avx512Abi<8>>` 
+  (conversion from vector-mask to bit-mask)
+
+- from `basic_simd_mask<4, _VecAbi<8>>` to `basic_simd_mask<4, 
+  _AbiArray<_VecAbi<4>, 2>>` (e.g. `simd_mask<float, 8>` to `simd_mask<int, 8>` 
+  on Intel SandyBridge)
+
+- from `basic_simd_mask<4, _AbiArray<_VecAbi<4>, 2>>` to `basic_simd_mask<4, 
+  _VecAbi<8>>` (e.g. `simd_mask<int, 8>` to `simd_mask<float, 8>` on Intel 
+  SandyBridge)
+
+At this point it is unclear how to avoid interconvertible types, which is why 
+the standard errs on the stricter side here.

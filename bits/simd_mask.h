@@ -153,10 +153,13 @@ namespace std::datapar
       template <size_t _UBytes, class _UAbi>
         requires(size() == basic_simd_mask<_UBytes, _UAbi>::size.value)
         _GLIBCXX_SIMD_ALWAYS_INLINE constexpr
+        explicit
+#if SIMD_MASK_IMPLICIT_CONVERSIONS
         // TODO: new paper? implicit conversion if *only* the ABI tag differs:
         // equal size and equal sizeof (_Bytes), but different ABI tag
         // implicit conversion in one direction, but not the other (avoid interconvertible types)
-        explicit(_UBytes != _Bytes or _Traits::template _S_explicit_mask_conversion<_UAbi>)
+        (_UBytes != _Bytes or _Traits::template _S_explicit_mask_conversion<_UAbi>)
+#endif
         basic_simd_mask(const basic_simd_mask<_UBytes, _UAbi>& __x) noexcept
         : basic_simd_mask(__detail::__private_init, _Impl::template _S_convert<_Tp>(__x))
         {}
