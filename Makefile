@@ -15,12 +15,35 @@ install:
 	install -m 644 -t $(includedir) simd
 	install -m 644 -t $(includedir)/bits bits/*.h
 
+sysincludedir = $(dir $(shell echo "#include <vector>"|"$(CXX)" -std=c++17 -x c++ -E -o- -|grep '^# 1 "/.*/vector"'|cut -d'"' -f2))
+
+install-system:
+	@echo "Installing to $(sysincludedir)"
+	@result=0; for i in bits/*.h; do \
+		test -f $(sysincludedir)$$i || continue; \
+		echo "Error: would overwrite $$i"; \
+		result=1; \
+	done; exit $$result
+	install -m 644 -t $(sysincludedir) simd
+	install -m 644 -t $(sysincludedir)/bits bits/*.h
+
+uninstall-system:
+	@echo "Uninstalling from $(sysincludedir)"
+	@rm $(sysincludedir)simd
+	@for i in bits/*.h; do rm $(sysincludedir)$$i; done
+
 info: $(check_targets)
 	@echo "This library is header-only and doesn't need to be built."
 	@echo
 	@echo "Installation"
 	@echo "============"
-	@echo "make prefix=~/.local install"
+	@echo "> make prefix=~/.local install"
+	@echo
+	@echo "Alternatively, install into the compiler's standard library directory:"
+	@echo "> make install-system"
+	@echo
+	@echo "To uninstall from the system:"
+	@echo "> make uninstall-system"
 	@echo
 	@echo "Testing"
 	@echo "======="

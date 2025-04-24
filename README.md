@@ -39,6 +39,16 @@ make prefix=~/.local install
 But you can also just point your compiler's include path to this repository 
 instead.
 
+Alternatively you can also install into the compiler's standard library 
+directory:
+```sh
+make install-system
+```
+You can uninstall again with:
+```sh
+make uninstall-system
+```
+
 Build your own project with C++26 (latest GCC, PRs to support Clang are 
 welcome). Just include `<simd>` and you're good to go:
 ```c++
