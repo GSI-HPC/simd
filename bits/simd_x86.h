@@ -3700,6 +3700,9 @@ namespace std::__detail
           if (__builtin_is_constant_evaluated() or __builtin_constant_p(__x))
             return _Base::_S_to_bits(__x);
 
+          else if constexpr (_S_size == 1)
+            return _Base::_S_to_bits(__x);
+
           else if constexpr (_S_use_bitmasks)
             {
               using _Tp = __value_type_of<_TV>;
