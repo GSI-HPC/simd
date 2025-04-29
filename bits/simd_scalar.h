@@ -733,6 +733,11 @@ namespace std::__detail
       _S_mask_broadcast(bool __x)
       { return __x; }
 
+    template <typename>
+      _GLIBCXX_SIMD_INTRINSIC static constexpr bool
+      _S_mask_generator(auto&& __gen)
+      { return __gen(__ic<_SimdSizeType(0)>); }
+
     _GLIBCXX_SIMD_INTRINSIC static constexpr _SanitizedBitMask<1>
     _S_to_bits(bool __x)
     { return _SanitizedBitMask<1>::__create_unchecked(__x); }
