@@ -1239,10 +1239,13 @@ namespace std::__detail
                         __x[1] ? -1 : 0, __x[1] ? -1 : 0}};
         }
 
-      template <same_as<unsigned char> _RV>
+      template <__vec_builtin _RV>
         _GLIBCXX_SIMD_INTRINSIC static constexpr _RV
         _S_convert_mask(same_as<bool> auto __x)
-        { return __x; }
+        {
+          static_assert(__width_of<_RV> == 1);
+          return __x ? ~_RV() : _RV();
+        }
 
       template <same_as<_MaskVec128<1>> _RV>
         _GLIBCXX_SIMD_INTRINSIC static constexpr _RV
