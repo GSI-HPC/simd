@@ -128,11 +128,12 @@ template <typename V>
     ADD_TEST(loads_iota, requires {T() + T(1);}) {
       std::tuple {[] {
         std::array<T, V::size * 2> arr = {};
-        std::iota(arr.begin(), arr.end(), T(1));
+        T init = 0;
+        for (auto& x : arr) x = (init += T(1));
         return arr;
       }(), [] {
         std::array<int, V::size * 2> arr = {};
-        std::iota(arr.begin(), arr.end(), T(1));
+        std::iota(arr.begin(), arr.end(), 1);
         return arr;
       }()},
       [](auto& t, auto mem, auto ints) {
@@ -166,38 +167,44 @@ template <typename V>
 
         dp::unchecked_store(v, mem, dp::flag_aligned);
         dp::unchecked_store(v, mem.begin() + V::size(), mem.end());
-        dp::unchecked_store(v, ints, dp::flag_convert);
-        dp::partial_store(v, ints.begin() + V::size() + 1, ints.end(),
-                                dp::flag_convert | dp::flag_overaligned<alignof(T)>);
         for (int i = 0; i < V::size; ++i)
           {
             t.verify_equal(mem[i], T(i + 1));
-            t.verify_equal(ints[i], int(T(i + 1)));
-          }
-        for (int i = 0; i < V::size; ++i)
-          {
             t.verify_equal(mem[V::size + i], T(i + 1));
-            t.verify_equal(ints[V::size + i], int(T(i)));
           }
-
-        dp::unchecked_store(V(), ints.begin(), V::size(), dp::flag_convert);
-        dp::unchecked_store(V(), ints.begin() + V::size(), V::size(), dp::flag_convert);
-        for (int i = 0; i < 2 * V::size; ++i)
-          t.verify_equal(ints[i], 0)("i =", i);
-
-        if constexpr (V::size() > 1)
+        if constexpr (complex_like<T>)
           {
-            dp::partial_store(v, ints.begin() + 1, V::size() - 2, dp::flag_convert);
-            for (int i = 0; i < V::size - 2; ++i)
-              t.verify_equal(ints[i], int(T(i)));
-            t.verify_equal(ints[V::size - 1], 0);
-            t.verify_equal(ints[V::size], 0);
           }
         else
           {
-            dp::partial_store(v, ints.begin() + 1, 0, dp::flag_convert);
-            t.verify_equal(ints[0], 0);
-            t.verify_equal(ints[1], 0);
+            dp::unchecked_store(v, ints, dp::flag_convert);
+            dp::partial_store(v, ints.begin() + V::size() + 1, ints.end(),
+                              dp::flag_convert | dp::flag_overaligned<alignof(T)>);
+            for (int i = 0; i < V::size; ++i)
+              {
+                t.verify_equal(ints[i], int(T(i + 1)));
+                t.verify_equal(ints[V::size + i], int(T(i)));
+              }
+
+            dp::unchecked_store(V(), ints.begin(), V::size(), dp::flag_convert);
+            dp::unchecked_store(V(), ints.begin() + V::size(), V::size(), dp::flag_convert);
+            for (int i = 0; i < 2 * V::size; ++i)
+              t.verify_equal(ints[i], 0)("i =", i);
+
+            if constexpr (V::size() > 1)
+              {
+                dp::partial_store(v, ints.begin() + 1, V::size() - 2, dp::flag_convert);
+                for (int i = 0; i < V::size - 2; ++i)
+                  t.verify_equal(ints[i], int(T(i)));
+                t.verify_equal(ints[V::size - 1], 0);
+                t.verify_equal(ints[V::size], 0);
+              }
+            else
+              {
+                dp::partial_store(v, ints.begin() + 1, 0, dp::flag_convert);
+                t.verify_equal(ints[0], 0);
+                t.verify_equal(ints[1], 0);
+              }
           }
       }
     };

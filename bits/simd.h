@@ -187,6 +187,22 @@ namespace std::datapar
                                                              value_type, _Flags...>);
         }
 
+      _GLIBCXX_SIMD_ALWAYS_INLINE static constexpr basic_simd
+      _S_load(const auto* __ptr)
+      { return {__detail::__private_init, _Impl::_S_load(__ptr, _S_type_tag)}; }
+
+      _GLIBCXX_SIMD_ALWAYS_INLINE static constexpr basic_simd
+      _S_partial_load(const auto* __ptr, auto __rg_size)
+      { return {__detail::__private_init, _Impl::_S_partial_load(__ptr, __rg_size, _S_type_tag)}; }
+
+      _GLIBCXX_SIMD_ALWAYS_INLINE constexpr void
+      _M_store(auto* __ptr) const
+      { _Impl::_S_store(_M_data, __ptr, _S_type_tag); }
+
+      _GLIBCXX_SIMD_ALWAYS_INLINE constexpr void
+      _M_partial_store(auto* __ptr, auto __rg_size) const
+      { _Impl::_S_partial_store(_M_data, __ptr, __rg_size, _S_type_tag); }
+
 #if RANGES_TO_SIMD
       // optimize the contiguous_range case
       template <std::ranges::contiguous_range _Rg, typename... _Flags>
@@ -713,6 +729,46 @@ namespace std::datapar
           static_assert(__detail::__loadstore_convertible_to<std::ranges::range_value_t<_Rg>,
                                                              value_type, _Flags...>);
         }
+
+      template <typename _Up>
+        _GLIBCXX_SIMD_ALWAYS_INLINE static constexpr basic_simd
+        _S_load(const _Up* __ptr)
+        {
+          if constexpr (__detail::__complex_like<_Up>)
+            return {__detail::__private_init,
+                    _TSimd::_S_load(reinterpret_cast<const typename _Up::value_type*>(__ptr))};
+          else
+            return basic_simd(_RealSimd::_S_load(__ptr));
+        }
+
+      template <typename _Up>
+        _GLIBCXX_SIMD_ALWAYS_INLINE static constexpr basic_simd
+        _S_partial_load(const _Up* __ptr, auto __rg_size)
+        {
+          if constexpr (__detail::__complex_like<_Up>)
+            return {
+              __detail::__private_init,
+              _TSimd::_S_partial_load(reinterpret_cast<const typename _Up::value_type*>(__ptr),
+                                      __rg_size * 2)};
+          else
+            return basic_simd(_RealSimd::_S_partial_load(__ptr, __rg_size));
+        }
+
+      template <typename _Up>
+      _GLIBCXX_SIMD_ALWAYS_INLINE constexpr void
+      _M_store(_Up* __ptr) const
+      {
+        static_assert(__detail::__complex_like<_Up>);
+        _M_data._M_store(reinterpret_cast<typename _Up::value_type*>(__ptr));
+      }
+
+      template <typename _Up>
+      _GLIBCXX_SIMD_ALWAYS_INLINE constexpr void
+      _M_partial_store(_Up* __ptr, auto __rg_size) const
+      {
+        static_assert(__detail::__complex_like<_Up>);
+        _M_data._M_partial_store(reinterpret_cast<typename _Up::value_type*>(__ptr), __rg_size);
+      }
 
 #if RANGES_TO_SIMD
       // optimize the contiguous_range case
