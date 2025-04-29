@@ -106,8 +106,6 @@ namespace std::datapar
                       or __static_size == dynamic_extent, "Out-of-bounds simd load");
 
       const auto* __ptr = __f.template _S_adjust_pointer<_RV>(ranges::data(__r));
-      constexpr __detail::__canonical_vec_type_t<_Rp>* __type_tag = nullptr;
-
       const auto __rg_size = std::ranges::size(__r);
       if constexpr (not __allow_out_of_bounds)
         __glibcxx_simd_precondition(
@@ -130,10 +128,9 @@ namespace std::datapar
         {
           if constexpr ((__static_size != dynamic_extent and __static_size >= _RV::size())
                           or not __allow_out_of_bounds)
-            return _RV(__detail::__private_init, _RV::_Impl::_S_load(__ptr, __type_tag));
+            return _RV::_S_load(__ptr);
           else
-            return _RV(__detail::__private_init, _RV::_Impl::_S_partial_load(__ptr, __rg_size,
-                                                                             __type_tag));
+            return _RV::_S_partial_load(__ptr, __rg_size);
         }
     }
 
@@ -353,8 +350,6 @@ namespace std::datapar
                       or __static_size == dynamic_extent, "Out-of-bounds simd store");
 
       auto* __ptr = __f.template _S_adjust_pointer<_TV>(ranges::data(__r));
-      constexpr __detail::__canonical_vec_type_t<_Tp>* __type_tag = nullptr;
-
       const auto __rg_size = ranges::size(__r);
       if constexpr (not __allow_out_of_bounds)
         __glibcxx_simd_precondition(
@@ -381,16 +376,16 @@ namespace std::datapar
 #endif
       else if constexpr ((__static_size != dynamic_extent and __static_size >= _TV::size())
                         or not __allow_out_of_bounds)
-        _TV::_Impl::_S_store(__v._M_data, __ptr, __type_tag);
+        __v._M_store(__ptr);
       else if (__rg_size >= _TV::size())
-        _TV::_Impl::_S_store(__v._M_data, __ptr, __type_tag);
+        __v._M_store(__ptr);
       else if (__builtin_constant_p(__rg_size))
         {
           for (unsigned __i = 0; __i < __rg_size; ++__i)
             __ptr[__i] = static_cast<std::ranges::range_value_t<_Rg>>(__v[__i]);
         }
       else
-        _TV::_Impl::_S_partial_store(__v._M_data, __ptr, __rg_size, __type_tag);
+        __v._M_partial_store(__ptr, __rg_size);
     }
 
   template <typename _Tp, typename _Abi, contiguous_iterator _It, typename... _Flags>
