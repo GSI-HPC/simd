@@ -363,8 +363,9 @@
 #endif
 
 #define _GLIBCXX_SIMD_INT_PACK(N, pack, code)                                                      \
-  [&]<int... pack> [[__gnu__::__always_inline__]] (std::integer_sequence<int, pack...>)            \
-    code (std::make_integer_sequence<int, N>())
+  [&]<std::__detail::_SimdSizeType... pack> [[__gnu__::__always_inline__]] (                       \
+      std::integer_sequence<std::__detail::_SimdSizeType, pack...>)                                \
+    code (std::make_integer_sequence<std::__detail::_SimdSizeType, N>())
 
 #if __cpp_deleted_function >= 202403L
 #define _GLIBCXX_DELETE_MSG(msg) delete(msg)
