@@ -527,6 +527,8 @@ namespace mask_conversion_tests
           check<do_test<int>(not k)>();
           check<do_test<double>(    k)>();
           check<do_test<double>(not k)>();
+          check<do_test<complex<float>>(    k)>();
+          check<do_test<complex<float>>(not k)>();
           check<do_test<complex<double>>(    k)>();
           check<do_test<complex<double>>(not k)>();
           if constexpr (P <= 2)
@@ -539,6 +541,7 @@ namespace mask_conversion_tests
     test()
     {
       using V = simd_mask<T>;
+      do_test<T, 1>();
       do_test<T, V::size()>();
       do_test<T, 2 * V::size()>();
       do_test<T, 4 * V::size()>();
@@ -555,6 +558,7 @@ namespace mask_conversion_tests
   static_assert(test<short>());
   static_assert(test<float>());
   static_assert(test<double>());
+  static_assert(test<complex<float>>());
   static_assert(test<complex<double>>());
 }
 
