@@ -8,8 +8,6 @@
 
 using namespace vir::literals;
 
-using std::__detail::__complex_like;
-
 static constexpr bool is_iec559 =
 #ifdef __GCC_IEC_559
       __GCC_IEC_559 >= 2;
@@ -20,7 +18,7 @@ static constexpr bool is_iec559 =
 #endif
 
 template <typename V>
-  requires __complex_like<typename V::value_type>
+  requires complex_like<typename V::value_type>
   struct Tests<V>
   {
     using T = typename V::value_type;
