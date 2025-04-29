@@ -1477,17 +1477,27 @@ namespace std::__detail
                                      __vec_broadcast<_S_full_size>(__n));
         }
 
-      template <same_as<_MaskUInt128> _Tp>
+      template <typename _Tp>
         requires (not requires { typename _Abi::_MaskInteger; })
         _GLIBCXX_SIMD_INTRINSIC static constexpr _MaskMember<_Tp>
         _S_mask_generator(auto&& __gen)
         {
-          return {_GLIBCXX_SIMD_INT_PACK(_S_size, _Is, {
-                    const bool __tmp[_S_size] = {bool(__gen(__ic<_Is>))...};
-                    return _GLIBCXX_SIMD_INT_PACK(2 * _S_size, _Js, {
-                             return typename _MaskMember<_Tp>::_VecType{(-__tmp[_Js / 2])...};
-                           });
-                  })};
+          return _GLIBCXX_SIMD_INT_PACK(_S_size, _Is, {
+                   if constexpr (is_same_v<_Tp, _MaskUInt128>)
+                     {
+                       const bool __tmp[_S_size] = {bool(__gen(__ic<_Is>))...};
+                       return _MaskMember<_Tp>{
+                         _GLIBCXX_SIMD_INT_PACK(2 * _S_size, _Js, {
+                           return typename _MaskMember<_Tp>::_VecType{(-__tmp[_Js / 2])...};
+                         })
+                       };
+                     }
+                   else
+                     {
+                       static_assert(__vec_builtin<_MaskMember<_Tp>>);
+                       return _MaskMember<_Tp>{_Tp(-bool(__gen(__ic<_Is>)))...};
+                     }
+                 });
         }
 
       // can permute to a size different to _S_size; __x must always be of _S_size, though

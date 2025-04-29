@@ -176,17 +176,7 @@ namespace std::datapar
       template <__detail::__simd_generator_invokable<value_type, size.value> _Fp>
         _GLIBCXX_SIMD_ALWAYS_INLINE constexpr explicit
         basic_simd_mask(_Fp&& __gen)
-        : _M_data([&]<__detail::_SimdSizeType... _Is>(__detail::_SimdIndexSequence<_Is...>) {
-            if constexpr (requires {_Impl::template _S_mask_generator<_Tp>(__gen);})
-              return _Impl::template _S_mask_generator<_Tp>(__gen);
-            else if constexpr (size.value == 1)
-              return bool(__gen(__detail::__ic<0>));
-            else
-              {
-                static_assert(not _S_is_bitmask);
-                return _MemberType { _Tp(-bool(__gen(__detail::__ic<_Is>)))... };
-              }
-          }(__detail::_MakeSimdIndexSequence<size()>()))
+        : _M_data(_Impl::template _S_mask_generator<_Tp>(__gen))
         {}
 
       _GLIBCXX_SIMD_ALWAYS_INLINE constexpr value_type
