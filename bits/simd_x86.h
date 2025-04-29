@@ -972,6 +972,11 @@ namespace std::__detail
             return _Base::template _S_convert_mask<_TV>(__x);
         }
 
+      template <same_as<unsigned char> _RV>
+        _GLIBCXX_SIMD_INTRINSIC static constexpr _RV
+        _S_convert_mask(same_as<bool> auto __x)
+        { return __x; }
+
       template <std::unsigned_integral _Kp, std::unsigned_integral _Lp, size_t _Np>
         _GLIBCXX_SIMD_INTRINSIC static constexpr _Kp
         _S_convert_mask(span<const _Lp, _Np> __x)
