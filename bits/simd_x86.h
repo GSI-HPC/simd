@@ -3022,11 +3022,11 @@ namespace std::__detail
                 return __k1 ^ _mm256_mask_fpclass_ps_mask(__k1, __xi, 0x99);
               else if constexpr (__vec_builtin_sizeof<_TV, 2, 32>)
                 return __k1 ^ _mm256_mask_fpclass_ph_mask(__k1, __xi, 0x99);
-              else if constexpr (__vec_builtin_sizeof<_TV, 8, 16>)
+              else if constexpr (__vec_builtin_sizeof<_TV, 8>)
                 return __k1 ^ _mm_mask_fpclass_pd_mask(__k1, __xi, 0x99);
-              else if constexpr (__vec_builtin_sizeof<_TV, 4, 16>)
+              else if constexpr (__vec_builtin_sizeof<_TV, 4>)
                 return __k1 ^ _mm_mask_fpclass_ps_mask(__k1, __xi, 0x99);
-              else if constexpr (__vec_builtin_sizeof<_TV, 2, 16>)
+              else if constexpr (__vec_builtin_sizeof<_TV, 2>)
                 return __k1 ^ _mm_mask_fpclass_ph_mask(__k1, __xi, 0x99);
               else
                 static_assert(false);
@@ -3057,11 +3057,11 @@ namespace std::__detail
                 return _mm256_fpclass_ps_mask(__xi, 0x18);
               else if constexpr (__vec_builtin_sizeof<_TV, 2, 32>)
                 return _mm256_fpclass_ph_mask(__xi, 0x18);
-              else if constexpr (__vec_builtin_sizeof<_TV, 8, 16>)
+              else if constexpr (__vec_builtin_sizeof<_TV, 8>)
                 return _mm_fpclass_pd_mask(__xi, 0x18);
-              else if constexpr (__vec_builtin_sizeof<_TV, 4, 16>)
+              else if constexpr (__vec_builtin_sizeof<_TV, 4>)
                 return _mm_fpclass_ps_mask(__xi, 0x18);
-              else if constexpr (__vec_builtin_sizeof<_TV, 2, 16>)
+              else if constexpr (__vec_builtin_sizeof<_TV, 2>)
                 return _mm_fpclass_ph_mask(__xi, 0x18);
               else
                 static_assert(false);
@@ -3099,13 +3099,12 @@ namespace std::__detail
             {
               const auto __xi = __to_x86_intrin(__x);
               const auto __k1 = __to_x86_intrin(_Abi::template _S_implicit_mask<_Tp>);
-              if constexpr (__vec_builtin_sizeof<_TV, 8, 16>)
-                return __k1 ^ _mm_mask_fpclass_pd_mask(__k1, __xi, __mode);
-              else if constexpr (__vec_builtin_sizeof<_TV, 4, 16>)
-                return __k1 ^ _mm_mask_fpclass_ps_mask(__k1, __xi, __mode);
-              else if constexpr (__vec_builtin_sizeof<_TV, 2, 16> and _Flags._M_have_avx512fp16()
-                                   and _Flags._M_have_avx512vl())
-                return __k1 ^ _mm_mask_fpclass_ph_mask(__k1, __xi, __mode);
+              if constexpr (__vec_builtin_sizeof<_TV, 8, 64>)
+                return __k1 ^ _mm512_mask_fpclass_pd_mask(__k1, __xi, __mode);
+              else if constexpr (__vec_builtin_sizeof<_TV, 4, 64>)
+                return __k1 ^ _mm512_mask_fpclass_ps_mask(__k1, __xi, __mode);
+              else if constexpr (__vec_builtin_sizeof<_TV, 2, 64> and _Flags._M_have_avx512fp16())
+                return __k1 ^ _mm512_mask_fpclass_ph_mask(__k1, __xi, __mode);
               else if constexpr (__vec_builtin_sizeof<_TV, 8, 32>)
                 return __k1 ^ _mm256_mask_fpclass_pd_mask(__k1, __xi, __mode);
               else if constexpr (__vec_builtin_sizeof<_TV, 4, 32>)
@@ -3113,12 +3112,13 @@ namespace std::__detail
               else if constexpr (__vec_builtin_sizeof<_TV, 2, 32> and _Flags._M_have_avx512fp16()
                                    and _Flags._M_have_avx512vl())
                 return __k1 ^ _mm256_mask_fpclass_ph_mask(__k1, __xi, __mode);
-              else if constexpr (__vec_builtin_sizeof<_TV, 8, 64>)
-                return __k1 ^ _mm512_mask_fpclass_pd_mask(__k1, __xi, __mode);
-              else if constexpr (__vec_builtin_sizeof<_TV, 4, 64>)
-                return __k1 ^ _mm512_mask_fpclass_ps_mask(__k1, __xi, __mode);
-              else if constexpr (__vec_builtin_sizeof<_TV, 2, 64> and _Flags._M_have_avx512fp16())
-                return __k1 ^ _mm512_mask_fpclass_ph_mask(__k1, __xi, __mode);
+              else if constexpr (__vec_builtin_sizeof<_TV, 8>)
+                return __k1 ^ _mm_mask_fpclass_pd_mask(__k1, __xi, __mode);
+              else if constexpr (__vec_builtin_sizeof<_TV, 4>)
+                return __k1 ^ _mm_mask_fpclass_ps_mask(__k1, __xi, __mode);
+              else if constexpr (__vec_builtin_sizeof<_TV, 2> and _Flags._M_have_avx512fp16()
+                                   and _Flags._M_have_avx512vl())
+                return __k1 ^ _mm_mask_fpclass_ph_mask(__k1, __xi, __mode);
               else
                 static_assert(false);
             }
@@ -3137,24 +3137,26 @@ namespace std::__detail
             }
           else if constexpr (_Flags._M_have_avx512dq())
             {
-              if constexpr (__vec_builtin_sizeof<_TV, 8, 16> and _Flags._M_have_avx512vl())
-                return _mm_movm_epi64(_knot_mask8(_mm_fpclass_pd_mask(__x, __mode)));
-              else if constexpr (__vec_builtin_sizeof<_TV, 4, 16> and _Flags._M_have_avx512vl())
-                return _mm_movm_epi32(_knot_mask8(_mm_fpclass_ps_mask(__to_x86_intrin(__x), __mode)));
-              else if constexpr (__vec_builtin_sizeof<_TV, 2, 16> and _Flags._M_have_avx512vl())
-                return _mm_movm_epi16(_knot_mask8(_mm_fpclass_ph_mask(__to_x86_intrin(__x), __mode)));
+              if constexpr (__vec_builtin_sizeof<_TV, 8, 64>)
+                return _mm512_movm_epi64(_knot_mask8(_mm512_fpclass_pd_mask(__x, __mode)));
+              else if constexpr (__vec_builtin_sizeof<_TV, 4, 64>)
+                return _mm512_movm_epi32(_knot_mask16(_mm512_fpclass_ps_mask(__x, __mode)));
+              else if constexpr (__vec_builtin_sizeof<_TV, 2, 64>)
+                return _mm512_movm_epi16(_knot_mask32(_mm512_fpclass_ph_mask(__x, __mode)));
               else if constexpr (__vec_builtin_sizeof<_TV, 8, 32> and _Flags._M_have_avx512vl())
                 return _mm256_movm_epi64(_knot_mask8(_mm256_fpclass_pd_mask(__x, __mode)));
               else if constexpr (__vec_builtin_sizeof<_TV, 4, 32> and _Flags._M_have_avx512vl())
                 return _mm256_movm_epi32(_knot_mask8(_mm256_fpclass_ps_mask(__x, __mode)));
               else if constexpr (__vec_builtin_sizeof<_TV, 2, 32> and _Flags._M_have_avx512vl())
                 return _mm256_movm_epi16(_knot_mask16(_mm256_fpclass_ph_mask(__x, __mode)));
-              else if constexpr (__vec_builtin_sizeof<_TV, 8, 64>)
-                return _mm512_movm_epi64(_knot_mask8(_mm512_fpclass_pd_mask(__x, __mode)));
-              else if constexpr (__vec_builtin_sizeof<_TV, 4, 64>)
-                return _mm512_movm_epi32(_knot_mask16(_mm512_fpclass_ps_mask(__x, __mode)));
-              else if constexpr (__vec_builtin_sizeof<_TV, 2, 64>)
-                return _mm512_movm_epi16(_knot_mask32(_mm512_fpclass_ph_mask(__x, __mode)));
+              else if constexpr (__vec_builtin_sizeof<_TV, 8> and _Flags._M_have_avx512vl())
+                return _mm_movm_epi64(_knot_mask8(_mm_fpclass_pd_mask(__x, __mode)));
+              else if constexpr (__vec_builtin_sizeof<_TV, 4> and _Flags._M_have_avx512vl())
+                return _mm_movm_epi32(_knot_mask8(_mm_fpclass_ps_mask(__to_x86_intrin(__x),
+                                                                      __mode)));
+              else if constexpr (__vec_builtin_sizeof<_TV, 2> and _Flags._M_have_avx512vl())
+                return _mm_movm_epi16(_knot_mask8(_mm_fpclass_ph_mask(__to_x86_intrin(__x),
+                                                                      __mode)));
               else
                 static_assert(false);
             }
