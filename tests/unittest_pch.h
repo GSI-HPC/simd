@@ -234,6 +234,9 @@ template <typename T0, typename T1>
   }
 
 template <typename T>
+  concept complex_like = std::__detail::__complex_like<T>;
+
+template <typename T>
   constexpr bool
   bit_equal(const T& a, const T& b)
   {
@@ -260,13 +263,13 @@ template <typename T>
             return all_of(std::bit_cast<B>(a).data == std::bit_cast<B>(b).data);
           }
       }
-    else if constexpr (std::__detail::__complex_like<T>)
+    else if constexpr (complex_like<T>)
       return bit_equal(a.real(), b.real()) and bit_equal(a.imag(), b.imag());
     else
       static_assert(false);
   }
 
-template <std::__detail::__complex_like T, typename Abi>
+template <complex_like T, typename Abi>
   constexpr typename dp::basic_simd<T, Abi>::mask_type
   my_isinf(const dp::basic_simd<T, Abi>& x)
   {
@@ -285,7 +288,7 @@ template <typename V>
       {
         using M = typename V::mask_type;
         using T = typename V::value_type;
-        if constexpr (std::__detail::__complex_like<T>)
+        if constexpr (complex_like<T>)
           { // fix up nan == nan and (inf,nan) == (inf,?)
             eq |= M(isnan(a.real()) and isnan(a.imag()) and isnan(b.real()) and isnan(a.imag()))
 #if 0
