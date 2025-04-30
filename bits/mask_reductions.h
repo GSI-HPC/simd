@@ -140,10 +140,13 @@ namespace std::datapar
       else if constexpr (requires {_Abi::_MaskImpl::_S_popcount(__k);})
         return _Abi::_MaskImpl::_S_popcount(__k);
 
-      else
+      else if constexpr (_Bs <= sizeof(0ULL))
         static_assert(-__size >= __finite_min_v<__detail::__mask_integer_from<_Bs>>);
 
-      return -reduce(-__k);
+      if constexpr (_Bs <= sizeof(0ULL))
+        return -reduce(-__k);
+      else
+        return reduce_count(rebind_t<double, _Kp>(__k));
     }
 
   /**

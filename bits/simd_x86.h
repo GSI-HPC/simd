@@ -3909,6 +3909,7 @@ namespace std::__detail
         }
 
       template <size_t _Bs>
+        requires (_Bs <= 8 or _S_use_bitmasks)
         _GLIBCXX_SIMD_INTRINSIC static int
         _S_popcount(std::datapar::basic_simd_mask<_Bs, _Abi> __k)
         {

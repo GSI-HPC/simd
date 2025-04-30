@@ -84,9 +84,10 @@ template <typename V>
         t.verify_equal(k & k, k);
         t.verify(none_of(k ^ k));
         t.verify_equal(std::datapar::reduce_count(k), nk);
-        t.verify_equal(-std::datapar::reduce(-k), nk)(k, -k);
+        if constexpr (sizeof(T) <= sizeof(0ULL))
+          t.verify_equal(-std::datapar::reduce(-k), nk)(k, -k);
         t.verify_equal(std::datapar::reduce_count(not k), V::size - nk)(not k);
-        if constexpr (V::size <= 128)
+        if constexpr (V::size <= 128 and sizeof(T) <= sizeof(0ULL))
           t.verify_equal(-std::datapar::reduce(-not k), V::size - nk)(-not k);
         t.verify(any_of(k));
         t.verify(bool(any_of(k & k0) ^ (i != 0)));
