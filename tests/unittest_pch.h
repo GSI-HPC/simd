@@ -638,10 +638,11 @@ template <typename T>
   is_constprop(const std::complex<T>& x)
   { return is_constprop(x.real()) and is_constprop(x.imag()); }
 
-template <typename T, std::size_t N>
+template <std::ranges::sized_range R>
   [[gnu::always_inline]] inline bool
-  is_constprop(const std::array<T, N>& arr)
+  is_constprop(const R& arr)
   {
+    constexpr std::size_t N = std::ranges::size(arr);
     return _GLIBCXX_SIMD_INT_PACK(N, Is, {
       return (is_constprop(arr[Is]) and ...);
     });
