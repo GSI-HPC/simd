@@ -1135,7 +1135,7 @@ namespace std::datapar
     struct rebind<_Tp, basic_simd_mask<_Bytes, _Abi>>
     {
       using _Abi1 = typename _Abi::template _Rebind<__detail::__canonical_vec_type_t<_Tp>>;
-      using type = basic_simd_mask<_Bytes, _Abi1>;
+      using type = basic_simd_mask<sizeof(_Tp), _Abi1>;
     };
 
   template <__detail::_SimdSizeType _Np, __detail::__vectorizable _Up,
