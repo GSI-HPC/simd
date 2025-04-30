@@ -779,7 +779,7 @@ template <typename V, int Init = 0, int MaxArg = int(test_iota_max<V, Init>)>
                 }
               using T = value_type_t<V>;
               if constexpr (std::__detail::__simd_complex<V>)
-                return std::complex<T>(T(i), T(i));
+                return std::complex<T>(T(i), T());
               else
                 return static_cast<T>(i);
             });
