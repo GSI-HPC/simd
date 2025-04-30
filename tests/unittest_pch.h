@@ -612,6 +612,11 @@ template <std::size_t B, typename Abi>
   is_constprop(const std::datapar::basic_simd_mask<B, Abi>& x)
   { return x._M_is_constprop(); }
 
+template <typename T>
+  [[gnu::always_inline]] inline bool
+  is_constprop(const std::complex<T>& x)
+  { return is_constprop(x.real()) and is_constprop(x.imag()); }
+
 template <typename T, std::size_t N>
   [[gnu::always_inline]] inline bool
   is_constprop(const std::array<T, N>& arr)
@@ -620,11 +625,6 @@ template <typename T, std::size_t N>
       return (is_constprop(arr[Is]) and ...);
     });
   }
-
-template <typename T>
-  [[gnu::always_inline]] inline bool
-  is_constprop(const std::complex<T>& x)
-  { return is_constprop(x.real()) and is_constprop(x.imag()); }
 
 [[gnu::always_inline, gnu::flatten]]
 void
