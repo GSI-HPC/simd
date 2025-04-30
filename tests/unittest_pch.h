@@ -119,6 +119,27 @@ template <typename T, typename U>
   std::ostream& operator<<(std::ostream& s, const std::pair<T, U>& x)
   { return s << '{' << x.first << ", " << x.second << '}'; }
 
+template <typename T>
+  concept is_string_type
+    = is_character_type_v<std::ranges::range_value_t<T>>
+        and (std::is_pointer_v<std::decay_t<T>>
+               or type_to_string<std::remove_cvref_t<T>>().contains("string"));
+
+template <std::ranges::range R>
+  requires (not is_string_type<R>)
+  std::ostream& operator<<(std::ostream& s, R&& x)
+  {
+    s << '[';
+    auto it = std::ranges::begin(x);
+    if (it != std::ranges::end(x))
+      {
+        s << *it;
+        while (++it != std::ranges::end(x))
+          s << ',' << *it;
+      }
+    return s << ']';
+  }
+
 struct additional_info
 {
   const bool failed = false;
@@ -633,8 +654,8 @@ constprop_test(auto&& fun, auto... args)
   runtime_verifier t{"constprop"};
 #ifndef __clang__
   t.verify((is_constprop(args) and ...))
-    ("=> At least one argument failed to constant-propagate:", is_constprop(args)...,
-     type_to_string<decltype(args)>()...);//, args...);
+    ("=> The following argument(s) failed to constant-propagate:",
+     (is_constprop(args) ? "" : type_to_string<decltype(args)>())...);//, args...);
 #endif
   fun(t, args...);
 }
