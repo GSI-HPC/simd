@@ -1170,31 +1170,31 @@ namespace std::__detail
         _S_permute(_TV __x, const _Fp __idx_perm) noexcept
         {
           static_assert(is_same_v<_TV, _SimdMember<__value_type_of<_TV>>>);
-          constexpr auto __idx
-            = [](const auto __idx_perm, _SimdSizeType __i) consteval -> _SimdSizeType {
-              _SimdSizeType __j = 0;
-              if constexpr (__detail::__index_permutation_function_nosize<_Fp>)
-                __j = __idx_perm(_IndexOffset + __i);
-              else if (__i >= _S_size)
-                return -1;
-              else
-                __j = __idx_perm(_IndexOffset + __i, _S_size);
-
-              if (__j == datapar::zero_element)
-                return _S_full_size;
-              else if (__j == datapar::uninit_element)
-                return -1;
-              else if (__i >= _S_size)
-                return  __j >= 0 and __j < _S_full_size ? __j : -1;
-              else if (__j < 0 or __j >= _S_size)
-                __builtin_unreachable(); // invalid index
-              else
-                return __j;
-            };
-          return _GLIBCXX_SIMD_INT_PACK(_S_full_size, _Is, {
-                   constexpr int __idxs[_S_full_size] = {__idx(__idx_perm, _Is)...};
-                   return __builtin_shufflevector(__x, _TV(), __idxs[_Is]...);
-                 });
+          constexpr auto __idx_perm2 = [=](auto __i) {
+            if constexpr (__detail::__index_permutation_function_nosize<_Fp>)
+              return __ic<__idx_perm(_IndexOffset + __i)>;
+            else if constexpr (__i >= _S_size)
+              return __i;
+            else
+              return __ic<__idx_perm(_IndexOffset + __i, _S_size)>;
+          };
+          constexpr auto __adj_idx = [](auto __i) {
+            constexpr int __j = __i;
+            if constexpr (__j == datapar::zero_element)
+              return __ic<_S_full_size>;
+            else if constexpr (__j == datapar::uninit_element)
+              return __ic<-1>;
+            else if constexpr (__i >= _S_size)
+              return  __ic<(__j >= 0 and __j < _S_full_size ? __j : -1)>;
+            else
+              {
+                static_assert (__j >= 0 and __j < _S_size, "invalid index");
+                return __ic<__j>;
+              }
+          };
+          return [&]<_SimdSizeType... _Is>(_SimdIndexSequence<_Is...>) {
+            return __builtin_shufflevector(__x, _TV(), __adj_idx(__idx_perm2(__ic<_Is>)).value...);
+          }(_MakeSimdIndexSequence<_S_full_size>());
         }
     };
 }
