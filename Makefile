@@ -59,6 +59,7 @@ clang_flags = $(CXXFLAGS)
 ifneq ($(compiler),clang)
 clang_flags := $(filter-out $(CXXFLAGS_$(compiler)),$(clang_flags)) $(CXXFLAGS_clang)
 endif
+clang_flags := $(filter-out -Werror -ferror-limit=%,$(clang_flags))
 define ccjson
   { "directory": "$(PWD)",
     "arguments": ["$(CXX)", $(clang_flags:%="%",) "-march=$1", "-include", "obj/$1.hpp", "-S", "$2"],
