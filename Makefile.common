@@ -217,10 +217,11 @@ codegen_files ::= $(wildcard codegen/*.c++)
 codegen_names ::= $(patsubst codegen/%.c++,%,$(codegen_files))
 codegen_targets ::= $(patsubst %,check-codegen-%,$(codegen_names))
 
-ifeq ($(SIMD_PROTOTYPING_OBJ),)
+ifeq ($(SIMD_OBJ_SUBST),)
 make_obj_dir_rule := mkdir -p obj
 else
-make_obj_dir_rule := mkdir -p $(SIMD_PROTOTYPING_OBJ); ln -s $(SIMD_PROTOTYPING_OBJ) obj
+obj_dir=$(shell echo $$PWD|sed '$(SIMD_OBJ_SUBST)')
+make_obj_dir_rule := mkdir -p $(obj_dir); ln -s $(obj_dir) obj
 endif
 
 obj:
