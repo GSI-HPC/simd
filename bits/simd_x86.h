@@ -1083,57 +1083,60 @@ namespace std::__detail
         _S_divides(_TV __x, _TV __y)
         {
           using _Tp = __value_type_of<_TV>;
-          if (not __builtin_is_constant_evaluated() and not __builtin_constant_p(__y))
-            {
-              if constexpr (is_integral_v<_Tp> and sizeof(_Tp) <= 4)
-                { // use divps - codegen of `x/y` is suboptimal (as of GCC 9.0.1)
-                  // Note that using floating-point division is likely to raise the
-                  // *Inexact* exception flag and thus appears like an invalid
-                  // "as-if" transformation. However, C++ doesn't specify how the
-                  // fpenv can be observed and points to C. C says that function
-                  // calls are assumed to potentially raise fp exceptions, unless
-                  // documented otherwise. Consequently, operator/, which is a
-                  // function call, may raise fp exceptions.
-                  //const struct _CsrGuard
-                  //{
-                  //  const unsigned _M_data = _mm_getcsr();
-                  //  _CsrGuard()
-                  //  { _mm_setcsr(0x9f80); } // turn off FP exceptions and flush-to-zero
-                  //  ~_CsrGuard() { _mm_setcsr(_M_data); }
-                  //} __csr;
+          if (__builtin_is_constant_evaluated() or __builtin_constant_p(__y))
+            return _Base::_S_divides(__x, __y);
+          else if constexpr (is_integral_v<_Tp> and sizeof(_Tp) <= 4)
+            { // use divps - codegen of `x/y` is suboptimal (as of GCC 9.0.1)
+              // Note that using floating-point division is likely to raise the
+              // *Inexact* exception flag and thus appears like an invalid
+              // "as-if" transformation. However, C++ doesn't specify how the
+              // fpenv can be observed and points to C. C says that function
+              // calls are assumed to potentially raise fp exceptions, unless
+              // documented otherwise. Consequently, operator/, which is a
+              // function call, may raise fp exceptions.
+#if 0
+              const struct _CsrGuard
+              {
+                const unsigned _M_data = _mm_getcsr();
 
-                  using _Float = conditional_t<sizeof(_Tp) == 4, double, float>;
-                  constexpr int __n_intermediate
-                    = std::min(_S_full_size, (_Flags._M_have_avx512f()
-                                                ? 64 : _Flags._M_have_avx() ? 32 : 16)
-                                 / int(sizeof(_Float)));
-                  using _FloatV = __vec_builtin_type<_Float, __n_intermediate>;
-                  constexpr int __n_floatv = __div_roundup(_S_size, __n_intermediate);
-                  const auto __xf = __vec_convert_all<_FloatV, __n_floatv>(__x);
-                  const auto __yf = __vec_convert_all<_FloatV, __n_floatv>(
-                                      _Abi::__make_padding_nonzero(__y));
-                  return _GLIBCXX_SIMD_INT_PACK(__n_floatv, _Is, {
-                           return __vec_convert<_TV>(_S_fp_div(__xf[_Is], __yf[_Is])...);
-                         });
-                }
-              /* 64-bit int division is potentially optimizable via double division if
-               * the value in __x is small enough and the conversion between
-               * int<->double is efficient enough:
-              else if constexpr (is_integral_v<_Tp> and is_unsigned_v<_Tp> and sizeof(_Tp) == 8)
-                {
-                  if constexpr (_Flags._M_have_sse4_1() and sizeof(__x) == 16)
-                    {
-                      if (_mm_test_all_zeros(__x, __m128i{0xffe0'0000'0000'0000ull,
-                                                          0xffe0'0000'0000'0000ull}))
-                        {
-                          __x | 0x __vector_convert<__m128d>(__x)
-                      }
-                    }
-                }
-               */
+                _CsrGuard()
+                { _mm_setcsr(0x9f80); } // turn off FP exceptions and flush-to-zero
+
+                ~_CsrGuard()
+                { _mm_setcsr(_M_data); }
+              } __csr_guard;
+#endif
+
+              using _Float = conditional_t<sizeof(_Tp) == 4, double, float>;
+              constexpr int __n_intermediate
+                = std::min(_S_full_size, (_Flags._M_have_avx512f()
+                                            ? 64 : _Flags._M_have_avx() ? 32 : 16)
+                             / int(sizeof(_Float)));
+              using _FloatV = __vec_builtin_type<_Float, __n_intermediate>;
+              constexpr int __n_floatv = __div_roundup(_S_size, __n_intermediate);
+              const auto __xf = __vec_convert_all<_FloatV, __n_floatv>(__x);
+              const auto __yf = __vec_convert_all<_FloatV, __n_floatv>(
+                                  _Abi::__make_padding_nonzero(__y));
+              return _GLIBCXX_SIMD_INT_PACK(__n_floatv, _Is, {
+                       return __vec_convert<_TV>(_S_fp_div(__xf[_Is], __yf[_Is])...);
+                     });
             }
-          if constexpr (_S_is_partial and _S_use_bitmasks and is_floating_point_v<_Tp>
-                          and sizeof(__x) >= 16)
+#if 0
+          // 64-bit int division is potentially optimizable via double division if
+          // the value in __x is small enough and the conversion between
+          // int<->double is efficient enough:
+          else if constexpr (is_integral_v<_Tp> and is_unsigned_v<_Tp> and sizeof(_Tp) == 8
+                               and _Flags._M_have_sse4_1() and sizeof(__x) == 16)
+            {
+              if (_mm_test_all_zeros(__x, __m128i{0xffe0'0000'0000'0000ull,
+                                                  0xffe0'0000'0000'0000ull}))
+                {
+                  __x | 0x __vector_convert<__m128d>(__x);
+                }
+            }
+#endif
+          else if constexpr (_S_is_partial and _S_use_bitmasks and is_floating_point_v<_Tp>
+                               and sizeof(__x) >= 16)
             {
               if constexpr (sizeof(__x) == 16 and sizeof(_Tp) == 2)
                 return __builtin_ia32_divph128_mask(
@@ -1161,7 +1164,9 @@ namespace std::__detail
                          __x, __y, __x, _Abi::template _S_implicit_mask<_Tp>);
               else if constexpr (sizeof(__x) == 64 and sizeof(_Tp) == 8)
                 return __builtin_ia32_divpd512_mask(
-                         __x, __y, __x, _Abi::template _S_implicit_mask<_Tp>);
+                         __x, __y, __x, _Abi::template _S_implicit_mask<_Tp>, 0x04);
+              else
+                static_assert(false);
             }
           return _Base::_S_divides(__x, __y);
         }
