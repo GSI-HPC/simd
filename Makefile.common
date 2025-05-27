@@ -2,6 +2,8 @@
 # Copyright © 2025      GSI Helmholtzzentrum fuer Schwerionenforschung GmbH
 #                       Matthias Kretz <m.kretz@gsi.de>
 
+objdir = obj
+
 CXXFLAGS+=-std=c++26 -Wall -Wextra -Werror -O2 -g0 -Wno-attributes -D_GLIBCXX_ASSERTIONS=1 $(FLAGS)
 CXXFLAGS_clang := -Wno-unknown-pragmas -ferror-limit=3
 CXXFLAGS_gcc := -fconcepts-diagnostics-depth=3 -fconstexpr-ops-limit=67108864 -fmax-errors=3
@@ -20,7 +22,7 @@ ifeq ($(file < .cxx_version),)
 $(file > .cxx_version,$(cxx_version))
 else
 ifneq ($(file < .cxx_version),$(cxx_version))
-$(info Remove PCH because the compiler changed. $(shell rm -f obj/*.hpp.gch))
+$(info Remove PCH because the compiler changed from "$(file < .cxx_version)" to "$(cxx_version)". $(shell rm -f $(objdir)/*.hpp.gch))
 $(file > .cxx_version,$(cxx_version))
 endif
 endif
@@ -120,25 +122,25 @@ endef
 
 print_progress := true
 
-obj/%.fast-math.hpp: obj/%.hpp
+$(objdir)/%.fast-math.hpp: $(objdir)/%.hpp
 	@cp $< $@
 
 define pch_template
-obj/$(1).hpp: tests/unittest*.h tests/*.cpp | obj
+$(objdir)/$(1).hpp: tests/unittest*.h tests/*.cpp | $(objdir)
 	@echo "Generate $$@"
 	@grep -h '^ *# *include ' tests/unittest*.h tests/*.cpp|grep -v unittest.h|sed 's,","$(PWD)/tests/,' > $$@
 
-obj/$(1).depend: obj/$(1).hpp
+$(objdir)/$(1).depend: $(objdir)/$(1).hpp
 	@echo "Update $(1) dependencies"
-	@$$(CXX) $$(CXXFLAGS) -march=$(1) -MM -MT "obj/$(1).hpp" obj/$(1).hpp | sed 's,: obj/$(1).hpp,:,' > $$@
+	@$$(CXX) $$(CXXFLAGS) -march=$(1) -MM -MT "$(objdir)/$(1).hpp" $(objdir)/$(1).hpp | sed 's,: $(objdir)/$(1).hpp,:,' > $$@
 
-include obj/$(1).depend
+include $(objdir)/$(1).depend
 
-obj/$(1).hpp.gch: obj/$(1).hpp | print_compiler_info
+$(objdir)/$(1).hpp.gch: $(objdir)/$(1).hpp | print_compiler_info
 	@printf -- '$$(msg_build) pre-compiled header for $(1)\n'
 	@$$(call call_compiler, $$(CXXFLAGS) -march=$(1) -c $$< -o $$@)
 
-obj/$(1).fast-math.hpp.gch: obj/$(1).fast-math.hpp | print_compiler_info
+$(objdir)/$(1).fast-math.hpp.gch: $(objdir)/$(1).fast-math.hpp | print_compiler_info
 	@printf -- '$$(msg_build) pre-compiled fast-math header for $(1)\n'
 	@$$(call call_compiler, $$(CXXFLAGS) -ffast-math -march=$(1) -c $$< -o $$@)
 
@@ -151,21 +153,21 @@ no_fast_math = $(shell head -n10 tests/$(1).cpp | grep -q no-fast-math && echo 1
 
 # arguments: test, arch
 define exe_template
-check/$(1).$(2)/%: tests/$(1).cpp obj/$(2).hpp.gch tests/unittest*.h
-	@printf -- '$$(msg_build) $(if $(DIRECT),and link )$$(@:check/%=  obj/%.exe)\n'
-	@mkdir -p $$(dir $$(@:check/%=obj/%.exe)) $$(dir $$@)
-	@rm -f $$(@:check/%=obj/%.exe) $$@
-	@$$(call call_compiler,$$(CXXFLAGS) -march=$(2) -D UNITTEST_TYPE="$$(call gettype,$$*)" -D UNITTEST_WIDTH=$$(call getwidth,$$*) -include obj/$(2).hpp $(if $(DIRECT),-o $$(@:check/%=obj/%.exe),-c -o $$(@:check/%=obj/%.o)) $$<)
+check/$(1).$(2)/%: tests/$(1).cpp $(objdir)/$(2).hpp.gch tests/unittest*.h
+	@printf -- '$$(msg_build) $(if $(DIRECT),and link )$$(@:check/%=  $(objdir)/%.exe)\n'
+	@mkdir -p $$(dir $$(@:check/%=$(objdir)/%.exe)) $$(dir $$@)
+	@rm -f $$(@:check/%=$(objdir)/%.exe) $$@
+	@$$(call call_compiler,$$(CXXFLAGS) -march=$(2) -D UNITTEST_TYPE="$$(call gettype,$$*)" -D UNITTEST_WIDTH=$$(call getwidth,$$*) -include $(objdir)/$(2).hpp $(if $(DIRECT),-o $$(@:check/%=$(objdir)/%.exe),-c -o $$(@:check/%=$(objdir)/%.o)) $$<)
 ifeq ($(DIRECT),)
 	@true || printf -- '$$(msg_link) $$@\n'
-	@$$(LINK_CXX) $$(CXXFLAGS) -march=$(2) -o $$(@:check/%=obj/%.exe) $$(@:check/%=obj/%.o)
-	@touch -r $$(@:check/%=obj/%.o) $$(@:check/%=obj/%.exe)
-	@rm $$(@:check/%=obj/%.o)
+	@$$(LINK_CXX) $$(CXXFLAGS) -march=$(2) -o $$(@:check/%=$(objdir)/%.exe) $$(@:check/%=$(objdir)/%.o)
+	@touch -r $$(@:check/%=$(objdir)/%.o) $$(@:check/%=$(objdir)/%.exe)
+	@rm $$(@:check/%=$(objdir)/%.o)
 endif
 	@rm -f $$@.failed
-	@$$(@:check/%=obj/%.exe) >$$@ 2>&1 && { \
+	@$$(@:check/%=$(objdir)/%.exe) >$$@ 2>&1 && { \
 		printf -- '$$(msg_run) %-60s %s\n' '$$@' "$$$$($$(print_progress))"; \
-		touch -r $$(@:check/%=obj/%.exe) $$@; \
+		touch -r $$(@:check/%=$(objdir)/%.exe) $$@; \
 	} || { \
 		printf -- '$$(msg_runf) $$@\n'; \
 		cat $$@; \
@@ -173,25 +175,25 @@ endif
 		false; \
 	}
 
-check/fast-math/$(1).$(2)/%: tests/$(1).cpp obj/$(2).fast-math.hpp.gch tests/unittest*.h
+check/fast-math/$(1).$(2)/%: tests/$(1).cpp $(objdir)/$(2).fast-math.hpp.gch tests/unittest*.h
 ifeq ($(call no_fast_math,$(1)),1)
 	@mkdir -p $$(dir $$@)
 	@touch $$@
 else
-	@mkdir -p $$(dir $$(@:check/%=obj/%.exe)) $$(dir $$@)
-	@printf -- '$$(msg_build) $(if $(DIRECT),and link )$$(@:check/%=  obj/%.exe)\n'
-	@rm -f $$(@:check/%=obj/%.exe) $$@
-	@$$(call call_compiler,$$(CXXFLAGS) -ffast-math -march=$(2) -D UNITTEST_TYPE="$$(call gettype,$$*)" -D UNITTEST_WIDTH=$$(call getwidth,$$*) -include obj/$(2).fast-math.hpp $(if $(DIRECT),-o $$(@:check/%=obj/%.exe),-c -o $$(@:check/%=obj/%.o)) $$<)
+	@mkdir -p $$(dir $$(@:check/%=$(objdir)/%.exe)) $$(dir $$@)
+	@printf -- '$$(msg_build) $(if $(DIRECT),and link )$$(@:check/%=  $(objdir)/%.exe)\n'
+	@rm -f $$(@:check/%=$(objdir)/%.exe) $$@
+	@$$(call call_compiler,$$(CXXFLAGS) -ffast-math -march=$(2) -D UNITTEST_TYPE="$$(call gettype,$$*)" -D UNITTEST_WIDTH=$$(call getwidth,$$*) -include $(objdir)/$(2).fast-math.hpp $(if $(DIRECT),-o $$(@:check/%=$(objdir)/%.exe),-c -o $$(@:check/%=$(objdir)/%.o)) $$<)
 ifeq ($(DIRECT),)
 	@true || printf -- '$$(msg_link) $$@\n'
-	@$$(LINK_CXX) $$(CXXFLAGS) -ffast-math -march=$(2) -o $$(@:check/%=obj/%.exe) $$(@:check/%=obj/%.o)
-	@touch -r $$(@:check/%=obj/%.o) $$(@:check/%=obj/%.exe)
-	@rm $$(@:check/%=obj/%.o)
+	@$$(LINK_CXX) $$(CXXFLAGS) -ffast-math -march=$(2) -o $$(@:check/%=$(objdir)/%.exe) $$(@:check/%=$(objdir)/%.o)
+	@touch -r $$(@:check/%=$(objdir)/%.o) $$(@:check/%=$(objdir)/%.exe)
+	@rm $$(@:check/%=$(objdir)/%.o)
 endif
 	@rm -f $$@.failed
-	@$$(@:check/%=obj/%.exe) >$$@ 2>&1 && { \
+	@$$(@:check/%=$(objdir)/%.exe) >$$@ 2>&1 && { \
 		printf -- '$$(msg_run) %-60s %s\n' '$$@' "$$$$($$(print_progress))"; \
-		touch -r $$(@:check/%=obj/%.exe) $$@; \
+		touch -r $$(@:check/%=$(objdir)/%.exe) $$@; \
 	} || { \
 		printf -- '$$(msg_runf) $$@\n'; \
 		cat $$@; \
@@ -206,50 +208,53 @@ $(foreach arch,$(testarchs),\
 	$(foreach t,$(tests),\
 	$(eval $(call exe_template,$(t),$(arch)))))
 
-constexpr_checks ::= $(foreach arch,$(testarchs),obj/constexpr.$(arch).s)
+constexpr_checks ::= $(foreach arch,$(testarchs),$(objdir)/constexpr.$(arch).s)
 
 .PHONY: check-constexpr
 check-constexpr: $(shell shuf -e -- $(constexpr_checks))
 
-check_targets := obj/check.targets
+check_targets := $(objdir)/check.targets
 
 codegen_files ::= $(wildcard codegen/*.c++)
 codegen_names ::= $(patsubst codegen/%.c++,%,$(codegen_files))
 codegen_targets ::= $(patsubst %,check-codegen-%,$(codegen_names))
 
-ifeq ($(SIMD_OBJ_SUBST),)
-make_obj_dir_rule := mkdir -p obj
+ifneq ($(SIMD_OBJ_SUBST),)
+ifneq ($(objdir),obj)
+$(error Ambiguous instructions: both 'objdir' and 'SIMD_OBJ_SUBST' are set to non-default values)
+endif
+real_obj_dir=$(shell echo $$PWD|sed '$(SIMD_OBJ_SUBST)')
+make_obj_dir_rule := mkdir -p $(real_obj_dir); ln -s $(real_obj_dir) $(objdir)
 else
-obj_dir=$(shell echo $$PWD|sed '$(SIMD_OBJ_SUBST)')
-make_obj_dir_rule := mkdir -p $(obj_dir); ln -s $(obj_dir) obj
+make_obj_dir_rule := mkdir -p $(objdir)
 endif
 
-obj:
+$(objdir):
 	@echo "Set up build dir and check dir"
 	@$(make_obj_dir_rule)
-	@mkdir -p obj/check
-	@ln -s obj/check check
+	@mkdir -p $(objdir)/check
+	@ln -s $(objdir)/check check
 
-obj/codegen.depend: obj $(codegen_files)
-	@echo "Update codegen dependencies"
+$(objdir)/codegen.depend: $(objdir) $(codegen_files)
+	@echo "Update codegen dependencies ..."
 	$(file >$@)
 	$(foreach c,$(codegen_names),\
-	  $(shell $(CXX) $(CXXFLAGS) -MM -MT obj/codegen.$c.s codegen/$c.c++ >> $@))
+	  $(shell $(CXX) $(CXXFLAGS) -MM -MT $(objdir)/codegen.$c.s codegen/$c.c++ >> $@))
 
-include obj/codegen.depend
+include $(objdir)/codegen.depend
 
-$(shell $(CXX) $(CXXFLAGS) -MM -MT "obj/constexpr.%.s" constexpr_tests.c++|tr -d '\\') obj/%.hpp.gch
+$(shell $(CXX) $(CXXFLAGS) -MM -MT "$(objdir)/constexpr.%.s" constexpr_tests.c++|tr -d '\\') $(objdir)/%.hpp.gch
 	@printf -- '$(msg_build) constexpr tests for $*\n'
-	@$(CXX) $(CXXFLAGS) -march=$* -include obj/$*.hpp -S -o $@ constexpr_tests.c++
+	@$(CXX) $(CXXFLAGS) -march=$* -include $(objdir)/$*.hpp -S -o $@ constexpr_tests.c++
 
 .PHONY: always-remake
 always-remake: ;
 
-check-codegen-%: obj/codegen.%.s codegen/check.sh
+check-codegen-%: $(objdir)/codegen.%.s codegen/check.sh
 	@echo "Testing for expected instructions in $<"
 	@codegen/check.sh "codegen/$*.c++" "$<"
 
-obj/codegen.%.s: codegen/%.c++ obj
+$(objdir)/codegen.%.s: codegen/%.c++ $(objdir)
 	@echo "Building $@"
 	@$(CXX) $(CXXFLAGS) -masm=intel -march=skylake -fcf-protection=none -S -o $@ $<
 	@cat $@ | grep -v '^\s*\.' | c++filt > $@.tmp

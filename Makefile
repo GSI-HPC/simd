@@ -62,11 +62,11 @@ endif
 clang_flags := $(filter-out -Werror -ferror-limit=%,$(clang_flags))
 define ccjson
   { "directory": "$(PWD)",
-    "arguments": ["$(CXX)", $(clang_flags:%="%",) "-march=$1", "-include", "obj/$1.hpp", "-S", "$2"],
+    "arguments": ["$(CXX)", $(clang_flags:%="%",) "-march=$1", "-include", "$(objdir)/$1.hpp", "-S", "$2"],
     "file": "$2" }
 endef
 
-obj/compile_commands.json: obj Makefile Makefile.common
+$(objdir)/compile_commands.json: $(objdir) Makefile Makefile.common
 	$(file >$@,[)
 	$(file >>$@,$(call ccjson,$(firstword $(testarchs)),constexpr_tests.c++)$(foreach arch,$(wordlist 2,$(words $(testarchs)),$(testarchs)),,$(call ccjson,$(arch),constexpr_tests.c++)))
 	$(file >>$@,])
@@ -76,17 +76,18 @@ metrics:
 	@sloccount *.h tests/*.h Makefile*
 
 .PHONY: tidy
-tidy: obj/compile_commands.json
-	@clang-tidy -p obj constexpr_tests.c++
+tidy: $(objdir)/compile_commands.json
+	@clang-tidy -p $(objdir) constexpr_tests.c++
 
 .PHONY: debug
 debug:
 	@echo "obj dir rule: $(make_obj_dir_rule)"
+	@echo "obj dir: $(objdir)"
 	@echo "compiler: $(compiler)"
 	@echo "CXXFLAGS: $(CXXFLAGS)"
-	@echo "$(testarchs)"
-	@echo "$(tests)"
-	@echo "$(testwidths)"
+	@echo "testarchs: $(testarchs)"
+	@echo "tests: $(tests)"
+	@echo "testwidths: $(testwidths)"
 	@for i in $(testtypes); do echo "- $$i"; done
 	@echo "width=$(call getwidth,shift_left.core2/signed-char.34)"
 	@echo "type=$(call gettype,shift_left.core2/signed-char.34)"
@@ -130,7 +131,7 @@ $(foreach type,$(testtypes),\
 	)
 
 $(foreach arch,$(testarchs),\
-	$(eval $(call simple_check_template,constexpr-$(arch),obj/constexpr.$(arch).s))\
+	$(eval $(call simple_check_template,constexpr-$(arch),$(objdir)/constexpr.$(arch).s))\
 	$(eval $(call check_template,$(arch),$(fortesttypes) $(fortests) \
 	  echo "check-$$$$t.$(arch).$$$$type";done;done;\
 	  echo "check-constexpr-$(arch)")) \
@@ -159,22 +160,22 @@ $(foreach t,$(tests),\
 	      echo "check/$t.$(arch)/$$$$type.$w";done)))) \
 	)
 
-$(check_targets): obj/compile_commands.json $(wildcard tests/*.cpp) Makefile Makefile.common
+$(check_targets): $(objdir)/compile_commands.json $(wildcard tests/*.cpp) Makefile Makefile.common
 	$(file >$@)
 	$(foreach t,$(tests),$(foreach w,$(testwidths),$(foreach y,$(testtypes),$(foreach a,$(testarchs),\
 		$(file >>$@,check/$t.$a/$y.$w)))))
 
 REPORTFLAGS=-fmem-report -ftime-report -Q
 
-obj/%.report:
+$(objdir)/%.report:
 	@echo "Build time reports for $*"
 	@$(CXX) $(CXXFLAGS) $(REPORTFLAGS) -march=$(call getarch,$*) \
 		-D UNITTEST_TYPE="$(call gettype,$*)" \
 		-D UNITTEST_WIDTH=$(call getwidth,$*) \
-		-c -o obj/$*.o tests/$(call gettest,$*).cpp
+		-c -o $(objdir)/$*.o tests/$(call gettest,$*).cpp
 	@echo "Build time reports for $* done"
 
-helptxt := obj/help.txt
+helptxt := $(objdir)/help.txt
 
 $(helptxt): Makefile $(check_targets)
 	$(file >$@)
@@ -188,7 +189,7 @@ help: $(helptxt)
 
 .PHONY: clean
 clean:
-	test -L obj && { rm -rf $(realpath obj); rm obj; }
-	rm -rf obj
+	test -L $(objdir) && { rm -rf $(realpath $(objdir)); rm $(objdir); }
+	rm -rf $(objdir)
 	rm -rf check
 
