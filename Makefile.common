@@ -36,33 +36,36 @@ CXXFLAGS += $(CXXFLAGS_$(compiler))
 
 #-D_GLIBCXX_DEBUG_UB=1
 
-icerun := $(shell which icerun)
-
 ifeq ($(ICECC_CXX),)
 LINK_CXX := $(CXX)
 else
 LINK_CXX := $(ICECC_CXX)
 endif
 
-ifeq ($(icerun)$(shell which icecc),)
-# without icecream (icerun and icecc) set DIRECT=1
+ifeq ($(notdir $(realpath $(CXX))),distcc)
+# using distcc
+ifeq ($(shell $(realpath $(CXX)) --show-hosts),)
+# except, not really
 DIRECT := 1
-else ifeq ($(ICECC),no)
+endif
+
+else ifeq ($(notdir $(realpath $(CXX))),icecc)
+# using icecc
+ifeq ($(ICECC),no)
 DIRECT := 1
 else ifeq ($(ICECC),disable)
 DIRECT := 1
-else ifneq ($(notdir $(realpath $(CXX))),icecc)
-# CXX isn't using icecream
-DIRECT := 1
-icerun :=
 else ifneq ($(DIRECT),)
 ifneq ($(ICECC_CXX),)
-ifeq ($(notdir $(realpath $(CXX))),icecc)
 # with icecream, DIRECT, and ICECC_CXX set, and CXX resolving to icecc, compile
 # locally but allocate slots on the icecream scheduler
 export ICECC=no
 endif
 endif
+
+else
+# CXX isn't using icecream or distcc
+DIRECT := 1
 endif
 
 testarchs ::= athlon64 \

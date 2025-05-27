@@ -84,6 +84,7 @@ debug:
 	@echo "obj dir rule: $(make_obj_dir_rule)"
 	@echo "obj dir: $(objdir)"
 	@echo "compiler: $(compiler)"
+	@echo "DIRECT: $(DIRECT)"
 	@echo "CXXFLAGS: $(CXXFLAGS)"
 	@echo "testarchs: $(testarchs)"
 	@echo "tests: $(tests)"
