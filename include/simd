@@ -1,0 +1,13 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later WITH GCC-exception-3.1 */
+/* Copyright © 2025      GSI Helmholtzzentrum fuer Schwerionenforschung GmbH
+ *                       Matthias Kretz <m.kretz@gsi.de>
+ */
+
+#ifndef SIMD_
+#define SIMD_
+
+#include "bits/simd_vec.h"
+
+#endif  // SIMD_
+
+// vim: ft=cpp
