@@ -197,7 +197,7 @@ namespace std::datapar
           using _Rp = resize_t<__detail::__simd_size_v<_Up, _Ap>, basic_simd_mask>;
           return _Rp([&](int __i) {
                    return _Impl::_S_get(_M_data, __idx[__i]);
-                 }));
+                 });
         }
 #endif
 
