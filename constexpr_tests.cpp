@@ -561,7 +561,6 @@ static_assert([] {
 
 // cat ///////////////////////////
 
-#if 0
 static_assert(all_of(simd::cat(simd::iota<simd::vec<int, 3>>, simd::vec<int, 1>(3))
                        == simd::iota<simd::vec<int, 4>>));
 
@@ -573,7 +572,6 @@ static_assert(all_of(simd::cat(simd::iota<simd::vec<double, 4>>, simd::iota<simd
 
 static_assert(all_of(simd::cat(simd::iota<simd::vec<double, 4>>, simd::iota<simd::vec<double, 4>> + 4)
                        == simd::iota<simd::vec<double, 8>>));
-#endif
 
 // select ////////////////////////
 

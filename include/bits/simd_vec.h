@@ -501,12 +501,9 @@ namespace std::simd
     { return chunk<resize_t<_Np, basic_mask<_Bytes, _Ap>>>(__x); }
 
   template<typename _Tp, typename... _Abis>
-    constexpr basic_vec<_Tp, __deduce_abi_t<_Tp, (basic_vec<_Tp, _Abis>::size() + ...)>>
+    constexpr basic_vec<_Tp, __deduce_abi_t<_Tp, (_Abis::_S_size + ...)>>
     cat(const basic_vec<_Tp, _Abis>&... __xs) noexcept
-    {
-      //using _Rp = basic_vec<_Tp, __deduce_abi_t<_Tp, (basic_vec<_Tp, _Abis>::size() + ...)>>;
-      static_assert(false, "TODO: cat");
-    }
+    { return basic_vec<_Tp, __deduce_abi_t<_Tp, (_Abis::_S_size + ...)>>::_S_concat(__xs...); }
 
   template<size_t _Bytes, typename... _Abis>
     constexpr basic_mask<_Bytes, __deduce_abi_t<__integer_from<_Bytes>,
@@ -1959,7 +1956,7 @@ namespace std::simd
       { return __builtin_constant_p(_M_data); }
 
       [[__gnu__::__always_inline__]]
-      constexpr _DataType
+      constexpr auto
       _M_concat_data() const
       {
         if constexpr (_S_is_scalar)
@@ -2109,6 +2106,27 @@ namespace std::simd
                        };
                      });
             }
+        }
+
+      template <typename _A0>
+        [[__gnu__::__always_inline__]]
+        static constexpr basic_vec
+        _S_concat(const basic_vec<value_type, _A0>& __x0) noexcept
+        { return basic_vec(__x0); }
+
+      template <typename... _As>
+        requires (sizeof...(_As) > 1)
+        [[__gnu__::__always_inline__]]
+        static constexpr basic_vec
+        _S_concat(const basic_vec<value_type, _As>&... __xs) noexcept
+        {
+          if constexpr (not _S_is_partial
+                          and ((not basic_vec<value_type, _As>::_S_is_partial
+                                  and _As::_S_size * sizeof...(_As) == _S_size) and ...))
+            return basic_vec::_S_init(__vec_concat(__xs._M_concat_data()...));
+
+          else
+            return basic_vec::_S_init(__vec_concat_sized<__xs.size()...>(__xs._M_concat_data()...));
         }
 
       [[__gnu__::__always_inline__]]

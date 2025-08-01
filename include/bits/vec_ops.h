@@ -184,6 +184,23 @@ namespace std::simd
         static_assert(false);
     }
 
+  template <int _N0, int _N1, int... _Ns, __vec_builtin _TV0, __vec_builtin _TV1,
+           __vec_builtin... _TVs>
+    [[__gnu__::__always_inline__]]
+    constexpr __vec_builtin_type<__vec_value_type<_TV0>,
+                                 __bit_ceil(unsigned(_N0 + (_N1 + ... + _Ns)))>
+    __vec_concat_sized(const _TV0& __a, const _TV1& __b, const _TVs&... __rest)
+    {
+      const auto __ab = _GLIBCXX_SIMD_INT_PACK(_N0 + _N1, _Is, {
+          return __builtin_shufflevector(
+              __a, __b, (_Is < _N0 ? _Is : _Is - _N0 + __width_of<_TV0>)...);
+          });
+      if constexpr (sizeof...(__rest) == 0)
+        return __ab;
+      else
+        return __vec_concat_sized<_N0 + _N1, _Ns...>(__ab, __rest...);
+    }
+
   template <__vec_builtin _TV>
     _GLIBCXX_SIMD_INTRINSIC constexpr _TV
     __vec_xor(_TV __a, _TV __b)
