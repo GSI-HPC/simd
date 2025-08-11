@@ -542,6 +542,9 @@ namespace std::simd
       template <size_t, typename>
         friend class basic_mask;
 
+      template <typename, typename>
+        friend class basic_vec;
+
       static constexpr int _S_size = _Ap::_S_size;
 
       static constexpr bool _S_is_scalar = is_same_v<_Ap, _ScalarAbi<_Ap::_S_size>>;
@@ -2386,9 +2389,13 @@ namespace std::simd
 
       [[__gnu__::__always_inline__]]
       friend constexpr basic_vec&
-      operator/=(basic_vec& __x, const basic_vec& __y) noexcept
+      operator/=(basic_vec& __x, const basic_vec& __y0) noexcept
       requires requires(value_type __a) { __a / __a; }
       {
+        basic_vec __y = __y0;
+        if constexpr (_S_is_partial)
+          __y = __select_impl(mask_type::_S_init(mask_type::_S_implicit_mask),
+                                     __y0, basic_vec(value_type(1)));
 #ifdef __SSE2__
         // x86 doesn't have integral SIMD division instructions
         // While division is faster, the required conversions are still a problem:
