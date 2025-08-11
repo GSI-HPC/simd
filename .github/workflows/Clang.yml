@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright © 2025      GSI Helmholtzzentrum fuer Schwerionenforschung GmbH
+#                       Matthias Kretz <m.kretz@gsi.de>
+
+name: Clang
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  clang:
+    strategy:
+      fail-fast: false
+      matrix:
+        version: [20, 21]
+
+    runs-on: ubuntu-latest
+
+    container:
+      image: ghcr.io/mattkretz/cplusplus-ci/base
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run test suite
+        env:
+          CXX: clang++-${{ matrix.version }}
+        run: make -j2 check-constexpr check/arithmetic.skylake/float.41
