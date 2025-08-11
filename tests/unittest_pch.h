@@ -1,0 +1,947 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
+/* Copyright © 2023–2025 GSI Helmholtzzentrum fuer Schwerionenforschung GmbH
+ *                       Matthias Kretz <m.kretz@gsi.de>
+ */
+
+#ifndef TESTS_UNITTEST_PCH_H_
+#define TESTS_UNITTEST_PCH_H_
+
+#include "../include/bits/simd_details.h"
+
+namespace test
+{
+  struct precondition_failure
+  {
+    std::string_view file;
+    int line;
+    std::string_view expr;
+    std::string_view msg;
+  };
+
+#undef __glibcxx_simd_precondition
+
+#define __glibcxx_simd_precondition(expr, msg, ...) \
+  do {                                              \
+    if (__builtin_expect(!bool(expr), false))       \
+      throw test::precondition_failure{__FILE__, __LINE__, #expr, msg}; \
+  } while(false)
+}
+
+#include "../include/simd"
+#include "constexpr_wrapper.h"
+
+#include <source_location>
+#include <iostream>
+#include <concepts>
+#include <cfenv>
+#include <vector>
+
+using run_function = void(*)();
+
+// global objects
+static std::vector<run_function> run_functions = {};
+
+static std::int64_t passed_tests = 0;
+
+static std::int64_t failed_tests = 0;
+
+static std::string_view test_name = "unknown";
+
+// ------------------------------------------------
+
+namespace simd = std::simd;
+
+template <typename T>
+  consteval std::basic_string_view<char>
+  type_to_string(T* = nullptr)
+  {
+    std::string_view fun = std::source_location::current().function_name();
+    const auto offset = fun.find("with T = ");
+    if (offset != std::string_view::npos)
+      {
+        fun = fun.substr(offset + 9);
+        return fun.substr(0, fun.size() - 1);
+      }
+    return fun;
+  }
+
+template <typename T>
+  struct is_character_type
+  : std::bool_constant<false>
+  {};
+
+template <typename T>
+  inline constexpr bool is_character_type_v = is_character_type<T>::value;
+
+template <typename T>
+  struct is_character_type<const T>
+  : is_character_type<T>
+  {};
+
+template <typename T>
+  struct is_character_type<T&>
+  : is_character_type<T>
+  {};
+
+template <> struct is_character_type<char> : std::bool_constant<true> {};
+template <> struct is_character_type<wchar_t> : std::bool_constant<true> {};
+template <> struct is_character_type<char8_t> : std::bool_constant<true> {};
+template <> struct is_character_type<char16_t> : std::bool_constant<true> {};
+template <> struct is_character_type<char32_t> : std::bool_constant<true> {};
+
+std::ostream& operator<<(std::ostream& s, std::byte b)
+{ return s << std::hex << static_cast<unsigned>(b) << std::dec; }
+
+template <typename T, typename Abi>
+std::ostream& operator<<(std::ostream& s, std::simd::basic_vec<T, Abi> const& v)
+{
+  using U = std::conditional_t<
+              sizeof(T) == 1, int, std::conditional_t<
+                                     is_character_type_v<T>,
+                                     std::simd::_UInt<sizeof(T)>, T>>;
+  s << '[' << U(v[0]);
+  for (int i = 1; i < v.size(); ++i)
+    s << ", " << U(v[i]);
+  return s << ']';
+}
+
+template <std::size_t B, typename Abi>
+std::ostream& operator<<(std::ostream& s, std::simd::basic_mask<B, Abi> const& v)
+{
+  s << '<';
+  for (int i = 0; i < v.size(); ++i)
+    s << int(v[i]);
+  return s << '>';
+}
+
+template <std::simd::__vec_builtin V>
+  std::ostream& operator<<(std::ostream& s, V v)
+  { return s << std::simd::vec<std::simd::__vec_value_type<V>, std::simd::__width_of<V>>(v); }
+
+template <typename T, typename U>
+  std::ostream& operator<<(std::ostream& s, const std::pair<T, U>& x)
+  { return s << '{' << x.first << ", " << x.second << '}'; }
+
+template <typename T>
+  concept is_string_type
+    = is_character_type_v<std::ranges::range_value_t<T>>
+        and (std::is_pointer_v<std::decay_t<T>>
+               or type_to_string<std::remove_cvref_t<T>>().contains("string"));
+
+template <std::ranges::range R>
+  requires (not is_string_type<R>)
+  std::ostream& operator<<(std::ostream& s, R&& x)
+  {
+    s << '[';
+    auto it = std::ranges::begin(x);
+    if (it != std::ranges::end(x))
+      {
+        s << *it;
+        while (++it != std::ranges::end(x))
+          s << ',' << *it;
+      }
+    return s << ']';
+  }
+
+struct additional_info
+{
+  const bool failed = false;
+
+  additional_info
+  operator()(auto const& value0, auto const&... more)
+  {
+    if (failed)
+      [&] {
+        std::cout << "  " << value0;
+        ((std::cout << ' ' << more), ...);
+        std::cout << std::endl;
+      }();
+    return *this;
+  }
+};
+
+struct log_novalue {};
+
+template <typename T>
+  struct unwrap_value_types
+  { using type = T; };
+
+template <typename T>
+  requires requires { typename T::value_type; }
+  struct unwrap_value_types<T>
+  { using type = typename unwrap_value_types<typename T::value_type>::type; };
+
+template <typename T>
+  using value_type_t = typename unwrap_value_types<std::remove_cvref_t<T>>::type;
+
+template <typename T>
+  struct as_unsigned;
+
+template <typename T>
+  using as_unsigned_t = typename as_unsigned<T>::type;
+
+template <typename T>
+  requires (sizeof(T) == sizeof(unsigned char))
+  struct as_unsigned<T>
+  { using type = unsigned char; };
+
+template <typename T>
+  requires (sizeof(T) == sizeof(unsigned short))
+  struct as_unsigned<T>
+  { using type = unsigned short; };
+
+template <typename T>
+  requires (sizeof(T) == sizeof(unsigned int))
+  struct as_unsigned<T>
+  { using type = unsigned int; };
+
+template <typename T>
+  requires (sizeof(T) == sizeof(unsigned long long))
+  struct as_unsigned<T>
+  { using type = unsigned long long; };
+
+template <typename T, typename Abi>
+  struct as_unsigned<std::simd::basic_vec<T, Abi>>
+  { using type = std::simd::rebind_t<as_unsigned_t<T>, std::simd::basic_vec<T, Abi>>; };
+
+template <typename T0, typename T1>
+  constexpr T0
+  ulp_distance_signed(T0 val0, const T1& ref1)
+  {
+    if constexpr (std::is_floating_point_v<T1>)
+      return ulp_distance_signed(val0, std::simd::rebind_t<T1, T0>(ref1));
+    else if constexpr (std::is_floating_point_v<value_type_t<T0>>)
+      {
+        int fp_exceptions = 0;
+        if not consteval
+          {
+            fp_exceptions = std::fetestexcept(FE_ALL_EXCEPT);
+          }
+        using std::isnan;
+        using std::abs;
+        using T = value_type_t<T0>;
+        using L = std::numeric_limits<T>;
+        constexpr T0 signexp_mask = -L::infinity();
+        T0 ref0(ref1);
+        T1 val1(val0);
+        const auto subnormal = fabs(ref1) < L::min();
+        using I = as_unsigned_t<T1>;
+        const T1 eps1 = select(subnormal, L::denorm_min(),
+                               L::epsilon() * std::bit_cast<T0>(
+                                                std::bit_cast<I>(ref1)
+                                                  & std::bit_cast<I>(signexp_mask)));
+        const T0 ulp = select(val0 == ref0 || (isnan(val0) && isnan(ref0)),
+                              T0(), T0((ref1 - val1) / eps1));
+        if not consteval
+          {
+            std::feclearexcept(FE_ALL_EXCEPT ^ fp_exceptions);
+          }
+        return ulp;
+      }
+    else
+      return ref1 - val0;
+  }
+
+template <typename T0, typename T1>
+  constexpr T0
+  ulp_distance(const T0& val, const T1& ref)
+  {
+    auto ulp = ulp_distance_signed(val, ref);
+    using T = value_type_t<decltype(ulp)>;
+    if constexpr (std::is_unsigned_v<T>)
+      return ulp;
+    else
+      {
+        using std::abs;
+        return fabs(ulp);
+      }
+  }
+
+template <typename T>
+  concept complex_like = std::simd::__complex_like<T>;
+
+template <typename T>
+  constexpr bool
+  bit_equal(const T& a, const T& b)
+  {
+    using std::simd::_UInt;
+    if constexpr (sizeof(T) <= 8)
+      return std::bit_cast<_UInt<sizeof(T)>>(a) == std::bit_cast<_UInt<sizeof(T)>>(b);
+    else if constexpr (std::simd::__simd_vec_or_mask_type<T>)
+      {
+        using TT = typename T::value_type;
+        if constexpr (sizeof(TT) <= 8)
+          {
+            struct B
+            {
+              alignas(T) simd::rebind_t<_UInt<sizeof(TT)>, T> data;
+            };
+            return all_of(std::bit_cast<B>(a).data == std::bit_cast<B>(b).data);
+          }
+        else
+          {
+            struct B
+            {
+              alignas(T) simd::rebind_t<_UInt<8>, simd::resize_t<T::size() * sizeof(TT) / 8, T>> data;
+            };
+            return all_of(std::bit_cast<B>(a).data == std::bit_cast<B>(b).data);
+          }
+      }
+    else if constexpr (complex_like<T>)
+      return bit_equal(a.real(), b.real()) and bit_equal(a.imag(), b.imag());
+    else
+      static_assert(false);
+  }
+
+template <complex_like T, typename Abi>
+  constexpr typename simd::basic_vec<T, Abi>::mask_type
+  my_isinf(const simd::basic_vec<T, Abi>& x)
+  {
+    using M = typename simd::basic_vec<T, Abi>::mask_type;
+    return M(isinf(x.real()) or isinf(x.imag()));
+  }
+
+template <typename V>
+  constexpr bool
+  equal_with_nan_and_inf_fixup(const V& a, const V& b)
+  {
+    auto eq = a == b;
+    if (std::simd::all_of(eq))
+      return true;
+    else if constexpr (std::simd::__simd_vec_type<V>)
+      {
+        using M = typename V::mask_type;
+        using T = typename V::value_type;
+        if constexpr (complex_like<T>)
+          { // fix up nan == nan and (inf,nan) == (inf,?)
+            eq |= M(isnan(a.real()) and isnan(a.imag()) and isnan(b.real()) and isnan(a.imag()))
+#if 0
+                      or (isinf(a.real()) and isunordered(a.imag(), b.imag())
+                            and a.real() == b.real())
+                      or (isinf(a.imag()) and isunordered(a.real(), b.real())
+                            and a.imag() == b.imag()));
+#else
+                  // a and b are "an infinity" according to C23 Annex G.3
+                    or (my_isinf(a) and my_isinf(b));
+#endif
+          }
+        else if constexpr (std::is_floating_point_v<T>)
+          { // fix up nan == nan results
+            eq |= isnan(a) and isnan(b);
+          }
+        else
+          return false;
+        return std::simd::all_of(eq);
+      }
+    else if constexpr (std::is_floating_point_v<V>)
+      return std::isnan(a) and std::isnan(b);
+    else
+      return false;
+  }
+
+struct constexpr_verifier
+{
+  struct ignore_the_rest
+  {
+    constexpr ignore_the_rest
+    operator()(auto const&, auto const&...)
+    { return *this; }
+  };
+
+  bool okay = true;
+
+  constexpr ignore_the_rest
+  verify_precondition_failure(std::string_view /*expected_msg*/, auto&& /*f*/) &
+  {
+#if 0 // This is waiting for constexpr exceptions to be implemented
+    try
+      {
+        f();
+        okay = false;
+      }
+    catch (const test::precondition_failure& failure)
+      { okay = okay and failure.msg == expected_msg; }
+    catch (...)
+      { okay = false; }
+#endif
+    return {};
+  }
+
+  constexpr ignore_the_rest
+  verify(const auto& k) &
+  {
+    okay = okay and std::simd::all_of(k);
+    return {};
+  }
+
+  constexpr ignore_the_rest
+  verify_equal(const auto& v, const auto& ref) &
+  {
+    using V = decltype(std::simd::select(v == ref, v, ref));
+    okay = okay and equal_with_nan_and_inf_fixup<V>(v, ref);
+    return {};
+  }
+
+  constexpr ignore_the_rest
+  verify_bit_equal(const auto& v, const auto& ref) &
+  {
+    using V = decltype(std::simd::select(v == ref, v, ref));
+    okay = okay and bit_equal<V>(v, ref);
+    return {};
+  }
+
+  template <typename T, typename U>
+    constexpr ignore_the_rest
+    verify_equal(const std::pair<T, U>& x, const std::pair<T, U>& y) &
+    {
+      verify_equal(x.first, y.first);
+      verify_equal(x.second, y.second);
+      return {};
+    }
+
+  constexpr ignore_the_rest
+  verify_not_equal(const auto& v, const auto& ref) &
+  {
+    okay = okay and std::simd::all_of(v != ref);
+    return {};
+  }
+
+  constexpr ignore_the_rest
+  verify_equal_to_ulp(const auto& x, const auto& y, float allowed_distance) &
+  {
+    okay = okay and std::simd::all_of(ulp_distance(x, y) <= allowed_distance);
+    return {};
+  }
+
+  constexpr_verifier() = default;
+
+  constexpr_verifier(const constexpr_verifier&) = delete;
+
+  constexpr_verifier(constexpr_verifier&&) = delete;
+};
+
+[[nodiscard]]
+consteval bool
+constexpr_test(auto&& fun, auto&&... args)
+{
+  constexpr_verifier t;
+  fun(t, args...);
+  return t.okay;
+}
+
+template <typename T>
+  T
+  make_value_unknown(const T& x)
+  {
+    T y = x;
+    asm("" : "+m"(y));
+    return y;
+  }
+
+template <typename T>
+  concept pair_specialization
+    = std::same_as<std::remove_cvref_t<T>, std::pair<typename std::remove_cvref_t<T>::first_type,
+                                                     typename std::remove_cvref_t<T>::second_type>>;
+
+struct runtime_verifier
+{
+  const std::string_view test_kind;
+
+  template <typename X, typename Y>
+    additional_info
+    log_failure(const X& x, const Y& y, std::source_location loc, std::size_t ip,
+                std::string_view s)
+    {
+      ++failed_tests;
+      std::cout << loc.file_name() << ':' << loc.line() << ':' << loc.column() << ": ("
+                << std::hex << ip << std::dec << ") in "
+                << test_kind << " test of '" << test_name
+                << "' " << s << " failed";
+      if constexpr (not std::is_same_v<X, log_novalue>)
+        {
+          std::cout << ":\n   result: " << std::boolalpha;
+          if constexpr (is_character_type_v<X>)
+            std::cout << int(x);
+          else
+            std::cout << x;
+          if constexpr (not std::is_same_v<decltype(y), const log_novalue&>)
+            {
+              std::cout << "\n expected: ";
+              if constexpr (is_character_type_v<Y>)
+                std::cout << int(y);
+              else
+                std::cout << y;
+            }
+        }
+      std::cout << std::endl;
+      return additional_info {true};
+    }
+
+  [[gnu::always_inline]] static inline
+  size_t
+  determine_ip()
+  {
+    size_t _ip = 0;
+#ifdef __x86_64__
+    asm volatile("lea 0(%%rip),%0" : "=r"(_ip));
+#elif defined __i386__
+    asm volatile("1: movl $1b,%0" : "=r"(_ip));
+#elif defined __arm__
+    asm volatile("mov %0,pc" : "=r"(_ip));
+#elif defined __aarch64__
+    asm volatile("adr %0,." : "=r"(_ip));
+#endif
+    return _ip;
+  }
+
+  [[gnu::always_inline]]
+  additional_info
+  verify_precondition_failure(std::string_view expected_msg, auto&& f,
+                              std::source_location loc = std::source_location::current()) &
+  {
+    const auto ip = determine_ip();
+    try
+      {
+        f();
+        ++failed_tests;
+        return log_failure(log_novalue(), log_novalue(), loc, ip,
+                           "precondition failure not detected");
+      }
+    catch (const test::precondition_failure& failure)
+      {
+        if (failure.msg != expected_msg)
+          {
+            ++failed_tests;
+            return log_failure(failure.msg, expected_msg, loc, ip, "unexpected exception");
+          }
+        else
+          {
+            ++passed_tests;
+            return {};
+          }
+      }
+    catch (...)
+      {
+        ++failed_tests;
+        return log_failure(log_novalue(), log_novalue(), loc, ip, "unexpected exception");
+      }
+  }
+
+  [[gnu::always_inline]]
+  additional_info
+  verify(auto&& k, std::source_location loc = std::source_location::current())
+  {
+    const auto ip = determine_ip();
+    if (std::simd::all_of(k))
+      {
+        ++passed_tests;
+        return {};
+      }
+    else
+      return log_failure(log_novalue(), log_novalue(), loc, ip, "verify");
+  }
+
+  [[gnu::always_inline]]
+  additional_info
+  verify_equal(auto&& x, auto&& y,
+               std::source_location loc = std::source_location::current())
+  {
+    using V = decltype(std::simd::select(x == y, x, y));
+    const auto ip = determine_ip();
+    bool ok;
+    if constexpr (pair_specialization<decltype(x)> and pair_specialization<decltype(y)>)
+      ok = std::simd::all_of(x.first == y.first) and std::simd::all_of(x.second == y.second);
+    else
+      ok = equal_with_nan_and_inf_fixup<V>(x, y);
+    if (ok)
+      {
+        ++passed_tests;
+        return {};
+      }
+    else
+      return log_failure(x, y, loc, ip, "verify_equal")(x == y);
+  }
+
+  [[gnu::always_inline]]
+  additional_info
+  verify_bit_equal(auto&& x, auto&& y,
+                   std::source_location loc = std::source_location::current())
+  {
+    using V = decltype(std::simd::select(x == y, x, y));
+    const auto ip = determine_ip();
+    if (bit_equal<V>(x, y))
+      {
+        ++passed_tests;
+        return {};
+      }
+    else
+      return log_failure(x, y, loc, ip, "verify_bit_equal");
+  }
+
+  [[gnu::always_inline]]
+  additional_info
+  verify_not_equal(auto&& x, auto&& y,
+                   std::source_location loc = std::source_location::current())
+  {
+    const auto ip = determine_ip();
+    if (std::simd::all_of(x != y))
+      {
+        ++passed_tests;
+        return {};
+      }
+    else
+      return log_failure(x, y, loc, ip, "verify_not_equal");
+  }
+
+  // ulp_distance_signed can raise FP exceptions and thus must be conditionally executed
+  [[gnu::always_inline]]
+  additional_info
+  verify_equal_to_ulp(auto&& x, auto&& y, float allowed_distance,
+                      std::source_location loc = std::source_location::current())
+  {
+    const auto ip = determine_ip();
+    const bool success = std::simd::all_of(ulp_distance(x, y) <= allowed_distance);
+    if (success)
+      {
+        ++passed_tests;
+        return {};
+      }
+    else
+      return log_failure(x, y, loc, ip, "verify_equal_to_ulp")
+               ("distance:", ulp_distance_signed(x, y),
+                "\n allowed:", allowed_distance);
+  }
+};
+
+[[gnu::noinline, gnu::noipa]]
+void
+runtime_test(auto&& fun, auto&&... args)
+{
+  runtime_verifier t {"runtime"};
+  fun(t, make_value_unknown(args)...);
+}
+
+template <typename T>
+  [[gnu::always_inline]] inline bool
+  is_constprop(const T& x)
+  { return vir::constexpr_value<T> or __builtin_constant_p(x); }
+
+template <typename T, typename Abi>
+  [[gnu::always_inline]] inline bool
+  is_constprop(const std::simd::basic_vec<T, Abi>& x)
+  { return x._M_is_constprop(); }
+
+template <std::size_t B, typename Abi>
+  [[gnu::always_inline]] inline bool
+  is_constprop(const std::simd::basic_mask<B, Abi>& x)
+  { return x._M_is_constprop(); }
+
+template <typename T>
+  [[gnu::always_inline]] inline bool
+  is_constprop(const std::complex<T>& x)
+  { return is_constprop(x.real()) and is_constprop(x.imag()); }
+
+template <std::ranges::sized_range R>
+  [[gnu::always_inline]] inline bool
+  is_constprop(const R& arr)
+  {
+    constexpr std::size_t N = std::ranges::size(arr);
+    return _GLIBCXX_SIMD_INT_PACK(N, Is, {
+      return (is_constprop(arr[Is]) and ...);
+    });
+  }
+
+[[gnu::always_inline, gnu::flatten]]
+void
+constprop_test(auto&& fun, auto... args)
+{
+  runtime_verifier t{"constprop"};
+#ifndef __clang__
+  t.verify((is_constprop(args) and ...))
+    ("=> The following argument(s) failed to constant-propagate:",
+     (is_constprop(args) ? "" : type_to_string<decltype(args)>())...);//, args...);
+#endif
+  fun(t, args...);
+}
+
+bool
+check_cpu_support()
+{
+#if defined __x86_64__ or defined __i386__
+    __builtin_cpu_init();
+#ifdef __SSE3__
+    if (not __builtin_cpu_supports("sse3")) return false;
+#endif
+#ifdef __SSSE3__
+    if (not __builtin_cpu_supports("ssse3")) return false;
+#endif
+#ifdef __SSE4_1__
+    if (not __builtin_cpu_supports("sse4.1")) return false;
+#endif
+#ifdef __SSE4_2__
+    if (not __builtin_cpu_supports("sse4.2")) return false;
+#endif
+#ifdef __SSE4A__
+    if (not __builtin_cpu_supports("sse4a")) return false;
+#endif
+#ifdef __XOP__
+    if (not __builtin_cpu_supports("xop")) return false;
+#endif
+#ifdef __FMA__
+    if (not __builtin_cpu_supports("fma")) return false;
+#endif
+#ifdef __FMA4__
+    if (not __builtin_cpu_supports("fma4")) return false;
+#endif
+#ifdef __AVX__
+    if (not __builtin_cpu_supports("avx")) return false;
+#endif
+#ifdef __AVX2__
+    if (not __builtin_cpu_supports("avx2")) return false;
+#endif
+#ifdef __BMI__
+    if (not __builtin_cpu_supports("bmi")) return false;
+#endif
+#ifdef __BMI2__
+    if (not __builtin_cpu_supports("bmi2")) return false;
+#endif
+#if defined __LZCNT__ and not defined __clang__
+    if (not __builtin_cpu_supports("lzcnt")) return false;
+#endif
+#ifdef __F16C__
+    if (not __builtin_cpu_supports("f16c")) return false;
+#endif
+#ifdef __POPCNT__
+    if (not __builtin_cpu_supports("popcnt")) return false;
+#endif
+#ifdef __AVX512F__
+    if (not __builtin_cpu_supports("avx512f")) return false;
+#endif
+#ifdef __AVX512DQ__
+    if (not __builtin_cpu_supports("avx512dq")) return false;
+#endif
+#ifdef __AVX512BW__
+    if (not __builtin_cpu_supports("avx512bw")) return false;
+#endif
+#ifdef __AVX512VL__
+    if (not __builtin_cpu_supports("avx512vl")) return false;
+#endif
+#ifdef __AVX512BITALG__
+    if (not __builtin_cpu_supports("avx512bitalg")) return false;
+#endif
+#ifdef __AVX512VBMI__
+    if (not __builtin_cpu_supports("avx512vbmi")) return false;
+#endif
+#ifdef __AVX512VBMI2__
+    if (not __builtin_cpu_supports("avx512vbmi2")) return false;
+#endif
+#ifdef __AVX512IFMA__
+    if (not __builtin_cpu_supports("avx512ifma")) return false;
+#endif
+#ifdef __AVX512CD__
+    if (not __builtin_cpu_supports("avx512cd")) return false;
+#endif
+#ifdef __AVX512VNNI__
+    if (not __builtin_cpu_supports("avx512vnni")) return false;
+#endif
+#ifdef __AVX512VPOPCNTDQ__
+    if (not __builtin_cpu_supports("avx512vpopcntdq")) return false;
+#endif
+#ifdef __AVX512VP2INTERSECT__
+    if (not __builtin_cpu_supports("avx512vp2intersect")) return false;
+#endif
+#ifdef __AVX512FP16__
+    if (not __builtin_cpu_supports("avx512fp16")) return false;
+#endif
+#endif
+    return true;
+}
+
+int run_check_cpu_support = [] {
+  if (not check_cpu_support())
+    {
+      std::cerr << "Incompatible CPU.\n";
+      std::exit(EXIT_SUCCESS);
+    }
+  return 0;
+}();
+
+/**
+ * The value of the largest element in test_iota<V, Init>.
+ */
+template <typename V, int Init = 0, int Max = V::size() + Init - 1>
+  constexpr value_type_t<V> test_iota_max
+    = sizeof(value_type_t<V>) < sizeof(int)
+        ? std::min(int(std::numeric_limits<value_type_t<V>>::max()),
+                   Max < 0 ? std::min(V::size() + Init - 1,
+                                      int(std::numeric_limits<value_type_t<V>>::max()) + Max)
+                           : Max)
+        : V::size() + Init - 1;
+
+template <typename T, typename Abi, int Init, int Max>
+  requires std::is_enum_v<T>
+  constexpr T test_iota_max<simd::basic_vec<T, Abi>, Init, Max>
+    = static_cast<T>(test_iota_max<simd::basic_vec<std::underlying_type_t<T>, Abi>, Init, Max>);
+
+/**
+ * Starts iota sequence at Init.
+ *
+ * With `Max == 0`: Wrap-around on overflow
+ * With `Max < 0`: Subtract from numeric_limits::max (to leave room for arithmetic ops)
+ * Otherwise: [Init..Max, Init..Max, ...] (inclusive)
+ *
+ * Use simd::iota if a non-monotonic sequence is a bug.
+ */
+template <typename V, int Init = 0, int MaxArg = int(test_iota_max<V, Init>)>
+  constexpr V test_iota = V([](int i) {
+              constexpr int Max = MaxArg < 0 ? int(test_iota_max<V, Init, MaxArg>) : MaxArg;
+              static_assert(Max == 0 or Max > Init or V::size() == 1);
+              i += Init;
+              if constexpr (Max > Init)
+                {
+                  while (i > Max)
+                    i -= Max - Init + 1;
+                }
+              using T = value_type_t<V>;
+              if constexpr (std::simd::__simd_complex<V>)
+                return std::complex<T>(T(i), T());
+              else
+                return static_cast<T>(i);
+            });
+
+/**
+ * A data-parallel object initialized with {values..., values..., ...}
+ */
+template <typename V, auto... values>
+  constexpr V vec = [] {
+    using T = typename V::value_type;
+    constexpr std::array<T, sizeof...(values)> arr = {T(values)...};
+    return V([&](size_t i) { return arr[i % arr.size()]; });
+  }();
+
+template <typename V>
+  struct Tests;
+
+template <typename T>
+  concept array_specialization
+    = requires {
+      typename T::value_type;
+      std::tuple_size<T>::value;
+    } and std::same_as<T, std::array<typename T::value_type, std::tuple_size_v<T>>>;
+
+template <typename Args = void, typename Fun = void>
+  struct add_test
+  {
+    alignas(std::bit_floor(sizeof(Args))) Args args;
+    Fun fun;
+  };
+
+struct dummy_test
+{
+  static constexpr std::array<int, 0> args = {};
+  static constexpr auto fun = [](auto&, auto...) {};
+};
+
+template <auto test_ref, std::size_t... arg_idx>
+  void
+  invoke_test_impl(std::index_sequence<arg_idx...>, auto... is)
+  {
+    constexpr auto fun = test_ref->fun;
+    [[maybe_unused]] constexpr auto args = test_ref->args;
+    constprop_test(fun, is..., std::get<arg_idx>(args)...);
+    runtime_test(fun, is..., std::get<arg_idx>(args)...);
+    constexpr bool passed = constexpr_test(fun, is..., std::get<arg_idx>(args)...);
+    if (passed)
+      ++passed_tests;
+    else
+      {
+        ++failed_tests;
+        std::cout << "=> constexpr test of '" << test_name << "' failed.\n";
+      }
+  }
+
+template <auto test_ref>
+  void
+  invoke_test(std::string_view name, auto... is)
+  {
+    test_name = name;
+    constexpr auto args = test_ref->args;
+    using A = std::remove_const_t<decltype(args)>;
+    constexpr std::make_index_sequence<std::tuple_size_v<A>> args_idx_seq = {};
+    if constexpr (array_specialization<A>)
+      { // call for each element
+        [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+          ([&] {
+            std::string tmp_name = std::string(name) + '|' + std::to_string(Is);
+            test_name = tmp_name;
+            ((std::cout << "Testing '" << test_name) << ... << (' ' + std::to_string(is)))
+              << ' ' << args[Is] << "'\n";
+            invoke_test_impl<test_ref>(std::index_sequence<Is>(), is...);
+          }(), ...);
+        }(args_idx_seq);
+      }
+    else
+      {
+        ((std::cout << "Testing '" << test_name) << ... << (' ' + std::to_string(is))) << "'\n";
+        invoke_test_impl<test_ref>(args_idx_seq, is...);
+      }
+  }
+
+#define ADD_TEST(name, ...)                                                                        \
+    template <int>                                                                                 \
+      static constexpr auto name##_tmpl = dummy_test {};                                           \
+                                                                                                   \
+    static void                                                                                    \
+    name()                                                                                         \
+    { invoke_test<&name##_tmpl<0>>(#name); }                                                       \
+                                                                                                   \
+    const int init_##name = [] {                                                                   \
+      run_functions.push_back(name);                                                               \
+      return 0;                                                                                    \
+    }();                                                                                           \
+                                                                                                   \
+    template <int Tmp>                                                                             \
+      requires (Tmp == 0) __VA_OPT__(and (__VA_ARGS__))                                            \
+      static constexpr auto name##_tmpl<Tmp> = add_test
+
+#define ADD_TEST_N(name, N, ...)                                                                   \
+    template <int>                                                                                 \
+      static constexpr auto name##_tmpl = dummy_test {};                                           \
+                                                                                                   \
+    static void                                                                                    \
+    name()                                                                                         \
+    {                                                                                              \
+      []<int... Is>(std::integer_sequence<int, Is...>) {                                           \
+        (invoke_test<&name##_tmpl<0>>(#name, vir::cw<Is>), ...);                                   \
+      }(std::make_integer_sequence<int, N>());                                                     \
+    }                                                                                              \
+                                                                                                   \
+    const int init_##name = [] {                                                                   \
+      run_functions.push_back(name);                                                               \
+      return 0;                                                                                    \
+    }();                                                                                           \
+                                                                                                   \
+    template <int Tmp>                                                                             \
+      requires (Tmp == 0) __VA_OPT__(and (__VA_ARGS__))                                            \
+      static constexpr auto name##_tmpl<Tmp> = add_test
+
+template <typename = void>
+void test_runner();
+
+int main()
+{
+  try
+    {
+      test_runner();
+    }
+  catch(const test::precondition_failure& fail)
+    {
+      std::cout << fail.file << ':' << fail.line << ": Error: precondition '" << fail.expr
+                << "' does not hold: " << fail.msg << '\n';
+      return EXIT_FAILURE;
+    }
+  std::cout << "Passed tests: " << passed_tests << "\nFailed tests: " << failed_tests << '\n';
+  return failed_tests != 0 ? EXIT_FAILURE : EXIT_SUCCESS;
+}
+
+#endif  // TESTS_UNITTEST_PCH_H_

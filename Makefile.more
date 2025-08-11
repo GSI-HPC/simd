@@ -1,0 +1,80 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright © 2025      GSI Helmholtzzentrum fuer Schwerionenforschung GmbH
+#                       Matthias Kretz <m.kretz@gsi.de>
+
+include Makefile.common
+
+shuffled_checks := $(shell shuf $(check_targets))
+
+untested := $(filter-out $(wildcard check/*.*/*.*),$(shuffled_checks))
+
+totaltests := $(shell echo $$(( $(words $(testarchs)) * $(words $(tests)) \
+	      * $(words $(testtypes)) * $(words $(testwidths)) )))
+
+total1  := $(shell echo $$(( ($(totaltests) + 50) / 100)))
+
+total10 := $(shell echo $$(( ($(totaltests) + 5) / 10)))
+
+debug:
+	@echo "#untested: $(words $(untested))"
+	@echo total1: $(total1)
+	@echo total10: $(total10)
+
+ifneq ($(MAKE_TERMOUT),)
+init_progress := $(words $(wildcard check/*.*/*.*))
+start_time := $(shell date +%s)
+$(file > $(objdir)/.progress,$(init_progress))
+print_progress := flock $(objdir)/.progress ./increment.sh $(objdir)/.progress | \
+		  { read p && \
+		    remain=$$(($(totaltests)-p)) && \
+		    rate=$$((60 * (p - $(init_progress)) / ($$(date +%s) - $(start_time)))) && \
+		    done=$$(((1000 * p / $(totaltests)))) && \
+		    timeremain=$$((remain/rate)) && \
+		    printf "[%2d.%d%% %2d%%/day %dh%02d remain]" \
+			   $$((done / 10)) $$((done % 10)) \
+			   $$((144000 * rate / $(totaltests))) \
+			   $$((timeremain / 60)) $$((timeremain % 60)); \
+		  }
+endif
+
+.PHONY: check check10 check1
+check: check-constexpr $(shuffled_checks) $(codegen_targets)
+
+check1: check-constexpr $(wordlist 1,$(total1),$(shuffled_checks)) $(codegen_targets)
+
+check10: check-constexpr $(wordlist 1,$(total10),$(shuffled_checks)) $(codegen_targets)
+
+.PHONY: check-failed check-passed check-untested
+
+check_subdirs := $(wildcard check/*.*/)
+
+ifeq ($(check_subdirs),)
+
+check-failed:
+
+check-passed:
+
+else
+
+check-failed: $(patsubst %.failed,%,$(wildcard check/*.*/*.*.failed))
+
+check-passed: $(shell find $(check_subdirs) ! -name '*.failed'|shuf)
+
+endif
+
+check-untested: $(untested)
+
+check-fast-math: $(patsubst check/%,check/fast-math/%,$(shuffled_checks))
+
+rerun/%: $(objdir)/%
+	@$< >$(@:rerun/%.exe=check/%) 2>&1 && { \
+		printf -- '$(msg_run) $@\n'; \
+		touch -r $< $(@:rerun/%.exe=check/%); \
+	} || { \
+		printf -- '$(msg_runf) $@\n'; \
+		cat $(@:rerun/%.exe=check/%); \
+		mv $(@:rerun/%.exe=check/%) $(@:rerun/%.exe=check/%).failed; \
+		false; \
+	}
+
+rerun: $(patsubst $(objdir)/%,rerun/%,$(wildcard $(objdir)/*.*/*.*.exe))
