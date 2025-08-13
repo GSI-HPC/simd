@@ -1151,6 +1151,10 @@ namespace std::simd
               else
                 return _M_data == _S_implicit_mask;
             }
+#if _GLIBCXX_SIMD_HAVE_SSE
+          else if (not (__builtin_is_constant_evaluated() or __builtin_constant_p(_M_data)))
+            return __x86_vecmask_all<_S_size>(_M_data);
+#endif
           else
             return _VecOps<_DataType, _S_size>::_S_all_of(_M_data);
         }
@@ -1170,6 +1174,10 @@ namespace std::simd
               else
                 return _M_data != 0;
             }
+#if _GLIBCXX_SIMD_HAVE_SSE
+          else if (not (__builtin_is_constant_evaluated() or __builtin_constant_p(_M_data)))
+            return __x86_vecmask_any<_S_size>(_M_data);
+#endif
           else
             return _VecOps<_DataType, _S_size>::_S_any_of(_M_data);
         }
@@ -1189,6 +1197,10 @@ namespace std::simd
               else
                 return _M_data == 0;
             }
+#if _GLIBCXX_SIMD_HAVE_SSE
+          else if (not (__builtin_is_constant_evaluated() or __builtin_constant_p(_M_data)))
+            return __x86_vecmask_none<_S_size>(_M_data);
+#endif
           else
             return _VecOps<_DataType, _S_size>::_S_none_of(_M_data);
         }
@@ -1692,7 +1704,7 @@ namespace std::simd
           if constexpr (_N0 == _N1)
             return (_M_data0 or _M_data1)._M_any_of();
           else
-            return _M_data0._M_any_of() and _M_data1._M_any_of();
+            return _M_data0._M_any_of() or _M_data1._M_any_of();
         }
 
       template <_ArchFlags _Flags = {}>

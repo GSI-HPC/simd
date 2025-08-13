@@ -8,7 +8,7 @@
 
 #include "vec_ops.h"
 
-#ifndef __SSE__
+#if not _GLIBCXX_SIMD_HAVE_SSE
 #error "wrong include for this target"
 #endif
 
@@ -17,8 +17,308 @@
 #pragma GCC target("avx2,bmi,bmi2,avx512vl,avx512bw,avx512dq,avx10.2")
 #pragma GCC pop_options
 
+// psabi warnings are bogus because the ABI of the internal types never leaks into user code
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpsabi"
+
 namespace std::simd
 {
+  static constexpr size_t __x86_max_general_register_size
+#ifdef __x86_64__
+    = 8;
+#else
+    = 4;
+#endif
+
+  [[__gnu__::__always_inline__]]
+  inline int
+  __x86_movmsk(__vec_builtin_type_bytes<__integer_from<8>, 16> __x)
+  { return __builtin_ia32_movmskpd(__vec_bit_cast<double>(__x)); }
+
+  [[__gnu__::__always_inline__]]
+  inline int
+  __x86_movmsk(__vec_builtin_type_bytes<__integer_from<8>, 32> __x)
+  {
+    return __builtin_ia32_movmskpd256(__vec_bit_cast<double>(__x));
+  }
+
+  template <_ArchFlags _Flags = {}>
+    [[__gnu__::__always_inline__]]
+    inline int
+    __x86_movmsk(__vec_builtin_type_bytes<__integer_from<4>, 8> __x)
+    {
+#if __has_builtin(__builtin_ia32_pext_di)
+      if constexpr (_Flags._M_have_bmi2())
+        return __builtin_ia32_pext_di(__builtin_bit_cast(unsigned long long, __x),
+                                      0x80000000'80000000ULL);
+#else
+      return __x86_movmsk(__vec_zero_pad_to_16(__x));
+#endif
+    }
+
+  [[__gnu__::__always_inline__]]
+  inline int
+  __x86_movmsk(__vec_builtin_type_bytes<__integer_from<4>, 16> __x)
+  { return __builtin_ia32_movmskps(__vec_bit_cast<float>(__x)); }
+
+  [[__gnu__::__always_inline__]]
+  inline int
+  __x86_movmsk(__vec_builtin_type_bytes<__integer_from<4>, 32> __x)
+  { return __builtin_ia32_movmskps256(__vec_bit_cast<float>(__x)); }
+
+  template <__vec_builtin _TV, auto _Flags = _ArchFlags()>
+    requires (sizeof(__vec_value_type<_TV>) <= 2)
+    [[__gnu__::__always_inline__]]
+    inline int
+    __x86_movmsk(_TV __x)
+    {
+      static_assert(__width_of<_TV> > 1);
+      if constexpr (sizeof(__x) == 32)
+        return __builtin_ia32_pmovmskb256(__vec_bit_cast<char>(__x));
+      else if constexpr (sizeof(__x) == 16)
+        return __builtin_ia32_pmovmskb128(__vec_bit_cast<char>(__x));
+      else if constexpr (sizeof(__x) == 8)
+        {
+#if __has_builtin(__builtin_ia32_pext_di)
+          if constexpr (_Flags._M_have_bmi2())
+            return __builtin_ia32_pext_di(__builtin_bit_cast(unsigned long long, __x),
+                                          0x8080'8080'8080'8080ULL);
+#endif
+          return __x86_movmsk(__vec_zero_pad_to_16(__x));
+        }
+      else if constexpr (sizeof(__x) == 4)
+        {
+#if __has_builtin(__builtin_ia32_pext_si)
+          if constexpr (_Flags._M_have_bmi2())
+            return __builtin_ia32_pext_si(__builtin_bit_cast(unsigned int, __x), 0x80808080u);
+#endif
+          return __x86_movmsk(__vec_zero_pad_to_16(__x));
+        }
+      else if constexpr (sizeof(__x) == 2)
+        {
+          auto __bits = __builtin_bit_cast(unsigned short, __x);
+#if __has_builtin(__builtin_ia32_pext_si)
+          if constexpr (_Flags._M_have_bmi2())
+            return __builtin_ia32_pext_si(__bits, 0x00008080u);
+#endif
+          return ((__bits >> 7) & 1) | ((__bits & 0x8000) >> 14);
+        }
+      else
+        static_assert(false);
+    }
+
+  template <__vec_builtin _TV, _ArchFlags _Flags = {}>
+    [[__gnu__::__always_inline__]]
+    inline bool
+    __x86_vec_is_zero(_TV __a)
+    {
+      using _Tp = __vec_value_type<_TV>;
+      constexpr bool __is_fp = is_floating_point_v<_Tp>;
+      if constexpr (sizeof(_TV) <= __x86_max_general_register_size)
+        return __builtin_bit_cast(__integer_from<sizeof(_TV)>, __a) == 0;
+      else if constexpr (_Flags._M_have_avx())
+        {
+          if constexpr (sizeof(_TV) == 32 and __is_fp and sizeof(_Tp) == 8)
+            return __builtin_ia32_vtestzpd256(__a, __a);
+          else if constexpr (sizeof(_TV) == 32 and __is_fp and sizeof(_Tp) == 4)
+            return __builtin_ia32_vtestzps256(__a, __a);
+          else if constexpr (sizeof(_TV) == 32 and __is_fp)
+            return __builtin_ia32_vtestzps256(__vec_bit_cast<float>(__a),
+                                              __vec_bit_cast<float>(__a));
+          else if constexpr (sizeof(_TV) == 32)
+            return __builtin_ia32_ptestz256(__vec_bit_cast<long long>(__a),
+                                            __vec_bit_cast<long long>(__a));
+          else if constexpr (sizeof(_TV) == 16 and __is_fp and sizeof(_Tp) == 8)
+            return __builtin_ia32_vtestzpd(__a, __a);
+          else if constexpr (sizeof(_TV) == 16 and __is_fp and sizeof(_Tp) == 4)
+            return __builtin_ia32_vtestzps(__a, __a);
+          else if constexpr (sizeof(_TV) == 16 and __is_fp)
+            return __builtin_ia32_vtestzps(__vec_bit_cast<float>(__a),
+                                           __vec_bit_cast<float>(__a));
+          else if constexpr (sizeof(_TV) == 16)
+            return __builtin_ia32_ptestz128(__vec_bit_cast<long long>(__a),
+                                            __vec_bit_cast<long long>(__a));
+          else if constexpr (sizeof(_TV) < 16)
+            return __x86_vec_is_zero(__vec_zero_pad_to_16(__a));
+          else
+            static_assert(false);
+        }
+      else if constexpr (_Flags._M_have_sse4_1())
+        {
+          if constexpr (sizeof(_TV) == 16)
+            return __builtin_ia32_ptestz128(__vec_bit_cast<long long>(__a),
+                                            __vec_bit_cast<long long>(__a));
+          else if constexpr (sizeof(_TV) < 16)
+            return __x86_vec_is_zero(__vec_zero_pad_to_16(__a));
+          else
+            static_assert(false);
+        }
+      else
+        return __x86_movmsk(__a) == 0;
+    }
+
+  template <__vec_builtin _TV, _ArchFlags _Flags = {}>
+    [[__gnu__::__always_inline__]]
+    inline int
+    __x86_vec_testz(_TV __a, _TV __b)
+    {
+      static_assert(sizeof(_TV) == 16 or sizeof(_TV) == 32);
+      static_assert(_Flags._M_have_sse4_1());
+      using _Tp = __vec_value_type<_TV>;
+      constexpr bool __is_fp = is_floating_point_v<_Tp>;
+      if constexpr (sizeof(_TV) == 32 and __is_fp and sizeof(_Tp) == 8)
+        return __builtin_ia32_vtestzpd256(__a, __b);
+      else if constexpr (sizeof(_TV) == 32 and __is_fp and sizeof(_Tp) == 4)
+        return __builtin_ia32_vtestzps256(__a, __b);
+      else if constexpr (sizeof(_TV) == 32 and __is_fp)
+        return __builtin_ia32_vtestzps256(__vec_bit_cast<float>(__a), __vec_bit_cast<float>(__b));
+      else if constexpr (sizeof(_TV) == 32)
+        return __builtin_ia32_ptestz256(__vec_bit_cast<long long>(__a),
+                                        __vec_bit_cast<long long>(__b));
+      else if constexpr (__is_fp and sizeof(_Tp) == 8 and _Flags._M_have_avx())
+        return __builtin_ia32_vtestzpd(__a, __b);
+      else if constexpr (__is_fp and sizeof(_Tp) == 4 and _Flags._M_have_avx())
+        return __builtin_ia32_vtestzps(__a, __b);
+      else if constexpr (__is_fp and _Flags._M_have_avx())
+        return __builtin_ia32_vtestzps(__vec_bit_cast<float>(__a), __vec_bit_cast<float>(__b));
+      else
+        return __builtin_ia32_ptestz128(__vec_bit_cast<long long>(__a),
+                                        __vec_bit_cast<long long>(__b));
+    }
+
+  template <__vec_builtin _TV, _ArchFlags _Flags = {}>
+    [[__gnu__::__always_inline__]]
+    inline int
+    __x86_vec_testc(_TV __a, _TV __b)
+    {
+      static_assert(sizeof(_TV) == 16 or sizeof(_TV) == 32);
+      static_assert(_Flags._M_have_sse4_1());
+      using _Tp = __vec_value_type<_TV>;
+      if constexpr (sizeof(_TV) == 32)
+        {
+          if constexpr (not is_floating_point_v<_Tp>)
+            return __builtin_ia32_ptestc256(__vec_bit_cast<long long>(__a),
+                                            __vec_bit_cast<long long>(__b));
+          else if constexpr (sizeof(_Tp) == 8)
+            return __builtin_ia32_vtestcpd256(__a, __b);
+          else if constexpr (sizeof(_Tp) == 4)
+            return __builtin_ia32_vtestcps256(__a, __b);
+          else // TODO:ph
+            static_assert(false);
+        }
+      else if constexpr (is_floating_point_v<_Tp> and _Flags._M_have_avx())
+        {
+          if constexpr (sizeof(_Tp) == 8)
+            return __builtin_ia32_vtestcpd(__a, __b);
+          else if constexpr (sizeof(_Tp) == 4)
+            return __builtin_ia32_vtestcps(__a, __b);
+          else // TODO:ph
+            static_assert(false);
+        }
+      else
+        return __builtin_ia32_ptestc128(__vec_bit_cast<long long>(__a),
+                                        __vec_bit_cast<long long>(__b));
+    }
+
+  template <int _Np, __vec_builtin _TV, _ArchFlags _Flags = {}>
+    [[__gnu__::__always_inline__]]
+    inline bool
+    __x86_vecmask_all(_TV __k)
+    {
+      using _Tp = __vec_value_type<_TV>;
+      static_assert(is_signed_v<_Tp>);
+      constexpr int __width = __width_of<_TV>;
+      static_assert(sizeof(__k) <= 32);
+      if constexpr (_Np == __width)
+        {
+          if constexpr (sizeof(__k) <= __x86_max_general_register_size)
+            {
+              using _Ip = __integer_from<sizeof(__k)>;
+              return __builtin_bit_cast(_Ip, __k) == ~_Ip();
+            }
+          else if constexpr (not _Flags._M_have_sse4_1())
+            {
+              constexpr int __valid_bits = (1 << (sizeof(_Tp) == 2 ? _Np * 2 : _Np)) - 1;
+              return __x86_movmsk(__k) == __valid_bits;
+            }
+          else if constexpr (sizeof(__k) < 16)
+            return __x86_vecmask_all<_Np>(__vec_zero_pad_to_16(__k));
+          else
+            return 0 != __x86_vec_testc(__k, ~_TV());
+        }
+      else if constexpr (sizeof(__k) <= __x86_max_general_register_size)
+        {
+          using _Ip = __integer_from<sizeof(__k)>;
+          constexpr _Ip __valid_bits = (_Ip(1) << (_Np * sizeof(_Tp) * __CHAR_BIT__)) - 1;
+          return (__builtin_bit_cast(_Ip, __k) & __valid_bits) == __valid_bits;
+        }
+      else if constexpr (not _Flags._M_have_sse4_1())
+        {
+          constexpr int __valid_bits = (1 << (sizeof(_Tp) == 2 ? _Np * 2 : _Np)) - 1;
+          return (__x86_movmsk(__k) & __valid_bits) == __valid_bits;
+        }
+      else if constexpr (sizeof(__k) < 16)
+        return __x86_vecmask_all<_Np>(__vec_zero_pad_to_16(__k));
+      else
+        return 0 != __x86_vec_testc(__k, _S_vec_implicit_mask<_Np, _TV>);
+    }
+
+  template <int _Np, __vec_builtin _TV, _ArchFlags _Flags = {}>
+    [[__gnu__::__always_inline__]]
+    inline bool
+    __x86_vecmask_any(_TV __k)
+    {
+      using _Tp = __vec_value_type<_TV>;
+      static_assert(is_signed_v<_Tp>);
+      constexpr int __width = __width_of<_TV>;
+      static_assert(sizeof(__k) <= 32);
+      if constexpr (_Np == __width)
+        return not __x86_vec_is_zero(__k);
+      else if constexpr (sizeof(__k) <= __x86_max_general_register_size)
+        {
+          using _Ip = __integer_from<sizeof(__k)>;
+          constexpr _Ip __valid_bits = (_Ip(1) << (_Np * sizeof(_Tp) * __CHAR_BIT__)) - 1;
+          return (__builtin_bit_cast(_Ip, __k) & __valid_bits) != _Ip();
+        }
+      else if constexpr (not _Flags._M_have_sse4_1())
+        {
+          constexpr int __valid_bits = (1 << (sizeof(_Tp) == 2 ? _Np * 2 : _Np)) - 1;
+          return (__x86_movmsk(__k) & __valid_bits) != 0;
+        }
+      else if constexpr (sizeof(__k) < 16)
+        return __x86_vecmask_any<_Np>(__vec_zero_pad_to_16(__k));
+      else
+        return 0 == __x86_vec_testz(__k, _S_vec_implicit_mask<_Np, _TV>);
+    }
+
+  template <int _Np, __vec_builtin _TV, _ArchFlags _Flags = {}>
+    [[__gnu__::__always_inline__]]
+    inline bool
+    __x86_vecmask_none(_TV __k)
+    {
+      using _Tp = __vec_value_type<_TV>;
+      static_assert(is_signed_v<_Tp>);
+      constexpr int __width = __width_of<_TV>;
+      static_assert(sizeof(__k) <= 32);
+      if constexpr (_Np == __width)
+        return __x86_vec_is_zero(__k);
+      else if constexpr (sizeof(__k) <= __x86_max_general_register_size)
+        {
+          using _Ip = __integer_from<sizeof(__k)>;
+          constexpr _Ip __valid_bits = (_Ip(1) << (_Np * sizeof(_Tp) * __CHAR_BIT__)) - 1;
+          return (__builtin_bit_cast(_Ip, __k) & __valid_bits) == _Ip();
+        }
+      else if constexpr (not _Flags._M_have_sse4_1())
+        {
+          constexpr int __valid_bits = (1 << (sizeof(_Tp) == 2 ? _Np * 2 : _Np)) - 1;
+          return (__x86_movmsk(__k) & __valid_bits) == 0;
+        }
+      else if constexpr (sizeof(__k) < 16)
+        return __x86_vecmask_none<_Np>(__vec_zero_pad_to_16(__k));
+      else
+        return 0 != __x86_vec_testz(__k, _S_vec_implicit_mask<_Np, _TV>);
+    }
+
   enum class _X86Cmp
   {
     _Eq = 0,
@@ -386,5 +686,7 @@ namespace std::simd
         }
     }
 }
+
+#pragma GCC diagnostic pop
 
 #endif  // INCLUDE_BITS_SIMD_X86_H_

@@ -84,6 +84,18 @@ namespace std::simd
   template <__vec_builtin _TV>
     using __double_vec_builtin_t = __resize_vec_builtin_t<__width_of<_TV> * 2, _TV>;
 
+  template <typename _Up, __vec_builtin _TV>
+    [[__gnu__::__always_inline__]]
+    constexpr __vec_builtin_type_bytes<_Up, sizeof(_TV)>
+    __vec_bit_cast(_TV __v)
+    { return reinterpret_cast<__vec_builtin_type_bytes<_Up, sizeof(_TV)>>(__v); }
+
+  template <int _Np, __vec_builtin _TV>
+    requires signed_integral<__vec_value_type<_TV>>
+    static constexpr _TV _S_vec_implicit_mask = []<int... _Is> (integer_sequence<int, _Is...>) {
+      return _TV{ (_Is < _Np ? -1 : 0)... };
+    } (make_integer_sequence<int, __width_of<_TV>>());
+
   /**
    * Helper function to work around Clang not allowing v[i] in constant expressions.
    */
