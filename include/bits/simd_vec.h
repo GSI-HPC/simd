@@ -2248,8 +2248,29 @@ namespace std::simd
             return mask_type(false);
           else if constexpr (_S_is_scalar)
             return mask_type(std::isnan(_M_data));
-          else // TODO: optimize
+          else if constexpr (_S_use_bitmask)
+            return _M_isunordered(*this);
+          else
             return mask_type([&](int __i) { return std::isnan(_M_data[__i]); });
+        }
+
+      template <_OptFlags _Flags = {}>
+        [[__gnu__::__always_inline__]]
+        constexpr mask_type
+        _M_isunordered(basic_vec __y) const requires is_floating_point_v<value_type>
+        {
+          if constexpr (_Flags._M_finite_math_only())
+            return mask_type(false);
+          else if constexpr (_S_is_scalar)
+            return mask_type(std::isunordered(_M_data, __y._M_data));
+#ifdef _GLIBCXX_SIMD_HAVE_SSE
+          else if constexpr (_S_use_bitmask)
+            return _M_bitmask_cmp<_X86Cmp::_Unord>(__y._M_data);
+#endif
+          else
+            return mask_type([&](int __i) {
+                     return std::isunordered(_M_data[__i], __y._M_data[__i]);
+                   });
         }
 
       // [simd.overview] default constructor ----------------------------------
@@ -2793,6 +2814,14 @@ namespace std::simd
       constexpr mask_type
       _M_isnan() const requires is_floating_point_v<value_type>
       { return mask_type::_S_init(_M_data0._M_isnan(), _M_data1._M_isnan()); }
+
+      [[__gnu__::__always_inline__]]
+      constexpr mask_type
+      _M_isunordered(basic_vec __y) const requires is_floating_point_v<value_type>
+      {
+        return mask_type::_S_init(_M_data0._M_isunordered(__y._M_data0),
+                                  _M_data1._M_isunordered(__y._M_data1));
+      }
 
       basic_vec() = default;
 
@@ -3705,7 +3734,19 @@ namespace std::simd
     [[__gnu__::__always_inline__]]
     constexpr typename __math_common_simd_t<_V0, _V1>::mask_type
     isunordered(const _V0& __x, const _V1& __y)
-    { static_assert(false, "TODO"); }
+    {
+      using _Vp = __math_common_simd_t<_V0, _V1>;
+      if constexpr (__simd_integral<_V0> or is_integral_v<_V0>)
+        return __y._M_isnan();
+      else if constexpr (__simd_integral<_V1> or is_integral_v<_V1>)
+        return __x._M_isnan();
+      else if constexpr (not is_same_v<_V0, _Vp>)
+        return isunordered(static_cast<_Vp>(__x), __y);
+      else if constexpr (not is_same_v<_V1, _Vp>)
+        return isunordered(__x, static_cast<_Vp>(__y));
+      else
+        return __x._M_isunordered(__y);
+    }
 
   template<__math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
