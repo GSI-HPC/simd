@@ -2238,28 +2238,6 @@ namespace std::simd
           }
       }
 
-      [[__gnu__::__always_inline__]]
-      friend constexpr basic_vec
-      __select_impl(const mask_type& __k, const basic_vec& __t, const basic_vec& __f)
-      {
-        if constexpr (_S_size == 1)
-          return __k[0] ? __t : __f;
-        else if constexpr (_S_use_bitmask)
-          {
-#if _GLIBCXX_SIMD_HAVE_SSE
-            if (__builtin_is_constant_evaluated()
-                  or (__k._M_is_constprop() and __t._M_is_constprop() and __f._M_is_constprop()))
-              return basic_vec([&](int __i) { return __k[__i] ? __t[__i] : __f[__i]; });
-            else
-              return __x86_bitmask_blend(__k._M_data, __t._M_data, __f._M_data);
-#else
-            static_assert(false, "TODO");
-#endif
-          }
-        else
-          return __k._M_data ? __t._M_data : __f._M_data;
-      }
-
       // [simd.overview] default constructor ----------------------------------
       basic_vec() = default;
 
@@ -2577,6 +2555,29 @@ namespace std::simd
       friend constexpr mask_type
       operator>=(const basic_vec& __x, const basic_vec& __y) noexcept
       { return __y <= __x; }
+
+      // [simd.cond] ---------------------------------------------------------
+      [[__gnu__::__always_inline__]]
+      friend constexpr basic_vec
+      __select_impl(const mask_type& __k, const basic_vec& __t, const basic_vec& __f)
+      {
+        if constexpr (_S_size == 1)
+          return __k[0] ? __t : __f;
+        else if constexpr (_S_use_bitmask)
+          {
+#if _GLIBCXX_SIMD_HAVE_SSE
+            if (__builtin_is_constant_evaluated()
+                  or (__k._M_is_constprop() and __t._M_is_constprop() and __f._M_is_constprop()))
+              return basic_vec([&](int __i) { return __k[__i] ? __t[__i] : __f[__i]; });
+            else
+              return __x86_bitmask_blend(__k._M_data, __t._M_data, __f._M_data);
+#else
+            static_assert(false, "TODO");
+#endif
+          }
+        else
+          return __k._M_data ? __t._M_data : __f._M_data;
+      }
     };
 
   template <__vectorizable _Tp, __abi_tag _Ap>
@@ -2772,14 +2773,6 @@ namespace std::simd
 #endif
         else
           return _M_data0._M_reduce_1(__binary_op)._M_reduce_tail(_M_data1, __binary_op);
-      }
-
-      [[__gnu__::__always_inline__]]
-      friend constexpr basic_vec
-      __select_impl(const mask_type& __k, const basic_vec& __t, const basic_vec& __f)
-      {
-        return _S_init(__select_impl(__k._M_data0, __t._M_data0, __f._M_data0),
-                       __select_impl(__k._M_data1, __t._M_data1, __f._M_data1));
       }
 
       basic_vec() = default;
@@ -2980,6 +2973,15 @@ namespace std::simd
       friend constexpr mask_type
       operator>=(const basic_vec& __x, const basic_vec& __y) noexcept
       { return mask_type::_S_init(__x._M_data0 >= __y._M_data0, __x._M_data1 >= __y._M_data1); }
+
+      // [simd.cond] ---------------------------------------------------------
+      [[__gnu__::__always_inline__]]
+      friend constexpr basic_vec
+      __select_impl(const mask_type& __k, const basic_vec& __t, const basic_vec& __f)
+      {
+        return _S_init(__select_impl(__k._M_data0, __t._M_data0, __f._M_data0),
+                       __select_impl(__k._M_data1, __t._M_data1, __f._M_data1));
+      }
     };
 
   template <__vectorizable _Tp, __abi_tag _Ap>
