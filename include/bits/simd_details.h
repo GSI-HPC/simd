@@ -453,6 +453,70 @@ namespace std::simd
     __div_ceil(_Tp __x, _Tp __y)
     { return (__x + __y - 1) / __y; }
 
+  template <typename _Tp>
+    struct __canonical_vec_type
+    { using type = _Tp; };
+
+  template <typename _Tp>
+    using __canonical_vec_type_t = typename __canonical_vec_type<_Tp>::type;
+
+  template <std::same_as<long> _Tp>
+    requires (sizeof(_Tp) == sizeof(int))
+    struct __canonical_vec_type<_Tp>
+    { using type = int; };
+
+  template <std::same_as<long> _Tp>
+    requires (sizeof(_Tp) == sizeof(long long))
+    struct __canonical_vec_type<_Tp>
+    { using type = long long; };
+
+  template <std::same_as<unsigned long> _Tp>
+    requires (sizeof(_Tp) == sizeof(unsigned int))
+    struct __canonical_vec_type<_Tp>
+    { using type = unsigned int; };
+
+  template <std::same_as<unsigned long> _Tp>
+    requires (sizeof(_Tp) == sizeof(unsigned long long))
+    struct __canonical_vec_type<_Tp>
+    { using type = unsigned long long; };
+
+  template <typename _Tp>
+    requires std::is_enum_v<_Tp>
+    struct __canonical_vec_type<_Tp>
+    { using type = __canonical_vec_type<std::underlying_type_t<_Tp>>::type; };
+
+  template <>
+    struct __canonical_vec_type<char>
+    { using type = std::conditional_t<std::is_signed_v<char>, signed char, unsigned char>; };
+
+  template <>
+    struct __canonical_vec_type<char8_t>
+    { using type = unsigned char; };
+
+  template <>
+    struct __canonical_vec_type<char16_t>
+    { using type = uint_least16_t; };
+
+  template <>
+    struct __canonical_vec_type<char32_t>
+    { using type = uint_least32_t; };
+
+  template <>
+    struct __canonical_vec_type<wchar_t>
+    {
+      using type = std::conditional_t<std::is_signed_v<wchar_t>,
+                                      simd::__integer_from<sizeof(wchar_t)>,
+                                      simd::_UInt<sizeof(wchar_t)>>;
+    };
+
+  template <>
+    struct __canonical_vec_type<_Float64>
+    { using type = double; };
+
+  template <>
+    struct __canonical_vec_type<_Float32>
+    { using type = float; };
+
   template <int _Np = 1>
     struct _ScalarAbi
     {
@@ -463,7 +527,7 @@ namespace std::simd
       static constexpr _AbiVariant _S_variant = {};
 
       template <typename _Tp>
-        using _DataType = _Tp;
+        using _DataType = __canonical_vec_type_t<_Tp>;
 
       static constexpr bool _S_use_2_for_1 = false;
 
@@ -516,7 +580,8 @@ namespace std::simd
                             static_assert(not __flags_test(_Var, _AbiVariant::_CxIleav));
                             static_assert(not __flags_test(_Var, _AbiVariant::_CxCtgus));
                             constexpr int __n = __bit_ceil(unsigned(_S_size));
-                            using _Vp [[__gnu__::__vector_size__(sizeof(_Tp) * __n)]] = _Tp;
+                            using _Vp [[__gnu__::__vector_size__(sizeof(_Tp) * __n)]]
+                              = __canonical_vec_type_t<_Tp>;
                             return _Vp();
                           }());
 
