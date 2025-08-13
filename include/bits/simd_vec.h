@@ -2238,6 +2238,20 @@ namespace std::simd
           }
       }
 
+      // [simd.math] ----------------------------------------------------------
+      template <_OptFlags _Flags = {}>
+        [[__gnu__::__always_inline__]]
+        constexpr mask_type
+        _M_isnan() const requires is_floating_point_v<value_type>
+        {
+          if constexpr (_Flags._M_finite_math_only())
+            return mask_type(false);
+          else if constexpr (_S_is_scalar)
+            return mask_type(std::isnan(_M_data));
+          else // TODO: optimize
+            return mask_type([&](int __i) { return std::isnan(_M_data[__i]); });
+        }
+
       // [simd.overview] default constructor ----------------------------------
       basic_vec() = default;
 
@@ -2774,6 +2788,11 @@ namespace std::simd
         else
           return _M_data0._M_reduce_1(__binary_op)._M_reduce_tail(_M_data1, __binary_op);
       }
+
+      [[__gnu__::__always_inline__]]
+      constexpr mask_type
+      _M_isnan() const requires is_floating_point_v<value_type>
+      { return mask_type::_S_init(_M_data0._M_isnan(), _M_data1._M_isnan()); }
 
       basic_vec() = default;
 
@@ -3638,7 +3657,7 @@ namespace std::simd
     [[__gnu__::__always_inline__]]
     constexpr typename __deduced_vec_t<_Vp>::mask_type
     isnan(const _Vp& __x)
-    { static_assert(false, "TODO"); }
+    { return __x._M_isnan(); }
 
   template <__math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
