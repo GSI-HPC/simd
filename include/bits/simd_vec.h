@@ -3359,10 +3359,616 @@ namespace std::simd
     { return __select_impl(__c, __a, __b); }
 
   // [simd.math] --------------------------------------------------------------
+  template <__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr rebind_t<int, __deduced_vec_t<_Vp>>
+    ilogb(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template <__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr __deduced_vec_t<_Vp>
+    ldexp(const _Vp& __x, const rebind_t<int, __deduced_vec_t<_Vp>>& exp)
+    { static_assert(false, "TODO"); }
+
+  template <__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr __deduced_vec_t<_Vp>
+    scalbn(const _Vp& __x, const rebind_t<int, __deduced_vec_t<_Vp>>& n)
+    { static_assert(false, "TODO"); }
+
+  template <__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr __deduced_vec_t<_Vp>
+    scalbln(const _Vp& __x, const rebind_t<long int, __deduced_vec_t<_Vp>>& n)
+    { static_assert(false, "TODO"); }
+
+  template <signed_integral T, typename Abi>
+    [[__gnu__::__always_inline__]]
+    constexpr basic_vec<T, Abi>
+    abs(const basic_vec<T, Abi>& j)
+    { static_assert(false, "TODO"); }
+
+  template <__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr __deduced_vec_t<_Vp>
+    abs(const _Vp& j)
+    { static_assert(false, "TODO"); }
+
+  template <__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr __deduced_vec_t<_Vp>
+    fabs(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template <__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr __deduced_vec_t<_Vp>
+    ceil(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template <__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr __deduced_vec_t<_Vp>
+    floor(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template <__math_floating_point _Vp>
+    __deduced_vec_t<_Vp>
+    nearbyint(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template <__math_floating_point _Vp>
+    __deduced_vec_t<_Vp>
+    rint(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template <__math_floating_point _Vp>
+    rebind_t<long int, __deduced_vec_t<_Vp>>
+    lrint(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template <__math_floating_point _Vp>
+    rebind_t<long long int, __deduced_vec_t<_Vp>>
+    llrint(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template <__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr __deduced_vec_t<_Vp>
+    round(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template <__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr rebind_t<long int, __deduced_vec_t<_Vp>>
+    lround(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template <__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr rebind_t<long long int, __deduced_vec_t<_Vp>>
+    llround(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template <typename _V0, typename _V1>
+    [[__gnu__::__always_inline__]]
+    constexpr __math_common_simd_t<_V0, _V1>
+    fmod(const _V0& __x, const _V1& __y)
+    { static_assert(false, "TODO"); }
+
+  template <__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr __deduced_vec_t<_Vp>
+    trunc(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template <typename _V0, typename _V1>
+    [[__gnu__::__always_inline__]]
+    constexpr __math_common_simd_t<_V0, _V1>
+    remainder(const _V0& __x, const _V1& __y)
+    { static_assert(false, "TODO"); }
+
+  template <typename _V0, typename _V1>
+    [[__gnu__::__always_inline__]]
+    constexpr __math_common_simd_t<_V0, _V1>
+    copysign(const _V0& __x, const _V1& __y)
+    { static_assert(false, "TODO"); }
+
+  template <typename _V0, typename _V1>
+    [[__gnu__::__always_inline__]]
+    constexpr __math_common_simd_t<_V0, _V1>
+    nextafter(const _V0& __x, const _V1& __y)
+    { static_assert(false, "TODO"); }
+
+  template <typename _V0, typename _V1>
+    [[__gnu__::__always_inline__]]
+    constexpr __math_common_simd_t<_V0, _V1>
+    fdim(const _V0& __x, const _V1& __y)
+    { static_assert(false, "TODO"); }
+
+  template <typename _V0, typename _V1>
+    [[__gnu__::__always_inline__]]
+    constexpr __math_common_simd_t<_V0, _V1>
+    fmax(const _V0& __x, const _V1& __y)
+    { static_assert(false, "TODO"); }
+
+  template <typename _V0, typename _V1>
+    [[__gnu__::__always_inline__]]
+    constexpr __math_common_simd_t<_V0, _V1>
+    fmin(const _V0& __x, const _V1& __y)
+    { static_assert(false, "TODO"); }
+
+  template <typename _V0, typename _V1, typename _V2>
+    [[__gnu__::__always_inline__]]
+    constexpr __math_common_simd_t<_V0, _V1, _V2>
+    fma(const _V0& __x, const _V1& __y, const _V2& __z)
+    { static_assert(false, "TODO"); }
+
+  template <__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr rebind_t<int, __deduced_vec_t<_Vp>>
+    fpclassify(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template <__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr typename __deduced_vec_t<_Vp>::mask_type
+    isfinite(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template <__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr typename __deduced_vec_t<_Vp>::mask_type
+    isinf(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template <__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr typename __deduced_vec_t<_Vp>::mask_type
+    isnan(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template <__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr typename __deduced_vec_t<_Vp>::mask_type
+    isnormal(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template <__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr typename __deduced_vec_t<_Vp>::mask_type
+    signbit(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template <typename _V0, typename _V1>
+    [[__gnu__::__always_inline__]]
+    constexpr typename __math_common_simd_t<_V0, _V1>::mask_type
+    isgreater(const _V0& __x, const _V1& __y)
+    { static_assert(false, "TODO"); }
+
+  template <typename _V0, typename _V1>
+    [[__gnu__::__always_inline__]]
+    constexpr typename __math_common_simd_t<_V0, _V1>::mask_type
+    isgreaterequal(const _V0& __x, const _V1& __y)
+    { static_assert(false, "TODO"); }
+
+  template <typename _V0, typename _V1>
+    [[__gnu__::__always_inline__]]
+    constexpr typename __math_common_simd_t<_V0, _V1>::mask_type
+    isless(const _V0& __x, const _V1& __y)
+    { static_assert(false, "TODO"); }
+
+  template <typename _V0, typename _V1>
+    [[__gnu__::__always_inline__]]
+    constexpr typename __math_common_simd_t<_V0, _V1>::mask_type
+    islessequal(const _V0& __x, const _V1& __y)
+    { static_assert(false, "TODO"); }
+
+  template <typename _V0, typename _V1>
+    [[__gnu__::__always_inline__]]
+    constexpr typename __math_common_simd_t<_V0, _V1>::mask_type
+    islessgreater(const _V0& __x, const _V1& __y)
+    { static_assert(false, "TODO"); }
+
+  template <typename _V0, typename _V1>
+    [[__gnu__::__always_inline__]]
+    constexpr typename __math_common_simd_t<_V0, _V1>::mask_type
+    isunordered(const _V0& __x, const _V1& __y)
+    { static_assert(false, "TODO"); }
+
+  template<__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr __deduced_vec_t<_Vp>
+    acos(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template<__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr __deduced_vec_t<_Vp>
+    asin(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template<__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr __deduced_vec_t<_Vp>
+    atan(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template<class _V0, class _V1>
+    [[__gnu__::__always_inline__]]
+    constexpr __math_common_simd_t<_V0, _V1>
+    atan2(const _V0& __y, const _V1& __x)
+    { static_assert(false, "TODO"); }
+
+  template<__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr __deduced_vec_t<_Vp>
+    cos(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template<__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr __deduced_vec_t<_Vp>
+    sin(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template<__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr __deduced_vec_t<_Vp>
+    tan(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template<__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr __deduced_vec_t<_Vp>
+    acosh(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template<__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr __deduced_vec_t<_Vp>
+    asinh(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template<__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr __deduced_vec_t<_Vp>
+    atanh(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template<__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr __deduced_vec_t<_Vp>
+    cosh(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template<__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr __deduced_vec_t<_Vp>
+    sinh(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template<__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr __deduced_vec_t<_Vp>
+    tanh(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template<__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr __deduced_vec_t<_Vp>
+    exp(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template<__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr __deduced_vec_t<_Vp>
+    exp2(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template<__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr __deduced_vec_t<_Vp>
+    expm1(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template<__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr __deduced_vec_t<_Vp>
+    log(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template<__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr __deduced_vec_t<_Vp>
+    log10(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template<__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr __deduced_vec_t<_Vp>
+    log1p(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template<__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr __deduced_vec_t<_Vp>
+    log2(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template<__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr __deduced_vec_t<_Vp>
+    logb(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template<__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr __deduced_vec_t<_Vp>
+    cbrt(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template<class _V0, class _V1>
+    [[__gnu__::__always_inline__]]
+    constexpr __math_common_simd_t<_V0, _V1>
+    hypot(const _V0& __x, const _V1& __y)
+    { static_assert(false, "TODO"); }
+
+  template<class _V0, class _V1, class _V2>
+    [[__gnu__::__always_inline__]]
+    constexpr __math_common_simd_t<_V0, _V1, _V2>
+    hypot(const _V0& __x, const _V1& __y, const _V2& __z)
+    { static_assert(false, "TODO"); }
+
+  template<class _V0, class _V1>
+    [[__gnu__::__always_inline__]]
+    constexpr __math_common_simd_t<_V0, _V1>
+    pow(const _V0& __x, const _V1& __y)
+    { static_assert(false, "TODO"); }
+
+  template<__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr __deduced_vec_t<_Vp>
+    sqrt(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template<__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr __deduced_vec_t<_Vp>
+    erf(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template<__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr __deduced_vec_t<_Vp>
+    erfc(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template<__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr __deduced_vec_t<_Vp>
+    lgamma(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template<__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr __deduced_vec_t<_Vp>
+    tgamma(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template<class _V0, class _V1, class _V2>
+    [[__gnu__::__always_inline__]]
+    constexpr __math_common_simd_t<_V0, _V1, _V2>
+    lerp(const _V0& __a, const _V1& __b, const _V2& __t) noexcept
+    { static_assert(false, "TODO"); }
+
+  template<__math_floating_point _Vp>
+    __deduced_vec_t<_Vp>
+    assoc_laguerre(const rebind_t<unsigned, __deduced_vec_t<_Vp>>& __n,
+                   const rebind_t<unsigned, __deduced_vec_t<_Vp>>& __m, const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template<__math_floating_point _Vp>
+    __deduced_vec_t<_Vp>
+    assoc_legendre(const rebind_t<unsigned, __deduced_vec_t<_Vp>>& __l,
+                   const rebind_t<unsigned, __deduced_vec_t<_Vp>>& __m, const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template<class _V0, class _V1>
+    __math_common_simd_t<_V0, _V1>
+    beta(const _V0& __x, const _V1& __y)
+    { static_assert(false, "TODO"); }
+
+  template<__math_floating_point _Vp> __deduced_vec_t<_Vp>
+    comp_ellint_1(const _Vp& __k)
+    { static_assert(false, "TODO"); }
+
+  template<__math_floating_point _Vp> __deduced_vec_t<_Vp>
+    comp_ellint_2(const _Vp& __k)
+    { static_assert(false, "TODO"); }
+
+  template<class _V0, class _V1>
+    __math_common_simd_t<_V0, _V1>
+    comp_ellint_3(const _V0& __k, const _V1& __nu)
+    { static_assert(false, "TODO"); }
+
+  template<class _V0, class _V1>
+    __math_common_simd_t<_V0, _V1>
+    cyl_bessel_i(const _V0& __nu, const _V1& __x)
+    { static_assert(false, "TODO"); }
+
+  template<class _V0, class _V1>
+    __math_common_simd_t<_V0, _V1>
+    cyl_bessel_j(const _V0& __nu, const _V1& __x)
+    { static_assert(false, "TODO"); }
+
+  template<class _V0, class _V1>
+    __math_common_simd_t<_V0, _V1>
+    cyl_bessel_k(const _V0& __nu, const _V1& __x)
+    { static_assert(false, "TODO"); }
+
+  template<class _V0, class _V1>
+    __math_common_simd_t<_V0, _V1>
+    cyl_neumann(const _V0& __nu, const _V1& __x)
+    { static_assert(false, "TODO"); }
+
+  template<class _V0, class _V1>
+    __math_common_simd_t<_V0, _V1>
+    ellint_1(const _V0& __k, const _V1& __phi)
+    { static_assert(false, "TODO"); }
+
+  template<class _V0, class _V1>
+    __math_common_simd_t<_V0, _V1>
+    ellint_2(const _V0& __k, const _V1& __phi)
+    { static_assert(false, "TODO"); }
+
+  template<class _V0, class _V1, class _V2>
+    __math_common_simd_t<_V0, _V1, _V2>
+    ellint_3(const _V0& __k, const _V1& __nu, const _V2& __phi)
+    { static_assert(false, "TODO"); }
+
+  template<__math_floating_point _Vp> __deduced_vec_t<_Vp>
+    expint(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template<__math_floating_point _Vp> __deduced_vec_t<_Vp>
+    hermite(const rebind_t<unsigned,
+                           __deduced_vec_t<_Vp>>& __n, const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template<__math_floating_point _Vp> __deduced_vec_t<_Vp>
+    laguerre(const rebind_t<unsigned,
+                            __deduced_vec_t<_Vp>>& __n, const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template<__math_floating_point _Vp> __deduced_vec_t<_Vp>
+    legendre(const rebind_t<unsigned,
+                            __deduced_vec_t<_Vp>>& __l, const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template<__math_floating_point _Vp> __deduced_vec_t<_Vp>
+    riemann_zeta(const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template<__math_floating_point _Vp> __deduced_vec_t<_Vp>
+    sph_bessel(const rebind_t<unsigned,
+                              __deduced_vec_t<_Vp>>& __n, const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template<__math_floating_point _Vp>
+    __deduced_vec_t<_Vp>
+    sph_legendre(const rebind_t<unsigned, __deduced_vec_t<_Vp>>& __l,
+                 const rebind_t<unsigned, __deduced_vec_t<_Vp>>& __m, const _Vp& __theta)
+    { static_assert(false, "TODO"); }
+
+  template<__math_floating_point _Vp> __deduced_vec_t<_Vp>
+    sph_neumann(const rebind_t<unsigned, __deduced_vec_t<_Vp>>& __n, const _Vp& __x)
+    { static_assert(false, "TODO"); }
+
+  template<__math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr __deduced_vec_t<_Vp>
+    frexp(const _Vp& __value, rebind_t<int, __deduced_vec_t<_Vp>>* __exp)
+    { static_assert(false, "TODO"); }
+
+  template<class _V0, class _V1>
+    [[__gnu__::__always_inline__]]
+    constexpr __math_common_simd_t<_V0, _V1>
+    remquo(const _V0& __x, const _V1& __y, rebind_t<int, __math_common_simd_t<_V0, _V1>>* __quo)
+    { static_assert(false, "TODO"); }
+
+  template<class T, class Abi>
+    [[__gnu__::__always_inline__]]
+    constexpr basic_vec<T, Abi>
+    modf(const type_identity_t<basic_vec<T, Abi>>& __value, basic_vec<T, Abi>* __iptr)
+    { static_assert(false, "TODO"); }
 
   // [simd.bit] ---------------------------------------------------------------
+  template<__simd_vec_type _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr _Vp
+    byteswap(const _Vp& __v) noexcept
+    { static_assert(false, "TODO"); }
 
-  // [simd.complex.math] ------------------------------------------------------
+  template<__simd_vec_type _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr _Vp
+    bit_ceil(const _Vp& __v) noexcept
+    { static_assert(false, "TODO"); }
+
+  template<__simd_vec_type _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr _Vp
+    bit_floor(const _Vp& __v) noexcept
+    { static_assert(false, "TODO"); }
+
+  template<__simd_vec_type _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr typename _Vp::mask_type
+    has_single_bit(const _Vp& __v) noexcept
+    { static_assert(false, "TODO"); }
+
+  template<__simd_vec_type _V0, __simd_vec_type _V1>
+    [[__gnu__::__always_inline__]]
+    constexpr _V0
+    rotl(const _V0& __v, const _V1& __s) noexcept
+    { static_assert(false, "TODO"); }
+
+  template<__simd_vec_type _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr _Vp
+    rotl(const _Vp& __v, int __s) noexcept
+    { static_assert(false, "TODO"); }
+
+  template<__simd_vec_type _V0, __simd_vec_type _V1>
+    [[__gnu__::__always_inline__]]
+    constexpr _V0
+    rotr(const _V0& __v, const _V1& __s) noexcept
+    { static_assert(false, "TODO"); }
+
+  template<__simd_vec_type _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr _Vp
+    rotr(const _Vp& __v, int __s) noexcept
+    { static_assert(false, "TODO"); }
+
+  template<__simd_vec_type _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr rebind_t<make_signed_t<typename _Vp::value_type>, _Vp>
+    bit_width(const _Vp& __v) noexcept
+    { static_assert(false, "TODO"); }
+
+  template<__simd_vec_type _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr rebind_t<make_signed_t<typename _Vp::value_type>, _Vp>
+    countl_zero(const _Vp& __v) noexcept
+    { static_assert(false, "TODO"); }
+
+  template<__simd_vec_type _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr rebind_t<make_signed_t<typename _Vp::value_type>, _Vp>
+    countl_one(const _Vp& __v) noexcept
+    { static_assert(false, "TODO"); }
+
+  template<__simd_vec_type _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr rebind_t<make_signed_t<typename _Vp::value_type>, _Vp>
+    countr_zero(const _Vp& __v) noexcept
+    { static_assert(false, "TODO"); }
+
+  template<__simd_vec_type _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr rebind_t<make_signed_t<typename _Vp::value_type>, _Vp>
+    countr_one(const _Vp& __v) noexcept
+    { static_assert(false, "TODO"); }
+
+  template<__simd_vec_type _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr rebind_t<make_signed_t<typename _Vp::value_type>, _Vp>
+    popcount(const _Vp& __v) noexcept
+    { static_assert(false, "TODO"); }
+
 
   // [P3319R5] ----------------------------------------------------------------
   template <typename _Tp>
@@ -3376,6 +3982,281 @@ namespace std::simd
                      "iota object would overflow");
       return __i;
     });
+
+  // [simd.complex.math] -----------------------------------------------------
+  template <__simd_complex _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr rebind_t<__simd_complex_value_type<_Vp>, _Vp>
+    real(const _Vp& __x) noexcept
+    { return __x.real(); }
+
+  template <__simd_complex _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr rebind_t<__simd_complex_value_type<_Vp>, _Vp>
+    imag(const _Vp& __x) noexcept
+    { return __x.imag(); }
+
+  template <__simd_complex _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr rebind_t<__simd_complex_value_type<_Vp>, _Vp>
+    abs(const _Vp& __x) noexcept
+    { return __x._M_abs(); }
+
+  template <__simd_complex _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr rebind_t<__simd_complex_value_type<_Vp>, _Vp>
+    arg(const _Vp& __x) noexcept
+    { return __x._M_arg(); }
+
+  template <__simd_complex _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr rebind_t<__simd_complex_value_type<_Vp>, _Vp>
+    norm(const _Vp& __x) noexcept
+    { return __x._M_norm(); }
+
+  template <__simd_complex _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr _Vp
+    conj(const _Vp& __x) noexcept
+    { return __x._M_conj(); }
+
+  template <__simd_complex _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr _Vp
+    proj(const _Vp& __x) noexcept
+    { return __x._M_proj(); }
+
+  template<__simd_complex _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr _Vp
+    exp(const _Vp& __v)
+    { static_assert(false, "TODO"); }
+
+  template<__simd_complex _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr _Vp
+    log(const _Vp& __v)
+    { static_assert(false, "TODO"); }
+
+  template<__simd_complex _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr _Vp
+    log10(const _Vp& __v)
+    { static_assert(false, "TODO"); }
+
+  template<__simd_complex _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr _Vp
+    sqrt(const _Vp& __v)
+    { static_assert(false, "TODO"); }
+
+  template<__simd_complex _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr _Vp
+    sin(const _Vp& __v)
+    { static_assert(false, "TODO"); }
+
+  template<__simd_complex _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr _Vp
+    asin(const _Vp& __v)
+    { static_assert(false, "TODO"); }
+
+  template<__simd_complex _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr _Vp
+    cos(const _Vp& __v)
+    { static_assert(false, "TODO"); }
+
+  template<__simd_complex _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr _Vp
+    acos(const _Vp& __v)
+    { static_assert(false, "TODO"); }
+
+  template<__simd_complex _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr _Vp
+    tan(const _Vp& __v)
+    { static_assert(false, "TODO"); }
+
+  template<__simd_complex _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr _Vp
+    atan(const _Vp& __v)
+    { static_assert(false, "TODO"); }
+
+  template<__simd_complex _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr _Vp
+    sinh(const _Vp& __v)
+    { static_assert(false, "TODO"); }
+
+  template<__simd_complex _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr _Vp
+    asinh(const _Vp& __v)
+    { static_assert(false, "TODO"); }
+
+  template<__simd_complex _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr _Vp
+    cosh(const _Vp& __v)
+    { static_assert(false, "TODO"); }
+
+  template<__simd_complex _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr _Vp
+    acosh(const _Vp& __v)
+    { static_assert(false, "TODO"); }
+
+  template<__simd_complex _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr _Vp
+    tanh(const _Vp& __v)
+    { static_assert(false, "TODO"); }
+
+  template<__simd_complex _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr _Vp
+    atanh(const _Vp& __v)
+    { static_assert(false, "TODO"); }
+
+  template<__simd_floating_point _Vp>
+    rebind_t<complex<typename _Vp::value_type>, _Vp>
+    polar(const _Vp& __x, const _Vp& __y = {})
+    { static_assert(false, "TODO"); }
+
+  template<__simd_complex _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr _Vp
+    pow(const _Vp& __x, const _Vp& __y)
+    { static_assert(false, "TODO"); }
+}
+
+namespace std
+{
+    // See [simd.alg], algorithms
+  using simd::min;
+  using simd::max;
+  using simd::minmax;
+  using simd::clamp;
+
+  // See [simd.math], mathematical functions
+  using simd::acos;
+  using simd::asin;
+  using simd::atan;
+  using simd::atan2;
+  using simd::cos;
+  using simd::sin;
+  using simd::tan;
+  using simd::acosh;
+  using simd::asinh;
+  using simd::atanh;
+  using simd::cosh;
+  using simd::sinh;
+  using simd::tanh;
+  using simd::exp;
+  using simd::exp2;
+  using simd::expm1;
+  using simd::frexp;
+  using simd::ilogb;
+  using simd::ldexp;
+  using simd::log;
+  using simd::log10;
+  using simd::log1p;
+  using simd::log2;
+  using simd::logb;
+  using simd::modf;
+  using simd::scalbn;
+  using simd::scalbln;
+  using simd::cbrt;
+  using simd::abs;
+  using simd::abs;
+  using simd::fabs;
+  using simd::hypot;
+  using simd::pow;
+  using simd::sqrt;
+  using simd::erf;
+  using simd::erfc;
+  using simd::lgamma;
+  using simd::tgamma;
+  using simd::ceil;
+  using simd::floor;
+  using simd::nearbyint;
+  using simd::rint;
+  using simd::lrint;
+  using simd::llrint;
+  using simd::round;
+  using simd::lround;
+  using simd::llround;
+  using simd::trunc;
+  using simd::fmod;
+  using simd::remainder;
+  using simd::remquo;
+  using simd::copysign;
+  using simd::nextafter;
+  using simd::fdim;
+  using simd::fmax;
+  using simd::fmin;
+  using simd::fma;
+  using simd::lerp;
+  using simd::fpclassify;
+  using simd::isfinite;
+  using simd::isinf;
+  using simd::isnan;
+  using simd::isnormal;
+  using simd::signbit;
+  using simd::isgreater;
+  using simd::isgreaterequal;
+  using simd::isless;
+  using simd::islessequal;
+  using simd::islessgreater;
+  using simd::isunordered;
+  using simd::assoc_laguerre;
+  using simd::assoc_legendre;
+  using simd::beta;
+  using simd::comp_ellint_1;
+  using simd::comp_ellint_2;
+  using simd::comp_ellint_3;
+  using simd::cyl_bessel_i;
+  using simd::cyl_bessel_j;
+  using simd::cyl_bessel_k;
+  using simd::cyl_neumann;
+  using simd::ellint_1;
+  using simd::ellint_2;
+  using simd::ellint_3;
+  using simd::expint;
+  using simd::hermite;
+  using simd::laguerre;
+  using simd::legendre;
+  using simd::riemann_zeta;
+  using simd::sph_bessel;
+  using simd::sph_legendre;
+  using simd::sph_neumann;
+
+  // See [simd.bit], bit manipulation
+  using simd::byteswap;
+  using simd::bit_ceil;
+  using simd::bit_floor;
+  using simd::has_single_bit;
+  using simd::rotl;
+  using simd::rotr;
+  using simd::bit_width;
+  using simd::countl_zero;
+  using simd::countl_one;
+  using simd::countr_zero;
+  using simd::countr_one;
+  using simd::popcount;
+
+  // See [simd.complex.math], vec complex math
+  using simd::real;
+  using simd::imag;
+  using simd::arg;
+  using simd::norm;
+  using simd::conj;
+  using simd::proj;
+  using simd::polar;
 }
 
 #pragma GCC diagnostic pop
