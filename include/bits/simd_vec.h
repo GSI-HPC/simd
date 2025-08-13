@@ -2376,6 +2376,41 @@ namespace std::simd
           return _M_data[__i];
       }
 
+      // [simd.unary] unary operators -----------------------------------------
+      [[__gnu__::__always_inline__]]
+      constexpr basic_vec&
+      operator++() noexcept requires requires(value_type __a) { ++__a; }
+      {
+        _M_data += 1;
+        return *this;
+      }
+
+      [[__gnu__::__always_inline__]]
+      constexpr basic_vec
+      operator++(int) noexcept requires requires(value_type __a) { __a++; }
+      {
+        basic_vec __r = *this;
+        _M_data += 1;
+        return __r;
+      }
+
+      [[__gnu__::__always_inline__]]
+      constexpr basic_vec&
+      operator--() noexcept requires requires(value_type __a) { --__a; }
+      {
+        _M_data -= 1;
+        return *this;
+      }
+
+      [[__gnu__::__always_inline__]]
+      constexpr basic_vec
+      operator--(int) noexcept requires requires(value_type __a) { __a--; }
+      {
+        basic_vec __r = *this;
+        _M_data -= 1;
+        return __r;
+      }
+
       // [simd.cassign] binary operators
 #define _GLIBCXX_SIMD_DEFINE_OP(sym)                                 \
       [[__gnu__::__always_inline__]]                                 \
@@ -2832,6 +2867,45 @@ namespace std::simd
         return __builtin_bit_cast(_Tmp, *this)._M_values[__i];
       }
 
+      // [simd.unary] unary operators -----------------------------------------
+      [[__gnu__::__always_inline__]]
+      constexpr basic_vec&
+      operator++() noexcept requires requires(value_type __a) { ++__a; }
+      {
+        ++_M_data0;
+        ++_M_data1;
+        return *this;
+      }
+
+      [[__gnu__::__always_inline__]]
+      constexpr basic_vec
+      operator++(int) noexcept requires requires(value_type __a) { __a++; }
+      {
+        basic_vec __r = *this;
+        ++_M_data0;
+        ++_M_data1;
+        return __r;
+      }
+
+      [[__gnu__::__always_inline__]]
+      constexpr basic_vec&
+      operator--() noexcept requires requires(value_type __a) { --__a; }
+      {
+        --_M_data0;
+        --_M_data1;
+        return *this;
+      }
+
+      [[__gnu__::__always_inline__]]
+      constexpr basic_vec
+      operator--(int) noexcept requires requires(value_type __a) { __a--; }
+      {
+        basic_vec __r = *this;
+        --_M_data0;
+        --_M_data1;
+        return __r;
+      }
+
       // [simd.cassign] -------------------------------------------------------
 #define _GLIBCXX_SIMD_DEFINE_OP(sym)                                 \
       [[__gnu__::__always_inline__]]                                 \
@@ -3080,6 +3154,41 @@ namespace std::simd
       basic_vec(const _RealSimd& __re, const _RealSimd& __im = {}) noexcept
         : _M_data([&](int __i) { return ((__i & 1) == 0 ? __re : __im)[__i / 2]; })
       {}
+
+      // [simd.unary] unary operators -----------------------------------------
+      [[__gnu__::__always_inline__]]
+      constexpr basic_vec&
+      operator++() noexcept requires requires(value_type __a) { ++__a; }
+      {
+        _M_data += value_type(_T0(1));
+        return *this;
+      }
+
+      [[__gnu__::__always_inline__]]
+      constexpr basic_vec
+      operator++(int) noexcept requires requires(value_type __a) { __a++; }
+      {
+        basic_vec __r = *this;
+        _M_data += value_type(_T0(1));
+        return __r;
+      }
+
+      [[__gnu__::__always_inline__]]
+      constexpr basic_vec&
+      operator--() noexcept requires requires(value_type __a) { --__a; }
+      {
+        _M_data -= value_type(_T0(1));
+        return *this;
+      }
+
+      [[__gnu__::__always_inline__]]
+      constexpr basic_vec
+      operator--(int) noexcept requires requires(value_type __a) { __a--; }
+      {
+        basic_vec __r = *this;
+        _M_data -= value_type(_T0(1));
+        return __r;
+      }
 
       // [simd.cassign] compound assignment -----------------------------------
 #define _GLIBCXX_SIMD_DEFINE_OP(sym)                                 \
