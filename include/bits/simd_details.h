@@ -974,41 +974,33 @@ namespace std::simd
     consteval auto
     __native_abi()
     {
+      constexpr int __adj_sizeof = sizeof(_Tp) * (1 + is_same_v<_Tp, _Float16>);
       if constexpr (not __vectorizable<_Tp>)
         return _InvalidAbi();
       else if constexpr (__complex_like<_Tp>)
         {
-          using _ValT = typename _Tp::value_type;
-          if constexpr (_Flags._M_have_avx512f())
-            return _Abi<64 / sizeof(_Tp), 1,
-                        __flags_or(_AbiVariant::_BitMask, _AbiVariant::_CxIleav)>();
-          else if constexpr (_Flags._M_have_avx2())
-            return _Abi<32 / sizeof(_Tp), 1,
-                        __flags_or(_AbiVariant::_VecMask, _AbiVariant::_CxIleav)>();
-          else if constexpr (_Flags._M_have_avx() and is_floating_point_v<_ValT>)
-            return _Abi<32 / sizeof(_Tp), 1,
-                        __flags_or(_AbiVariant::_VecMask, _AbiVariant::_CxIleav)>();
-          else if constexpr (_Flags._M_have_sse2())
-            return _Abi<16 / sizeof(_Tp), 1,
-                        __flags_or(_AbiVariant::_VecMask, _AbiVariant::_CxIleav)>();
-          else if constexpr (_Flags._M_have_sse() and is_floating_point_v<_ValT>
-                               and sizeof(_ValT) == sizeof(float))
-            return _Abi<16 / sizeof(_Tp), 1,
-                        __flags_or(_AbiVariant::_VecMask, _AbiVariant::_CxIleav)>();
-          else
+          constexpr auto __underlying = __native_abi<typename _Tp::value_type>();
+          if constexpr (__underlying._S_size == 1)
             return _ScalarAbi<1>();
+          else
+            return _Abi<__underlying._S_size / 2, 1,
+                        __flags_or(__underlying._S_variant, _AbiVariant::_CxIleav)>();
         }
-      else if constexpr (_Flags._M_have_avx512f())
+      else if constexpr (_Flags._M_have_avx512fp16())
         return _Abi<64 / sizeof(_Tp), 1, _AbiVariant::_BitMask>();
+      else if constexpr (_Flags._M_have_avx512f())
+        return _Abi<64 / __adj_sizeof, 1, _AbiVariant::_BitMask>();
+      else if constexpr (is_same_v<_Tp, _Float16> and not _Flags._M_have_f16c())
+        return _ScalarAbi<1>();
       else if constexpr (_Flags._M_have_avx2())
-        return _Abi<32 / sizeof(_Tp), 1, _AbiVariant::_VecMask>();
+        return _Abi<32 / __adj_sizeof, 1, _AbiVariant::_VecMask>();
       else if constexpr (_Flags._M_have_avx() and is_floating_point_v<_Tp>)
-        return _Abi<32 / sizeof(_Tp), 1, _AbiVariant::_VecMask>();
+        return _Abi<32 / __adj_sizeof, 1, _AbiVariant::_VecMask>();
       else if constexpr (_Flags._M_have_sse2())
-        return _Abi<16 / sizeof(_Tp), 1, _AbiVariant::_VecMask>();
+        return _Abi<16 / __adj_sizeof, 1, _AbiVariant::_VecMask>();
       else if constexpr (_Flags._M_have_sse() and is_floating_point_v<_Tp>
                            and sizeof(_Tp) == sizeof(float))
-        return _Abi<16 / sizeof(_Tp), 1, _AbiVariant::_VecMask>();
+        return _Abi<16 / __adj_sizeof, 1, _AbiVariant::_VecMask>();
       else
         return _ScalarAbi<1>();
     }
@@ -1125,6 +1117,8 @@ namespace std::simd
             return __abi_rebind<double, _Np, _A0>();
           else if constexpr (_Bytes == sizeof(float))
             return __abi_rebind<float, _Np, _A0>();
+          else if constexpr (_Flags._M_have_f16c() and _Bytes == sizeof(_Float16))
+            return __abi_rebind<_Float16, _Np, _A0>();
           else // impossible
             static_assert(false);
         }

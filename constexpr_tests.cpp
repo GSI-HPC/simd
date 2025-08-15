@@ -103,6 +103,17 @@ static_assert(alignof(simd::mask<double, 8>) == 32);
 static_assert(std::same_as<decltype(+simd::mask<float, 8>()), simd::vec<int, 8>>);
 #endif
 
+#if defined __SSE__ and not defined __F16C__
+static_assert(simd::vec<std::float16_t>::size() == 1);
+static_assert(simd::vec<std::complex<std::float16_t>>::size() == 1);
+static_assert(simd::mask<std::float16_t>::size() == 1);
+static_assert(simd::mask<std::complex<std::float16_t>>::size() == 1);
+static_assert(alignof(simd::vec<std::float16_t, 8>) == alignof(std::float16_t));
+static_assert(alignof(simd::rebind_t<std::float16_t, simd::vec<float>>) == alignof(std::float16_t));
+static_assert(simd::rebind_t<std::float16_t, simd::mask<float>>::abi_type::_S_nreg
+                == simd::vec<float>::size());
+#endif
+
 template <auto X>
   using Ic = std::integral_constant<std::remove_const_t<decltype(X)>, X>;
 
@@ -204,7 +215,7 @@ template <template <typename> class Tpl>
     Tpl<long long> o;
     Tpl<unsigned long long> p;
 #ifdef __STDCPP_FLOAT16_T__
-    //Tpl<std::float16_t> q;
+    Tpl<std::float16_t> q;
 #endif
 #ifdef __STDCPP_FLOAT32_T__
     Tpl<std::float32_t> r;
