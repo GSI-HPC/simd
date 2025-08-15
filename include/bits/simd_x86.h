@@ -113,28 +113,14 @@ namespace std::simd
     __x86_vec_is_zero(_TV __a)
     {
       using _Tp = __vec_value_type<_TV>;
-      constexpr bool __is_fp = is_floating_point_v<_Tp>;
+      static_assert(is_integral_v<_Tp>);
       if constexpr (sizeof(_TV) <= __x86_max_general_register_size)
         return __builtin_bit_cast(__integer_from<sizeof(_TV)>, __a) == 0;
       else if constexpr (_Flags._M_have_avx())
         {
-          if constexpr (sizeof(_TV) == 32 and __is_fp and sizeof(_Tp) == 8)
-            return __builtin_ia32_vtestzpd256(__a, __a);
-          else if constexpr (sizeof(_TV) == 32 and __is_fp and sizeof(_Tp) == 4)
-            return __builtin_ia32_vtestzps256(__a, __a);
-          else if constexpr (sizeof(_TV) == 32 and __is_fp)
-            return __builtin_ia32_vtestzps256(__vec_bit_cast<float>(__a),
-                                              __vec_bit_cast<float>(__a));
-          else if constexpr (sizeof(_TV) == 32)
+          if constexpr (sizeof(_TV) == 32)
             return __builtin_ia32_ptestz256(__vec_bit_cast<long long>(__a),
                                             __vec_bit_cast<long long>(__a));
-          else if constexpr (sizeof(_TV) == 16 and __is_fp and sizeof(_Tp) == 8)
-            return __builtin_ia32_vtestzpd(__a, __a);
-          else if constexpr (sizeof(_TV) == 16 and __is_fp and sizeof(_Tp) == 4)
-            return __builtin_ia32_vtestzps(__a, __a);
-          else if constexpr (sizeof(_TV) == 16 and __is_fp)
-            return __builtin_ia32_vtestzps(__vec_bit_cast<float>(__a),
-                                           __vec_bit_cast<float>(__a));
           else if constexpr (sizeof(_TV) == 16)
             return __builtin_ia32_ptestz128(__vec_bit_cast<long long>(__a),
                                             __vec_bit_cast<long long>(__a));
@@ -164,23 +150,9 @@ namespace std::simd
     {
       static_assert(sizeof(_TV) == 16 or sizeof(_TV) == 32);
       static_assert(_Flags._M_have_sse4_1());
-      using _Tp = __vec_value_type<_TV>;
-      constexpr bool __is_fp = is_floating_point_v<_Tp>;
-      if constexpr (sizeof(_TV) == 32 and __is_fp and sizeof(_Tp) == 8)
-        return __builtin_ia32_vtestzpd256(__a, __b);
-      else if constexpr (sizeof(_TV) == 32 and __is_fp and sizeof(_Tp) == 4)
-        return __builtin_ia32_vtestzps256(__a, __b);
-      else if constexpr (sizeof(_TV) == 32 and __is_fp)
-        return __builtin_ia32_vtestzps256(__vec_bit_cast<float>(__a), __vec_bit_cast<float>(__b));
-      else if constexpr (sizeof(_TV) == 32)
+      if constexpr (sizeof(_TV) == 32)
         return __builtin_ia32_ptestz256(__vec_bit_cast<long long>(__a),
                                         __vec_bit_cast<long long>(__b));
-      else if constexpr (__is_fp and sizeof(_Tp) == 8 and _Flags._M_have_avx())
-        return __builtin_ia32_vtestzpd(__a, __b);
-      else if constexpr (__is_fp and sizeof(_Tp) == 4 and _Flags._M_have_avx())
-        return __builtin_ia32_vtestzps(__a, __b);
-      else if constexpr (__is_fp and _Flags._M_have_avx())
-        return __builtin_ia32_vtestzps(__vec_bit_cast<float>(__a), __vec_bit_cast<float>(__b));
       else
         return __builtin_ia32_ptestz128(__vec_bit_cast<long long>(__a),
                                         __vec_bit_cast<long long>(__b));
@@ -193,28 +165,9 @@ namespace std::simd
     {
       static_assert(sizeof(_TV) == 16 or sizeof(_TV) == 32);
       static_assert(_Flags._M_have_sse4_1());
-      using _Tp = __vec_value_type<_TV>;
       if constexpr (sizeof(_TV) == 32)
-        {
-          if constexpr (not is_floating_point_v<_Tp>)
-            return __builtin_ia32_ptestc256(__vec_bit_cast<long long>(__a),
-                                            __vec_bit_cast<long long>(__b));
-          else if constexpr (sizeof(_Tp) == 8)
-            return __builtin_ia32_vtestcpd256(__a, __b);
-          else if constexpr (sizeof(_Tp) == 4)
-            return __builtin_ia32_vtestcps256(__a, __b);
-          else // TODO:ph
-            static_assert(false);
-        }
-      else if constexpr (is_floating_point_v<_Tp> and _Flags._M_have_avx())
-        {
-          if constexpr (sizeof(_Tp) == 8)
-            return __builtin_ia32_vtestcpd(__a, __b);
-          else if constexpr (sizeof(_Tp) == 4)
-            return __builtin_ia32_vtestcps(__a, __b);
-          else // TODO:ph
-            static_assert(false);
-        }
+        return __builtin_ia32_ptestc256(__vec_bit_cast<long long>(__a),
+                                        __vec_bit_cast<long long>(__b));
       else
         return __builtin_ia32_ptestc128(__vec_bit_cast<long long>(__a),
                                         __vec_bit_cast<long long>(__b));
@@ -226,7 +179,7 @@ namespace std::simd
     __x86_vecmask_all(_TV __k)
     {
       using _Tp = __vec_value_type<_TV>;
-      static_assert(is_signed_v<_Tp>);
+      static_assert(is_integral_v<_Tp> and is_signed_v<_Tp>);
       constexpr int __width = __width_of<_TV>;
       static_assert(sizeof(__k) <= 32);
       if constexpr (_Np == __width)
@@ -269,7 +222,7 @@ namespace std::simd
     __x86_vecmask_any(_TV __k)
     {
       using _Tp = __vec_value_type<_TV>;
-      static_assert(is_signed_v<_Tp>);
+      static_assert(is_integral_v<_Tp> and is_signed_v<_Tp>);
       constexpr int __width = __width_of<_TV>;
       static_assert(sizeof(__k) <= 32);
       if constexpr (_Np == __width)
@@ -297,7 +250,7 @@ namespace std::simd
     __x86_vecmask_none(_TV __k)
     {
       using _Tp = __vec_value_type<_TV>;
-      static_assert(is_signed_v<_Tp>);
+      static_assert(is_integral_v<_Tp> and is_signed_v<_Tp>);
       constexpr int __width = __width_of<_TV>;
       static_assert(sizeof(__k) <= 32);
       if constexpr (_Np == __width)
