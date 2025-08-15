@@ -590,6 +590,8 @@ namespace std::simd
       using _VecType = basic_vec<__integer_from<_Bytes>,
                                  decltype(__abi_rebind<__integer_from<_Bytes>, _S_size, _Ap>())>;
 
+      static constexpr bool _S_has_bool_member = _S_is_scalar;
+
     public:
       _DataType _M_data;
 
@@ -913,10 +915,6 @@ namespace std::simd
       // [simd.mask.ctor] TODO: uint constructor ------------------------------------
 
       // [simd.mask.subscr] ---------------------------------------------------
-      consteval bool
-      _M_has_bool_member() const noexcept
-      { return _S_is_scalar; }
-
       [[__gnu__::__always_inline__]]
       constexpr value_type
       operator[](__simd_size_type __i) const
@@ -1273,6 +1271,8 @@ namespace std::simd
       using _VecType = basic_vec<__integer_from<_Bytes>,
                                  decltype(__abi_rebind<__integer_from<_Bytes>, _S_size, _Ap>())>;
 
+      static constexpr bool _S_has_bool_member = _Mask1::_S_has_bool_member;
+
     public:
       using value_type = bool;
 
@@ -1467,10 +1467,6 @@ namespace std::simd
       // [simd.mask.ctor] TODO: uint constructor ------------------------------------
 
       // [simd.mask.subscr] ---------------------------------------------------
-      consteval bool
-      _M_has_bool_member() const noexcept
-      { return _M_data1._M_has_bool_member(); }
-
       [[__gnu__::__always_inline__]]
       constexpr value_type
       operator[](__simd_size_type __i) const
@@ -1478,7 +1474,7 @@ namespace std::simd
         // in some cases the last element can be 'bool' instead of bit-/vector-mask;
         // e.g. mask<short, 17> is {mask<short, 16>, mask<short, 1>}, where the latter uses
         // _ScalarAbi<1>, which is stored as 'bool'
-        if constexpr (_M_data1._M_has_bool_member())
+        if constexpr (_M_data1._S_has_bool_member)
           {
             if (__i < _N0)
               return _M_data0[__i];
