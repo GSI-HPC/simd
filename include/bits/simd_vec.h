@@ -592,9 +592,13 @@ namespace std::simd
 
       static constexpr bool _S_has_bool_member = _S_is_scalar;
 
-    public:
+      // Actual padding bytes, not padding elements.
+      // => _S_padding_bytes is 0 even if _S_is_partial is true.
+      static constexpr size_t _S_padding_bytes = 0;
+
       _DataType _M_data;
 
+    public:
       using value_type = bool;
 
       using abi_type = _Ap;
@@ -866,7 +870,9 @@ namespace std::simd
                 return _GLIBCXX_SIMD_INT_PACK(_S_size, _Is, {
                          return ((__x[_Is] ? (1ull << _Is) : 0ull) | ...);
                        });
-              else if constexpr (sizeof(__x) == sizeof(_M_data))
+              else if constexpr (sizeof(__x) == sizeof(_M_data) and _Bytes == _UBytes
+                                   and not _S_has_bool_member and not _UV::_S_has_bool_member
+                                   and not _UV::_S_use_bitmask and _UV::_S_padding_bytes == 0)
                 return __builtin_bit_cast(_DataType, __x);
               else if constexpr (_S_use_2_for_1)
                 return _GLIBCXX_SIMD_INT_PACK(_S_size * 2, _Is, {
@@ -1272,6 +1278,9 @@ namespace std::simd
                                  decltype(__abi_rebind<__integer_from<_Bytes>, _S_size, _Ap>())>;
 
       static constexpr bool _S_has_bool_member = _Mask1::_S_has_bool_member;
+
+      static constexpr size_t _S_padding_bytes
+        = __alignof__(_Mask0) - sizeof(_Mask1) + _Mask1::_S_padding_bytes;
 
     public:
       using value_type = bool;
