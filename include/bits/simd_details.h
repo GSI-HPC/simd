@@ -1030,6 +1030,34 @@ namespace std::simd
 
 #endif
 
+  /**@internal
+   * You must use this type as template argument to function templates that are not declared
+   * always_inline (to avoid issues when linking code compiled with different compiler flags).
+   */
+  struct _TargetTraits
+  : _ArchFlags, _OptFlags
+  {};
+
+  // [simd.expos.abi]
+  template <typename _Tp>
+    using __native_abi_t = decltype(__native_abi<_Tp>());
+
+  template <typename _Tp, int _Np, _TargetTraits _Target = {}>
+    consteval auto
+    __deduce_abi()
+    {
+      constexpr auto __native = __native_abi<_Tp>();
+      if constexpr (0 == __native._S_size)
+        return _InvalidAbi();
+      else if constexpr (_Np == __native._S_size)
+        return __native;
+      else
+        return __native.template _M_resize<_Np>();
+    }
+
+  template <typename _Tp, int _Np>
+    using __deduce_abi_t = decltype(__deduce_abi<_Tp, _Np>());
+
   // rebind for basic_vec, and basic_mask where we know the destination value-type
   template <typename _Tp, int _Np, __abi_tag _A0, _ArchFlags = {}>
     consteval auto
@@ -1043,8 +1071,8 @@ namespace std::simd
           static_assert(0 != __native._S_size);
           constexpr int __nreg = __div_ceil(_Np, __native._S_size);
 
-          if constexpr (is_same_v<_A0, _ScalarAbi<_Np>>)
-            return __native.template _M_resize<_Np>();
+          if constexpr (is_same_v<_A0, _ScalarAbi<_A0::_S_size>>)
+            return __deduce_abi<_Tp, _Np>();
 
           else if constexpr (__complex_like<_Tp>
                                and __flags_test(_A0::_S_variant, _AbiVariant::_CxCtgus)
@@ -1089,11 +1117,15 @@ namespace std::simd
       else if constexpr (_Bytes == sizeof(double) * 2)
         return __abi_rebind<complex<double>, _Np, _A0>();
 
-      // If we're coming from _ScalarAbi then we have no clue where we're coming from, just go with
-      // __integer_from as our conservative guess (we can't know whether any value-type was
-      // complex).
-      else if constexpr (is_same_v<_A0, _ScalarAbi<_Np>>)
-        return __native_abi<__integer_from<_Bytes>>().template _M_resize<_Np>();
+      else if constexpr (is_same_v<_A0, _ScalarAbi<_A0::_S_size>>)
+        {
+          if constexpr (_IsOnlyResize)
+            // stick to _ScalarAbi (likely _Float16 without hardware support)
+            return _ScalarAbi<_Np>();
+          else
+            // otherwise, fresh start via __deduce_abi_t using __integer_from
+            return __deduce_abi<__integer_from<_Bytes>, _Np>();
+        }
 
       // If the source ABI is complex, _Bytes == sizeof(complex<float>) or
       // sizeof(complex<float16_t>), and _IsOnlyResize is true, then it's a mask<complex<float>,
@@ -1171,34 +1203,6 @@ namespace std::simd
             __builtin_unreachable();
         }
     }
-
-  /**@internal
-   * You must use this type as template argument to function templates that are not declared
-   * always_inline (to avoid issues when linking code compiled with different compiler flags).
-   */
-  struct _TargetTraits
-  : _ArchFlags, _OptFlags
-  {};
-
-  // [simd.expos.abi]
-  template <typename _Tp>
-    using __native_abi_t = decltype(__native_abi<_Tp>());
-
-  template <typename _Tp, int _Np, _TargetTraits _Target = {}>
-    consteval auto
-    __deduce_abi()
-    {
-      constexpr auto __native = __native_abi<_Tp>();
-      if constexpr (0 == __native._S_size)
-        return _InvalidAbi();
-      else if constexpr (_Np == __native._S_size)
-        return __native;
-      else
-        return __native.template _M_resize<_Np>();
-    }
-
-  template <typename _Tp, int _Np>
-    using __deduce_abi_t = decltype(__deduce_abi<_Tp, _Np>());
 
   // [simd.expos]
   using __simd_size_type = int;
