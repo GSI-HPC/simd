@@ -131,7 +131,7 @@ template <typename V>
         return arr;
       }(), [] {
         std::array<int, V::size * 2> arr = {};
-        std::iota(arr.begin(), arr.end(), 1);
+        simd::__iota(arr.begin(), arr.end(), 1);
         return arr;
       }()},
       [](auto& t, auto mem, auto ints) {

@@ -4147,13 +4147,14 @@ namespace std::simd
 
 
   // [P3319R5] ----------------------------------------------------------------
-  template <typename _Tp>
-    requires (__vectorizable<_Tp> and is_arithmetic_v<_Tp>) or __simd_vec_type<_Tp>
-    inline constexpr _Tp iota = _Tp();
+  template <__vectorizable _Tp>
+    requires is_arithmetic_v<_Tp>
+    inline constexpr _Tp
+    __iota<_Tp> = _Tp();
 
   template <typename _Tp, typename _Abi>
     inline constexpr basic_vec<_Tp, _Abi>
-    iota<basic_vec<_Tp, _Abi>> = basic_vec<_Tp, _Abi>([](_Tp __i) -> _Tp {
+    __iota<basic_vec<_Tp, _Abi>> = basic_vec<_Tp, _Abi>([](_Tp __i) -> _Tp {
       static_assert (__simd_size_v<_Tp, _Abi> - 1 <= numeric_limits<_Tp>::max(),
                      "iota object would overflow");
       return __i;

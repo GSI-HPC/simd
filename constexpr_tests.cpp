@@ -280,7 +280,7 @@ static_assert(
               })));
 
 static_assert(all_of((simd::vec<int, 4>([](int i) { return i << 10; }) >> 10)
-                == simd::iota<simd::vec<int, 4>>));
+                == simd::__iota<simd::vec<int, 4>>));
 
 // vec iterators /////////////////////
 
@@ -572,26 +572,26 @@ static_assert([] {
 
 // cat ///////////////////////////
 
-static_assert(all_of(simd::cat(simd::iota<simd::vec<int, 3>>, simd::vec<int, 1>(3))
-                       == simd::iota<simd::vec<int, 4>>));
+static_assert(all_of(simd::cat(simd::__iota<simd::vec<int, 3>>, simd::vec<int, 1>(3))
+                       == simd::__iota<simd::vec<int, 4>>));
 
-static_assert(all_of(simd::cat(simd::iota<simd::vec<int, 4>>, simd::iota<simd::vec<int, 4>> + 4)
-                       == simd::iota<simd::vec<int, 8>>));
+static_assert(all_of(simd::cat(simd::__iota<simd::vec<int, 4>>, simd::__iota<simd::vec<int, 4>> + 4)
+                       == simd::__iota<simd::vec<int, 8>>));
 
-static_assert(all_of(simd::cat(simd::iota<simd::vec<double, 4>>, simd::iota<simd::vec<double, 2>> + 4)
-                       == simd::iota<simd::vec<double, 6>>));
+static_assert(all_of(simd::cat(simd::__iota<simd::vec<double, 4>>, simd::__iota<simd::vec<double, 2>> + 4)
+                       == simd::__iota<simd::vec<double, 6>>));
 
-static_assert(all_of(simd::cat(simd::iota<simd::vec<double, 4>>, simd::iota<simd::vec<double, 4>> + 4)
-                       == simd::iota<simd::vec<double, 8>>));
+static_assert(all_of(simd::cat(simd::__iota<simd::vec<double, 4>>, simd::__iota<simd::vec<double, 4>> + 4)
+                       == simd::__iota<simd::vec<double, 8>>));
 
 // select ////////////////////////
 
 #ifndef AVOID_BROKEN_CLANG_FAILURES
 static_assert(all_of(simd::vec<long long, 8>(std::array{0, 0, 0, 0, 4, 4, 4, 4})
-                       == select(simd::iota<simd::vec<double, 8>> < 4, 0ll, 4ll)));
+                       == select(simd::__iota<simd::vec<double, 8>> < 4, 0ll, 4ll)));
 
 static_assert(all_of(simd::vec<int, 8>(std::array{0, 0, 0, 0, 4, 4, 4, 4})
-                       == select(simd::iota<simd::vec<float, 8>> < 4.f, 0, 4)));
+                       == select(simd::__iota<simd::vec<float, 8>> < 4.f, 0, 4)));
 #endif
 
 // permute ////////////////////////
@@ -698,58 +698,58 @@ namespace permutations
 }
 
 static_assert(
-  all_of(simd::permute(simd::iota<simd::vec<int>>, permutations::duplicate_even)
-	   == simd::iota<simd::vec<int>> / 2 * 2));
+  all_of(simd::permute(simd::__iota<simd::vec<int>>, permutations::duplicate_even)
+	   == simd::__iota<simd::vec<int>> / 2 * 2));
 
 static_assert(
-  all_of(simd::permute(simd::iota<simd::vec<int>>, permutations::duplicate_odd)
-	   == simd::iota<simd::vec<int>> / 2 * 2 + 1));
+  all_of(simd::permute(simd::__iota<simd::vec<int>>, permutations::duplicate_odd)
+	   == simd::__iota<simd::vec<int>> / 2 * 2 + 1));
 
 static_assert(
-  all_of(simd::permute(simd::iota<simd::vec<int>>, permutations::swap_neighbors<1>)
+  all_of(simd::permute(simd::__iota<simd::vec<int>>, permutations::swap_neighbors<1>)
            == simd::vec<int>([](int i) { return i ^ 1; })));
 
 static_assert(
-  all_of(simd::permute(simd::iota<simd::vec<int, 8>>,
+  all_of(simd::permute(simd::__iota<simd::vec<int, 8>>,
 		      permutations::swap_neighbors<2>)
 	   == simd::vec<int, 8>(std::array{2, 3, 0, 1, 6, 7, 4, 5})));
 
 static_assert(
-  all_of(simd::permute(simd::iota<simd::vec<int, 12>>,
+  all_of(simd::permute(simd::__iota<simd::vec<int, 12>>,
 		      permutations::swap_neighbors<3>)
 	   == simd::vec<int, 12>(
 		std::array{3, 4, 5, 0, 1, 2, 9, 10, 11, 6, 7, 8})));
 
 static_assert(
-  all_of(simd::permute(simd::iota<simd::vec<int>>, permutations::broadcast<1>)
+  all_of(simd::permute(simd::__iota<simd::vec<int>>, permutations::broadcast<1>)
 	   == simd::vec<int>(1)));
 
 static_assert(
-  all_of(simd::permute(simd::iota<simd::vec<int>>, permutations::broadcast_first)
+  all_of(simd::permute(simd::__iota<simd::vec<int>>, permutations::broadcast_first)
 	   == simd::vec<int>(0)));
 
 static_assert(
-  all_of(simd::permute(simd::iota<simd::vec<int>>, permutations::broadcast_last)
+  all_of(simd::permute(simd::__iota<simd::vec<int>>, permutations::broadcast_last)
            == simd::vec<int>(int(simd::vec<int>::size() - 1))));
 
 static_assert(
-  all_of(simd::permute(simd::iota<simd::vec<int>>, permutations::reverse)
+  all_of(simd::permute(simd::__iota<simd::vec<int>>, permutations::reverse)
            == simd::vec<int>([](int i) { return int(simd::vec<int>::size()) - 1 - i; })));
 
 static_assert(
-  all_of(simd::permute(simd::iota<simd::vec<int>>, permutations::rotate<1>)
-           == (simd::iota<simd::vec<int>> + 1) % int(simd::vec<int>::size())));
+  all_of(simd::permute(simd::__iota<simd::vec<int>>, permutations::rotate<1>)
+           == (simd::__iota<simd::vec<int>> + 1) % int(simd::vec<int>::size())));
 
 static_assert(
-  all_of(simd::permute(simd::iota<simd::vec<int>>, permutations::rotate<2>)
-           == (simd::iota<simd::vec<int>> + 2) % int(simd::vec<int>::size())));
+  all_of(simd::permute(simd::__iota<simd::vec<int>>, permutations::rotate<2>)
+           == (simd::__iota<simd::vec<int>> + 2) % int(simd::vec<int>::size())));
 
 static_assert(
-  all_of(simd::permute(simd::iota<simd::vec<int, 7>>, permutations::rotate<2>)
+  all_of(simd::permute(simd::__iota<simd::vec<int, 7>>, permutations::rotate<2>)
            == simd::vec<int, 7>(std::array {2, 3, 4, 5, 6, 0, 1})));
 
 static_assert(
-  all_of(simd::permute(simd::iota<simd::vec<int, 7>>, permutations::rotate<-2>)
+  all_of(simd::permute(simd::__iota<simd::vec<int, 7>>, permutations::rotate<-2>)
            == simd::vec<int, 7>(std::array {5, 6, 0, 1, 2, 3, 4})));
 
 // flags ////////////////////////

@@ -333,6 +333,13 @@
 #define _GLIBCXX_DELETE_MSG(msg) delete
 #endif
 
+namespace std::simd
+{
+  template <typename _Tp>
+    inline constexpr _Tp
+    __iota = [] { static_assert(false, "invalid __iota specialization"); }();
+}
+
 #define _GLIBCXX_SIMD_INT_PACK(N, pack, ...)                                            \
   [&]<int... pack> [[__gnu__::__always_inline__]] (std::integer_sequence<int, pack...>) \
   __VA_ARGS__ (std::make_integer_sequence<int, N>())

@@ -790,7 +790,7 @@ template <typename T, typename Abi, int Init, int Max>
  * With `Max < 0`: Subtract from numeric_limits::max (to leave room for arithmetic ops)
  * Otherwise: [Init..Max, Init..Max, ...] (inclusive)
  *
- * Use simd::iota if a non-monotonic sequence is a bug.
+ * Use simd::__iota if a non-monotonic sequence is a bug.
  */
 template <typename V, int Init = 0, int MaxArg = int(test_iota_max<V, Init>)>
   constexpr V test_iota = V([](int i) {
