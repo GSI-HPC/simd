@@ -338,11 +338,41 @@ namespace std::simd
   template <typename _Tp>
     inline constexpr _Tp
     __iota = [] { static_assert(false, "invalid __iota specialization"); }();
+
+#if __has_builtin(__integer_pack)
+  template <typename _Tp, std::size_t _Np>
+    inline constexpr type_identity_t<_Tp[_Np]>
+    __iota<_Tp[_Np]> = {__integer_pack(_Tp(_Np))...};
+#else
+  template<typename _Tp, typename>
+    struct __iota_array;
+
+  template<typename _Tp, _Tp... _Is>
+    struct __iota_array<_Tp, integer_sequence<_Tp, _Is...>>
+    { static constexpr _Tp _S_data[sizeof...(_Is)] = {_Is...}; };
+
+  template <typename _Tp, std::size_t _Np>
+    inline constexpr auto&
+    __iota<_Tp[_Np]> = __iota_array<_Tp, make_integer_sequence<_Tp, _Np>>::_S_data;
+#endif
+
+  template <auto _Value0, auto... _Values>
+    requires (is_same_v<decltype(_Value0), decltype(_Values)> and ...)
+    inline constexpr type_identity_t<decltype(_Value0)[1 + sizeof...(_Values)]>
+    __static_array = {_Value0, _Values...};
 }
 
+#if __cpp_structured_bindings >= 202411L
+#define _GLIBCXX_SIMD_INT_PACK(N, pack, ...)                                            \
+  [&] [[__gnu__::__always_inline__]] {                                                  \
+    constexpr auto [...pack] = std::simd::__iota<int[N]>;                               \
+    __VA_ARGS__                                                                         \
+  }()
+#else
 #define _GLIBCXX_SIMD_INT_PACK(N, pack, ...)                                            \
   [&]<int... pack> [[__gnu__::__always_inline__]] (std::integer_sequence<int, pack...>) \
   __VA_ARGS__ (std::make_integer_sequence<int, N>())
+#endif
 
 namespace std::simd
 {
