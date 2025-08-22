@@ -874,6 +874,15 @@ namespace std::simd
                                    and not _S_has_bool_member and not _UV::_S_has_bool_member
                                    and not _UV::_S_use_bitmask and _UV::_S_padding_bytes == 0)
                 return __builtin_bit_cast(_DataType, __x);
+              else if (not __builtin_is_constant_evaluated()
+                         and sizeof(__x) == sizeof(_M_data) and _Bytes == _UBytes
+                         and not _S_has_bool_member and not _UV::_S_has_bool_member
+                         and not _UV::_S_use_bitmask and _UV::_S_padding_bytes != 0)
+                {
+                  _DataType __tmp = {};
+                  __builtin_memcpy(&__tmp, &__x, sizeof(__x) - _UV::_S_padding_bytes);
+                  return __tmp;
+                }
               else if constexpr (_S_use_2_for_1)
                 return _GLIBCXX_SIMD_INT_PACK(_S_size * 2, _Is, {
                          return _DataType{__vec_value_type<_DataType>(__x[_Is / 2] ? -1 : 0)...};
@@ -2395,39 +2404,50 @@ namespace std::simd
       }
 
       // [simd.unary] unary operators -----------------------------------------
+      // increment and decrement are implemented in terms of operator+=/-= which avoids UB on
+      // padding elements while not breaking UBsan
       [[__gnu__::__always_inline__]]
       constexpr basic_vec&
       operator++() noexcept requires requires(value_type __a) { ++__a; }
-      {
-        _M_data += 1;
-        return *this;
-      }
+      { return *this += value_type(1); }
 
       [[__gnu__::__always_inline__]]
       constexpr basic_vec
       operator++(int) noexcept requires requires(value_type __a) { __a++; }
       {
         basic_vec __r = *this;
-        _M_data += 1;
+        *this += value_type(1);
         return __r;
       }
 
       [[__gnu__::__always_inline__]]
       constexpr basic_vec&
       operator--() noexcept requires requires(value_type __a) { --__a; }
-      {
-        _M_data -= 1;
-        return *this;
-      }
+      { return *this -= value_type(1); }
 
       [[__gnu__::__always_inline__]]
       constexpr basic_vec
       operator--(int) noexcept requires requires(value_type __a) { __a--; }
       {
         basic_vec __r = *this;
-        _M_data -= 1;
+        *this -= value_type(1);
         return __r;
       }
+
+      [[__gnu__::__always_inline__]]
+      constexpr mask_type
+      operator!() const noexcept requires requires(value_type __a) { !__a; }
+      { return mask_type::_S_init(!_M_data); }
+
+      [[__gnu__::__always_inline__]]
+      constexpr basic_vec
+      operator+() const noexcept requires requires(value_type __a) { +__a; }
+      { return *this; }
+
+      [[__gnu__::__always_inline__]]
+      constexpr basic_vec
+      operator-() const noexcept requires requires(value_type __a) { -__a; }
+      { return _S_init(-_M_data); }
 
       // [simd.cassign] binary operators
 #define _GLIBCXX_SIMD_DEFINE_OP(sym)                                 \
@@ -2440,10 +2460,6 @@ namespace std::simd
         return __x;                                                  \
       }
 
-      _GLIBCXX_SIMD_DEFINE_OP(+)
-      _GLIBCXX_SIMD_DEFINE_OP(-)
-      _GLIBCXX_SIMD_DEFINE_OP(*)
-      _GLIBCXX_SIMD_DEFINE_OP(%)
       _GLIBCXX_SIMD_DEFINE_OP(&)
       _GLIBCXX_SIMD_DEFINE_OP(|)
       _GLIBCXX_SIMD_DEFINE_OP(^)
@@ -2454,13 +2470,85 @@ namespace std::simd
 
       [[__gnu__::__always_inline__]]
       friend constexpr basic_vec&
-      operator/=(basic_vec& __x, const basic_vec& __y0) noexcept
+      operator+=(basic_vec& __x, const basic_vec& __y) noexcept
+      requires requires(value_type __a) { __a + __a; }
+      {
+        if constexpr (_S_is_partial and is_integral_v<value_type> and is_signed_v<value_type>)
+          { // avoid spurious UB on signed integer overflow of the padding element(s). But don't
+            // remove UB of the active elements (so that UBsan can still do its job).
+            using _UV = typename _Ap::template _DataType<make_unsigned_t<value_type>>;
+            const _DataType __result
+              = reinterpret_cast<_DataType>(reinterpret_cast<_UV>(__x._M_data)
+                                              + reinterpret_cast<_UV>(__y._M_data));
+            const auto __positive = __y > value_type();
+            const auto __overflow = __positive != (__result > __x);
+            if (__overflow._M_any_of())
+              __builtin_unreachable(); // trigger UBsan
+            __x._M_data = __result;
+          }
+        else
+          __x._M_data += __y._M_data;
+        return __x;
+      }
+
+      [[__gnu__::__always_inline__]]
+      friend constexpr basic_vec&
+      operator-=(basic_vec& __x, const basic_vec& __y) noexcept
+      requires requires(value_type __a) { __a - __a; }
+      {
+        if constexpr (_S_is_partial and is_integral_v<value_type> and is_signed_v<value_type>)
+          { // avoid spurious UB on signed integer overflow of the padding element(s). But don't
+            // remove UB of the active elements (so that UBsan can still do its job).
+            using _UV = typename _Ap::template _DataType<make_unsigned_t<value_type>>;
+            const _DataType __result
+              = reinterpret_cast<_DataType>(reinterpret_cast<_UV>(__x._M_data)
+                                              - reinterpret_cast<_UV>(__y._M_data));
+            const auto __positive = __y > value_type();
+            const auto __overflow = __positive != (__result < __x);
+            if (__overflow._M_any_of())
+              __builtin_unreachable(); // trigger UBsan
+            __x._M_data = __result;
+          }
+        else
+          __x._M_data -= __y._M_data;
+        return __x;
+      }
+
+      [[__gnu__::__always_inline__]]
+      friend constexpr basic_vec&
+      operator*=(basic_vec& __x, const basic_vec& __y) noexcept
+      requires requires(value_type __a) { __a * __a; }
+      {
+        if constexpr (_S_is_partial and is_integral_v<value_type> and is_signed_v<value_type>)
+          { // avoid spurious UB on signed integer overflow of the padding element(s). But don't
+            // remove UB of the active elements (so that UBsan can still do its job).
+            for (int __i = 0; __i < _S_size; ++__i)
+              {
+                if (__builtin_mul_overflow_p(__x._M_data[__i], __y._M_data[__i], value_type()))
+                  __builtin_unreachable();
+              }
+            using _UV = typename _Ap::template _DataType<make_unsigned_t<value_type>>;
+            __x._M_data = reinterpret_cast<_DataType>(reinterpret_cast<_UV>(__x._M_data)
+                                                        * reinterpret_cast<_UV>(__y._M_data));
+          }
+
+        // 'uint16 * uint16' promotes to int and can therefore lead to UB. The standard does not
+        // require to avoid the undefined behavior. It's unnecessary and easy to avoid. It's also
+        // unexpected because there's no UB on the vector types (which don't promote).
+        else if constexpr (_S_is_scalar and is_unsigned_v<value_type>
+                             and is_signed_v<decltype(value_type() * value_type())>)
+          __x._M_data = unsigned(__x._M_data) * unsigned(__y._M_data);
+
+        else
+          __x._M_data *= __y._M_data;
+        return __x;
+      }
+
+      [[__gnu__::__always_inline__]]
+      friend constexpr basic_vec&
+      operator/=(basic_vec& __x, const basic_vec& __y) noexcept
       requires requires(value_type __a) { __a / __a; }
       {
-        basic_vec __y = __y0;
-        if constexpr (_S_is_partial)
-          __y = __select_impl(mask_type::_S_init(mask_type::_S_implicit_mask),
-                                     __y0, basic_vec(value_type(1)));
 #ifdef __SSE2__
         // x86 doesn't have integral SIMD division instructions
         // While division is faster, the required conversions are still a problem:
@@ -2475,7 +2563,59 @@ namespace std::simd
               return __x = basic_vec(rebind_t<double, basic_vec>(__x) / __y);
           }
 #endif
-        __x._M_data /= __y._M_data;
+        basic_vec __y1 = __y;
+        if constexpr (_S_is_partial)
+          {
+            if constexpr (is_integral_v<value_type>)
+              {
+                // Assume integral division doesn't have SIMD instructions and must be done per
+                // element anyway. Partial vectors should skip their padding elements.
+                if (__builtin_is_constant_evaluated())
+                  __x = basic_vec([&](int __i) -> value_type {
+                          return __x._M_data[__i] / __y._M_data[__i];
+                        });
+                else
+                  {
+                    for (int __i = 0; __i < _S_size; ++__i)
+                      __x._M_data[__i] /= __y._M_data[__i];
+                  }
+                return __x;
+              }
+            else
+              __y1 = __select_impl(mask_type::_S_init(mask_type::_S_implicit_mask),
+                                   __y, basic_vec(value_type(1)));
+          }
+        __x._M_data /= __y1._M_data;
+        return __x;
+      }
+
+      [[__gnu__::__always_inline__]]
+      friend constexpr basic_vec&
+      operator%=(basic_vec& __x, const basic_vec& __y) noexcept
+      requires requires(value_type __a) { __a % __a; }
+      {
+        static_assert(is_integral_v<value_type>);
+        if constexpr (_S_is_partial)
+          {
+            if (__builtin_is_constant_evaluated())
+              __x = basic_vec([&](int __i) -> value_type {
+                      return __x._M_data[__i] % __y._M_data[__i];
+                    });
+            else if (__builtin_constant_p(__x._M_data % __y._M_data))
+              __x._M_data %= __y._M_data;
+            else if (__y._M_is_constprop())
+              __x._M_data %= __select_impl(mask_type::_S_init(mask_type::_S_implicit_mask),
+                                           __y, basic_vec(value_type(1)))._M_data;
+            else
+              {
+                // Assume integral division doesn't have SIMD instructions and must be done per
+                // element anyway. Partial vectors should skip their padding elements.
+                for (int __i = 0; __i < _S_size; ++__i)
+                  __x._M_data[__i] %= __y._M_data[__i];
+              }
+          }
+        else
+          __x._M_data %= __y._M_data;
         return __x;
       }
 
@@ -2952,6 +3092,21 @@ namespace std::simd
         return __r;
       }
 
+      [[__gnu__::__always_inline__]]
+      constexpr mask_type
+      operator!() const noexcept requires requires(value_type __a) { !__a; }
+      { return mask_type::_S_init(!_M_data0, !_M_data1); }
+
+      [[__gnu__::__always_inline__]]
+      constexpr basic_vec
+      operator+() const noexcept requires requires(value_type __a) { +__a; }
+      { return *this; }
+
+      [[__gnu__::__always_inline__]]
+      constexpr basic_vec
+      operator-() const noexcept requires requires(value_type __a) { -__a; }
+      { return _S_init(-_M_data0, -_M_data1); }
+
       // [simd.cassign] -------------------------------------------------------
 #define _GLIBCXX_SIMD_DEFINE_OP(sym)                                 \
       [[__gnu__::__always_inline__]]                                 \
@@ -3210,6 +3365,12 @@ namespace std::simd
         : _M_data([&](int __i) { return ((__i & 1) == 0 ? __re : __im)[__i / 2]; })
       {}
 
+      // [simd.subscr] --------------------------------------------------------
+      [[__gnu__::__always_inline__]]
+      constexpr value_type
+      operator[](__simd_size_type __i) const
+      { return value_type(_M_data[__i * 2], _M_data[__i * 2 + 1]); }
+
       // [simd.unary] unary operators -----------------------------------------
       [[__gnu__::__always_inline__]]
       constexpr basic_vec&
@@ -3242,6 +3403,25 @@ namespace std::simd
       {
         basic_vec __r = *this;
         _M_data -= value_type(_T0(1));
+        return __r;
+      }
+
+      [[__gnu__::__always_inline__]]
+      constexpr mask_type
+      operator!() const noexcept requires requires(value_type __a) { !__a; }
+      { return mask_type::_S_and_neighbors(!_M_data); }
+
+      [[__gnu__::__always_inline__]]
+      constexpr basic_vec
+      operator+() const noexcept requires requires(value_type __a) { +__a; }
+      { return *this; }
+
+      [[__gnu__::__always_inline__]]
+      constexpr basic_vec
+      operator-() const noexcept requires requires(value_type __a) { -__a; }
+      {
+        basic_vec __r = *this;
+        __r._M_data = -_M_data;
         return __r;
       }
 
@@ -3345,6 +3525,45 @@ namespace std::simd
       constexpr void
       imag(const _RealSimd& __x) noexcept
       { _M_data._M_complex_set_imag(__x); }
+
+      // [simd.cond] ---------------------------------------------------------
+      [[__gnu__::__always_inline__]]
+      friend constexpr basic_vec
+      __select_impl(const mask_type& __k, const basic_vec& __t, const basic_vec& __f)
+      { return _S_init(__select_impl(__k._M_data, __t._M_data, __f._M_data)); }
+
+      // [simd.complex.math] internals ---------------------------------------
+      [[__gnu__::__always_inline__]]
+      constexpr _RealSimd
+      _M_abs() const; // TODO
+
+      // associated functions
+      [[__gnu__::__always_inline__]]
+      constexpr _RealSimd
+      _M_norm() const
+      {
+#if 0
+        return (_M_data * _M_data)._M_hadd();
+#elif 0
+        const auto __squared = _M_data * _M_data;
+        return permute<size.value>(
+                 __squared + __squared._M_swap_neighbors(),
+                 [](unsigned __i) { return __i * 2; });
+#elif 0
+        const auto __squared = _M_data * _M_data;
+        return permute<size.value>(__squared, [](int __i) { return __i * 2; })
+                 + permute<size.value>(__squared, [](int __i) { return __i * 2 + 1; });
+#elif 1
+        auto __re = real();
+        auto __im = imag();
+        return __re * __re + __im * __im;
+#endif
+      }
+
+      [[__gnu__::__always_inline__]]
+      constexpr basic_vec
+      _M_conj() const
+      { return _S_init(_M_data._M_complex_conj()); }
     };
 
   // [simd.overview] deduction guide ------------------------------------------
@@ -3496,29 +3715,40 @@ namespace std::simd
 
   // [simd.alg] ---------------------------------------------------------------
   template<typename _Tp, typename _Ap>
+    [[__gnu__::__always_inline__]]
     constexpr basic_vec<_Tp, _Ap>
-    min(const basic_vec<_Tp, _Ap>& __a, const basic_vec<_Tp, _Ap>& __b) noexcept;
+    min(const basic_vec<_Tp, _Ap>& __a, const basic_vec<_Tp, _Ap>& __b) noexcept
+    { static_assert(false, "TODO"); }
 
   template<typename _Tp, typename _Ap>
+    [[__gnu__::__always_inline__]]
     constexpr basic_vec<_Tp, _Ap>
-      max(const basic_vec<_Tp, _Ap>& __a, const basic_vec<_Tp, _Ap>& __b) noexcept;
+    max(const basic_vec<_Tp, _Ap>& __a, const basic_vec<_Tp, _Ap>& __b) noexcept
+    { static_assert(false, "TODO"); }
 
   template<typename _Tp, typename _Ap>
+    [[__gnu__::__always_inline__]]
     constexpr pair<basic_vec<_Tp, _Ap>, basic_vec<_Tp, _Ap>>
-      minmax(const basic_vec<_Tp, _Ap>& __a, const basic_vec<_Tp, _Ap>& __b) noexcept;
+    minmax(const basic_vec<_Tp, _Ap>& __a, const basic_vec<_Tp, _Ap>& __b) noexcept
+    { static_assert(false, "TODO"); }
 
   template<typename _Tp, typename _Ap>
+    [[__gnu__::__always_inline__]]
     constexpr basic_vec<_Tp, _Ap>
-      clamp(const basic_vec<_Tp, _Ap>& __v, const basic_vec<_Tp, _Ap>& __lo,
-            const basic_vec<_Tp, _Ap>& __hi);
+    clamp(const basic_vec<_Tp, _Ap>& __v, const basic_vec<_Tp, _Ap>& __lo,
+          const basic_vec<_Tp, _Ap>& __hi)
+    { static_assert(false, "TODO"); }
 
   template<typename _Tp, typename _Up>
-    constexpr auto select(bool __c, const _Tp& __a, const _Up& __b)
+    constexpr auto
+    select(bool __c, const _Tp& __a, const _Up& __b)
     -> remove_cvref_t<decltype(__c ? __a : __b)>
     { return __c ? __a : __b; }
 
   template<size_t _Bytes, typename _Ap, typename _Tp, typename _Up>
-    constexpr auto select(const basic_mask<_Bytes, _Ap>& __c, const _Tp& __a, const _Up& __b)
+    [[__gnu__::__always_inline__]]
+    constexpr auto
+    select(const basic_mask<_Bytes, _Ap>& __c, const _Tp& __a, const _Up& __b)
     noexcept -> decltype(__select_impl(__c, __a, __b))
     { return __select_impl(__c, __a, __b); }
 
