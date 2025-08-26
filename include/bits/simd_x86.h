@@ -329,6 +329,15 @@ namespace std::simd
         static_assert(false);
     }
 
+  template <typename _Tp>
+    using __x86_intrin_int
+      = decltype([] {
+          if constexpr (sizeof(_Tp) == 1)
+            return char();
+          else
+            return __integer_from<sizeof(_Tp)>();
+        }());
+
   template <_X86Cmp _Cmp, __vec_builtin _TV, _ArchFlags _Flags = {}>
     requires is_integral_v<__vec_value_type<_TV>>
     [[__gnu__::__always_inline__]]
@@ -341,37 +350,39 @@ namespace std::simd
         return __x86_bitmask_cmp<_Cmp>(__vec_zero_pad_to_16(__x), __vec_zero_pad_to_16(__y));
       else if constexpr (is_signed_v<_Tp>)
         {
+          const auto __xi = __vec_bit_cast<__x86_intrin_int<_Tp>>(__x);
+          const auto __yi = __vec_bit_cast<__x86_intrin_int<_Tp>>(__y);
           if constexpr (sizeof(_TV) == 64 and sizeof(_Tp) == 8)
-            return __builtin_ia32_cmpq512_mask(__x, __y, __c, -1);
+            return __builtin_ia32_cmpq512_mask(__xi, __yi, __c, -1);
           else if constexpr (sizeof(_TV) == 64 and sizeof(_Tp) == 4)
-            return __builtin_ia32_cmpd512_mask(__x, __y, __c, -1);
+            return __builtin_ia32_cmpd512_mask(__xi, __yi, __c, -1);
           else if constexpr (sizeof(_TV) == 64 and sizeof(_Tp) == 2)
-            return __builtin_ia32_cmpw512_mask(__x, __y, __c, -1);
+            return __builtin_ia32_cmpw512_mask(__xi, __yi, __c, -1);
           else if constexpr (sizeof(_TV) == 64 and sizeof(_Tp) == 1)
-            return __builtin_ia32_cmpb512_mask(__x, __y, __c, -1);
+            return __builtin_ia32_cmpb512_mask(__xi, __yi, __c, -1);
           else if constexpr (sizeof(_TV) == 32 and sizeof(_Tp) == 8)
-            return __builtin_ia32_cmpq256_mask(__x, __y, __c, -1);
+            return __builtin_ia32_cmpq256_mask(__xi, __yi, __c, -1);
           else if constexpr (sizeof(_TV) == 32 and sizeof(_Tp) == 4)
-            return __builtin_ia32_cmpd256_mask(__x, __y, __c, -1);
+            return __builtin_ia32_cmpd256_mask(__xi, __yi, __c, -1);
           else if constexpr (sizeof(_TV) == 32 and sizeof(_Tp) == 2)
-            return __builtin_ia32_cmpw256_mask(__x, __y, __c, -1);
+            return __builtin_ia32_cmpw256_mask(__xi, __yi, __c, -1);
           else if constexpr (sizeof(_TV) == 32 and sizeof(_Tp) == 1)
-            return __builtin_ia32_cmpb256_mask(__x, __y, __c, -1);
+            return __builtin_ia32_cmpb256_mask(__xi, __yi, __c, -1);
           else if constexpr (sizeof(_TV) == 16 and sizeof(_Tp) == 8)
-            return __builtin_ia32_cmpq128_mask(__x, __y, __c, -1);
+            return __builtin_ia32_cmpq128_mask(__xi, __yi, __c, -1);
           else if constexpr (sizeof(_TV) == 16 and sizeof(_Tp) == 4)
-            return __builtin_ia32_cmpd128_mask(__x, __y, __c, -1);
+            return __builtin_ia32_cmpd128_mask(__xi, __yi, __c, -1);
           else if constexpr (sizeof(_TV) == 16 and sizeof(_Tp) == 2)
-            return __builtin_ia32_cmpw128_mask(__x, __y, __c, -1);
+            return __builtin_ia32_cmpw128_mask(__xi, __yi, __c, -1);
           else if constexpr (sizeof(_TV) == 16 and sizeof(_Tp) == 1)
-            return __builtin_ia32_cmpb128_mask(__x, __y, __c, -1);
+            return __builtin_ia32_cmpb128_mask(__xi, __yi, __c, -1);
           else
             static_assert(false);
         }
       else
         {
-          const auto __xi = __vec_bit_cast<make_signed_t<_Tp>>(__x);
-          const auto __yi = __vec_bit_cast<make_signed_t<_Tp>>(__y);
+          const auto __xi = __vec_bit_cast<__x86_intrin_int<_Tp>>(__x);
+          const auto __yi = __vec_bit_cast<__x86_intrin_int<_Tp>>(__y);
           if constexpr (sizeof(_TV) == 64 and sizeof(_Tp) == 8)
             return __builtin_ia32_ucmpq512_mask(__xi, __yi, __c, -1);
           else if constexpr (sizeof(_TV) == 64 and sizeof(_Tp) == 4)
