@@ -678,20 +678,19 @@ namespace std::simd
             }
         }
 
-      // The _IsOnlyResize = true, because the value-type doesn't really change. It's either two Ts
-      // combined to a complex<T> or single Ts. That's the _Bytes/2 (complex<T> -> T).
-      // _IsOnlyResize = true is necessary for AVX w/o AVX2.
+      // If this basic_mask specialization is used for _CxIleav vecs then it's actually made up of
+      // twice as many (with half the number of Bytes) elements. By construction, the _S_nreg == 1
+      // specializations can use a mask register with twice the elements still with _S_nreg == 1.
       using _CxElementMask
         = basic_mask<_Bytes / 2,
                      decltype([] consteval {
-                       auto __a = __abi_rebind<_Bytes / 2, _S_size * 2, _Ap, true>();
-                       if constexpr (is_same_v<decltype(__a), _InvalidAbi>)
-                         return __a;
-                       else if constexpr (is_same_v<decltype(__a), _ScalarAbi<__a._S_size>>)
-                         return __a;
-                       else
-                         return _Abi<__a._S_size, __a._S_nreg,
-                                     __flags_and(__a._S_variant, _AbiVariant::_MaskVariants)>();
+                       if constexpr (not __flags_test(_Ap::_S_variant, _AbiVariant::_CxIleav))
+                         return _InvalidAbi();
+                       else if constexpr (is_same_v<_Ap, _ScalarAbi<_S_size>>)
+                         return _ScalarAbi<_S_size * 2>();
+                       else // _Ap is _Abi<_S_size, 1, Something>
+                         return _Abi<_S_size * 2, 1, __flags_and(_Ap::_S_variant,
+                                                                 _AbiVariant::_MaskVariants)>();
                      }())>;
 
       [[__gnu__::__always_inline__]]
