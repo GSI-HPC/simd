@@ -730,6 +730,10 @@ namespace std::simd
     _M_conforming_to_STDC_annex_G() const
     { return _M_test(10) and not _M_finite_math_only(); }
 
+    constexpr bool
+    _M_support_snan() const
+    { return _M_test(11); }
+
     __UINT64_TYPE__ _M_build_flags
       = 0
 #if __NO_TRAPPING_MATH__ or __FAST_MATH__
@@ -769,6 +773,9 @@ namespace std::simd
         // will do so as well. However, Clang never defines the macro.
 #if defined __STDC_IEC_60559_COMPLEX__ or defined __STDC_IEC_559_COMPLEX__ or defined __clang__
           + (1 << 10)
+#endif
+#if __SUPPORT_SNAN__
+          + (1 << 11)
 #endif
         ;
   };
