@@ -95,13 +95,22 @@ std::ostream& operator<<(std::ostream& s, std::byte b)
 template <typename T, typename Abi>
 std::ostream& operator<<(std::ostream& s, std::simd::basic_vec<T, Abi> const& v)
 {
-  using U = std::conditional_t<
-              sizeof(T) == 1, int, std::conditional_t<
-                                     is_character_type_v<T>,
-                                     std::simd::_UInt<sizeof(T)>, T>>;
-  s << '[' << U(v[0]);
-  for (int i = 1; i < v.size(); ++i)
-    s << ", " << U(v[i]);
+  if constexpr (std::is_arithmetic_v<T>)
+    {
+      using U = std::conditional_t<
+                  sizeof(T) == 1, int, std::conditional_t<
+                                         is_character_type_v<T>,
+                                         std::simd::_UInt<sizeof(T)>, T>>;
+      s << '[' << U(v[0]);
+      for (int i = 1; i < v.size(); ++i)
+        s << ", " << U(v[i]);
+    }
+  else
+    {
+      s << '[' << v[0];
+      for (int i = 1; i < v.size(); ++i)
+        s << ", " << v[i];
+    }
   return s << ']';
 }
 
