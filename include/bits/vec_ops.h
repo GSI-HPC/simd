@@ -313,6 +313,23 @@ namespace std::simd
     requires std::floating_point<__vec_value_type<_V>>
     constexpr _V _S_signmask = __vec_xor(_V() + 1, _V() - 1);
 
+  // work around __builtin_constant_p returning false unless passed a variable
+  // (__builtin_constant_p(x[0]) is false while __is_constprop(x[0]) is true)
+  _GLIBCXX_SIMD_ALWAYS_INLINE constexpr bool
+  __is_constprop(const auto& __x)
+  { return __builtin_is_constant_evaluated() or __builtin_constant_p(__x); }
+
+  _GLIBCXX_SIMD_ALWAYS_INLINE constexpr bool
+  __is_constprop(const __complex_like auto& __x)
+  {
+    return __builtin_is_constant_evaluated()
+             or (__is_constprop(__x.real()) and __is_constprop(__x.imag()));
+  }
+
+  _GLIBCXX_SIMD_INTRINSIC constexpr bool
+  __is_constprop_equal_to(const auto& __x, const auto& __expect)
+  { return (__builtin_is_constant_evaluated() or __builtin_constant_p(__x)) and __x == __expect; }
+
   template <__vec_builtin _TV, int _Np = __width_of<_TV>,
             typename = make_integer_sequence<int, _Np>>
     struct _VecOps;
