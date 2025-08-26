@@ -302,6 +302,7 @@ template <typename T>
       static_assert(false);
   }
 
+// true iff real or imag parts of x are +/-inf. This matches the C23 Annex G interpretation.
 template <complex_like T, typename Abi>
   constexpr typename simd::basic_vec<T, Abi>::mask_type
   my_isinf(const simd::basic_vec<T, Abi>& x)
@@ -310,6 +311,11 @@ template <complex_like T, typename Abi>
     return M(isinf(x.real()) or isinf(x.imag()));
   }
 
+// treat as equal if either:
+// - operator== yields true
+// - or for floats, a and b are NaNs
+// - or for complex, a and b are any infinity (see my_isinf)
+// - or for complex, a and b are NaNs in real *and* imag components
 template <typename V>
   constexpr bool
   equal_with_nan_and_inf_fixup(const V& a, const V& b)
