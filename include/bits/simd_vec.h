@@ -3011,7 +3011,7 @@ namespace std::simd
         [[__gnu__::__always_inline__]]
         constexpr explicit
         basic_vec(_Fp&& __gen)
-          : _M_data0(__gen), _M_data1([&](auto __i) {
+          : _M_data0(__gen), _M_data1([&] [[__gnu__::__always_inline__]] (auto __i) {
                                return __gen(__simd_size_constant<__i + _N0>);
                              })
         {}
