@@ -189,30 +189,13 @@ namespace std::simd
                    __b[8], __b[9], __b[10], __b[11], __b[12], __b[13], __b[14], __b[15],
                    __b[16], __b[17], __b[18], __b[19], __b[20], __b[21], __b[22], __b[23],
                    __b[24], __b[25], __b[26], __b[27], __b[28], __b[29], __b[30], __b[31]};
-#else
-      if constexpr (_N0 == 1)
-        return __builtin_shufflevector(__a, __b, 0, 1);
-      else if constexpr (_N0 == 2)
-        return __builtin_shufflevector(__a, __b, 0, 1, 2, 3);
-      else if constexpr (_N0 == 4)
-        return __builtin_shufflevector(__a, __b, 0, 1, 2, 3, 4, 5, 6, 7);
-      else if constexpr (_N0 == 8)
-        return __builtin_shufflevector(__a, __b,
-                                       0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
-      else if constexpr (_N0 == 16)
-        return __builtin_shufflevector(__a, __b,
-                                       0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
-                                       18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31);
-      else if constexpr (_N0 == 32)
-        return __builtin_shufflevector(__a, __b,
-                                       0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
-                                       18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
-                                       33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
-                                       48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62,
-                                       63);
-#endif
       else
         static_assert(false);
+#elif __has_builtin(__integer_pack)
+      return __builtin_shufflevector(__a, __b, __integer_pack(2 * _N0)...);
+#else
+#error "Neither Clang nor GCC?"
+#endif
     }
 
   template <int _N0, int _N1, int... _Ns, __vec_builtin _TV0, __vec_builtin _TV1,
