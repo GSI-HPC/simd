@@ -2322,7 +2322,7 @@ namespace std::simd
               if constexpr (_S_is_scalar)
                 return static_cast<value_type>(__x[0]);
               else
-                return __builtin_convertvector(__x._M_concat_data(), _DataType);
+                return __vec_cast<_DataType>(__x._M_concat_data());
             }())
         {}
 
@@ -2369,7 +2369,7 @@ namespace std::simd
             {
               __vec_builtin_type<_Up, _S_full_size> __tmp = {};
               __builtin_memcpy(&__tmp, __ptr, sizeof(_Up) * _S_size);
-              _M_data = __builtin_convertvector(__tmp, _DataType);
+              _M_data = __vec_cast<_DataType>(__tmp);
             }
         }
 

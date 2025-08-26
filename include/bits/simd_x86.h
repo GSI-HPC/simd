@@ -318,9 +318,7 @@ namespace std::simd
               // without AVX512_FP16, float16_t size needs to match float32_t size
               // (cf. __native_abi())
               static_assert(sizeof(_TV) <= 32);
-              using _F32V [[__gnu__::__vector_size__(2 * sizeof(_TV))]] = float;
-              return __x86_bitmask_cmp<_Cmp>(__builtin_convertvector(__x, _F32V),
-                                             __builtin_convertvector(__y, _F32V));
+              return __x86_bitmask_cmp<_Cmp>(__vec_cast<float>(__x), __vec_cast<float>(__y));
             }
         }
       else if constexpr (sizeof(_TV) < 16)

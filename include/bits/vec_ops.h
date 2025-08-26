@@ -90,6 +90,25 @@ namespace std::simd
     __vec_bit_cast(_TV __v)
     { return reinterpret_cast<__vec_builtin_type_bytes<_Up, sizeof(_TV)>>(__v); }
 
+  /** \internal
+   * Simple wrapper around __builtin_convertvector to provide static_cast-like syntax.
+   */
+  template <__vec_builtin _UV, __vec_builtin _TV>
+    [[__gnu__::__always_inline__]]
+    constexpr _UV
+    __vec_cast(_TV __v)
+    { return __builtin_convertvector(__v, _UV); }
+
+  /** \internal
+   * Overload of the above cast function that determines the destination vector type from a given
+   * element type \p _Up and the `__width_of` the argument type.
+   */
+  template <__vectorizable _Up, __vec_builtin _TV>
+    [[__gnu__::__always_inline__]]
+    constexpr __vec_builtin_type<_Up, __width_of<_TV>>
+    __vec_cast(_TV __v)
+    { return __builtin_convertvector(__v, __vec_builtin_type<_Up, __width_of<_TV>>); }
+
   template <int _Np, __vec_builtin _TV>
     requires signed_integral<__vec_value_type<_TV>>
     static constexpr _TV _S_vec_implicit_mask = []<int... _Is> (integer_sequence<int, _Is...>) {
