@@ -410,6 +410,85 @@ namespace std::simd
         }
     }
 
+  template <__vec_builtin _TV, _ArchFlags _Flags = {}>
+    [[__gnu__::__always_inline__]]
+    inline auto
+    __x86_bitmask_isinf(_TV __x)
+    {
+      static_assert(_Flags._M_have_avx512dq());
+      using _Tp = __vec_value_type<_TV>;
+      static_assert(is_floating_point_v<_Tp>);
+      if constexpr (sizeof(_TV) == 64 and sizeof(_Tp) == 8)
+        return __builtin_ia32_fpclasspd512_mask(__x, 0x18, -1);
+      else if constexpr (sizeof(_TV) == 32 and sizeof(_Tp) == 8)
+        return __builtin_ia32_fpclasspd256_mask(__x, 0x18, -1);
+      else if constexpr (sizeof(_TV) == 16 and sizeof(_Tp) == 8)
+        return __builtin_ia32_fpclasspd128_mask(__x, 0x18, -1);
+      else if constexpr (sizeof(_TV) == 64 and sizeof(_Tp) == 4)
+        return __builtin_ia32_fpclassps512_mask(__x, 0x18, -1);
+      else if constexpr (sizeof(_TV) == 32 and sizeof(_Tp) == 4)
+        return __builtin_ia32_fpclassps256_mask(__x, 0x18, -1);
+      else if constexpr (sizeof(_TV) == 16 and sizeof(_Tp) == 4)
+        return __builtin_ia32_fpclassps128_mask(__x, 0x18, -1);
+      else if constexpr (sizeof(_TV) == 64 and sizeof(_Tp) == 2 and _Flags._M_have_avx512fp16())
+        return __builtin_ia32_fpclassph512_mask(__x, 0x18, -1);
+      else if constexpr (sizeof(_TV) == 32 and sizeof(_Tp) == 2 and _Flags._M_have_avx512fp16())
+        return __builtin_ia32_fpclassph256_mask(__x, 0x18, -1);
+      else if constexpr (sizeof(_TV) == 16 and sizeof(_Tp) == 2 and _Flags._M_have_avx512fp16())
+        return __builtin_ia32_fpclassph128_mask(__x, 0x18, -1);
+      else if constexpr (sizeof(_Tp) == 2 and not _Flags._M_have_avx512fp16())
+        return __x86_bitmask_isinf(__vec_cast<float>(__x));
+      else if constexpr (sizeof(_TV) < 16)
+        return __x86_bitmask_isinf(__vec_zero_pad_to_16(__x));
+      else
+        static_assert(false);
+    }
+
+  template <__vec_builtin _KV, _ArchFlags _Flags = {}>
+    [[__gnu__::__always_inline__]]
+    inline _KV
+    __x86_bit_to_vecmask(std::integral auto __bits)
+    {
+      using _Kp = __vec_value_type<_KV>;
+      static_assert((sizeof(__bits) * __CHAR_BIT__ == __width_of<_KV>)
+                      or (sizeof(__bits) == 1 and __CHAR_BIT__ > __width_of<_KV>));
+
+      if constexpr (sizeof(_Kp) == 1 and sizeof(_KV) == 64)
+        return __builtin_ia32_cvtmask2b512(__bits);
+      else if constexpr (sizeof(_Kp) == 1 and sizeof(_KV) == 32)
+        return __builtin_ia32_cvtmask2b256(__bits);
+      else if constexpr (sizeof(_Kp) == 1 and sizeof(_KV) == 16)
+        return __builtin_ia32_cvtmask2b128(__bits);
+      else if constexpr (sizeof(_Kp) == 1 and sizeof(_KV) <= 8)
+        return _VecOps<_KV>::_S_extract(__builtin_ia32_cvtmask2b128(__bits));
+
+      else if constexpr (sizeof(_Kp) == 2 and sizeof(_KV) == 64)
+        return __builtin_ia32_cvtmask2w512(__bits);
+      else if constexpr (sizeof(_Kp) == 2 and sizeof(_KV) == 32)
+        return __builtin_ia32_cvtmask2w256(__bits);
+      else if constexpr (sizeof(_Kp) == 2 and sizeof(_KV) == 16)
+        return __builtin_ia32_cvtmask2w128(__bits);
+      else if constexpr (sizeof(_Kp) == 2 and sizeof(_KV) <= 8)
+        return _VecOps<_KV>::_S_extract(__builtin_ia32_cvtmask2w128(__bits));
+
+      else if constexpr (sizeof(_Kp) == 4 and sizeof(_KV) == 64)
+        return __builtin_ia32_cvtmask2d512(__bits);
+      else if constexpr (sizeof(_Kp) == 4 and sizeof(_KV) == 32)
+        return __builtin_ia32_cvtmask2d256(__bits);
+      else if constexpr (sizeof(_Kp) == 4 and sizeof(_KV) <= 16)
+        return _VecOps<_KV>::_S_extract(__builtin_ia32_cvtmask2d128(__bits));
+
+      else if constexpr (sizeof(_Kp) == 8 and sizeof(_KV) == 64)
+        return __builtin_ia32_cvtmask2q512(__bits);
+      else if constexpr (sizeof(_Kp) == 8 and sizeof(_KV) == 32)
+        return __builtin_ia32_cvtmask2q256(__bits);
+      else if constexpr (sizeof(_Kp) == 8 and sizeof(_KV) == 16)
+        return __builtin_ia32_cvtmask2q128(__bits);
+
+      else
+        static_assert(false);
+    }
+
   template <unsigned_integral _Kp, __vec_builtin _TV, _ArchFlags _Flags = {}>
     requires is_integral_v<__vec_value_type<_TV>>
     [[__gnu__::__always_inline__]]

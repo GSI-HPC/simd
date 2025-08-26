@@ -2252,6 +2252,10 @@ namespace std::simd
       }
 
       // [simd.math] ----------------------------------------------------------
+      //
+      // ISO/IEC 60559 on the classification operations (5.7.2 General Operations):
+      // "They are never exceptional, even for signaling NaNs."
+      //
       template <_OptFlags _Flags = {}>
         [[__gnu__::__always_inline__]]
         constexpr mask_type
@@ -2263,11 +2267,64 @@ namespace std::simd
             return mask_type(std::isnan(_M_data));
           else if constexpr (_S_use_bitmask)
             return _M_isunordered(*this);
-          else
+          else if constexpr (not _Flags._M_support_snan())
+            return not (*this == *this);
+          else if (__builtin_is_constant_evaluated() or __builtin_constant_p(_M_data))
             return mask_type([&](int __i) { return std::isnan(_M_data[__i]); });
+          else
+            {
+              // 60559: NaN is represented as Inf + non-zero mantissa bits
+              using _Ip = __integer_from<sizeof(value_type)>;
+              return __builtin_bit_cast(_Ip, numeric_limits<value_type>::infinity())
+                       < __builtin_bit_cast(rebind_t<_Ip, basic_vec>, _M_fabs());
+            }
         }
 
-      template <_OptFlags _Flags = {}>
+      template <_TargetTraits _Flags = {}>
+        [[__gnu__::__always_inline__]]
+        constexpr mask_type
+        _M_isinf() const requires is_floating_point_v<value_type>
+        {
+          if constexpr (_Flags._M_finite_math_only())
+            return mask_type(false);
+          else if constexpr (_S_is_scalar)
+            return mask_type(std::isinf(_M_data));
+          else if (__builtin_is_constant_evaluated() or __builtin_constant_p(_M_data))
+            return mask_type([&](int __i) { return std::isinf(_M_data[__i]); });
+#ifdef _GLIBCXX_SIMD_HAVE_SSE
+          else if constexpr (_S_use_bitmask)
+            return mask_type::_S_init(__x86_bitmask_isinf(_M_data));
+          else if constexpr (_Flags._M_have_avx512dq())
+            return __x86_bit_to_vecmask<typename mask_type::_DataType>(
+                     __x86_bitmask_isinf(_M_data));
+#endif
+          else
+            {
+              using _Ip = __integer_from<sizeof(value_type)>;
+              return __vec_bit_cast<_Ip>(_M_fabs()._M_data)
+                       == __builtin_bit_cast(_Ip, numeric_limits<value_type>::infinity());
+            }
+        }
+
+      [[__gnu__::__always_inline__]]
+      constexpr basic_vec
+      _M_abs() const
+      {
+        if constexpr (is_floating_point_v<value_type>)
+          return _M_fabs();
+        else
+          return _M_data < 0 ? -_M_data : _M_data;
+      }
+
+      [[__gnu__::__always_inline__]]
+      constexpr basic_vec
+      _M_fabs() const
+      {
+        static_assert(is_floating_point_v<value_type>);
+        return __vec_andnot(_S_signmask<_DataType>, _M_data);
+      }
+
+      template <_TargetTraits _Flags = {}>
         [[__gnu__::__always_inline__]]
         constexpr mask_type
         _M_isunordered(basic_vec __y) const requires is_floating_point_v<value_type>
@@ -2961,11 +3018,26 @@ namespace std::simd
 
       [[__gnu__::__always_inline__]]
       constexpr mask_type
+      _M_isinf() const requires is_floating_point_v<value_type>
+      { return mask_type::_S_init(_M_data0._M_isinf(), _M_data1._M_isinf()); }
+
+      [[__gnu__::__always_inline__]]
+      constexpr mask_type
       _M_isunordered(basic_vec __y) const requires is_floating_point_v<value_type>
       {
         return mask_type::_S_init(_M_data0._M_isunordered(__y._M_data0),
                                   _M_data1._M_isunordered(__y._M_data1));
       }
+
+      [[__gnu__::__always_inline__]]
+      constexpr basic_vec
+      _M_abs() const
+      { return _S_init(_M_data0._M_abs(), _M_data1._M_abs()); }
+
+      [[__gnu__::__always_inline__]]
+      constexpr basic_vec
+      _M_fabs() const
+      { return _S_init(_M_data0._M_fabs(), _M_data1._M_fabs()); }
 
       basic_vec() = default;
 
@@ -3914,13 +3986,13 @@ namespace std::simd
     [[__gnu__::__always_inline__]]
     constexpr typename __deduced_vec_t<_Vp>::mask_type
     isinf(const _Vp& __x)
-    { static_assert(false, "TODO"); }
+    { return static_cast<const __deduced_vec_t<_Vp>&>(__x)._M_isinf(); }
 
   template <__math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
     constexpr typename __deduced_vec_t<_Vp>::mask_type
     isnan(const _Vp& __x)
-    { return __x._M_isnan(); }
+    { return static_cast<const __deduced_vec_t<_Vp>&>(__x)._M_isnan(); }
 
   template <__math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
@@ -3974,12 +4046,8 @@ namespace std::simd
         return __y._M_isnan();
       else if constexpr (__simd_integral<_V1> or is_integral_v<_V1>)
         return __x._M_isnan();
-      else if constexpr (not is_same_v<_V0, _Vp>)
-        return isunordered(static_cast<_Vp>(__x), __y);
-      else if constexpr (not is_same_v<_V1, _Vp>)
-        return isunordered(__x, static_cast<_Vp>(__y));
       else
-        return __x._M_isunordered(__y);
+        return static_cast<const _Vp&>(__x)._M_isunordered(static_cast<const _Vp&>(__y));
     }
 
   template<__math_floating_point _Vp>
