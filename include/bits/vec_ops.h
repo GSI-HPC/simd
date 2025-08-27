@@ -186,9 +186,11 @@ namespace std::simd
                                  __bit_ceil(unsigned(_N0 + (_N1 + ... + _Ns)))>
     __vec_concat_sized(const _TV0& __a, const _TV1& __b, const _TVs&... __rest)
     {
-      const auto __ab = _GLIBCXX_SIMD_INT_PACK(_N0 + _N1, _Is, {
+      const auto __ab = _GLIBCXX_SIMD_INT_PACK(__bit_ceil(unsigned(_N0 + _N1)), _Is, {
           return __builtin_shufflevector(
-              __a, __b, (_Is < _N0 ? _Is : _Is - _N0 + __width_of<_TV0>)...);
+                   __a, __b, (_Is < _N0 ? _Is
+                                        : _Is < _N0 + _N1 ? _Is - _N0 + __width_of<_TV0>
+                                                          : -1)...);
           });
       if constexpr (sizeof...(__rest) == 0)
         return __ab;
