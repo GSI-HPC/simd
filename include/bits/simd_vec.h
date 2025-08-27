@@ -900,6 +900,11 @@ namespace std::simd
       operator-() const noexcept requires requires(value_type __a) { -__a; }
       { return _S_init(-_M_data); }
 
+      [[__gnu__::__always_inline__]]
+      constexpr basic_vec
+      operator~() const noexcept requires requires(value_type __a) { ~__a; }
+      { return _S_init(~_M_data); }
+
       // [simd.cassign] binary operators
 #define _GLIBCXX_SIMD_DEFINE_OP(sym)                                 \
       [[__gnu__::__always_inline__]]                                 \
@@ -1596,6 +1601,11 @@ namespace std::simd
       constexpr basic_vec
       operator-() const noexcept requires requires(value_type __a) { -__a; }
       { return _S_init(-_M_data0, -_M_data1); }
+
+      [[__gnu__::__always_inline__]]
+      constexpr basic_vec
+      operator~() const noexcept requires requires(value_type __a) { ~__a; }
+      { return _S_init(~_M_data0, ~_M_data1); }
 
       // [simd.cassign] -------------------------------------------------------
 #define _GLIBCXX_SIMD_DEFINE_OP(sym)                                 \
