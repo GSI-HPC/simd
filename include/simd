@@ -7,6 +7,10 @@
 #define SIMD_
 
 #include "bits/simd_vec.h"
+#include "bits/simd_alg.h"
+#include "bits/simd_mask_reductions.h"
+#include "bits/simd_reductions.h"
+#include "bits/simd_bit.h"
 
 #endif  // SIMD_
 
