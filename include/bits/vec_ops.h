@@ -90,25 +90,6 @@ namespace std::simd
     __vec_bit_cast(_TV __v)
     { return reinterpret_cast<__vec_builtin_type_bytes<_Up, sizeof(_TV)>>(__v); }
 
-  /** \internal
-   * Simple wrapper around __builtin_convertvector to provide static_cast-like syntax.
-   */
-  template <__vec_builtin _UV, __vec_builtin _TV>
-    [[__gnu__::__always_inline__]]
-    constexpr _UV
-    __vec_cast(_TV __v)
-    { return __builtin_convertvector(__v, _UV); }
-
-  /** \internal
-   * Overload of the above cast function that determines the destination vector type from a given
-   * element type \p _Up and the `__width_of` the argument type.
-   */
-  template <__vectorizable _Up, __vec_builtin _TV>
-    [[__gnu__::__always_inline__]]
-    constexpr __vec_builtin_type<_Up, __width_of<_TV>>
-    __vec_cast(_TV __v)
-    { return __builtin_convertvector(__v, __vec_builtin_type<_Up, __width_of<_TV>>); }
-
   template <int _Np, __vec_builtin _TV>
     requires signed_integral<__vec_value_type<_TV>>
     static constexpr _TV _S_vec_implicit_mask = []<int... _Is> (integer_sequence<int, _Is...>) {
@@ -216,6 +197,91 @@ namespace std::simd
     }
 
   template <__vec_builtin _TV>
+    [[__gnu__::__always_inline__]]
+    constexpr __half_vec_builtin_t<_TV>
+    __vec_split_lo(_TV __v)
+    { return __builtin_shufflevector(__v, __v, __integer_pack(__width_of<_TV> / 2)...); }
+
+  template <__vec_builtin _TV>
+    [[__gnu__::__always_inline__]]
+    constexpr __half_vec_builtin_t<_TV>
+    __vec_split_hi(_TV __v)
+    {
+      constexpr int __n = __width_of<_TV> / 2;
+      return _GLIBCXX_SIMD_INT_PACK(__n, _Is, {
+               return __half_vec_builtin_t<_TV> {__v[(__n + _Is)]...};
+             });
+    }
+
+  /**
+   * Return a type with sizeof 16. If the input type is smaller, add zero-padding to \p __x.
+   */
+  template <__vec_builtin _TV>
+    _GLIBCXX_SIMD_INTRINSIC constexpr auto
+    __vec_zero_pad_to_16(_TV __x)
+    {
+      static_assert(sizeof(_TV) < 16);
+      using _Up = _UInt<sizeof(_TV)>;
+      __vec_builtin_type_bytes<_Up, 16> __tmp = {__builtin_bit_cast(_Up, __x)};
+      return __builtin_bit_cast(__vec_builtin_type_bytes<__vec_value_type<_TV>, 16>, __tmp);
+    }
+
+  /// Return \p __x zero-padded to \p _Bytes bytes.
+  template <size_t _Bytes, __vec_builtin _TV>
+    _GLIBCXX_SIMD_INTRINSIC constexpr auto
+    __vec_zero_pad_to(_TV __x)
+    {
+      static_assert(sizeof(_TV) <= _Bytes);
+      if constexpr (sizeof(_TV) == _Bytes)
+        return __x;
+      else
+        return __vec_zero_pad_to<_Bytes>(__vec_concat(__x, _TV()));
+    }
+
+#if _GLIBCXX_SIMD_HAVE_SSE
+  template <__vec_builtin _UV, __vec_builtin _TV>
+    inline _UV
+    __x86_cvt_f16c(_TV __v);
+#endif
+
+  /** \internal
+   * Simple wrapper around __builtin_convertvector to provide static_cast-like syntax.
+   *
+   * Works around GCC failing to use the F16C/AVX512F cvtps2ph/cvtph2ps instructions.
+   */
+  template <__vec_builtin _UV, __vec_builtin _TV, _ArchFlags _Flags = {}>
+    [[__gnu__::__always_inline__]]
+    constexpr _UV
+    __vec_cast(_TV __v)
+    {
+      static_assert(__width_of<_UV> == __width_of<_TV>);
+#if _GLIBCXX_SIMD_HAVE_SSE
+      constexpr bool __to_f16 = is_same_v<__vec_value_type<_UV>, _Float16>;
+      constexpr bool __from_f16 = is_same_v<__vec_value_type<_TV>, _Float16>;
+      constexpr bool __needs_f16c = _Flags._M_have_f16c() and not _Flags._M_have_avx512fp16()
+                                      and (__to_f16 or __from_f16);
+      if (__needs_f16c and not __builtin_is_constant_evaluated() and not __builtin_constant_p(__v))
+        { // Work around PR121688
+          if constexpr (__needs_f16c)
+            return __x86_cvt_f16c<_UV>(__v);
+        }
+#endif
+      return __builtin_convertvector(__v, _UV);
+    }
+
+  /** \internal
+   * Overload of the above cast function that determines the destination vector type from a given
+   * element type \p _Up and the `__width_of` the argument type.
+   *
+   * Calls the above overload.
+   */
+  template <__vectorizable _Up, __vec_builtin _TV>
+    [[__gnu__::__always_inline__]]
+    constexpr __vec_builtin_type<_Up, __width_of<_TV>>
+    __vec_cast(_TV __v)
+    { return __vec_cast<__vec_builtin_type<_Up, __width_of<_TV>>>(__v); }
+
+  template <__vec_builtin _TV>
     _GLIBCXX_SIMD_INTRINSIC constexpr _TV
     __vec_xor(_TV __a, _TV __b)
     {
@@ -279,31 +345,6 @@ namespace std::simd
         return __builtin_bit_cast(_TV, ~__builtin_bit_cast(_UV, __a));
       else
         return ~__a;
-    }
-
-  /**
-   * Return a type with sizeof 16. If the input type is smaller, add zero-padding to \p __x.
-   */
-  template <__vec_builtin _TV>
-    _GLIBCXX_SIMD_INTRINSIC constexpr auto
-    __vec_zero_pad_to_16(_TV __x)
-    {
-      static_assert(sizeof(_TV) < 16);
-      using _Up = _UInt<sizeof(_TV)>;
-      __vec_builtin_type_bytes<_Up, 16> __tmp = {__builtin_bit_cast(_Up, __x)};
-      return __builtin_bit_cast(__vec_builtin_type_bytes<__vec_value_type<_TV>, 16>, __tmp);
-    }
-
-  /// Return \p __x zero-padded to \p _Bytes bytes.
-  template <size_t _Bytes, __vec_builtin _TV>
-    _GLIBCXX_SIMD_INTRINSIC constexpr auto
-    __vec_zero_pad_to(_TV __x)
-    {
-      static_assert(sizeof(_TV) <= _Bytes);
-      if constexpr (sizeof(_TV) == _Bytes)
-        return __x;
-      else
-        return __vec_zero_pad_to<_Bytes>(__vec_concat(__x, _TV()));
     }
 
   /**

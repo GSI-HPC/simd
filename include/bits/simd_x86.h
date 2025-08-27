@@ -753,6 +753,53 @@ namespace std::simd
           return ((__y + 0x2222'2222'2222'2222ull) & __mask) * 3;
         }
     }
+
+  // FIXME: Work around PR121688
+  template <__vec_builtin _UV, __vec_builtin _TV>
+    [[__gnu__::__always_inline__]]
+    inline _UV
+    __x86_cvt_f16c(_TV __v)
+    {
+      constexpr bool __from_f16 = is_same_v<__vec_value_type<_TV>, _Float16>;
+      constexpr bool __to_f16 = not __from_f16;
+      if constexpr (__to_f16 and not is_same_v<__vec_value_type<_TV>, float>)
+        return __x86_cvt_f16c<_UV>(__vec_cast<float>(__v));
+      else if constexpr (__from_f16 and not is_same_v<__vec_value_type<_UV>, float>)
+        return __vec_cast<_UV>(__x86_cvt_f16c<__vec_builtin_type<float, __width_of<_TV>>>(__v));
+      else if constexpr (__from_f16)
+        {
+          const auto __vi = __vec_bit_cast<__x86_intrin_int<_Float16>>(__v);
+          if constexpr (sizeof(_TV) == 4)
+            return __vec_split_lo(__builtin_ia32_vcvtph2ps(__vec_zero_pad_to_16(__vi)));
+          else if constexpr (sizeof(_TV) == 8)
+            return __builtin_ia32_vcvtph2ps(__vec_zero_pad_to_16(__vi));
+          else if constexpr (sizeof(_TV) == 16)
+            return __builtin_ia32_vcvtph2ps256(__vi);
+          else if constexpr (sizeof(_TV) == 32)
+            return __builtin_ia32_vcvtph2ps512_mask(__vi, __vec_builtin_type<float, 16>(), -1, 4);
+          else if constexpr (sizeof(_TV) >= 64)
+            return __vec_concat(__x86_cvt_f16c<__half_vec_builtin_t<_UV>>(__vec_split_lo(__v)),
+                                __x86_cvt_f16c<__half_vec_builtin_t<_UV>>(__vec_split_hi(__v)));
+          else
+            static_assert(false);
+        }
+      else if constexpr (sizeof(_TV) == 8)
+        return reinterpret_cast<_UV>(
+                 __vec_split_lo(__vec_split_lo(__builtin_ia32_vcvtps2ph(
+                                                 __vec_zero_pad_to_16(__v), 4))));
+      else if constexpr (sizeof(_TV) == 16)
+        return reinterpret_cast<_UV>(__vec_split_lo(__builtin_ia32_vcvtps2ph(__v, 4)));
+      else if constexpr (sizeof(_TV) == 32)
+        return reinterpret_cast<_UV>(__builtin_ia32_vcvtps2ph256(__v, 4));
+      else if constexpr (sizeof(_TV) == 64)
+        return reinterpret_cast<_UV>(__builtin_ia32_vcvtps2ph512_mask(
+                                       __v, 4, __vec_builtin_type<short, 16>(), -1));
+      else if constexpr (sizeof(_TV) >= 128)
+        return __vec_concat(__x86_cvt_f16c<__half_vec_builtin_t<_UV>>(__vec_split_lo(__v)),
+                            __x86_cvt_f16c<__half_vec_builtin_t<_UV>>(__vec_split_hi(__v)));
+      else
+        static_assert(false);
+    }
 }
 
 #pragma GCC diagnostic pop
