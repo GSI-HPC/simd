@@ -11,6 +11,7 @@
 #include "bits/simd_mask_reductions.h"
 #include "bits/simd_reductions.h"
 #include "bits/simd_bit.h"
+#include "bits/simd_math.h"
 
 #endif  // SIMD_
 

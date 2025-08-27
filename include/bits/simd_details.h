@@ -808,6 +808,11 @@ namespace std::simd
     consteval bool
     _M_have_sve() const
     { return _M_test(3); }
+
+    template <typename _Tp>
+      consteval bool
+      _M_eval_as_f32() const
+      { return is_same_v<_Tp, _Float16>; }
   };
 
 #elif __powerpc__
@@ -842,6 +847,11 @@ namespace std::simd
 
     consteval bool _M_power10()
     { return (_M_flags & 0xf) >= 5; }
+
+    template <typename _Tp>
+      consteval bool
+      _M_eval_as_f32() const
+      { return is_same_v<_Tp, _Float16>; }
   };
 
 #elif _GLIBCXX_SIMD_HAVE_SSE
@@ -1012,6 +1022,11 @@ namespace std::simd
     consteval bool
     _M_have_avx512fp16() const
     { return _M_test(30); }
+
+    template <typename _Tp>
+      consteval bool
+      _M_eval_as_f32() const
+      { return is_same_v<_Tp, _Float16> and not _M_have_avx512fp16(); }
   };
 
   template <typename _Tp, _ArchFlags _Flags = {}>
