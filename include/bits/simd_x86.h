@@ -754,6 +754,59 @@ namespace std::simd
         }
     }
 
+  template <__vec_builtin _TV, _ArchFlags _Flags = {}>
+    [[__gnu__::__always_inline__]]
+    inline _TV
+    __x86_complex_multiplies(_TV __x, _TV __y)
+    {
+      using _Tp = __vec_value_type<_TV>;
+      using _VO = _VecOps<_TV>;
+
+      static_assert(_Flags._M_have_fma());
+      static_assert(is_floating_point_v<_Tp>);
+
+      if constexpr (not _Flags._M_have_avx512fp16() and sizeof(_Tp) == 2)
+        return __vec_cast<_Tp>(__x86_complex_multiplies(__vec_cast<float>(__x),
+                                                        __vec_cast<float>(__y)));
+      else if constexpr (sizeof(_TV) < 16)
+        return _VO::_S_extract(__x86_complex_multiplies(__vec_zero_pad_to_16(__x),
+                                                        __vec_zero_pad_to_16(__y)));
+
+      else
+        {
+          _TV __x_real = _VO::_S_dup_even(__x);
+          _TV __x_imag = _VO::_S_dup_odd(__x);
+          _TV __y_swapped = _VO::_S_swap_neighbors(__y);
+
+          if constexpr (sizeof(__x) == 16 and sizeof(_Tp) == 2)
+            return __builtin_ia32_vfmaddsubph(__x_real, __y, __x_imag * __y_swapped);
+          else if constexpr (sizeof(__x) == 32 and sizeof(_Tp) == 2)
+            return __builtin_ia32_vfmaddsubph256(__x_real, __y, __x_imag * __y_swapped);
+          else if constexpr (sizeof(__x) == 64 and sizeof(_Tp) == 2)
+            return __builtin_ia32_vfmaddsubph512_mask(
+                     __x_real, __y, __x_imag * __y_swapped, -1, 0x04);
+
+          else if constexpr (sizeof(__x) == 16 and sizeof(_Tp) == 4)
+            return __builtin_ia32_vfmaddsubps(__x_real, __y, __x_imag * __y_swapped);
+          else if constexpr (sizeof(__x) == 32 and sizeof(_Tp) == 4)
+            return __builtin_ia32_vfmaddsubps256(__x_real, __y, __x_imag * __y_swapped);
+          else if constexpr (sizeof(__x) == 64 and sizeof(_Tp) == 4)
+            return __builtin_ia32_vfmaddsubps512_mask(
+                     __x_real, __y, __x_imag * __y_swapped, -1, 0x04);
+
+          else if constexpr (sizeof(__x) == 16 and sizeof(_Tp) == 8)
+            return __builtin_ia32_vfmaddsubpd(__x_real, __y, __x_imag * __y_swapped);
+          else if constexpr (sizeof(__x) == 32 and sizeof(_Tp) == 8)
+            return __builtin_ia32_vfmaddsubpd256(__x_real, __y, __x_imag * __y_swapped);
+          else if constexpr (sizeof(__x) == 64 and sizeof(_Tp) == 8)
+            return __builtin_ia32_vfmaddsubpd512_mask(
+                     __x_real, __y, __x_imag * __y_swapped, -1, 0x04);
+
+          else
+            static_assert(false);
+        }
+    }
+
   // FIXME: Work around PR121688
   template <__vec_builtin _UV, __vec_builtin _TV>
     [[__gnu__::__always_inline__]]

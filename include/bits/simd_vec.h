@@ -1905,6 +1905,32 @@ namespace std::simd
       }
     };
 
+  template <typename _Cx, __vec_builtin _TV, _TargetTraits = {}>
+    [[__gnu__::__cold__]]
+    constexpr _TV
+    __cx_redo_mul(_TV __r, const _TV __x, const _TV __y, const auto __nan, int __n)
+    {
+      // redo multiplication using scalar complex-mul on (NaN, NaN) results
+      alignas(_TV) __vec_value_type<_TV> __arr[__width_of<_TV>] = {};
+      for (int __i = 0; __i < __n; __i += 2)
+        {
+          if (__nan[__i] and __nan[__i + 1])
+            {
+              const _Cx __cx(__x[__i], __x[__i + 1]);
+              const _Cx __cy(__y[__i], __y[__i + 1]);
+              const _Cx __cr = __cx * __cy;
+              __arr[__i] = __cr.real();
+              __arr[__i + 1] = __cr.imag();
+            }
+          else
+            {
+              __arr[__i] = __r[__i];
+              __arr[__i + 1] = __r[__i + 1];
+            }
+        }
+      return __builtin_bit_cast(_TV, __arr);
+    }
+
   template <__vectorizable _Tp, __abi_tag _Ap>
     requires (_Ap::_S_nreg == 1)
       and (is_same_v<_Ap, _ScalarAbi<_Ap::_S_size>> or not __complex_like<_Tp>)
@@ -2095,6 +2121,88 @@ namespace std::simd
         else
           _VecOps<_DataType>::_S_overwrite_odd_elements(_M_data, __x);
       }
+
+      [[__gnu__::__always_inline__]]
+      constexpr basic_vec
+      _M_complex_conj() const
+      {
+        static_assert((_S_size & 1) == 0);
+        return _VecOps<_DataType>::_S_complex_negate_imag(_M_data);
+      }
+
+      template <typename _CxVec, _TargetTraits _Flags = {}>
+        [[__gnu__::__always_inline__]]
+        constexpr void
+        _M_complex_multiply_with(basic_vec __yvec)
+        {
+          const _DataType __x = _M_data;
+          const _DataType __y = __yvec._M_data;
+          static_assert((_S_size & 1) == 0);
+          using _VO = _VecOps<_DataType>;
+          if (_VecOps<_DataType, _S_size>::_S_complex_imag_is_constprop_zero(__x))
+            {
+              if (_VecOps<_DataType, _S_size>::_S_complex_imag_is_constprop_zero(__y))
+                _M_data = __x * __y;
+              else
+                {
+                  if (_Flags._M_conforming_to_STDC_annex_G())
+                    {
+                      auto __a = _VO::_S_dup_even(__x) * __y;
+                      auto __b = _DataType() * _VO::_S_swap_neighbors(__y);
+#if SIMD_DIAGNOSE_INDETERMINATE_SIGNED_ZERO
+                      //if (_SuperImpl::_S_any_of(_SuperImpl::_S_equal_to(__a, 0))) // __b is ±0 by construction
+#endif
+                      _M_data = _VO::_S_addsub(__a, __b);
+                    }
+                  else
+                    _M_data = _VO::_S_dup_even(__x) * __y;
+                }
+            }
+          else if (_VecOps<_DataType, _S_size>::_S_complex_imag_is_constprop_zero(__y))
+            {
+              if (_Flags._M_conforming_to_STDC_annex_G())
+                _M_data = _VO::_S_addsub(_VO::_S_dup_even(__y) * __x,
+                                         _DataType() * _VO::_S_swap_neighbors(__x));
+              else
+                _M_data = _VO::_S_dup_even(__y) * __x;
+            }
+          else if (_VecOps<_DataType, _S_size>::_S_complex_real_is_constprop_zero(__y))
+            {
+              if (_Flags._M_conforming_to_STDC_annex_G())
+                _M_data = _VO::_S_addsub(_DataType(), _VO::_S_dup_odd(__y)
+                                           * _VO::_S_swap_neighbors(__x));
+              else
+                _M_data = _VO::_S_dup_odd(__y)
+                            * _VO::_S_complex_negate_real(_VO::_S_swap_neighbors(__x));
+            }
+          else if (_VecOps<_DataType, _S_size>::_S_complex_real_is_constprop_zero(__x))
+            {
+              if (_Flags._M_conforming_to_STDC_annex_G())
+                _M_data = _VO::_S_addsub(_DataType(), _VO::_S_dup_odd(__x)
+                                           * _VO::_S_swap_neighbors(__y));
+              else
+                _M_data = _VO::_S_dup_odd(__x)
+                            * _VO::_S_complex_negate_real(_VO::_S_swap_neighbors(__y));
+            }
+          else
+            {
+#if _GLIBCXX_SIMD_HAVE_SSE
+              if (_Flags._M_have_fma() and not __builtin_is_constant_evaluated()
+                    and not (__builtin_constant_p(__x) and __builtin_constant_p(__y)))
+                {
+                  if constexpr (_Flags._M_have_fma())
+                    _M_data = __x86_complex_multiplies(__x, __y);
+                }
+              else
+#endif
+                _M_data = _VO::_S_addsub(_VO::_S_dup_even(__x) * __y,
+                                         _VO::_S_dup_odd(__x) * _VO::_S_swap_neighbors(__y));
+              mask_type __nan = _M_isnan();
+              if (_Flags._M_conforming_to_STDC_annex_G() and __nan._M_any_of()) [[unlikely]]
+                _M_data = __cx_redo_mul<typename _CxVec::value_type>(_M_data, __x, __y, __nan,
+                                                                     _S_size);
+            }
+        }
 
       template <typename _Vp>
         [[__gnu__::__always_inline__]]
@@ -2905,6 +3013,20 @@ namespace std::simd
                    _DataType1::template _S_static_permute<_Size, _Offset + _N0>(__x, __idxmap));
         }
 
+      [[__gnu__::__always_inline__]]
+      constexpr basic_vec
+      _M_complex_conj() const
+      { return _S_init(_M_data0._M_complex_conj(), _M_data1._M_complex_conj()); }
+
+      template <typename _CxVec, _TargetTraits _Flags = {}>
+        [[__gnu__::__always_inline__]]
+        constexpr void
+        _M_complex_multiply_with(const basic_vec& __yvec)
+        {
+          _M_data0.template _M_complex_multiply_with<_CxVec>(__yvec._M_data0);
+          _M_data1.template _M_complex_multiply_with<_CxVec>(__yvec._M_data1);
+        }
+
       template <typename _Vp>
         [[__gnu__::__always_inline__]]
         constexpr auto
@@ -3289,6 +3411,15 @@ namespace std::simd
 
       static constexpr bool _S_is_partial = sizeof(_M_data) > sizeof(_Tp) * _S_size;
 
+      [[__gnu__::__always_inline__]]
+      static constexpr basic_vec
+      _S_init(const _TSimd& __x)
+      {
+        basic_vec __r;
+        __r._M_data = __x;
+        return __r;
+      }
+
     public:
       using value_type = _Tp;
 
@@ -3480,7 +3611,7 @@ namespace std::simd
       [[__gnu__::__always_inline__]]
       constexpr mask_type
       operator!() const noexcept requires requires(value_type __a) { !__a; }
-      { return mask_type::_S_and_neighbors(!_M_data); }
+      { return _S_init(!_M_data); }
 
       [[__gnu__::__always_inline__]]
       constexpr basic_vec
@@ -3497,45 +3628,40 @@ namespace std::simd
       }
 
       // [simd.cassign] compound assignment -----------------------------------
-#define _GLIBCXX_SIMD_DEFINE_OP(sym)                                 \
-      [[__gnu__::__always_inline__]]                                 \
-      friend constexpr basic_vec&                                    \
-      operator sym##=(basic_vec& __x, const basic_vec& __y) noexcept \
-      requires requires(value_type __a) { __a sym __a; }             \
-      {                                                              \
-        __x._M_data sym##= __y._M_data;                              \
-        return __x;                                                  \
-      }
-
-      _GLIBCXX_SIMD_DEFINE_OP(+)
-      _GLIBCXX_SIMD_DEFINE_OP(-)
-      _GLIBCXX_SIMD_DEFINE_OP(*)
-      _GLIBCXX_SIMD_DEFINE_OP(/)
-      _GLIBCXX_SIMD_DEFINE_OP(%)
-      _GLIBCXX_SIMD_DEFINE_OP(&)
-      _GLIBCXX_SIMD_DEFINE_OP(|)
-      _GLIBCXX_SIMD_DEFINE_OP(^)
-      _GLIBCXX_SIMD_DEFINE_OP(<<)
-      _GLIBCXX_SIMD_DEFINE_OP(>>)
-
-#undef _GLIBCXX_SIMD_DEFINE_OP
-
       [[__gnu__::__always_inline__]]
       friend constexpr basic_vec&
-      operator<<=(basic_vec& __x, __simd_size_type __y) noexcept
-      requires requires(value_type __a, __simd_size_type __b) { __a << __b; }
+      operator+=(basic_vec& __x, const basic_vec& __y) noexcept
+      requires requires(value_type __a) { __a + __a; }
       {
-        __x._M_data <<= __y;
+        __x._M_data += __y._M_data;
         return __x;
       }
 
       [[__gnu__::__always_inline__]]
       friend constexpr basic_vec&
-      operator>>=(basic_vec& __x, __simd_size_type __y) noexcept
-      requires requires(value_type __a, __simd_size_type __b) { __a >> __b; }
+      operator-=(basic_vec& __x, const basic_vec& __y) noexcept
+      requires requires(value_type __a) { __a - __a; }
       {
-        __x._M_data >>= __y;
+        __x._M_data -= __y._M_data;
         return __x;
+      }
+
+      [[__gnu__::__always_inline__]]
+      friend constexpr basic_vec&
+      operator*=(basic_vec& __x, const basic_vec& __y) noexcept
+      requires requires(value_type __a) { __a * __a; }
+      {
+        __x._M_data.template _M_complex_multiply_with<basic_vec>(__y._M_data);
+        return __x;
+      }
+
+      template <int _RemoveMe = 0>
+      [[__gnu__::__always_inline__]]
+      friend constexpr basic_vec&
+      operator/=(basic_vec& __x, const basic_vec& __y) noexcept
+      requires requires(value_type __a) { __a / __a; }
+      {
+        static_assert(false, "TODO");
       }
 
       // [simd.comparison] compare operators ----------------------------------
@@ -3547,33 +3673,7 @@ namespace std::simd
       [[__gnu__::__always_inline__]]
       friend constexpr mask_type
       operator!=(const basic_vec& __x, const basic_vec& __y) noexcept
-      {
-        return __x._M_data != __y._M_data;
-      }
-
-      [[__gnu__::__always_inline__]]
-      friend constexpr mask_type
-      operator<(const basic_vec& __x, const basic_vec& __y) noexcept
-      {
-        return __x._M_data < __y._M_data;
-      }
-
-      [[__gnu__::__always_inline__]]
-      friend constexpr mask_type
-      operator<=(const basic_vec& __x, const basic_vec& __y) noexcept
-      {
-        return __x._M_data <= __y._M_data;
-      }
-
-      [[__gnu__::__always_inline__]]
-      friend constexpr mask_type
-      operator>(const basic_vec& __x, const basic_vec& __y) noexcept
-      { return __y < __x; }
-
-      [[__gnu__::__always_inline__]]
-      friend constexpr mask_type
-      operator>=(const basic_vec& __x, const basic_vec& __y) noexcept
-      { return __y <= __x; }
+      { return mask_type::_S_or_neighbors(__x._M_data != __y._M_data); }
 
       // [simd.complex.access] complex-value accessors ------------------------
       // LWG4230: returns _RealSimd instead of auto
