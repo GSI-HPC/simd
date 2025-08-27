@@ -531,6 +531,29 @@ namespace std::simd
             }
         }
 
+      template <typename _A0, typename... _As>
+        [[__gnu__::__always_inline__]]
+        constexpr void
+        _M_assign_from(auto _Offset, const basic_vec<value_type, _A0>& __x0,
+                       const basic_vec<value_type, _As>&... __xs)
+        {
+          if constexpr (_Offset.value >= _A0::_S_size)
+            // make the pack as small as possible
+            _M_assign_from(integral_constant<int, _Offset.value - _A0::_S_size>(), __xs...);
+          else if constexpr (_A0::_S_size >= _S_size + _Offset.value)
+            {
+              if constexpr (_S_size == 1)
+                _M_data = __x0[_Offset];
+              else
+                _M_data = _VecOps<_DataType>::_S_extract(__x0._M_concat_data(), _Offset);
+            }
+          else
+            _M_data = _VecOps<_DataType>::_S_extract(
+                        __vec_concat_sized<__x0.size(), __xs.size()...>(__x0._M_concat_data(),
+                                                                        __xs._M_concat_data()...),
+                        _Offset);
+        }
+
       template <typename _A0>
         [[__gnu__::__always_inline__]]
         static constexpr basic_vec
@@ -1369,6 +1392,62 @@ namespace std::simd
                        _Rest([&](int __i) { return (*this)[__i + __n * _Vp::_S_size]; })
                      };
             });
+        }
+
+      template <typename _A0, typename... _As>
+        [[__gnu__::__always_inline__]]
+        constexpr void
+        _M_assign_from(auto _Offset, const basic_vec<value_type, _A0>& __x0,
+                       const basic_vec<value_type, _As>&... __xs)
+        {
+          if constexpr (_Offset.value >= _A0::_S_size)
+            // make the pack as small as possible
+            _M_assign_from(integral_constant<int, _Offset.value - _A0::_S_size>(), __xs...);
+          else
+            {
+              _M_data0._M_assign_from(_Offset, __x0, __xs...);
+              _M_data1._M_assign_from(integral_constant<int, _Offset + _DataType0::size>(),
+                                      __x0, __xs...);
+            }
+        }
+
+      template <typename _A0>
+        [[__gnu__::__always_inline__]]
+        static constexpr basic_vec
+        _S_concat(const basic_vec<value_type, _A0>& __x0) noexcept
+        { return basic_vec(__x0); }
+
+      template <typename _A0, typename... _As>
+        [[__gnu__::__always_inline__]]
+        static constexpr basic_vec
+        _S_concat(const basic_vec<value_type, _A0>& __x0,
+                  const basic_vec<value_type, _As>&... __xs) noexcept
+        {
+          if constexpr (is_same_v<basic_vec<value_type, _A0>, _DataType0>)
+            return _S_init(__x0, _DataType1::_S_concat(__xs...));
+          else if (__builtin_is_constant_evaluated()
+                     or (__x0._M_is_constprop() and ... and __xs._M_is_constprop()))
+            {
+              basic_vec __r;
+              __r._M_data0.template _M_assign_from(integral_constant<int, 0>(), __x0, __xs...);
+              __r._M_data1.template _M_assign_from(_DataType0::size, __x0, __xs...);
+              return __r;
+            }
+          else
+            {
+              basic_vec __r = {};
+              byte* __dst = reinterpret_cast<byte*>(&__r);
+              constexpr size_t __nbytes0 = sizeof(value_type) * _A0::_S_size;
+              __builtin_memcpy(__dst, &__x0, _A0::_S_nreg == 1 ? sizeof(__x0) : __nbytes0);
+              __dst += sizeof(value_type) * _A0::_S_size;
+              template for (const auto& __x : {__xs...})
+                {
+                  constexpr size_t __nbytes = sizeof(value_type) * __x.size.value;
+                  __builtin_memcpy(__dst, &__x, __nbytes);
+                  __dst += __nbytes;
+                }
+              return __r;
+            }
         }
 
       [[__gnu__::__always_inline__]]
