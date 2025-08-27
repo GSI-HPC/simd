@@ -251,7 +251,7 @@ namespace std::simd
    *
    * Works around GCC failing to use the F16C/AVX512F cvtps2ph/cvtph2ps instructions.
    */
-  template <__vec_builtin _UV, __vec_builtin _TV, _ArchFlags _Flags = {}>
+  template <__vec_builtin _UV, __vec_builtin _TV, _ArchTraits _Traits = {}>
     [[__gnu__::__always_inline__]]
     constexpr _UV
     __vec_cast(_TV __v)
@@ -260,7 +260,7 @@ namespace std::simd
 #if _GLIBCXX_SIMD_HAVE_SSE
       constexpr bool __to_f16 = is_same_v<__vec_value_type<_UV>, _Float16>;
       constexpr bool __from_f16 = is_same_v<__vec_value_type<_TV>, _Float16>;
-      constexpr bool __needs_f16c = _Flags._M_have_f16c() and not _Flags._M_have_avx512fp16()
+      constexpr bool __needs_f16c = _Traits._M_have_f16c() and not _Traits._M_have_avx512fp16()
                                       and (__to_f16 or __from_f16);
       if (__needs_f16c and not __builtin_is_constant_evaluated() and not __builtin_constant_p(__v))
         { // Work around PR121688
@@ -584,12 +584,12 @@ namespace std::simd
 
       // True iff all elements at even indexes are zero. This includes signed zeros only when
       // -fno-signed-zeros is in effect.
-      template <_OptFlags _Flags = {}>
+      template <_OptTraits _Traits = {}>
         [[__gnu__::__always_inline__]]
       static constexpr bool
         _S_complex_real_is_constprop_zero(_TV __x)
         {
-          if constexpr (_Flags._M_conforming_to_STDC_annex_G())
+          if constexpr (_Traits._M_conforming_to_STDC_annex_G())
             {
               using _Up = _UInt<sizeof(_Tp)>;
               return (((_Is & 1) == 1 or __is_constprop_equal_to(__builtin_bit_cast(_Up, __x[_Is]),
@@ -616,12 +616,12 @@ namespace std::simd
 
       // True iff all elements at odd indexes are zero. This includes signed zeros only when
       // -fno-signed-zeros is in effect.
-      template <_OptFlags _Flags = {}>
+      template <_OptTraits _Traits = {}>
         [[__gnu__::__always_inline__]]
         static constexpr bool
         _S_complex_imag_is_constprop_zero(_TV __x)
         {
-          if constexpr (_Flags._M_conforming_to_STDC_annex_G())
+          if constexpr (_Traits._M_conforming_to_STDC_annex_G())
             {
               using _Up = _UInt<sizeof(_Tp)>;
               return (((_Is & 1) == 0 or __is_constprop_equal_to(__builtin_bit_cast(_Up, __x[_Is]),

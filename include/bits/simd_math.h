@@ -298,7 +298,7 @@ namespace std::simd
 #define _GLIBCXX_SIMD_MATH_CALL(fn)                                                                \
   _GLIBCXX_SIMD_MATH_IMPL(fn)                                                                      \
                                                                                                    \
-  template<__math_floating_point _Vp, _ArchFlags _Flags = {}>                                      \
+  template<__math_floating_point _Vp, _ArchTraits _Traits = {}>                                    \
     [[__gnu__::__always_inline__]]                                                                 \
     constexpr __deduced_vec_t<_Vp>                                                                 \
     fn(const _Vp& __x)                                                                             \
@@ -311,7 +311,7 @@ namespace std::simd
                });                                                                                 \
       else if constexpr (_Vp::size() == 1)                                                         \
         return std::fn(__x[0]);                                                                    \
-      else if constexpr (_Flags.template _M_eval_as_f32<typename _Vp::value_type>())               \
+      else if constexpr (_Traits.template _M_eval_as_f32<typename _Vp::value_type>())              \
         return _Vp(fn(rebind_t<float, _Vp>(__x)));                                                 \
       else if constexpr (_Vp::abi_type::_S_nreg == 1)                                              \
         return __##fn(__x._M_get());                                                               \

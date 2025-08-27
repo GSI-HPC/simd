@@ -684,7 +684,7 @@ namespace std::simd
   { return true; }
 #endif
 
-  struct _OptFlags
+  struct _OptTraits
   {
     consteval bool
     _M_test(int __bit) const
@@ -782,7 +782,7 @@ namespace std::simd
 
 #if _GLIBCXX_SIMD_HAVE_NEON or _GLIBCXX_SIMD_HAVE_SVE
 
-  struct _ArchFlags
+  struct _ArchTraits
   {
     __UINT64_TYPE__ _M_flags = (_GLIBCXX_SIMD_HAVE_NEON << 0)
                           | (_GLIBCXX_SIMD_HAVE_NEON_A32 << 1)
@@ -817,7 +817,7 @@ namespace std::simd
 
 #elif __powerpc__
 
-  struct _ArchFlags
+  struct _ArchTraits
   {
     __UINT64_TYPE__ _M_flags = 0
 #ifdef _ARCH_PWR10
@@ -856,7 +856,7 @@ namespace std::simd
 
 #elif _GLIBCXX_SIMD_HAVE_SSE
 
-  struct _ArchFlags
+  struct _ArchTraits
   {
     __UINT64_TYPE__ _M_flags = (_GLIBCXX_SIMD_HAVE_MMX << 0)
                           | (_GLIBCXX_SIMD_HAVE_SSE << 1)
@@ -1029,7 +1029,7 @@ namespace std::simd
       { return is_same_v<_Tp, _Float16> and not _M_have_avx512fp16(); }
   };
 
-  template <typename _Tp, _ArchFlags _Flags = {}>
+  template <typename _Tp, _ArchTraits _Traits = {}>
     consteval auto
     __native_abi()
     {
@@ -1045,19 +1045,19 @@ namespace std::simd
             return _Abi<__underlying._S_size / 2, 1,
                         __flags_or(__underlying._S_variant, _AbiVariant::_CxIleav)>();
         }
-      else if constexpr (_Flags._M_have_avx512fp16())
+      else if constexpr (_Traits._M_have_avx512fp16())
         return _Abi<64 / sizeof(_Tp), 1, _AbiVariant::_BitMask>();
-      else if constexpr (_Flags._M_have_avx512f())
+      else if constexpr (_Traits._M_have_avx512f())
         return _Abi<64 / __adj_sizeof, 1, _AbiVariant::_BitMask>();
-      else if constexpr (is_same_v<_Tp, _Float16> and not _Flags._M_have_f16c())
+      else if constexpr (is_same_v<_Tp, _Float16> and not _Traits._M_have_f16c())
         return _ScalarAbi<1>();
-      else if constexpr (_Flags._M_have_avx2())
+      else if constexpr (_Traits._M_have_avx2())
         return _Abi<32 / __adj_sizeof, 1, _AbiVariant::_VecMask>();
-      else if constexpr (_Flags._M_have_avx() and is_floating_point_v<_Tp>)
+      else if constexpr (_Traits._M_have_avx() and is_floating_point_v<_Tp>)
         return _Abi<32 / __adj_sizeof, 1, _AbiVariant::_VecMask>();
-      else if constexpr (_Flags._M_have_sse2())
+      else if constexpr (_Traits._M_have_sse2())
         return _Abi<16 / __adj_sizeof, 1, _AbiVariant::_VecMask>();
-      else if constexpr (_Flags._M_have_sse() and is_floating_point_v<_Tp>
+      else if constexpr (_Traits._M_have_sse() and is_floating_point_v<_Tp>
                            and sizeof(_Tp) == sizeof(float))
         return _Abi<16 / __adj_sizeof, 1, _AbiVariant::_VecMask>();
       else
@@ -1068,7 +1068,7 @@ namespace std::simd
 
   // scalar fallback
   // TODO: add more targets
-  struct _ArchFlags
+  struct _ArchTraits
   {
     __UINT64_TYPE__ _M_flags = 0;
 
@@ -1094,7 +1094,7 @@ namespace std::simd
    * always_inline (to avoid issues when linking code compiled with different compiler flags).
    */
   struct _TargetTraits
-  : _ArchFlags, _OptFlags
+  : _ArchTraits, _OptTraits
   {};
 
   // [simd.expos.abi]
@@ -1118,7 +1118,7 @@ namespace std::simd
     using __deduce_abi_t = decltype(__deduce_abi<_Tp, _Np>());
 
   // rebind for basic_vec, and basic_mask where we know the destination value-type
-  template <typename _Tp, int _Np, __abi_tag _A0, _ArchFlags = {}>
+  template <typename _Tp, int _Np, __abi_tag _A0, _ArchTraits = {}>
     consteval auto
     __abi_rebind()
     {
@@ -1162,7 +1162,7 @@ namespace std::simd
   // '2x vector(2) long long'.
   // That's why this overload has the additional _IsOnlyResize parameter, which tells us that the
   // value-type doesn't change.
-  template <size_t _Bytes, int _Np, __abi_tag _A0, bool _IsOnlyResize, _ArchFlags _Flags = {}>
+  template <size_t _Bytes, int _Np, __abi_tag _A0, bool _IsOnlyResize, _ArchTraits _Traits = {}>
     consteval auto
     __abi_rebind()
     {
@@ -1200,7 +1200,7 @@ namespace std::simd
       // We determine whether _A0 identifies an AVX vector by looking at the size of a native
       // register. If it's 32, it's a YMM register, otherwise it's 16 or less.
       else if constexpr (_IsOnlyResize
-                           and _Flags._M_have_avx() and not _Flags._M_have_avx2()
+                           and _Traits._M_have_avx() and not _Traits._M_have_avx2()
                            and __bit_ceil(__div_ceil<unsigned>(
                                             _A0::_S_size, _A0::_S_nreg)) * _Bytes == 32)
         {
@@ -1208,7 +1208,7 @@ namespace std::simd
             return __abi_rebind<double, _Np, _A0>();
           else if constexpr (_Bytes == sizeof(float))
             return __abi_rebind<float, _Np, _A0>();
-          else if constexpr (_Flags._M_have_f16c() and _Bytes == sizeof(_Float16))
+          else if constexpr (_Traits._M_have_f16c() and _Bytes == sizeof(_Float16))
             return __abi_rebind<_Float16, _Np, _A0>();
           else // impossible
             static_assert(false);
@@ -1381,7 +1381,7 @@ namespace std::simd
 
   struct __convert_flag;
 
-  template <typename _From, typename _To, typename... _Flags>
+  template <typename _From, typename _To, typename... _Traits>
     concept __loadstore_convertible_to
       = same_as<_From, _To>
           or (__vectorizable<_From> and __vectorizable<_To>
@@ -1391,7 +1391,7 @@ namespace std::simd
 #else
                        or (std::convertible_to<_From, _To>
 #endif
-                             and (std::same_as<_Flags, __convert_flag> or ...))));
+                             and (std::same_as<_Traits, __convert_flag> or ...))));
 
   template <typename _From, typename _To>
     concept __simd_generator_convertible_to

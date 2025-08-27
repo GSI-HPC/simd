@@ -42,13 +42,13 @@ namespace std::simd
     return __builtin_ia32_movmskpd256(__vec_bit_cast<double>(__x));
   }
 
-  template <_ArchFlags _Flags = {}>
+  template <_ArchTraits _Traits = {}>
     [[__gnu__::__always_inline__]]
     inline int
     __x86_movmsk(__vec_builtin_type_bytes<__integer_from<4>, 8> __x)
     {
 #if __has_builtin(__builtin_ia32_pext_di)
-      if constexpr (_Flags._M_have_bmi2())
+      if constexpr (_Traits._M_have_bmi2())
         return __builtin_ia32_pext_di(__builtin_bit_cast(unsigned long long, __x),
                                       0x80000000'80000000ULL);
 #else
@@ -66,7 +66,7 @@ namespace std::simd
   __x86_movmsk(__vec_builtin_type_bytes<__integer_from<4>, 32> __x)
   { return __builtin_ia32_movmskps256(__vec_bit_cast<float>(__x)); }
 
-  template <__vec_builtin _TV, auto _Flags = _ArchFlags()>
+  template <__vec_builtin _TV, auto _Traits = _ArchTraits()>
     requires (sizeof(__vec_value_type<_TV>) <= 2)
     [[__gnu__::__always_inline__]]
     inline int
@@ -80,7 +80,7 @@ namespace std::simd
       else if constexpr (sizeof(__x) == 8)
         {
 #if __has_builtin(__builtin_ia32_pext_di)
-          if constexpr (_Flags._M_have_bmi2())
+          if constexpr (_Traits._M_have_bmi2())
             return __builtin_ia32_pext_di(__builtin_bit_cast(unsigned long long, __x),
                                           0x8080'8080'8080'8080ULL);
 #endif
@@ -89,7 +89,7 @@ namespace std::simd
       else if constexpr (sizeof(__x) == 4)
         {
 #if __has_builtin(__builtin_ia32_pext_si)
-          if constexpr (_Flags._M_have_bmi2())
+          if constexpr (_Traits._M_have_bmi2())
             return __builtin_ia32_pext_si(__builtin_bit_cast(unsigned int, __x), 0x80808080u);
 #endif
           return __x86_movmsk(__vec_zero_pad_to_16(__x));
@@ -98,7 +98,7 @@ namespace std::simd
         {
           auto __bits = __builtin_bit_cast(unsigned short, __x);
 #if __has_builtin(__builtin_ia32_pext_si)
-          if constexpr (_Flags._M_have_bmi2())
+          if constexpr (_Traits._M_have_bmi2())
             return __builtin_ia32_pext_si(__bits, 0x00008080u);
 #endif
           return ((__bits >> 7) & 1) | ((__bits & 0x8000) >> 14);
@@ -107,7 +107,7 @@ namespace std::simd
         static_assert(false);
     }
 
-  template <__vec_builtin _TV, _ArchFlags _Flags = {}>
+  template <__vec_builtin _TV, _ArchTraits _Traits = {}>
     [[__gnu__::__always_inline__]]
     inline bool
     __x86_vec_is_zero(_TV __a)
@@ -116,7 +116,7 @@ namespace std::simd
       static_assert(is_integral_v<_Tp>);
       if constexpr (sizeof(_TV) <= __x86_max_general_register_size)
         return __builtin_bit_cast(__integer_from<sizeof(_TV)>, __a) == 0;
-      else if constexpr (_Flags._M_have_avx())
+      else if constexpr (_Traits._M_have_avx())
         {
           if constexpr (sizeof(_TV) == 32)
             return __builtin_ia32_ptestz256(__vec_bit_cast<long long>(__a),
@@ -129,7 +129,7 @@ namespace std::simd
           else
             static_assert(false);
         }
-      else if constexpr (_Flags._M_have_sse4_1())
+      else if constexpr (_Traits._M_have_sse4_1())
         {
           if constexpr (sizeof(_TV) == 16)
             return __builtin_ia32_ptestz128(__vec_bit_cast<long long>(__a),
@@ -143,13 +143,13 @@ namespace std::simd
         return __x86_movmsk(__a) == 0;
     }
 
-  template <__vec_builtin _TV, _ArchFlags _Flags = {}>
+  template <__vec_builtin _TV, _ArchTraits _Traits = {}>
     [[__gnu__::__always_inline__]]
     inline int
     __x86_vec_testz(_TV __a, _TV __b)
     {
       static_assert(sizeof(_TV) == 16 or sizeof(_TV) == 32);
-      static_assert(_Flags._M_have_sse4_1());
+      static_assert(_Traits._M_have_sse4_1());
       if constexpr (sizeof(_TV) == 32)
         return __builtin_ia32_ptestz256(__vec_bit_cast<long long>(__a),
                                         __vec_bit_cast<long long>(__b));
@@ -158,13 +158,13 @@ namespace std::simd
                                         __vec_bit_cast<long long>(__b));
     }
 
-  template <__vec_builtin _TV, _ArchFlags _Flags = {}>
+  template <__vec_builtin _TV, _ArchTraits _Traits = {}>
     [[__gnu__::__always_inline__]]
     inline int
     __x86_vec_testc(_TV __a, _TV __b)
     {
       static_assert(sizeof(_TV) == 16 or sizeof(_TV) == 32);
-      static_assert(_Flags._M_have_sse4_1());
+      static_assert(_Traits._M_have_sse4_1());
       if constexpr (sizeof(_TV) == 32)
         return __builtin_ia32_ptestc256(__vec_bit_cast<long long>(__a),
                                         __vec_bit_cast<long long>(__b));
@@ -173,7 +173,7 @@ namespace std::simd
                                         __vec_bit_cast<long long>(__b));
     }
 
-  template <int _Np, __vec_builtin _TV, _ArchFlags _Flags = {}>
+  template <int _Np, __vec_builtin _TV, _ArchTraits _Traits = {}>
     [[__gnu__::__always_inline__]]
     inline bool
     __x86_vecmask_all(_TV __k)
@@ -189,7 +189,7 @@ namespace std::simd
               using _Ip = __integer_from<sizeof(__k)>;
               return __builtin_bit_cast(_Ip, __k) == ~_Ip();
             }
-          else if constexpr (not _Flags._M_have_sse4_1())
+          else if constexpr (not _Traits._M_have_sse4_1())
             {
               constexpr int __valid_bits = (1 << (sizeof(_Tp) == 2 ? _Np * 2 : _Np)) - 1;
               return __x86_movmsk(__k) == __valid_bits;
@@ -205,7 +205,7 @@ namespace std::simd
           constexpr _Ip __valid_bits = (_Ip(1) << (_Np * sizeof(_Tp) * __CHAR_BIT__)) - 1;
           return (__builtin_bit_cast(_Ip, __k) & __valid_bits) == __valid_bits;
         }
-      else if constexpr (not _Flags._M_have_sse4_1())
+      else if constexpr (not _Traits._M_have_sse4_1())
         {
           constexpr int __valid_bits = (1 << (sizeof(_Tp) == 2 ? _Np * 2 : _Np)) - 1;
           return (__x86_movmsk(__k) & __valid_bits) == __valid_bits;
@@ -216,7 +216,7 @@ namespace std::simd
         return 0 != __x86_vec_testc(__k, _S_vec_implicit_mask<_Np, _TV>);
     }
 
-  template <int _Np, __vec_builtin _TV, _ArchFlags _Flags = {}>
+  template <int _Np, __vec_builtin _TV, _ArchTraits _Traits = {}>
     [[__gnu__::__always_inline__]]
     inline bool
     __x86_vecmask_any(_TV __k)
@@ -233,7 +233,7 @@ namespace std::simd
           constexpr _Ip __valid_bits = (_Ip(1) << (_Np * sizeof(_Tp) * __CHAR_BIT__)) - 1;
           return (__builtin_bit_cast(_Ip, __k) & __valid_bits) != _Ip();
         }
-      else if constexpr (not _Flags._M_have_sse4_1())
+      else if constexpr (not _Traits._M_have_sse4_1())
         {
           constexpr int __valid_bits = (1 << (sizeof(_Tp) == 2 ? _Np * 2 : _Np)) - 1;
           return (__x86_movmsk(__k) & __valid_bits) != 0;
@@ -244,7 +244,7 @@ namespace std::simd
         return 0 == __x86_vec_testz(__k, _S_vec_implicit_mask<_Np, _TV>);
     }
 
-  template <int _Np, __vec_builtin _TV, _ArchFlags _Flags = {}>
+  template <int _Np, __vec_builtin _TV, _ArchTraits _Traits = {}>
     [[__gnu__::__always_inline__]]
     inline bool
     __x86_vecmask_none(_TV __k)
@@ -261,7 +261,7 @@ namespace std::simd
           constexpr _Ip __valid_bits = (_Ip(1) << (_Np * sizeof(_Tp) * __CHAR_BIT__)) - 1;
           return (__builtin_bit_cast(_Ip, __k) & __valid_bits) == _Ip();
         }
-      else if constexpr (not _Flags._M_have_sse4_1())
+      else if constexpr (not _Traits._M_have_sse4_1())
         {
           constexpr int __valid_bits = (1 << (sizeof(_Tp) == 2 ? _Np * 2 : _Np)) - 1;
           return (__x86_movmsk(__k) & __valid_bits) == 0;
@@ -283,7 +283,7 @@ namespace std::simd
     _Nle = 6,
   };
 
-  template <_X86Cmp _Cmp, __vec_builtin _TV, _ArchFlags _Flags = {}>
+  template <_X86Cmp _Cmp, __vec_builtin _TV, _ArchTraits _Traits = {}>
     requires is_floating_point_v<__vec_value_type<_TV>>
     [[__gnu__::__always_inline__]]
     inline auto
@@ -305,13 +305,13 @@ namespace std::simd
         return __builtin_ia32_cmpps128_mask(__x, __y, __c, -1);
       else if constexpr (is_same_v<_Tp, _Float16>)
         {
-          if constexpr (sizeof(_TV) == 64 and _Flags._M_have_avx512fp16())
+          if constexpr (sizeof(_TV) == 64 and _Traits._M_have_avx512fp16())
             return __builtin_ia32_cmpph512_mask(__x, __y, __c, -1);
-          else if constexpr (sizeof(_TV) == 32 and _Flags._M_have_avx512fp16())
+          else if constexpr (sizeof(_TV) == 32 and _Traits._M_have_avx512fp16())
             return __builtin_ia32_cmpph256_mask(__x, __y, __c, -1);
-          else if constexpr (sizeof(_TV) == 16 and _Flags._M_have_avx512fp16())
+          else if constexpr (sizeof(_TV) == 16 and _Traits._M_have_avx512fp16())
             return __builtin_ia32_cmpph128_mask(__x, __y, __c, -1);
-          else if constexpr (sizeof(_TV) < 16 and _Flags._M_have_avx512fp16())
+          else if constexpr (sizeof(_TV) < 16 and _Traits._M_have_avx512fp16())
             return __x86_bitmask_cmp<_Cmp>(__vec_zero_pad_to_16(__x), __vec_zero_pad_to_16(__y));
           else
             {
@@ -336,7 +336,7 @@ namespace std::simd
             return __integer_from<sizeof(_Tp)>();
         }());
 
-  template <_X86Cmp _Cmp, __vec_builtin _TV, _ArchFlags _Flags = {}>
+  template <_X86Cmp _Cmp, __vec_builtin _TV, _ArchTraits _Traits = {}>
     requires is_integral_v<__vec_value_type<_TV>>
     [[__gnu__::__always_inline__]]
     inline auto
@@ -410,12 +410,12 @@ namespace std::simd
         }
     }
 
-  template <__vec_builtin _TV, _ArchFlags _Flags = {}>
+  template <__vec_builtin _TV, _ArchTraits _Traits = {}>
     [[__gnu__::__always_inline__]]
     inline auto
     __x86_bitmask_isinf(_TV __x)
     {
-      static_assert(_Flags._M_have_avx512dq());
+      static_assert(_Traits._M_have_avx512dq());
       using _Tp = __vec_value_type<_TV>;
       static_assert(is_floating_point_v<_Tp>);
       if constexpr (sizeof(_TV) == 64 and sizeof(_Tp) == 8)
@@ -430,13 +430,13 @@ namespace std::simd
         return __builtin_ia32_fpclassps256_mask(__x, 0x18, -1);
       else if constexpr (sizeof(_TV) == 16 and sizeof(_Tp) == 4)
         return __builtin_ia32_fpclassps128_mask(__x, 0x18, -1);
-      else if constexpr (sizeof(_TV) == 64 and sizeof(_Tp) == 2 and _Flags._M_have_avx512fp16())
+      else if constexpr (sizeof(_TV) == 64 and sizeof(_Tp) == 2 and _Traits._M_have_avx512fp16())
         return __builtin_ia32_fpclassph512_mask(__x, 0x18, -1);
-      else if constexpr (sizeof(_TV) == 32 and sizeof(_Tp) == 2 and _Flags._M_have_avx512fp16())
+      else if constexpr (sizeof(_TV) == 32 and sizeof(_Tp) == 2 and _Traits._M_have_avx512fp16())
         return __builtin_ia32_fpclassph256_mask(__x, 0x18, -1);
-      else if constexpr (sizeof(_TV) == 16 and sizeof(_Tp) == 2 and _Flags._M_have_avx512fp16())
+      else if constexpr (sizeof(_TV) == 16 and sizeof(_Tp) == 2 and _Traits._M_have_avx512fp16())
         return __builtin_ia32_fpclassph128_mask(__x, 0x18, -1);
-      else if constexpr (sizeof(_Tp) == 2 and not _Flags._M_have_avx512fp16())
+      else if constexpr (sizeof(_Tp) == 2 and not _Traits._M_have_avx512fp16())
         return __x86_bitmask_isinf(__vec_cast<float>(__x));
       else if constexpr (sizeof(_TV) < 16)
         return __x86_bitmask_isinf(__vec_zero_pad_to_16(__x));
@@ -444,7 +444,7 @@ namespace std::simd
         static_assert(false);
     }
 
-  template <__vec_builtin _KV, _ArchFlags _Flags = {}>
+  template <__vec_builtin _KV, _ArchTraits _Traits = {}>
     [[__gnu__::__always_inline__]]
     inline _KV
     __x86_bit_to_vecmask(std::integral auto __bits)
@@ -489,7 +489,7 @@ namespace std::simd
         static_assert(false);
     }
 
-  template <unsigned_integral _Kp, __vec_builtin _TV, _ArchFlags _Flags = {}>
+  template <unsigned_integral _Kp, __vec_builtin _TV, _ArchTraits _Traits = {}>
     requires is_integral_v<__vec_value_type<_TV>>
     [[__gnu__::__always_inline__]]
     constexpr inline _TV
@@ -527,7 +527,7 @@ namespace std::simd
         static_assert(false);
     }
 
-  template <unsigned_integral _Kp, __vec_builtin _TV, _ArchFlags _Flags = {}>
+  template <unsigned_integral _Kp, __vec_builtin _TV, _ArchTraits _Traits = {}>
     requires is_floating_point_v<__vec_value_type<_TV>>
     [[__gnu__::__always_inline__]]
     constexpr inline _TV
@@ -558,14 +558,14 @@ namespace std::simd
         static_assert(false);
     }
 
-  template <int _OutputBits = 4, _ArchFlags _Flags = {}>
+  template <int _OutputBits = 4, _ArchTraits _Traits = {}>
     constexpr _UInt<1>
     __bit_extract_even(_UInt<1> __x)
     {
       static_assert(_OutputBits <= 4);
       constexpr _UInt<1> __mask = 0x55u >> ((4 - _OutputBits) * 2);
 #if __has_builtin(__builtin_ia32_pext_si)
-      if constexpr (_Flags._M_have_bmi2())
+      if constexpr (_Traits._M_have_bmi2())
         return __builtin_ia32_pext_si(__x, __mask);
 #endif
       __x &= __mask;
@@ -576,7 +576,7 @@ namespace std::simd
       return __x;
     }
 
-  template <int _OutputBits = 8, _ArchFlags _Flags = {}>
+  template <int _OutputBits = 8, _ArchTraits _Traits = {}>
     constexpr _UInt<1>
     __bit_extract_even(_UInt<2> __x)
     {
@@ -587,7 +587,7 @@ namespace std::simd
           static_assert(_OutputBits <= 8);
           constexpr _UInt<2> __mask = 0x5555u >> ((8 - _OutputBits) * 2);
 #if __has_builtin(__builtin_ia32_pext_si)
-          if constexpr (_Flags._M_have_bmi2())
+          if constexpr (_Traits._M_have_bmi2())
             return __builtin_ia32_pext_si(__x, __mask);
 #endif
           __x &= __mask;
@@ -600,7 +600,7 @@ namespace std::simd
         }
     }
 
-  template <int _OutputBits = 16, _ArchFlags _Flags = {}>
+  template <int _OutputBits = 16, _ArchTraits _Traits = {}>
     constexpr _UInt<_OutputBits <= 8 ? 1 : 2>
     __bit_extract_even(_UInt<4> __x)
     {
@@ -613,7 +613,7 @@ namespace std::simd
           static_assert(_OutputBits <= 16);
           constexpr _UInt<4> __mask = 0x5555'5555u >> ((16 - _OutputBits) * 2);
 #if __has_builtin(__builtin_ia32_pext_si)
-          if constexpr (_Flags._M_have_bmi2())
+          if constexpr (_Traits._M_have_bmi2())
             return __builtin_ia32_pext_si(__x, __mask);
 #endif
           __x &= __mask;
@@ -628,7 +628,7 @@ namespace std::simd
         }
     }
 
-  template <int _OutputBits = 32, _ArchFlags _Flags = {}>
+  template <int _OutputBits = 32, _ArchTraits _Traits = {}>
     constexpr _UInt<_OutputBits <= 8 ? 1 : _OutputBits <= 16 ? 2 : 4>
     __bit_extract_even(_UInt<8> __x)
     {
@@ -643,7 +643,7 @@ namespace std::simd
           static_assert(_OutputBits <= 32);
           constexpr _UInt<8> __mask = 0x5555'5555'5555'5555ull >> ((32 - _OutputBits) * 2);
 #if __has_builtin(__builtin_ia32_pext_si)
-          if constexpr (_Flags._M_have_bmi2())
+          if constexpr (_Traits._M_have_bmi2())
             {
 #if __has_builtin(__builtin_ia32_pext_di)
               return __builtin_ia32_pext_di(__x, __mask);
@@ -668,7 +668,7 @@ namespace std::simd
     }
 
   // input bits must be 0 for all bits > _InputBits
-  template <int _InputBits = 8, _ArchFlags _Flags = {}>
+  template <int _InputBits = 8, _ArchTraits _Traits = {}>
     constexpr _UInt<_InputBits <= 4 ? 1 : 2>
     __duplicate_each_bit(_UInt<1> __x)
     {
@@ -677,7 +677,7 @@ namespace std::simd
       if constexpr (_InputBits == 1)
         return __x * 3;
 #if __has_builtin(__builtin_ia32_pdep_si)
-      else if constexpr (_Flags._M_have_bmi2())
+      else if constexpr (_Traits._M_have_bmi2())
         return 3 * __builtin_ia32_pdep_si(__x, __mask);
 #endif
       else if constexpr (_InputBits == 2) // 0000'00BA
@@ -697,7 +697,7 @@ namespace std::simd
         }
     }
 
-  template <int _InputBits = 16, _ArchFlags _Flags = {}>
+  template <int _InputBits = 16, _ArchTraits _Traits = {}>
     constexpr _UInt<4>
     __duplicate_each_bit(_UInt<2> __x)
     {
@@ -708,7 +708,7 @@ namespace std::simd
           static_assert(_InputBits <= 16);
           constexpr _UInt<4> __mask = 0x5555'5555u >> ((16 - _InputBits) * 2);
 #if __has_builtin(__builtin_ia32_pdep_si)
-          if constexpr (_Flags._M_have_bmi2())
+          if constexpr (_Traits._M_have_bmi2())
             return 3 * __builtin_ia32_pdep_si(__x, __mask);
 #endif
           _UInt<4> __y = ((__x << 8) | __x) & 0x00FF00FFu;
@@ -720,7 +720,7 @@ namespace std::simd
         }
     }
 
-  template <int _InputBits = 32, _ArchFlags _Flags = {}>
+  template <int _InputBits = 32, _ArchTraits _Traits = {}>
     constexpr _UInt<8>
     __duplicate_each_bit(_UInt<4> __x)
     {
@@ -733,7 +733,7 @@ namespace std::simd
           static_assert(_InputBits <= 32);
           constexpr _UInt<8> __mask = 0x5555'5555'5555'5555u >> ((32 - _InputBits) * 2);
 #if __has_builtin(__builtin_ia32_pdep_si)
-          if constexpr (_Flags._M_have_bmi2())
+          if constexpr (_Traits._M_have_bmi2())
             {
 #if __has_builtin(__builtin_ia32_pdep_di)
               return 3 * __builtin_ia32_pdep_di(__x, __mask);
@@ -754,7 +754,7 @@ namespace std::simd
         }
     }
 
-  template <__vec_builtin _TV, _ArchFlags _Flags = {}>
+  template <__vec_builtin _TV, _ArchTraits _Traits = {}>
     [[__gnu__::__always_inline__]]
     inline _TV
     __x86_complex_multiplies(_TV __x, _TV __y)
@@ -762,10 +762,10 @@ namespace std::simd
       using _Tp = __vec_value_type<_TV>;
       using _VO = _VecOps<_TV>;
 
-      static_assert(_Flags._M_have_fma());
+      static_assert(_Traits._M_have_fma());
       static_assert(is_floating_point_v<_Tp>);
 
-      if constexpr (not _Flags._M_have_avx512fp16() and sizeof(_Tp) == 2)
+      if constexpr (not _Traits._M_have_avx512fp16() and sizeof(_Tp) == 2)
         return __vec_cast<_Tp>(__x86_complex_multiplies(__vec_cast<float>(__x),
                                                         __vec_cast<float>(__y)));
       else if constexpr (sizeof(_TV) < 16)

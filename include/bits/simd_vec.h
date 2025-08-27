@@ -44,11 +44,11 @@ namespace std::simd
     constexpr size_t alignment_v = alignment<_Tp, _Up>::value;
 
   // --- rebind ---
-  template <typename _Tp, typename _Vp, _ArchFlags _Traits = {}>
+  template <typename _Tp, typename _Vp, _ArchTraits _Traits = {}>
     struct rebind
     {};
 
-  template <__vectorizable _Tp, __simd_vec_type _Vp, _ArchFlags _Traits>
+  template <__vectorizable _Tp, __simd_vec_type _Vp, _ArchTraits _Traits>
     //requires requires { typename __deduce_abi_t<_Tp, _Vp::size()>; }
     struct rebind<_Tp, _Vp, _Traits>
     {
@@ -57,7 +57,7 @@ namespace std::simd
       using type = basic_vec<_Tp, _A1>;
     };
 
-  template <__vectorizable _Tp, __simd_mask_type _Mp, _ArchFlags _Traits>
+  template <__vectorizable _Tp, __simd_mask_type _Mp, _ArchTraits _Traits>
     //requires requires { typename __deduce_abi_t<_Tp, _Mp::size()>; }
     struct rebind<_Tp, _Mp, _Traits>
     {
@@ -70,11 +70,11 @@ namespace std::simd
     using rebind_t = typename rebind<_Tp, _Vp>::type;
 
   // --- resize ---
-  template <__simd_size_type _Np, typename _Vp, _ArchFlags _Traits = {}>
+  template <__simd_size_type _Np, typename _Vp, _ArchTraits _Traits = {}>
     struct resize
     {};
 
-  template <__simd_size_type _Np, __data_parallel_type _Vp, _ArchFlags _Traits>
+  template <__simd_size_type _Np, __data_parallel_type _Vp, _ArchTraits _Traits>
     requires requires { typename _Vp::mask_type; }
     //requires requires { typename __deduce_abi_t<typename _Vp::value_type, _Np>; }
     struct resize<_Np, _Vp, _Traits>
@@ -84,7 +84,7 @@ namespace std::simd
       using type = basic_vec<typename _Vp::value_type, _A1>;
     };
 
-  template <__simd_size_type _Np, __simd_mask_type _Mp, _ArchFlags _Traits>
+  template <__simd_size_type _Np, __simd_mask_type _Mp, _ArchTraits _Traits>
     //requires requires { typename __deduce_abi_t<typename _Mp::value_type, _Np>; }
     struct resize<_Np, _Mp, _Traits>
     {
@@ -197,9 +197,9 @@ namespace std::simd
   template <typename...>
     struct flags;
 
-  template <typename... _Flags>
-    requires (__loadstore_tag<_Flags> and ...)
-    struct flags<_Flags...>
+  template <typename... _Traits>
+    requires (__loadstore_tag<_Traits> and ...)
+    struct flags<_Traits...>
     {
       consteval bool
       _M_is_equal(flags) const
@@ -223,10 +223,10 @@ namespace std::simd
         friend consteval auto
         operator|(flags, flags<_T0, _More...>)
         {
-          if constexpr ((same_as<_Flags, _T0> or ...))
-            return flags<_Flags...>{} | flags<_More...>{};
+          if constexpr ((same_as<_Traits, _T0> or ...))
+            return flags<_Traits...>{} | flags<_More...>{};
           else
-            return flags<_Flags..., _T0>{} | flags<_More...>{};
+            return flags<_Traits..., _T0>{} | flags<_More...>{};
         }
 
       consteval auto
@@ -237,7 +237,7 @@ namespace std::simd
         consteval auto
         _M_and(flags<_T0, _More...>) const
         {
-          if constexpr ((same_as<_Flags, _T0> or ...))
+          if constexpr ((same_as<_Traits, _T0> or ...))
             return flags<_T0>{} | (flags{}._M_and(flags<_More...>{}));
           else
             return flags{}._M_and(flags<_More...>{});
@@ -251,11 +251,11 @@ namespace std::simd
         consteval auto
         _M_xor(flags<_T0, _More...>) const
         {
-          if constexpr ((same_as<_Flags, _T0> or ...))
+          if constexpr ((same_as<_Traits, _T0> or ...))
             {
               constexpr auto __removed
-                = (conditional_t<same_as<_Flags, _T0>, flags<>,
-                                      flags<_Flags>>{} | ...);
+                = (conditional_t<same_as<_Traits, _T0>, flags<>,
+                                      flags<_Traits>>{} | ...);
               return __removed._M_xor(flags<_More...>{});
             }
           else
@@ -274,7 +274,7 @@ namespace std::simd
         static constexpr _Up*
         _S_adjust_pointer(_Up* __ptr)
         {
-          (_S_apply_adjust_pointer<_Flags, _Tp>(__ptr), ...);
+          (_S_apply_adjust_pointer<_Traits, _Tp>(__ptr), ...);
           return __ptr;
         }
     };
@@ -649,7 +649,7 @@ namespace std::simd
           return _M_data;
       }
 
-      template <_ArchFlags _Flags = {}>
+      template <_ArchTraits _Traits = {}>
         [[__gnu__::__always_inline__]]
         static constexpr basic_mask
         _S_partial_mask_of_n(int __n)
@@ -662,11 +662,11 @@ namespace std::simd
           else
             {
 #if __has_builtin(__builtin_ia32_bzhi_si)
-              if constexpr (_S_size <= 32 and _Flags._M_have_bmi2())
+              if constexpr (_S_size <= 32 and _Traits._M_have_bmi2())
                 return __builtin_ia32_bzhi_si(~0u >> (32 - _S_size), unsigned(__n));
 #endif
 #if __has_builtin(__builtin_ia32_bzhi_di)
-              if constexpr (_S_size <= 64 and _Flags._M_have_bmi2())
+              if constexpr (_S_size <= 64 and _Traits._M_have_bmi2())
                 return __builtin_ia32_bzhi_di(~0ull >> (64 - _S_size), unsigned(__n));
 #endif
               if constexpr (_S_size <= 32)
@@ -1148,7 +1148,7 @@ namespace std::simd
         }
 
       // [simd.mask.reductions] implementation --------------------------------
-      template <_ArchFlags _Flags = {}>
+      template <_ArchTraits _Traits = {}>
         [[__gnu__::__always_inline__]]
         constexpr bool
         _M_all_of() const noexcept
@@ -1171,7 +1171,7 @@ namespace std::simd
             return _VecOps<_DataType, _S_size>::_S_all_of(_M_data);
         }
 
-      template <_ArchFlags _Flags = {}>
+      template <_ArchTraits _Traits = {}>
         [[__gnu__::__always_inline__]]
         constexpr bool
         _M_any_of() const noexcept
@@ -1194,7 +1194,7 @@ namespace std::simd
             return _VecOps<_DataType, _S_size>::_S_any_of(_M_data);
         }
 
-      template <_ArchFlags _Flags = {}>
+      template <_ArchTraits _Traits = {}>
         [[__gnu__::__always_inline__]]
         constexpr bool
         _M_none_of() const noexcept
@@ -1348,13 +1348,13 @@ namespace std::simd
                               __vec_zero_pad_to<sizeof(_M_data0)>(_M_data1._M_concat_data()));
       }
 
-      template <_ArchFlags _Flags = {}>
+      template <_ArchTraits _Traits = {}>
         [[__gnu__::__always_inline__]]
         static constexpr basic_mask
         _S_partial_mask_of_n(int __n)
         {
 #if __has_builtin(__builtin_ia32_bzhi_di)
-          if constexpr (_S_use_bitmask and _S_size <= 64 and _Flags._M_have_bmi2())
+          if constexpr (_S_use_bitmask and _S_size <= 64 and _Traits._M_have_bmi2())
             return __builtin_ia32_bzhi_di(~0ull >> (64 - _S_size), unsigned(__n));
 #endif
           if (__n < _N0)
@@ -1698,7 +1698,7 @@ namespace std::simd
                                             __select_impl(__k._M_data1, __t, __f));
         }
 
-      template <_ArchFlags _Flags = {}>
+      template <_ArchTraits _Traits = {}>
         [[__gnu__::__always_inline__]]
         constexpr bool
         _M_all_of() const
@@ -1709,7 +1709,7 @@ namespace std::simd
             return _M_data0._M_all_of() and _M_data1._M_all_of();
         }
 
-      template <_ArchFlags _Flags = {}>
+      template <_ArchTraits _Traits = {}>
         [[__gnu__::__always_inline__]]
         constexpr bool
         _M_any_of() const
@@ -1720,7 +1720,7 @@ namespace std::simd
             return _M_data0._M_any_of() or _M_data1._M_any_of();
         }
 
-      template <_ArchFlags _Flags = {}>
+      template <_ArchTraits _Traits = {}>
         [[__gnu__::__always_inline__]]
         constexpr bool
         _M_none_of() const
@@ -2135,7 +2135,7 @@ namespace std::simd
         return _VecOps<_DataType>::_S_complex_negate_imag(_M_data);
       }
 
-      template <typename _CxVec, _TargetTraits _Flags = {}>
+      template <typename _CxVec, _TargetTraits _Traits = {}>
         [[__gnu__::__always_inline__]]
         constexpr void
         _M_complex_multiply_with(basic_vec __yvec)
@@ -2150,7 +2150,7 @@ namespace std::simd
                 _M_data = __x * __y;
               else
                 {
-                  if (_Flags._M_conforming_to_STDC_annex_G())
+                  if (_Traits._M_conforming_to_STDC_annex_G())
                     {
                       auto __a = _VO::_S_dup_even(__x) * __y;
                       auto __b = _DataType() * _VO::_S_swap_neighbors(__y);
@@ -2165,7 +2165,7 @@ namespace std::simd
             }
           else if (_VecOps<_DataType, _S_size>::_S_complex_imag_is_constprop_zero(__y))
             {
-              if (_Flags._M_conforming_to_STDC_annex_G())
+              if (_Traits._M_conforming_to_STDC_annex_G())
                 _M_data = _VO::_S_addsub(_VO::_S_dup_even(__y) * __x,
                                          _DataType() * _VO::_S_swap_neighbors(__x));
               else
@@ -2173,7 +2173,7 @@ namespace std::simd
             }
           else if (_VecOps<_DataType, _S_size>::_S_complex_real_is_constprop_zero(__y))
             {
-              if (_Flags._M_conforming_to_STDC_annex_G())
+              if (_Traits._M_conforming_to_STDC_annex_G())
                 _M_data = _VO::_S_addsub(_DataType(), _VO::_S_dup_odd(__y)
                                            * _VO::_S_swap_neighbors(__x));
               else
@@ -2182,7 +2182,7 @@ namespace std::simd
             }
           else if (_VecOps<_DataType, _S_size>::_S_complex_real_is_constprop_zero(__x))
             {
-              if (_Flags._M_conforming_to_STDC_annex_G())
+              if (_Traits._M_conforming_to_STDC_annex_G())
                 _M_data = _VO::_S_addsub(_DataType(), _VO::_S_dup_odd(__x)
                                            * _VO::_S_swap_neighbors(__y));
               else
@@ -2192,10 +2192,10 @@ namespace std::simd
           else
             {
 #if _GLIBCXX_SIMD_HAVE_SSE
-              if (_Flags._M_have_fma() and not __builtin_is_constant_evaluated()
+              if (_Traits._M_have_fma() and not __builtin_is_constant_evaluated()
                     and not (__builtin_constant_p(__x) and __builtin_constant_p(__y)))
                 {
-                  if constexpr (_Flags._M_have_fma())
+                  if constexpr (_Traits._M_have_fma())
                     _M_data = __x86_complex_multiplies(__x, __y);
                 }
               else
@@ -2203,7 +2203,7 @@ namespace std::simd
                 _M_data = _VO::_S_addsub(_VO::_S_dup_even(__x) * __y,
                                          _VO::_S_dup_odd(__x) * _VO::_S_swap_neighbors(__y));
               mask_type __nan = _M_isnan();
-              if (_Flags._M_conforming_to_STDC_annex_G() and __nan._M_any_of()) [[unlikely]]
+              if (_Traits._M_conforming_to_STDC_annex_G() and __nan._M_any_of()) [[unlikely]]
                 _M_data = __cx_redo_mul<typename _CxVec::value_type>(_M_data, __x, __y, __nan,
                                                                      _S_size);
             }
@@ -2296,7 +2296,7 @@ namespace std::simd
           return _M_reduce_1(__binary_op)._M_reduce_tail(__rest, __binary_op);
       }
 
-      template <_ArchFlags _Flags = {}>
+      template <_ArchTraits _Traits = {}>
         [[__gnu__::__always_inline__]]
         constexpr value_type
         _M_reduce(auto __binary_op) const
@@ -2369,18 +2369,18 @@ namespace std::simd
       // ISO/IEC 60559 on the classification operations (5.7.2 General Operations):
       // "They are never exceptional, even for signaling NaNs."
       //
-      template <_OptFlags _Flags = {}>
+      template <_OptTraits _Traits = {}>
         [[__gnu__::__always_inline__]]
         constexpr mask_type
         _M_isnan() const requires is_floating_point_v<value_type>
         {
-          if constexpr (_Flags._M_finite_math_only())
+          if constexpr (_Traits._M_finite_math_only())
             return mask_type(false);
           else if constexpr (_S_is_scalar)
             return mask_type(std::isnan(_M_data));
           else if constexpr (_S_use_bitmask)
             return _M_isunordered(*this);
-          else if constexpr (not _Flags._M_support_snan())
+          else if constexpr (not _Traits._M_support_snan())
             return not (*this == *this);
           else if (__builtin_is_constant_evaluated() or __builtin_constant_p(_M_data))
             return mask_type([&](int __i) { return std::isnan(_M_data[__i]); });
@@ -2393,12 +2393,12 @@ namespace std::simd
             }
         }
 
-      template <_TargetTraits _Flags = {}>
+      template <_TargetTraits _Traits = {}>
         [[__gnu__::__always_inline__]]
         constexpr mask_type
         _M_isinf() const requires is_floating_point_v<value_type>
         {
-          if constexpr (_Flags._M_finite_math_only())
+          if constexpr (_Traits._M_finite_math_only())
             return mask_type(false);
           else if constexpr (_S_is_scalar)
             return mask_type(std::isinf(_M_data));
@@ -2407,7 +2407,7 @@ namespace std::simd
 #ifdef _GLIBCXX_SIMD_HAVE_SSE
           else if constexpr (_S_use_bitmask)
             return mask_type::_S_init(__x86_bitmask_isinf(_M_data));
-          else if constexpr (_Flags._M_have_avx512dq())
+          else if constexpr (_Traits._M_have_avx512dq())
             return __x86_bit_to_vecmask<typename mask_type::_DataType>(
                      __x86_bitmask_isinf(_M_data));
 #endif
@@ -2437,12 +2437,12 @@ namespace std::simd
         return __vec_andnot(_S_signmask<_DataType>, _M_data);
       }
 
-      template <_TargetTraits _Flags = {}>
+      template <_TargetTraits _Traits = {}>
         [[__gnu__::__always_inline__]]
         constexpr mask_type
         _M_isunordered(basic_vec __y) const requires is_floating_point_v<value_type>
         {
-          if constexpr (_Flags._M_finite_math_only())
+          if constexpr (_Traits._M_finite_math_only())
             return mask_type(false);
           else if constexpr (_S_is_scalar)
             return mask_type(std::isunordered(_M_data, __y._M_data));
@@ -3033,7 +3033,7 @@ namespace std::simd
       _M_complex_conj() const
       { return _S_init(_M_data0._M_complex_conj(), _M_data1._M_complex_conj()); }
 
-      template <typename _CxVec, _TargetTraits _Flags = {}>
+      template <typename _CxVec, _TargetTraits _Traits = {}>
         [[__gnu__::__always_inline__]]
         constexpr void
         _M_complex_multiply_with(const basic_vec& __yvec)
