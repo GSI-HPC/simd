@@ -686,51 +686,51 @@ namespace std::simd
 
   struct _OptFlags
   {
-    constexpr bool
+    consteval bool
     _M_test(int __bit) const
     { return ((_M_build_flags >> __bit) & 1) == 1; }
 
-    constexpr bool
+    consteval bool
     _M_handle_fp_exceptions() const
     { return _M_test(0); }
 
-    constexpr bool
+    consteval bool
     _M_fast_math() const
     { return _M_test(1); }
 
-    constexpr bool
+    consteval bool
     _M_finite_math_only() const
     { return _M_test(2); }
 
-    constexpr bool
+    consteval bool
     _M_no_signed_zeros() const
     { return _M_test(3); }
 
-    constexpr bool
+    consteval bool
     _M_signed_zeros() const
     { return not _M_test(3); }
 
-    constexpr bool
+    consteval bool
     _M_reciprocal_math() const
     { return _M_test(4); }
 
-    constexpr bool
+    consteval bool
     _M_no_math_errno() const
     { return _M_test(5); }
 
-    constexpr bool
+    consteval bool
     _M_math_errno() const
     { return not _M_test(5); }
 
-    constexpr bool
+    consteval bool
     _M_associative_math() const
     { return _M_test(6); }
 
-    constexpr bool
+    consteval bool
     _M_conforming_to_STDC_annex_G() const
     { return _M_test(10) and not _M_finite_math_only(); }
 
-    constexpr bool
+    consteval bool
     _M_support_snan() const
     { return _M_test(11); }
 
@@ -789,23 +789,23 @@ namespace std::simd
                           | (_GLIBCXX_SIMD_HAVE_NEON_A64 << 2)
                           | (_GLIBCXX_SIMD_HAVE_SVE << 3);
 
-    constexpr bool
+    consteval bool
     _M_test(int __bit) const
     { return ((_M_flags >> __bit) & 1) == 1; }
 
-    constexpr bool
+    consteval bool
     _M_have_neon() const
     { return _M_test(0); }
 
-    constexpr bool
+    consteval bool
     _M_have_neon_a32() const
     { return _M_test(1); }
 
-    constexpr bool
+    consteval bool
     _M_have_neon_a64() const
     { return _M_test(2); }
 
-    constexpr bool
+    consteval bool
     _M_have_sve() const
     { return _M_test(3); }
   };
@@ -885,131 +885,131 @@ namespace std::simd
                           | (_GLIBCXX_SIMD_HAVE_AVXVNNIINT8 << 34)
                           | (_GLIBCXX_SIMD_HAVE_AVXVNNIINT16 << 35);
 
-    constexpr bool
+    consteval bool
     _M_test(int __bit) const
     { return ((_M_flags >> __bit) & 1) == 1; }
 
-    constexpr bool
+    consteval bool
     _M_have_mmx() const
     { return _M_test(0); }
 
-    constexpr bool
+    consteval bool
     _M_have_sse() const
     { return _M_test(1); }
 
-    constexpr bool
+    consteval bool
     _M_have_sse2() const
     { return _M_test(2); }
 
-    constexpr bool
+    consteval bool
     _M_have_sse3() const
     { return _M_test(3); }
 
-    constexpr bool
+    consteval bool
     _M_have_ssse3() const
     { return _M_test(4); }
 
-    constexpr bool
+    consteval bool
     _M_have_sse4_1() const
     { return _M_test(5); }
 
-    constexpr bool
+    consteval bool
     _M_have_sse4_2() const
     { return _M_test(6); }
 
-    constexpr bool
+    consteval bool
     _M_have_xop() const
     { return _M_test(7); }
 
-    constexpr bool
+    consteval bool
     _M_have_avx() const
     { return _M_test(8); }
 
-    constexpr bool
+    consteval bool
     _M_have_avx2() const
     { return _M_test(9); }
 
-    constexpr bool
+    consteval bool
     _M_have_bmi() const
     { return _M_test(10); }
 
-    constexpr bool
+    consteval bool
     _M_have_bmi2() const
     { return _M_test(11); }
 
-    constexpr bool
+    consteval bool
     _M_have_lzcnt() const
     { return _M_test(12); }
 
-    constexpr bool
+    consteval bool
     _M_have_sse4a() const
     { return _M_test(13); }
 
-    constexpr bool
+    consteval bool
     _M_have_fma() const
     { return _M_test(14); }
 
-    constexpr bool
+    consteval bool
     _M_have_fma4() const
     { return _M_test(15); }
 
-    constexpr bool
+    consteval bool
     _M_have_f16c() const
     { return _M_test(16); }
 
-    constexpr bool
+    consteval bool
     _M_have_popcnt() const
     { return _M_test(17); }
 
-    constexpr bool
+    consteval bool
     _M_have_avx512f() const
     { return _M_test(18); }
 
-    constexpr bool
+    consteval bool
     _M_have_avx512dq() const
     { return _M_test(19); }
 
-    constexpr bool
+    consteval bool
     _M_have_avx512vl() const
     { return _M_test(20); }
 
-    constexpr bool
+    consteval bool
     _M_have_avx512bw() const
     { return _M_test(21); }
 
-    constexpr bool
+    consteval bool
     _M_have_avx512bitalg() const
     { return _M_test(22); }
 
-    constexpr bool
+    consteval bool
     _M_have_avx512vbmi() const
     { return _M_test(23); }
 
-    constexpr bool
+    consteval bool
     _M_have_avx512vbmi2() const
     { return _M_test(24); }
 
-    constexpr bool
+    consteval bool
     _M_have_avx512ifma() const
     { return _M_test(25); }
 
-    constexpr bool
+    consteval bool
     _M_have_avx512cd() const
     { return _M_test(26); }
 
-    constexpr bool
+    consteval bool
     _M_have_avx512vnni() const
     { return _M_test(27); }
 
-    constexpr bool
+    consteval bool
     _M_have_avx512vpopcntdq() const
     { return _M_test(28); }
 
-    constexpr bool
+    consteval bool
     _M_have_avx512vp2intersect() const
     { return _M_test(29); }
 
-    constexpr bool
+    consteval bool
     _M_have_avx512fp16() const
     { return _M_test(30); }
   };
