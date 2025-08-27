@@ -8,6 +8,7 @@
 
 #include "simd_details.h"
 
+#include <bit>
 #include <bits/utility.h>
 
 // psabi warnings are bogus because the ABI of the internal types never leaks into user code
