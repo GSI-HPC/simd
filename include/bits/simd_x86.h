@@ -496,7 +496,11 @@ namespace std::simd
     __x86_bitmask_blend(_Kp __k, _TV __t, _TV __f)
     {
       using _Tp = __vec_value_type<_TV>;
-      if constexpr (sizeof(_TV) == 64 and sizeof(_Tp) == 8)
+      using _Ip = __x86_intrin_int<_Tp>;
+      if constexpr (not is_same_v<_Ip, _Tp>)
+        return reinterpret_cast<_TV>(__x86_bitmask_blend(__k, __vec_bit_cast<_Ip>(__t),
+                                                         __vec_bit_cast<_Ip>(__f)));
+      else if constexpr (sizeof(_TV) == 64 and sizeof(_Tp) == 8)
         return __builtin_ia32_blendmq_512_mask (__f, __t, __k);
       else if constexpr (sizeof(_TV) == 64 and sizeof(_Tp) == 4)
         return __builtin_ia32_blendmd_512_mask (__f, __t, __k);
