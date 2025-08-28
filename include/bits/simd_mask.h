@@ -752,11 +752,31 @@ namespace std::simd
       { return !__x && __y; }
 
       // [simd.mask.cond] -----------------------------------------------------
+      [[__gnu__::__always_inline__]]
+      friend constexpr basic_mask
+      __select_impl(const basic_mask& __k, const basic_mask& __t, const basic_mask& __f) noexcept
+      {
+        if constexpr (not _S_use_bitmask)
+          return __k._M_data ? __t._M_data : __f._M_data;
+        else
+          return (__k._M_data & __t._M_data) | (~__k._M_data & __f._M_data);
+      }
+
+      [[__gnu__::__always_inline__]]
+      friend constexpr basic_mask
+      __select_impl(const basic_mask& __k, same_as<bool> auto __t, same_as<bool> auto __f) noexcept
+      {
+        if (__t == __f)
+          return basic_mask(__t);
+        else
+          return __t ? __k : !__k;
+      }
+
       template <__vectorizable _T0, same_as<_T0> _T1>
         requires (sizeof(_T0) == _Bytes)
         [[__gnu__::__always_inline__]]
         friend constexpr vec<_T0, _S_size>
-        __select_impl(const basic_mask& __k, const _T0& __t, const _T1& __f)
+        __select_impl(const basic_mask& __k, const _T0& __t, const _T1& __f) noexcept
         {
           if constexpr (not _S_use_bitmask)
             return __k._M_data ? __t : __f;
@@ -878,6 +898,9 @@ namespace std::simd
     {
       template <size_t, typename>
         friend class basic_mask;
+
+      template <typename, typename>
+        friend class basic_vec;
 
       static constexpr int _S_size = _Ap::_S_size;
 
@@ -1305,11 +1328,29 @@ namespace std::simd
       { return !__x && __y; }
 
       // [simd.mask.cond] -----------------------------------------------------
+      [[__gnu__::__always_inline__]]
+      friend constexpr basic_mask
+      __select_impl(const basic_mask& __k, const basic_mask& __t, const basic_mask& __f) noexcept
+      {
+        return _S_init(__select_impl(__k._M_data0, __t._M_data0, __f._M_data0),
+                       __select_impl(__k._M_data1, __t._M_data1, __f._M_data1));
+      }
+
+      [[__gnu__::__always_inline__]]
+      friend constexpr basic_mask
+      __select_impl(const basic_mask& __k, same_as<bool> auto __t, same_as<bool> auto __f) noexcept
+      {
+        if (__t == __f)
+          return basic_mask(__t);
+        else
+          return __t ? __k : !__k;
+      }
+
       template <__vectorizable _T0, same_as<_T0> _T1>
         requires (sizeof(_T0) == _Bytes)
         [[__gnu__::__always_inline__]]
         friend constexpr vec<_T0, _S_size>
-        __select_impl(const basic_mask& __k, const _T0& __t, const _T1& __f)
+        __select_impl(const basic_mask& __k, const _T0& __t, const _T1& __f) noexcept
         {
           return vec<_T0, _S_size>::_S_init(__select_impl(__k._M_data0, __t, __f),
                                             __select_impl(__k._M_data1, __t, __f));

@@ -1218,7 +1218,7 @@ namespace std::simd
       // [simd.cond] ---------------------------------------------------------
       [[__gnu__::__always_inline__]]
       friend constexpr basic_vec
-      __select_impl(const mask_type& __k, const basic_vec& __t, const basic_vec& __f)
+      __select_impl(const mask_type& __k, const basic_vec& __t, const basic_vec& __f) noexcept
       {
         if constexpr (_S_size == 1)
           return __k[0] ? __t : __f;
@@ -1764,7 +1764,7 @@ namespace std::simd
       // [simd.cond] ---------------------------------------------------------
       [[__gnu__::__always_inline__]]
       friend constexpr basic_vec
-      __select_impl(const mask_type& __k, const basic_vec& __t, const basic_vec& __f)
+      __select_impl(const mask_type& __k, const basic_vec& __t, const basic_vec& __f) noexcept
       {
         return _S_init(__select_impl(__k._M_data0, __t._M_data0, __f._M_data0),
                        __select_impl(__k._M_data1, __t._M_data1, __f._M_data1));
@@ -2086,7 +2086,7 @@ namespace std::simd
       // [simd.cond] ---------------------------------------------------------
       [[__gnu__::__always_inline__]]
       friend constexpr basic_vec
-      __select_impl(const mask_type& __k, const basic_vec& __t, const basic_vec& __f)
+      __select_impl(const mask_type& __k, const basic_vec& __t, const basic_vec& __f) noexcept
       { return _S_init(__select_impl(__k._M_data, __t._M_data, __f._M_data)); }
 
       // [simd.complex.math] internals ---------------------------------------
