@@ -715,20 +715,19 @@ namespace std::simd
             { __x.template _M_resize<_Tp::_S_size, _Tp::_S_nreg>() } -> same_as<_Tp>;
           };
 
-#ifdef math_errhandling
-  // Determine if math functions must raise floating-point exceptions.
+  // Determine if math functions must *raise* floating-point exceptions.
   // math_errhandling may expand to an extern symbol, in which case we must assume fp exceptions
   // need to be considered.
-  template <int __me = math_errhandling>
+  template <int = 0>
+    requires requires { typename bool_constant<0 != (math_errhandling & MATH_ERREXCEPT)>; }
     consteval bool
     __handle_fpexcept_impl(int)
-    { return __me & MATH_ERREXCEPT; }
+    { return 0 != (math_errhandling & MATH_ERREXCEPT); }
 
   // Fallback if math_errhandling doesn't work: implement correct exception behavior.
   consteval bool
   __handle_fpexcept_impl(float)
   { return true; }
-#endif
 
   struct _OptTraits
   {
@@ -736,9 +735,15 @@ namespace std::simd
     _M_test(int __bit) const
     { return ((_M_build_flags >> __bit) & 1) == 1; }
 
+    // true iff floating-point operations can signal an exception (allow non-default handler)
     consteval bool
-    _M_handle_fp_exceptions() const
+    _M_fp_may_signal() const
     { return _M_test(0); }
+
+    // true iff floating-point operations can raise an exception flag
+    consteval bool
+    _M_fp_may_raise() const
+    { return _M_test(12); }
 
     consteval bool
     _M_fast_math() const
@@ -782,11 +787,10 @@ namespace std::simd
 
     __UINT64_TYPE__ _M_build_flags
       = 0
-#if __NO_TRAPPING_MATH__ or __FAST_MATH__
+#if not __NO_TRAPPING_MATH__
           + (1 << 0)
-#elif defined math_errhandling
-          + (__handle_fpexcept_impl(0) << 0)
 #endif
+          + (__handle_fpexcept_impl(0) << 12)
 #if __FAST_MATH__
           + (1 << 1)
 #endif
@@ -817,7 +821,7 @@ namespace std::simd
         // C Annex G defines the behavior of complex<T> where T is IEC60559 floating-point. If
         // __STDC_IEC_60559_COMPLEX__ is defined then Annex G is implemented - and simd<complex>
         // will do so as well. However, Clang never defines the macro.
-#if defined __STDC_IEC_60559_COMPLEX__ or defined __STDC_IEC_559_COMPLEX__ or defined __clang__
+#if defined __STDC_IEC_60559_COMPLEX__ or defined __STDC_IEC_559_COMPLEX__ or defined _GLIBCXX_CLANG
           + (1 << 10)
 #endif
 #if __SUPPORT_SNAN__
