@@ -1574,7 +1574,7 @@ namespace std::simd
     { using type = common_type_t<__math_common_simd_t<_T0, _T1>, _TRest...>; };
 
   template <typename _T0, typename _T1, typename... _TRest>
-    requires is_void_v<__math_common_simd_t<_T0, _T1>>
+    requires (sizeof...(_TRest) > 0) and is_void_v<__math_common_simd_t<_T0, _T1>>
     struct __math_common_simd_impl<_T0, _T1, _TRest...>
     { using type = common_type_t<__math_common_simd_t<_TRest...>, _T0, _T1>; };
 
