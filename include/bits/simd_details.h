@@ -333,8 +333,54 @@
 #define _GLIBCXX_DELETE_MSG(msg) delete
 #endif
 
+#define _GLIBCXX_SIMD_TOSTRING_IMPL(x) #x
+#define _GLIBCXX_SIMD_TOSTRING(x) _GLIBCXX_SIMD_TOSTRING_IMPL(x)
+#define _GLIBCXX_SIMD_LOC __FILE__ ":" _GLIBCXX_SIMD_TOSTRING(__LINE__) ": "
+
+#if not IFNDR_SIMD_PRECONDITIONS
+#define __glibcxx_simd_precondition(expr, msg, ...)                                                \
+  do {                                                                                             \
+    if (__builtin_expect(!bool(expr), false))                                                      \
+      std::simd::__invoke_ub(                                                                      \
+        _GLIBCXX_SIMD_LOC "precondition failure in '%s':\n" msg " ('" #expr "' does not hold)",    \
+        __PRETTY_FUNCTION__ __VA_OPT__(,) __VA_ARGS__);                                            \
+  } while(false)
+#else
+#define __glibcxx_simd_precondition(expr, msg, ...)                                                \
+  do {                                                                                             \
+    const bool __precondition_result = !bool(expr);                                                \
+    if (__builtin_constant_p(__precondition_result) && __precondition_result)                      \
+      []() __attribute__((__noinline__, __noipa__, __error__("precondition failure."               \
+        "\n" _GLIBCXX_SIMD_LOC "note: " msg " (precondition '" #expr "' does not hold)")))         \
+      { __builtin_unreachable(); }();                                                              \
+    else if (__builtin_expect(__precondition_result, false))                                       \
+      std::simd::__invoke_ub(                                                                      \
+        _GLIBCXX_SIMD_LOC "precondition failure in '%s':\n" msg " ('" #expr "' does not hold)",    \
+        __PRETTY_FUNCTION__ __VA_OPT__(,) __VA_ARGS__);                                            \
+  } while(false)
+#endif
+
 namespace std::simd
 {
+  template <typename... _Args>
+    [[noreturn]] _GLIBCXX_SIMD_ALWAYS_INLINE inline void
+    __invoke_ub([[maybe_unused]] const char* __msg, [[maybe_unused]] const _Args&... __args)
+    {
+#ifdef _GLIBCXX_ASSERTIONS
+#if __GNUC__ < 15
+      ((std::cerr << __msg) << ... << __args) << '\n';
+#else
+      __builtin_fprintf(stderr, __msg, __args...);
+      __builtin_fprintf(stderr, "\n");
+#endif
+      __builtin_abort();
+#elif _GLIBCXX_HARDEN >= 3
+      __builtin_trap();
+#else
+      __builtin_unreachable();
+#endif
+    }
+
   template <typename _Tp>
     inline constexpr _Tp
     __iota = [] { static_assert(false, "invalid __iota specialization"); }();

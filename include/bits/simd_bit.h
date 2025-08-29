@@ -22,8 +22,13 @@ namespace std::simd
   template<__simd_vec_type _Vp>
     [[__gnu__::__always_inline__]]
     constexpr _Vp
-    bit_ceil(const _Vp& __v) noexcept
-    { return _Vp([&](int __i) { return std::bit_ceil(__v[__i]); }); }
+    bit_ceil(const _Vp& __v)
+    {
+      using _Tp = typename _Vp::value_type;
+      constexpr _Tp __max = _Tp(1) << (sizeof(_Tp) * __CHAR_BIT__ - 1);
+      __glibcxx_simd_precondition(all_of(__v <= __max), "bit_ceil result is not representable");
+      return _Vp([&](int __i) { return std::bit_ceil(__v[__i]); });
+    }
 
   template<__simd_vec_type _Vp>
     [[__gnu__::__always_inline__]]
