@@ -22,7 +22,7 @@ jobs:
       image: ghcr.io/mattkretz/cplusplus-ci/latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Run test suite
         env:
