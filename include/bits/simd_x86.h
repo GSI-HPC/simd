@@ -42,6 +42,11 @@ namespace std::simd
     return __builtin_ia32_movmskpd256(__vec_bit_cast<double>(__x));
   }
 
+  [[__gnu__::__always_inline__]]
+  inline int
+  __x86_movmsk(__vec_builtin_type_bytes<__integer_from<4>, 16> __x)
+  { return __builtin_ia32_movmskps(__vec_bit_cast<float>(__x)); }
+
   template <_ArchTraits _Traits = {}>
     [[__gnu__::__always_inline__]]
     inline int
@@ -55,11 +60,6 @@ namespace std::simd
       return __x86_movmsk(__vec_zero_pad_to_16(__x));
 #endif
     }
-
-  [[__gnu__::__always_inline__]]
-  inline int
-  __x86_movmsk(__vec_builtin_type_bytes<__integer_from<4>, 16> __x)
-  { return __builtin_ia32_movmskps(__vec_bit_cast<float>(__x)); }
 
   [[__gnu__::__always_inline__]]
   inline int
