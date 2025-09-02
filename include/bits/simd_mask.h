@@ -914,6 +914,10 @@ namespace std::simd
 
       using _Mask1 = basic_mask<_Bytes, decltype(__abi_rebind<_Bytes, _N1, _Ap, true>())>;
 
+      // _Ap::_S_nreg determines how deep the recursion goes. E.g. basic_mask<4, _Abi<8, 4>> cannot
+      // use basic_mask<4, _Abi<4, 1>> as _Mask0/1 types.
+      static_assert(_Mask0::abi_type::_S_nreg + _Mask1::abi_type::_S_nreg == _Ap::_S_nreg);
+
       static constexpr bool _S_use_bitmask = _Mask0::_S_use_bitmask;
 
       static constexpr bool _S_use_2_for_1 = _Mask0::_S_use_2_for_1;

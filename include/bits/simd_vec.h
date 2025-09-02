@@ -1277,6 +1277,8 @@ namespace std::simd
 
       using _DataType1 = basic_vec<_Tp, decltype(__abi_rebind<_Tp, _N1, _Ap>())>;
 
+      static_assert(_DataType0::abi_type::_S_nreg + _DataType1::abi_type::_S_nreg == _Ap::_S_nreg);
+
       _DataType0 _M_data0;
 
       _DataType1 _M_data1;
