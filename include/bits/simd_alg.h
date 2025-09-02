@@ -17,26 +17,29 @@ namespace std::simd
     [[__gnu__::__always_inline__]]
     constexpr basic_vec<_Tp, _Ap>
     min(const basic_vec<_Tp, _Ap>& __a, const basic_vec<_Tp, _Ap>& __b) noexcept
-    { static_assert(false, "TODO"); }
+    { return __select_impl(__a < __b, __a, __b); }
 
   template<typename _Tp, typename _Ap>
     [[__gnu__::__always_inline__]]
     constexpr basic_vec<_Tp, _Ap>
     max(const basic_vec<_Tp, _Ap>& __a, const basic_vec<_Tp, _Ap>& __b) noexcept
-    { static_assert(false, "TODO"); }
+    { return __select_impl(__a < __b, __b, __a); }
 
   template<typename _Tp, typename _Ap>
     [[__gnu__::__always_inline__]]
     constexpr pair<basic_vec<_Tp, _Ap>, basic_vec<_Tp, _Ap>>
     minmax(const basic_vec<_Tp, _Ap>& __a, const basic_vec<_Tp, _Ap>& __b) noexcept
-    { static_assert(false, "TODO"); }
+    { return {min(__a, __b), max(__a, __b)}; }
 
   template<typename _Tp, typename _Ap>
     [[__gnu__::__always_inline__]]
     constexpr basic_vec<_Tp, _Ap>
     clamp(const basic_vec<_Tp, _Ap>& __v, const basic_vec<_Tp, _Ap>& __lo,
           const basic_vec<_Tp, _Ap>& __hi)
-    { static_assert(false, "TODO"); }
+    {
+      __glibcxx_simd_precondition(none_of(__lo > __hi), "lower bound is larger than upper bound");
+      return max(__lo, min(__hi, __v));
+    }
 
   template<typename _Tp, typename _Up>
     constexpr auto
