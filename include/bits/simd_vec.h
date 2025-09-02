@@ -1928,7 +1928,7 @@ namespace std::simd
         constexpr
         explicit(not convertible_to<_Up, value_type>)
         basic_vec(const basic_vec<_Up, _UAbi>& __x) noexcept
-        : basic_vec(basic_vec<_T0, typename _UAbi::template _Rebind<_T0>>(__x))
+        : basic_vec(basic_vec<_T0, decltype(__abi_rebind<_T0, _S_size, _UAbi>())>(__x))
         {}
 
       // [simd.ctor] generator constructor ------------------------------------
