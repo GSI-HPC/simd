@@ -783,6 +783,15 @@ namespace std::simd
           : _M_data(_DataType() == _DataType() ? static_cast<value_type>(__x) : value_type())
         {}
 
+#ifdef _GLIBCXX_SIMD_CONSTEVAL_BROADCAST
+      template <convertible_to<value_type> _Up>
+        requires (is_arithmetic_v<_Up> and not __broadcast_constructible<_Up, value_type>)
+        consteval
+        basic_vec(const _Up& __x)
+        : _M_data(_DataType() == _DataType() ? static_cast<value_type>(__x) : value_type())
+        { __throw_unless_value_preserving_conversion<value_type>(__x); }
+#endif
+
       // [simd.ctor] conversion constructor -----------------------------------
       template <typename _Up, typename _UAbi>
         requires (__simd_size_v<_Up, _UAbi> == _S_size)
@@ -1577,6 +1586,15 @@ namespace std::simd
           : _M_data0(static_cast<value_type>(__x)), _M_data1(static_cast<value_type>(__x))
         {}
 
+#ifdef _GLIBCXX_SIMD_CONSTEVAL_BROADCAST
+      template <convertible_to<value_type> _Up>
+        requires (is_arithmetic_v<_Up> and not __broadcast_constructible<_Up, value_type>)
+        consteval
+        basic_vec(const _Up& __x)
+        : _M_data0(static_cast<value_type>(__x)), _M_data1(static_cast<value_type>(__x))
+        { __throw_unless_value_preserving_conversion<value_type>(__x); }
+#endif
+
       // [simd.ctor] conversion constructor -----------------------------------
       template <typename _Up, typename _UAbi>
         requires (__simd_size_v<_Up, _UAbi> == _S_size)
@@ -1881,6 +1899,15 @@ namespace std::simd
                 return (__i & 1) == 0 ? __x : _T0();
             })
         {}
+
+#ifdef _GLIBCXX_SIMD_CONSTEVAL_BROADCAST
+      template <convertible_to<value_type> _Up>
+        requires (is_arithmetic_v<_Up> and not __broadcast_constructible<_Up, value_type>)
+        consteval
+        basic_vec(const _Up& __x)
+        : basic_vec(static_cast<value_type>(__x))
+        { __throw_unless_value_preserving_conversion<_T0>(__x); }
+#endif
 
       // [simd.ctor] conversion constructor -----------------------------------
       template <__complex_like _Up, typename _UAbi>

@@ -86,7 +86,11 @@ namespace test02
   // ensure 'true ? int : vec<float>' doesn't work
   template <typename T>
     concept has_type_member = requires { typename T::type; };
+#ifdef _GLIBCXX_SIMD_CONSTEVAL_BROADCAST
+  static_assert(has_type_member<common_type<int, simd::vec<float>>>);
+#else
   static_assert(not has_type_member<common_type<int, simd::vec<float>>>);
+#endif
 
   constexpr simd::vec<complex<double>>::mask_type k = {};
 }
@@ -121,7 +125,11 @@ static_assert(    std::convertible_to<Ic<1>, simd::vec<float>>);
 static_assert(not std::convertible_to<Ic<1.1>, simd::vec<float>>);
 static_assert(not std::convertible_to<simd::vec<int, 4>, simd::vec<float, 4>>);
 static_assert(not std::convertible_to<simd::vec<float, 4>, simd::vec<int, 4>>);
+#ifdef _GLIBCXX_SIMD_CONSTEVAL_BROADCAST
+static_assert(    std::convertible_to<int, simd::vec<float>>);
+#else
 static_assert(not std::convertible_to<int, simd::vec<float>>);
+#endif
 static_assert(    std::convertible_to<simd::vec<int, 4>, simd::vec<double, 4>>);
 
 template <typename V>

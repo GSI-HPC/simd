@@ -1611,6 +1611,29 @@ namespace std::simd
     else
       static_assert(false);
   }
+
+#ifdef _GLIBCXX_SIMD_CONSTEVAL_BROADCAST
+  class __value_changing_conversion
+  {};
+
+  template <typename _To, signed_integral _From>
+    consteval void
+    __throw_unless_value_preserving_conversion(const _From& __x)
+    {
+      using _Up = make_unsigned_t<_From>;
+      if (static_cast<_Up>(static_cast<_To>(__x)) != static_cast<_Up>(__x))
+        throw __value_changing_conversion();
+    }
+
+  template <typename _To, typename _From>
+    requires (is_arithmetic_v<_From> and not signed_integral<_From>)
+    consteval void
+    __throw_unless_value_preserving_conversion(const _From& __x)
+    {
+      if (static_cast<_From>(static_cast<_To>(__x)) != __x)
+        throw __value_changing_conversion();
+    }
+#endif
 }
 
 #pragma GCC diagnostic pop
