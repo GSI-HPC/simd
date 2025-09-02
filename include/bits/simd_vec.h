@@ -965,6 +965,8 @@ namespace std::simd
               __builtin_unreachable(); // trigger UBsan
             __x._M_data = __result;
           }
+        else if constexpr (_TargetTraits()._M_eval_as_f32<value_type>())
+          __x = basic_vec(rebind_t<float, basic_vec>(__x) + __y);
         else
           __x._M_data += __y._M_data;
         return __x;
@@ -988,6 +990,8 @@ namespace std::simd
               __builtin_unreachable(); // trigger UBsan
             __x._M_data = __result;
           }
+        else if constexpr (_TargetTraits()._M_eval_as_f32<value_type>())
+          __x = basic_vec(rebind_t<float, basic_vec>(__x) - __y);
         else
           __x._M_data -= __y._M_data;
         return __x;
@@ -1018,6 +1022,9 @@ namespace std::simd
                              and is_signed_v<decltype(value_type() * value_type())>)
           __x._M_data = unsigned(__x._M_data) * unsigned(__y._M_data);
 
+        else if constexpr (_TargetTraits()._M_eval_as_f32<value_type>())
+          __x = basic_vec(rebind_t<float, basic_vec>(__x) * __y);
+
         else
           __x._M_data *= __y._M_data;
         return __x;
@@ -1042,6 +1049,9 @@ namespace std::simd
               return __x = basic_vec(rebind_t<double, basic_vec>(__x) / __y);
           }
 #endif
+        if constexpr (_TargetTraits()._M_eval_as_f32<value_type>())
+          return __x = basic_vec(rebind_t<float, basic_vec>(__x) / __y);
+
         basic_vec __y1 = __y;
         if constexpr (_S_is_partial)
           {
