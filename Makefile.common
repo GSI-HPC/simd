@@ -108,6 +108,7 @@ testtypes ::= signed-char \
 
 ifneq ($(compiler),clang)
 testtypes += std::float16_t
+testtypes += complex-float16_t
 endif
 
 testtypes ::= $(subst ::,--,$(testtypes))
@@ -115,7 +116,7 @@ testtypes ::= $(subst ::,--,$(testtypes))
 testwidths ::= $(shell seq 1 67)
 
 getwidth = $(subst .,,$(suffix $(1)))
-gettype = $(subst -, ,$(subst complex-double,std::complex<double>,$(subst complex-float,std::complex<float>,$(subst --,::,$(subst .,,$(basename $(notdir $(1))))))))
+gettype = $(subst -, ,$(subst complex-double,std::complex<double>,$(subst complex-float,std::complex<float>,$(subst complex-float16_t,std::complex<std::float16_t>,$(subst --,::,$(subst .,,$(basename $(notdir $(1)))))))))
 getarch = $(subst .,,$(suffix $(subst /,,$(dir $(1)))))
 gettest = $(basename $(subst /,,$(dir $(1))))
 
