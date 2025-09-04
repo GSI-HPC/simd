@@ -784,9 +784,9 @@ namespace std::simd
           _TV __y_swapped = _VO::_S_swap_neighbors(__y);
 
           if constexpr (sizeof(__x) == 16 and sizeof(_Tp) == 2)
-            return __builtin_ia32_vfmaddsubph(__x_real, __y, __x_imag * __y_swapped);
+            return __builtin_ia32_vfmaddsubph128_mask(__x_real, __y, __x_imag * __y_swapped, -1);
           else if constexpr (sizeof(__x) == 32 and sizeof(_Tp) == 2)
-            return __builtin_ia32_vfmaddsubph256(__x_real, __y, __x_imag * __y_swapped);
+            return __builtin_ia32_vfmaddsubph256_mask(__x_real, __y, __x_imag * __y_swapped, -1);
           else if constexpr (sizeof(__x) == 64 and sizeof(_Tp) == 2)
             return __builtin_ia32_vfmaddsubph512_mask(
                      __x_real, __y, __x_imag * __y_swapped, -1, 0x04);
