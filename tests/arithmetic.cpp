@@ -26,6 +26,8 @@ template <typename V>
     using Real = typename T::value_type;
     using RealV = simd::rebind_t<Real, V>;
 
+    static_assert(std::is_floating_point_v<Real>);
+
     static constexpr T min = std::numeric_limits<Real>::lowest();
     static constexpr T norm_min = std::numeric_limits<Real>::min();
     static constexpr T denorm_min = std::numeric_limits<Real>::denorm_min();
@@ -83,7 +85,7 @@ template <typename V>
         t.verify_equal(x * x, x[0] * x[0]);
         x *= T(1, 1);
         t.verify_equal(x * x, x[0] * x[0])(x);
-        x *= T(1, .5);
+        x *= T(1, Real(.5));
         t.verify_equal(x * x, x[0] * x[0])(x);
       }
     };
