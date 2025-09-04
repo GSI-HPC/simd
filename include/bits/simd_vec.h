@@ -2126,7 +2126,10 @@ namespace std::simd
       [[__gnu__::__always_inline__]]
       friend constexpr basic_vec
       __select_impl(const mask_type& __k, const basic_vec& __t, const basic_vec& __f) noexcept
-      { return _S_init(__select_impl(__k._M_data, __t._M_data, __f._M_data)); }
+      {
+        // __t._M_data and __f._M_data unwrap the underlying basic_vec<_T0> object
+        return _S_init(__select_impl(__k._M_unwrap_complex(), __t._M_data, __f._M_data));
+      }
 
       // [simd.complex.math] internals ---------------------------------------
       [[__gnu__::__always_inline__]]

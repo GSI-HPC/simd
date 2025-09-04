@@ -340,6 +340,11 @@ namespace std::simd
         return __r;
       }
 
+      [[__gnu__::__always_inline__]]
+      constexpr _CxElementMask
+      _M_unwrap_complex() const
+      { return __builtin_bit_cast(_CxElementMask, _M_data); }
+
       template <typename _Mp>
         [[__gnu__::__always_inline__]]
         constexpr auto _M_chunk() const noexcept
@@ -1008,7 +1013,20 @@ namespace std::simd
         }
 
       using _CxElementMask
-        = basic_mask<_Bytes / 2, decltype(__abi_rebind<_Bytes / 2, _S_size * 2, _Ap, false>())>;
+        = basic_mask<_Bytes / 2,
+                     decltype([] consteval {
+                       if constexpr (not _S_is_cx_ileav)
+                         {
+                           if constexpr (is_same_v<_Ap, _ScalarAbi<_S_size>>)
+                             return _ScalarAbi<_S_size * 2>();
+                           else
+                             return _InvalidAbi();
+                         }
+                       else // _Ap is _Abi<_S_size, 1, Something>
+                         return _Abi<_S_size * 2, _Ap::_S_nreg,
+                                     __flags_and(_Ap::_S_variant, _AbiVariant::_MaskVariants)>();
+                     }())>;
+
 
       [[__gnu__::__always_inline__]]
       static constexpr basic_mask
@@ -1028,6 +1046,14 @@ namespace std::simd
         static_assert(not _CxElementMask::_S_is_cx_ileav);
         return _S_init(_Mask0::_S_or_neighbors(__k._M_data0),
                        _Mask1::_S_or_neighbors(__k._M_data1));
+      }
+
+      [[__gnu__::__always_inline__]]
+      constexpr _CxElementMask
+      _M_unwrap_complex() const
+      {
+        return _CxElementMask::_S_init(_M_data0._M_unwrap_complex(),
+                                       _M_data1._M_unwrap_complex());
       }
 
       template <typename _Mp>
