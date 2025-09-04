@@ -9,7 +9,6 @@ template <typename V>
   struct Tests
   {
     using T = typename V::value_type;
-    static_assert(std::totally_ordered<T>);
 
     using M = typename V::mask_type;
     using pair = std::pair<V, V>;
@@ -22,14 +21,14 @@ template <typename V>
     {
       if constexpr (std::is_enum_v<T>)
         {
-          using Vu = dp::rebind_t<std::underlying_type_t<T>, V>;
+          using Vu = simd::rebind_t<std::underlying_type_t<T>, V>;
           return static_cast<V>(std::to_underlying(x_max) - static_cast<Vu>(x));
         }
       else
         return x_max - x;
     }
 
-    ADD_TEST(Min) {
+    ADD_TEST(Min, std::totally_ordered<T>) {
       std::tuple{test_iota<V, 0, -1>, reverse_iota(test_iota<V, 0, -1>), test_iota<V, 1>},
       [](auto& t, const V x, const V y, const V x1) {
         t.verify_equal(min(x, x), x);
@@ -50,7 +49,7 @@ template <typename V>
       }
     };
 
-    ADD_TEST(Max) {
+    ADD_TEST(Max, std::totally_ordered<T>) {
       std::tuple{test_iota<V, 0, -1>, reverse_iota(test_iota<V, 0, -1>), test_iota<V, 1>},
       [](auto& t, const V x, const V y, const V x1) {
         t.verify_equal(max(x, x), x);
@@ -71,7 +70,7 @@ template <typename V>
       }
     };
 
-    ADD_TEST(Minmax) {
+    ADD_TEST(Minmax, std::totally_ordered<T>) {
       std::tuple{test_iota<V, 0, -1>, reverse_iota(test_iota<V, 0, -1>), test_iota<V, 1>},
       [](auto& t, const V x, const V y, const V x1) {
         t.verify_equal(minmax(x, x), pair{x, x});
@@ -97,7 +96,7 @@ template <typename V>
       }
     };
 
-    ADD_TEST(Clamp) {
+    ADD_TEST(Clamp, std::totally_ordered<T>) {
       std::tuple{test_iota<V>, reverse_iota(test_iota<V>)},
       [](auto& t, const V x, const V y) {
         t.verify_equal(clamp(x, V(), x), x);
