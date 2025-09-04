@@ -330,7 +330,7 @@ namespace std::simd
           else
             {
               auto __idxmap2 = [=](auto __i) consteval {
-                if constexpr (int(__i) >= _Size) // _S_full_size > _Size
+                if constexpr (int(__i + _Offset) >= _Size) // _S_full_size > _Size
                   return __simd_size_constant<simd::uninit_element>;
                 else if constexpr (__index_permutation_function_nosize<_Fp>)
                   return __simd_size_constant<__idxmap(__i + _Offset)>;
