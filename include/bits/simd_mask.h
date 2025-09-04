@@ -301,7 +301,7 @@ namespace std::simd
       using _CxElementMask
         = basic_mask<_Bytes / 2,
                      decltype([] consteval {
-                       if constexpr (not __flags_test(_Ap::_S_variant, _AbiVariant::_CxIleav))
+                       if constexpr (not _S_is_cx_ileav)
                          return _InvalidAbi();
                        else if constexpr (is_same_v<_Ap, _ScalarAbi<_S_size>>)
                          return _ScalarAbi<_S_size * 2>();
@@ -314,9 +314,8 @@ namespace std::simd
       static constexpr basic_mask
       _S_and_neighbors(const _CxElementMask& __k)
       {
-        static_assert(__flags_test(_Ap::_S_variant, _AbiVariant::_CxIleav));
-        static_assert(not __flags_test(_CxElementMask::abi_type::_S_variant,
-                                       _AbiVariant::_CxIleav));
+        static_assert(_S_is_cx_ileav);
+        static_assert(not _CxElementMask::_S_is_cx_ileav);
         basic_mask __r;
         if constexpr (_S_use_bitmask)
           __r._M_data = __k._M_data & (((__k._M_data >> 1) & 0x5555'5555'5555'5555ull)
@@ -330,9 +329,8 @@ namespace std::simd
       static constexpr basic_mask
       _S_or_neighbors(const _CxElementMask& __k)
       {
-        static_assert(__flags_test(_Ap::_S_variant, _AbiVariant::_CxIleav));
-        static_assert(not __flags_test(_CxElementMask::abi_type::_S_variant,
-                                       _AbiVariant::_CxIleav));
+        static_assert(_S_is_cx_ileav);
+        static_assert(not _CxElementMask::_S_is_cx_ileav);
         basic_mask __r;
         if constexpr (_S_use_bitmask)
           __r._M_data = __k._M_data | (((__k._M_data >> 1) & 0x5555'5555'5555'5555ull)
@@ -1016,9 +1014,8 @@ namespace std::simd
       static constexpr basic_mask
       _S_and_neighbors(const _CxElementMask& __k)
       {
-        static_assert(__flags_test(_Ap::_S_variant, _AbiVariant::_CxIleav));
-        static_assert(not __flags_test(_CxElementMask::abi_type::_S_variant,
-                                       _AbiVariant::_CxIleav));
+        static_assert(_S_is_cx_ileav);
+        static_assert(not _CxElementMask::_S_is_cx_ileav);
         return _S_init(_Mask0::_S_and_neighbors(__k._M_data0),
                        _Mask1::_S_and_neighbors(__k._M_data1));
       }
@@ -1027,9 +1024,8 @@ namespace std::simd
       static constexpr basic_mask
       _S_or_neighbors(const _CxElementMask& __k)
       {
-        static_assert(__flags_test(_Ap::_S_variant, _AbiVariant::_CxIleav));
-        static_assert(not __flags_test(_CxElementMask::abi_type::_S_variant,
-                                       _AbiVariant::_CxIleav));
+        static_assert(_S_is_cx_ileav);
+        static_assert(not _CxElementMask::_S_is_cx_ileav);
         return _S_init(_Mask0::_S_or_neighbors(__k._M_data0),
                        _Mask1::_S_or_neighbors(__k._M_data1));
       }
