@@ -557,7 +557,8 @@ namespace std::simd
                                                               __vec_bit_cast<_Up>(__f)));
         }
       else if constexpr (sizeof(_TV) < 16)
-        return __x86_bitmask_blend(__k, __vec_zero_pad_to_16(__t), __vec_zero_pad_to_16(__f));
+        return _VecOps<_TV>::_S_extract(__x86_bitmask_blend(__k, __vec_zero_pad_to_16(__t),
+                                                            __vec_zero_pad_to_16(__f)));
       else
         static_assert(false);
     }
