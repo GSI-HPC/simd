@@ -1802,8 +1802,7 @@ namespace std::simd
     };
 
   template <__vectorizable _Tp, __abi_tag _Ap>
-    requires (_Ap::_S_nreg >= 1)
-      and __complex_like<_Tp>
+    requires __complex_like<_Tp>
       and (__flags_test(_Ap::_S_variant, _AbiVariant::_CxIleav))
     class basic_vec<_Tp, _Ap>
     : _BinaryOps<_Tp, _Ap>

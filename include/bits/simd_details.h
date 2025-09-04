@@ -711,6 +711,7 @@ namespace std::simd
   template <typename _Tp>
     concept __abi_tag
       = same_as<decltype(_Tp::_S_variant), const _AbiVariant>
+          and (_Tp::_S_size >= _Tp::_S_nreg) and (_Tp::_S_nreg >= 1)
           and requires(_Tp __x) {
             { __x.template _M_resize<_Tp::_S_size, _Tp::_S_nreg>() } -> same_as<_Tp>;
           };
