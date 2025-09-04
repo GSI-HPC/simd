@@ -913,9 +913,27 @@ namespace std::simd
 
       static constexpr int _N1 = _S_size - _N0;
 
-      using _Mask0 = basic_mask<_Bytes, decltype(__abi_rebind<_Bytes, _N0, _Ap, true>())>;
+      static constexpr int _Nreg0 = __bit_ceil(unsigned(_Ap::_S_nreg)) / 2;
 
-      using _Mask1 = basic_mask<_Bytes, decltype(__abi_rebind<_Bytes, _N1, _Ap, true>())>;
+      static constexpr int _Nreg1 = _Ap::_S_nreg - _Nreg0;
+
+      using _Mask0 = basic_mask<_Bytes, decltype([] consteval {
+                                          if constexpr (is_same_v<_Ap, _ScalarAbi<_S_size>>)
+                                            return _ScalarAbi<_N0>();
+                                          else if constexpr (_N0 > 1)
+                                            return _Abi<_N0, _Nreg0, _Ap::_S_variant>();
+                                          else
+                                            return __abi_rebind<_Bytes, _N0, _Ap, true>();
+                                        }())>;
+
+      using _Mask1 = basic_mask<_Bytes, decltype([] consteval {
+                                          if constexpr (is_same_v<_Ap, _ScalarAbi<_S_size>>)
+                                            return _ScalarAbi<_N1>();
+                                          else if constexpr (_N1 > 1)
+                                            return _Abi<_N1, _Nreg1, _Ap::_S_variant>();
+                                          else
+                                            return __abi_rebind<_Bytes, _N1, _Ap, true>();
+                                        }())>;
 
       // _Ap::_S_nreg determines how deep the recursion goes. E.g. basic_mask<4, _Abi<8, 4>> cannot
       // use basic_mask<4, _Abi<4, 1>> as _Mask0/1 types.
