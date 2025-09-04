@@ -1881,7 +1881,19 @@ namespace std::simd
         {
           constexpr int __n = _S_size / _Vp::_S_size;
           constexpr int __rem = _S_size % _Vp::_S_size;
-          static_assert(false, "TODO");
+          const auto __chunked = _M_data.template _M_chunk<typename _Vp::_TSimd>();
+          if constexpr (__rem == 0)
+            return _GLIBCXX_SIMD_INT_PACK(__n, _Is, {
+                     return array<_Vp, __n> {_Vp::_S_init(__chunked[_Is])...};
+                   });
+          else
+            {
+              using _Rest = resize_t<__rem, _Vp>;
+              return _GLIBCXX_SIMD_INT_PACK(__n, _Is, {
+                       return tuple {_Vp::_S_init(get<_Is>(__chunked))...,
+                                     _Rest::_S_init(get<__n>(__chunked))};
+                     });
+            }
         }
 
       basic_vec() = default;
