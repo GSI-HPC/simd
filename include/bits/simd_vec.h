@@ -198,8 +198,9 @@ namespace std::simd
         {
           if (__nan[__i] and __nan[__i + 1])
             {
-              const _Cx __cx(__x[__i], __x[__i + 1]);
-              const _Cx __cy(__y[__i], __y[__i + 1]);
+              using _Tc = typename _Cx::value_type;
+              const _Cx __cx(_Tc(__x[__i]), _Tc(__x[__i + 1]));
+              const _Cx __cy(_Tc(__y[__i]), _Tc(__y[__i + 1]));
               const _Cx __cr = __cx * __cy;
               __arr[__i] = __cr.real();
               __arr[__i + 1] = __cr.imag();
@@ -426,7 +427,15 @@ namespace std::simd
           const _DataType __y = __yvec._M_data;
           static_assert((_S_size & 1) == 0);
           using _VO = _VecOps<_DataType>;
-          if (_VecOps<_DataType, _S_size>::_S_complex_imag_is_constprop_zero(__x))
+          if constexpr (_Traits.template _M_eval_as_f32<value_type>())
+            {
+              using _Vf = rebind_t<float, basic_vec>;
+              _Vf __xf = _Vf(*this);
+              __xf.template _M_complex_multiply_with<_CxVec>(_Vf(__yvec));
+              *this = basic_vec(__xf);
+              return;
+            }
+          else if (_VecOps<_DataType, _S_size>::_S_complex_imag_is_constprop_zero(__x))
             {
               if (_VecOps<_DataType, _S_size>::_S_complex_imag_is_constprop_zero(__y))
                 _M_data = __x * __y;
