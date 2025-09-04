@@ -470,6 +470,8 @@ namespace mask_conversion_tests
           check<do_test<int>(not k)>();
           check<do_test<double>(    k)>();
           check<do_test<double>(not k)>();
+          check<do_test<std::float16_t>(    k)>();
+          check<do_test<std::float16_t>(not k)>();
           check<do_test<complex<float>>(    k)>();
           check<do_test<complex<float>>(not k)>();
           check<do_test<complex<double>>(    k)>();
@@ -501,6 +503,7 @@ namespace mask_conversion_tests
   static_assert(test<short>());
   static_assert(test<float>());
   static_assert(test<double>());
+  static_assert(test<std::float16_t>());
   static_assert(test<complex<float>>());
   static_assert(test<complex<double>>());
 }
