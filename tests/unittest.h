@@ -44,10 +44,12 @@
     struct canonical_vec_type<_Tp>
     { using type = unsigned long long; };
 
+  /* Not yet
   template <typename _Tp>
     requires std::is_enum_v<_Tp>
     struct canonical_vec_type<_Tp>
     { using type = canonical_vec_type<std::underlying_type_t<_Tp>>::type; };
+   */
 
   template <>
     struct canonical_vec_type<char>
