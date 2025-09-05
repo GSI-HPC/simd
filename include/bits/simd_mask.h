@@ -178,8 +178,8 @@ namespace std::simd
       static constexpr int _S_full_size = [] {
         if constexpr (_S_is_scalar)
           return _S_size;
-        else if constexpr (_S_use_bitmask)
-          return __div_ceil(_S_size, __CHAR_BIT__) * __CHAR_BIT__;
+        else if constexpr (_S_use_bitmask and _S_size < __CHAR_BIT__)
+          return __CHAR_BIT__;
         else
           return __bit_ceil(unsigned(_S_size));
       }();
