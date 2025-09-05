@@ -40,9 +40,9 @@ namespace test02
   template <int N>
     using expected_abi
 #ifdef __AVX512F__
-      = _Abi<N, 1, __flags_or(_AbiVariant::_BitMask, _AbiVariant::_CxIleav)>;
+      = _Abi<N, 1, _AbiVariant::_BitMask | _AbiVariant::_CxIleav>;
 #else
-      = _Abi<N, 1, __flags_or(_AbiVariant::_VecMask, _AbiVariant::_CxIleav)>;
+      = _Abi<N, 1, _AbiVariant::_VecMask | _AbiVariant::_CxIleav>;
 #endif
 
   static_assert(same_as<simd::vec<complex<float>, 1>::abi_type, expected_abi<1>>);

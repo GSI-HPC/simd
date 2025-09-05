@@ -306,8 +306,8 @@ namespace std::simd
                        else if constexpr (is_same_v<_Ap, _ScalarAbi<_S_size>>)
                          return _ScalarAbi<_S_size * 2>();
                        else // _Ap is _Abi<_S_size, 1, Something>
-                         return _Abi<_S_size * 2, 1, __flags_and(_Ap::_S_variant,
-                                                                 _AbiVariant::_MaskVariants)>();
+                         return _Abi<_S_size * 2, 1,
+                                     _Ap::_S_variant & _AbiVariant::_MaskVariants>();
                      }())>;
 
       [[__gnu__::__always_inline__]]
@@ -1042,7 +1042,7 @@ namespace std::simd
                          }
                        else // _Ap is _Abi<_S_size, 1, Something>
                          return _Abi<_S_size * 2, _Ap::_S_nreg,
-                                     __flags_and(_Ap::_S_variant, _AbiVariant::_MaskVariants)>();
+                                     _Ap::_S_variant & _AbiVariant::_MaskVariants>();
                      }())>;
 
 

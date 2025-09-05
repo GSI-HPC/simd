@@ -482,7 +482,7 @@ namespace std::simd
           or (__complex_like_impl<_Tp> and __vectorizable_scalar<typename _Tp::value_type>
                 and floating_point<typename _Tp::value_type>);
 
-  enum class _AbiVariant : unsigned long long
+  enum _AbiVariant : unsigned long long
   {
     _VecMask = 1 << 0, // default uses vector masks
     _BitMask = 1 << 1, // switch to bit-masks (AVX512)
@@ -492,23 +492,9 @@ namespace std::simd
     _CxVariants = _CxIleav | _CxCtgus,
   };
 
-  consteval _AbiVariant
-  __flags_or(_AbiVariant __x, _AbiVariant __y)
-  {
-    return static_cast<_AbiVariant>(static_cast<unsigned long long>(__x)
-                                      | static_cast<unsigned long long>(__y));
-  }
-
-  consteval _AbiVariant
-  __flags_and(_AbiVariant __x, _AbiVariant __y)
-  {
-    return static_cast<_AbiVariant>(static_cast<unsigned long long>(__x)
-                                      & static_cast<unsigned long long>(__y));
-  }
-
   consteval bool
   __flags_test(_AbiVariant __flags, _AbiVariant __x)
-  { return __flags_or(__flags, __x) == __flags; }
+  { return (__flags | __x) == __flags; }
 
   struct _InvalidInteger
   {};
@@ -626,7 +612,7 @@ namespace std::simd
         }
     };
 
-  template <int _Np, int _Nreg, _AbiVariant _Var
+  template <int _Np, int _Nreg, underlying_type_t<_AbiVariant> _Var
 #ifdef __AVX512F__
               = _AbiVariant::_BitMask
 #else
@@ -655,13 +641,13 @@ namespace std::simd
        */
       static constexpr int _S_nreg = _Nreg;
 
-      static constexpr _AbiVariant _S_variant = _Var;
+      static constexpr _AbiVariant _S_variant = static_cast<_AbiVariant>(_Var);
 
       template <typename _Tp>
         using _DataType = decltype([] {
                             static_assert(_S_nreg == 1);
-                            static_assert(not __flags_test(_Var, _AbiVariant::_CxIleav));
-                            static_assert(not __flags_test(_Var, _AbiVariant::_CxCtgus));
+                            static_assert(not __flags_test(_S_variant, _AbiVariant::_CxIleav));
+                            static_assert(not __flags_test(_S_variant, _AbiVariant::_CxCtgus));
                             constexpr int __n = __bit_ceil(unsigned(_S_size));
                             using _Vp [[__gnu__::__vector_size__(sizeof(_Tp) * __n)]]
                               = __canonical_vec_type_t<_Tp>;
@@ -671,12 +657,12 @@ namespace std::simd
       // Use two values (bits, vector elements) per logical element of the mask.
       // This is not used for _DataType<_Tp> because its _Tp can never be complex (cf. basic_vec
       // partial specialization)
-      static constexpr bool _S_use_2_for_1 = __flags_test(_Var, _AbiVariant::_CxIleav);
+      static constexpr bool _S_use_2_for_1 = __flags_test(_S_variant, _AbiVariant::_CxIleav);
 
       template <size_t _Bytes>
         using _MaskDataType
           = decltype([] {
-              if constexpr (__flags_test(_Var, _AbiVariant::_BitMask))
+              if constexpr (__flags_test(_S_variant, _AbiVariant::_BitMask))
                 {
                   if constexpr (_Nreg > 1)
                     return _InvalidInteger();
@@ -698,7 +684,7 @@ namespace std::simd
         consteval auto
         _M_resize() const
         {
-          if constexpr (_N2 == 1 and not __flags_test(_Var, _AbiVariant::_CxIleav))
+          if constexpr (_N2 == 1 and not __flags_test(_S_variant, _AbiVariant::_CxIleav))
             return _ScalarAbi<1>();
           else
             return _Abi<_N2, _Nreg2, _Var>();
@@ -1094,7 +1080,7 @@ namespace std::simd
             return _ScalarAbi<1>();
           else
             return _Abi<__underlying._S_size / 2, 1,
-                        __flags_or(__underlying._S_variant, _AbiVariant::_CxIleav)>();
+                        __underlying._S_variant | _AbiVariant::_CxIleav>();
         }
       else if constexpr (_Traits._M_have_avx512fp16())
         return _Abi<64 / sizeof(_Tp), 1, _AbiVariant::_BitMask>();
@@ -1197,13 +1183,13 @@ namespace std::simd
             return _Abi<_Np, __nreg * 2, _A0::_S_variant>();
 
           else if constexpr (__complex_like<_Tp>)
-            return _Abi<_Np, __nreg, __flags_or(_A0::_S_variant, _AbiVariant::_CxIleav)>();
+            return _Abi<_Np, __nreg, _A0::_S_variant | _AbiVariant::_CxIleav>();
 
           else if constexpr (_Np == 1)
             return _ScalarAbi<1>();
 
           else
-            return _Abi<_Np, __nreg, __flags_and(_A0::_S_variant, _AbiVariant::_MaskVariants)>();
+            return _Abi<_Np, __nreg, _A0::_S_variant & _AbiVariant::_MaskVariants>();
         }
     }
 
@@ -1291,8 +1277,7 @@ namespace std::simd
           constexpr _AbiVariant __f1 = _From::_S_variant;
 
           // converting to a bit-mask is better
-          if constexpr (__flags_and(__f0, _AbiVariant::_MaskVariants)
-                          != __flags_and(__f1, _AbiVariant::_MaskVariants))
+          if constexpr ((__f0 & _AbiVariant::_MaskVariants) != (__f1 & _AbiVariant::_MaskVariants))
             return __flags_test(__f0, _AbiVariant::_VecMask); // to _VecMask is explicit
 
           // with vec-masks, fewer registers is better
