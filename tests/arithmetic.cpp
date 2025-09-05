@@ -144,6 +144,13 @@ template <typename V>
     using T = typename V::value_type;
     using M = typename V::mask_type;
 
+#define PR121801 1
+#if PR121801
+    using T2 = std::conditional_t<std::is_same_v<T, std::float16_t>, float, T>;
+#else
+    using T2 = T;
+#endif
+
     static constexpr T min = std::numeric_limits<T>::lowest();
     static constexpr T norm_min = std::numeric_limits<T>::min();
     static constexpr T max = std::numeric_limits<T>::max();
@@ -264,7 +271,7 @@ template <typename V>
         t.verify_equal_to_ulp(x / x, V(T(1)), 1);
         t.verify_equal_to_ulp(T(3) / x, V(T(3) / T(2)), 1);
         t.verify_equal_to_ulp(x / T(3), V(T(2) / T(3)), 1);
-        t.verify_equal_to_ulp(y / x, vec<V, T(.5), T(1), T(1.5), T(2), T(2.5), T(3), T(3.5)>, 1);
+        t.verify_equal_to_ulp(y / x, vec<V, .5, 1, 1.5, 2, 2.5, 3, 3.5>, 1);
       }
     };
 
@@ -290,19 +297,19 @@ template <typename V>
     };
 
     ADD_TEST(divide2, (is_iec559 or not std::is_floating_point_v<T>) and requires(T x) { x / x; }) {
-      std::tuple{T(2), vec<V, 1, 2, 3, 4, 5, 6, 7>, vec<V, max, norm_min>, vec<V, norm_min, max>,
-                 vec<V, max, T(norm_min + 1)>},
+      std::tuple{T(2), vec<V, 1, 2, 3, 4, 5, 6, 7>, vec<V, T2(max), T2(norm_min)>,
+                 vec<V, T2(norm_min), T2(max)>, vec<V, T2(max), T2(norm_min) + 1>},
       [](auto& t, V x, V y, V z, V a, V b) {
         t.verify_equal(x / x, V(1));
         t.verify_equal(T(3) / x, V(T(3) / T(2)));
         t.verify_equal(x / T(3), V(T(2) / T(3)));
-        t.verify_equal(y / x, vec<V, T(.5), T(1), T(1.5), T(2), T(2.5), T(3), T(3.5)>);
-        V ref = vec<V, T(max / 2), T(norm_min / 2)>;
+        t.verify_equal(y / x, vec<V, .5, 1, 1.5, 2, 2.5, 3, 3.5>);
+        V ref = vec<V, T2(max / 2), T2(norm_min / 2)>;
         t.verify_equal(z / x, ref);
-        ref = vec<V, T(norm_min / 2), T(max / 2)>;
+        ref = vec<V, T2(norm_min / 2), T2(max / 2)>;
         t.verify_equal(a / x, ref);
         t.verify_equal(b / b, V(1));
-        ref = vec<V, T(2 / max), T(2 / (norm_min + 1))>;
+        ref = vec<V, T2(2 / max), T2(2 / (norm_min + 1))>;
         t.verify_equal(x / b, ref);
         t.verify_equal(x /= b, ref);
         t.verify_equal(x, ref);
