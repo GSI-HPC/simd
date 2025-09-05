@@ -279,21 +279,24 @@ template <typename T>
     else if constexpr (std::simd::__simd_vec_or_mask_type<T>)
       {
         using TT = typename T::value_type;
-        if constexpr (sizeof(TT) <= 8)
-          {
-            struct B
-            {
-              alignas(T) simd::rebind_t<_UInt<sizeof(TT)>, T> data;
-            };
-            return all_of(std::bit_cast<B>(a).data == std::bit_cast<B>(b).data);
-          }
+        if constexpr (std::is_integral_v<TT>)
+          return all_of(a == b);
         else
           {
+            constexpr size_t uint_size = std::min(size_t(8), sizeof(TT));
             struct B
             {
-              alignas(T) simd::rebind_t<_UInt<8>, simd::resize_t<T::size() * sizeof(TT) / 8, T>> data;
+              alignas(T) simd::rebind_t<_UInt<uint_size>,
+                                        simd::resize_t<T::size() * uint_size / 8, T>> data;
             };
-            return all_of(std::bit_cast<B>(a).data == std::bit_cast<B>(b).data);
+            if constexpr (sizeof(B) == sizeof(a))
+              return all_of(std::bit_cast<B>(a).data == std::bit_cast<B>(b).data);
+            else
+              {
+                auto [a0, a1] = chunk<std::bit_ceil(unsigned(T::size())) / 2>(a);
+                auto [b0, b1] = chunk<std::bit_ceil(unsigned(T::size())) / 2>(b);
+                return bit_equal(a0, b0) and bit_equal(a1, b1);
+              }
           }
       }
     else if constexpr (complex_like<T>)
@@ -561,20 +564,19 @@ struct runtime_verifier
   verify_equal(auto&& x, auto&& y,
                std::source_location loc = std::source_location::current())
   {
-    using V = decltype(std::simd::select(x == y, x, y));
     const auto ip = determine_ip();
     bool ok;
     if constexpr (pair_specialization<decltype(x)> and pair_specialization<decltype(y)>)
       ok = std::simd::all_of(x.first == y.first) and std::simd::all_of(x.second == y.second);
     else
-      ok = equal_with_nan_and_inf_fixup<V>(x, y);
+      ok = equal_with_nan_and_inf_fixup<decltype(std::simd::select(x == y, x, y))>(x, y);
     if (ok)
       {
         ++passed_tests;
         return {};
       }
     else
-      return log_failure(x, y, loc, ip, "verify_equal")(x == y);
+      return log_failure(x, y, loc, ip, "verify_equal");
   }
 
   [[gnu::always_inline]]
