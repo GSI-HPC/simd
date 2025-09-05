@@ -1224,7 +1224,7 @@ namespace std::simd
       }
 
       // [simd.comparison] ----------------------------------------------------
-#ifdef __SSE__
+#if _GLIBCXX_SIMD_HAVE_SSE
       template <_X86Cmp _Cmp>
         [[__gnu__::__always_inline__]]
         constexpr mask_type
@@ -1268,7 +1268,7 @@ namespace std::simd
       friend constexpr mask_type
       operator==(const basic_vec& __x, const basic_vec& __y) noexcept
       {
-#ifdef __SSE__
+#if _GLIBCXX_SIMD_HAVE_SSE
         if constexpr (_S_use_bitmask)
           return __x._M_bitmask_cmp<_X86Cmp::_Eq>(__y._M_data);
         else
@@ -1280,7 +1280,7 @@ namespace std::simd
       friend constexpr mask_type
       operator!=(const basic_vec& __x, const basic_vec& __y) noexcept
       {
-#ifdef __SSE__
+#if _GLIBCXX_SIMD_HAVE_SSE
         if constexpr (_S_use_bitmask)
           return __x._M_bitmask_cmp<_X86Cmp::_Neq>(__y._M_data);
         else
@@ -1292,7 +1292,7 @@ namespace std::simd
       friend constexpr mask_type
       operator<(const basic_vec& __x, const basic_vec& __y) noexcept
       {
-#ifdef __SSE__
+#if _GLIBCXX_SIMD_HAVE_SSE
         if constexpr (_S_use_bitmask)
           return __x._M_bitmask_cmp<_X86Cmp::_Lt>(__y._M_data);
         else
@@ -1304,7 +1304,7 @@ namespace std::simd
       friend constexpr mask_type
       operator<=(const basic_vec& __x, const basic_vec& __y) noexcept
       {
-#ifdef __SSE__
+#if _GLIBCXX_SIMD_HAVE_SSE
         if constexpr (_S_use_bitmask)
           return __x._M_bitmask_cmp<_X86Cmp::_Le>(__y._M_data);
         else
