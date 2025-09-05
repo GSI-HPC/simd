@@ -788,74 +788,71 @@ namespace std::simd
         }
 
       // [simd.mask.reductions] implementation --------------------------------
-      template <_ArchTraits _Traits = {}>
-        [[__gnu__::__always_inline__]]
-        constexpr bool
-        _M_all_of() const noexcept
-        {
-          if constexpr (_S_is_scalar)
-            return _M_data;
-          else if constexpr (_S_use_bitmask)
-            {
-              if constexpr (_S_is_partial)
-                // PR120925 (partial kortest pattern not recognized)
-                return (_M_data & _S_implicit_mask) == _S_implicit_mask;
-              else
-                return _M_data == _S_implicit_mask;
-            }
+      [[__gnu__::__always_inline__]]
+      constexpr bool
+      _M_all_of() const noexcept
+      {
+        if constexpr (_S_is_scalar)
+          return _M_data;
+        else if constexpr (_S_use_bitmask)
+          {
+            if constexpr (_S_is_partial)
+              // PR120925 (partial kortest pattern not recognized)
+              return (_M_data & _S_implicit_mask) == _S_implicit_mask;
+            else
+              return _M_data == _S_implicit_mask;
+          }
 #if _GLIBCXX_SIMD_HAVE_SSE
-          else if (not (__builtin_is_constant_evaluated() or __builtin_constant_p(_M_data)))
-            return __x86_vecmask_all<_S_size>(_M_data);
+        else if (not (__builtin_is_constant_evaluated() or __builtin_constant_p(_M_data)))
+          return __x86_vecmask_all<_S_size>(_M_data);
 #endif
-          else
-            return _VecOps<_DataType, _S_size>::_S_all_of(_M_data);
-        }
+        else
+          return _VecOps<_DataType, _S_size>::_S_all_of(_M_data);
+      }
 
-      template <_ArchTraits _Traits = {}>
-        [[__gnu__::__always_inline__]]
-        constexpr bool
-        _M_any_of() const noexcept
-        {
-          if constexpr (_S_is_scalar)
-            return _M_data;
-          else if constexpr (_S_use_bitmask)
-            {
-              if constexpr (_S_is_partial)
-                // PR120925 (partial kortest pattern not recognized)
-                return (_M_data & _S_implicit_mask) != 0;
-              else
-                return _M_data != 0;
-            }
+      [[__gnu__::__always_inline__]]
+      constexpr bool
+      _M_any_of() const noexcept
+      {
+        if constexpr (_S_is_scalar)
+          return _M_data;
+        else if constexpr (_S_use_bitmask)
+          {
+            if constexpr (_S_is_partial)
+              // PR120925 (partial kortest pattern not recognized)
+              return (_M_data & _S_implicit_mask) != 0;
+            else
+              return _M_data != 0;
+          }
 #if _GLIBCXX_SIMD_HAVE_SSE
-          else if (not (__builtin_is_constant_evaluated() or __builtin_constant_p(_M_data)))
-            return __x86_vecmask_any<_S_size>(_M_data);
+        else if (not (__builtin_is_constant_evaluated() or __builtin_constant_p(_M_data)))
+          return __x86_vecmask_any<_S_size>(_M_data);
 #endif
-          else
-            return _VecOps<_DataType, _S_size>::_S_any_of(_M_data);
-        }
+        else
+          return _VecOps<_DataType, _S_size>::_S_any_of(_M_data);
+      }
 
-      template <_ArchTraits _Traits = {}>
-        [[__gnu__::__always_inline__]]
-        constexpr bool
-        _M_none_of() const noexcept
-        {
-          if constexpr (_S_is_scalar)
-            return not _M_data;
-          else if constexpr (_S_use_bitmask)
-            {
-              if constexpr (_S_is_partial)
-                // PR120925 (partial kortest pattern not recognized)
-                return (_M_data & _S_implicit_mask) == 0;
-              else
-                return _M_data == 0;
-            }
+      [[__gnu__::__always_inline__]]
+      constexpr bool
+      _M_none_of() const noexcept
+      {
+        if constexpr (_S_is_scalar)
+          return not _M_data;
+        else if constexpr (_S_use_bitmask)
+          {
+            if constexpr (_S_is_partial)
+              // PR120925 (partial kortest pattern not recognized)
+              return (_M_data & _S_implicit_mask) == 0;
+            else
+              return _M_data == 0;
+          }
 #if _GLIBCXX_SIMD_HAVE_SSE
-          else if (not (__builtin_is_constant_evaluated() or __builtin_constant_p(_M_data)))
-            return __x86_vecmask_none<_S_size>(_M_data);
+        else if (not (__builtin_is_constant_evaluated() or __builtin_constant_p(_M_data)))
+          return __x86_vecmask_none<_S_size>(_M_data);
 #endif
-          else
-            return _VecOps<_DataType, _S_size>::_S_none_of(_M_data);
-        }
+        else
+          return _VecOps<_DataType, _S_size>::_S_none_of(_M_data);
+      }
 
       [[__gnu__::__always_inline__]]
       constexpr __simd_size_type
