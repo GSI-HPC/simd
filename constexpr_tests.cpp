@@ -9,6 +9,8 @@
 
 namespace simd = std::simd;
 
+using std::complex;
+
 namespace test01
 {
   using std::same_as;
@@ -594,6 +596,18 @@ static_assert(all_of(simd::cat(simd::__iota<simd::vec<double, 4>>, simd::__iota<
 
 static_assert(all_of(simd::cat(simd::__iota<simd::vec<double, 4>>, simd::__iota<simd::vec<double, 4>> + 4)
                        == simd::__iota<simd::vec<double, 8>>));
+
+static_assert(all_of(simd::cat(simd::__iota<simd::vec<complex<float>, 1>>,
+                               simd::__iota<simd::vec<complex<float>, 1>> + 1.f)
+                       == simd::__iota<simd::vec<complex<float>, 2>>));
+
+static_assert(all_of(simd::cat(simd::__iota<simd::vec<complex<float>, 3>>,
+                               simd::__iota<simd::vec<complex<float>, 3>> + 3.f)
+                       == simd::__iota<simd::vec<complex<float>, 6>>));
+
+static_assert(all_of(simd::cat(simd::__iota<simd::vec<complex<float>, 8>>,
+                               simd::__iota<simd::vec<complex<float>, 8>> + 8.f)
+                       == simd::__iota<simd::vec<complex<float>, 16>>));
 
 // select ////////////////////////
 

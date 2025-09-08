@@ -646,7 +646,7 @@ namespace std::simd
         [[__gnu__::__always_inline__]]
         static constexpr basic_vec
         _S_concat(const basic_vec<value_type, _A0>& __x0) noexcept
-        { return basic_vec(__x0); }
+        { return static_cast<const basic_vec&>(__x0); }
 
       template <typename... _As>
         requires (sizeof...(_As) > 1)
@@ -1541,13 +1541,19 @@ namespace std::simd
         { return basic_vec(__x0); }
 
       template <typename _A0, typename... _As>
+        requires (sizeof...(_As) >= 1)
         [[__gnu__::__always_inline__]]
         static constexpr basic_vec
         _S_concat(const basic_vec<value_type, _A0>& __x0,
                   const basic_vec<value_type, _As>&... __xs) noexcept
         {
           if constexpr (is_same_v<basic_vec<value_type, _A0>, _DataType0>)
-            return _S_init(__x0, _DataType1::_S_concat(__xs...));
+            {
+              if constexpr (sizeof...(_As) == 1)
+                return _S_init(__x0, __xs...);
+              else
+                return _S_init(__x0, _DataType1::_S_concat(__xs...));
+            }
           else if (__builtin_is_constant_evaluated()
                      or (__x0._M_is_constprop() and ... and __xs._M_is_constprop()))
             {
@@ -2004,6 +2010,19 @@ namespace std::simd
                      });
             }
         }
+
+      template <typename _A0>
+        [[__gnu__::__always_inline__]]
+        static constexpr basic_vec
+        _S_concat(const basic_vec<value_type, _A0>& __x0) noexcept
+        { return static_cast<const basic_vec&>(__x0); }
+
+      template <typename... _As>
+        requires (sizeof...(_As) > 1)
+        [[__gnu__::__always_inline__]]
+        static constexpr basic_vec
+        _S_concat(const basic_vec<value_type, _As>&... __xs) noexcept
+        { return basic_vec::_S_init(_TSimd::_S_concat(__xs._M_data...)); }
 
       basic_vec() = default;
 
@@ -2679,8 +2698,17 @@ namespace std::simd
   template <typename _Tp, typename _Abi>
     inline constexpr basic_vec<_Tp, _Abi>
     __iota<basic_vec<_Tp, _Abi>> = basic_vec<_Tp, _Abi>([](_Tp __i) -> _Tp {
-      static_assert (__simd_size_v<_Tp, _Abi> - 1 <= numeric_limits<_Tp>::max(),
-                     "iota object would overflow");
+      static_assert(__simd_size_v<_Tp, _Abi> - 1 <= numeric_limits<_Tp>::max(),
+                    "iota object would overflow");
+      return __i;
+    });
+
+  template <__complex_like _Tp, typename _Abi>
+    inline constexpr basic_vec<_Tp, _Abi>
+    __iota<basic_vec<_Tp, _Abi>> = basic_vec<_Tp, _Abi>([](typename _Tp::value_type __i)
+                                                          -> typename _Tp::value_type {
+      static_assert(__simd_size_v<_Tp, _Abi> - 1 <= numeric_limits<typename _Tp::value_type>::max(),
+                    "iota object would overflow");
       return __i;
     });
 }
