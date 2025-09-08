@@ -1393,8 +1393,13 @@ namespace std::simd
         friend constexpr vec<_T0, _S_size>
         __select_impl(const basic_mask& __k, const _T0& __t, const _T1& __f) noexcept
         {
-          return vec<_T0, _S_size>::_S_init(__select_impl(__k._M_data0, __t, __f),
-                                            __select_impl(__k._M_data1, __t, __f));
+          using _Vp = vec<_T0, _S_size>;
+          if constexpr (__complex_like<_T0>)
+            return _Vp::_S_concat(__select_impl(__k._M_data0, __t, __f),
+                                  __select_impl(__k._M_data1, __t, __f));
+          else
+            return _Vp::_S_init(__select_impl(__k._M_data0, __t, __f),
+                                __select_impl(__k._M_data1, __t, __f));
         }
 
       template <_ArchTraits _Traits = {}>

@@ -115,14 +115,19 @@ template <typename V>
     };
 
     ADD_TEST(Select) {
-      std::tuple{test_iota<V, 0, 63>, test_iota<V, 1, 64>},
-      [](auto& t, const V x, const V y) {
+      std::tuple{test_iota<V, 0, 63>, test_iota<V, 1, 64>, T(2),
+                 M([](int i) { return 1 == (i & 1); })},
+      [](auto& t, const V x, const V y, const T z, const M k) {
         t.verify_equal(select(M(true), x, y), x);
         t.verify_equal(select(M(false), x, y), y);
         t.verify_equal(select(M(true), y, x), y);
         t.verify_equal(select(M(false), y, x), x);
-        t.verify_equal(select(M([](int i) { return 1 == (i & 1); }), x, T()),
+        t.verify_equal(select(k, x, T()),
                        V([](int i) { return (1 == (i & 1)) ? T(i & 63) : T(); }));
+
+        t.verify_equal(select(M(true), z, T()), z);
+        t.verify_equal(select(M(true), T(), z), V());
+        t.verify_equal(select(k, z, T()), V([](int i) { return (1 == (i & 1)) ? T(2) : T(); }));
       }
     };
   };
