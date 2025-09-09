@@ -11,6 +11,7 @@ template <typename V>
     using T = typename V::value_type;
 
     using M = typename V::mask_type;
+
     using pair = std::pair<V, V>;
     static constexpr std::conditional_t<std::is_floating_point_v<T>, short, T> x_max
       = test_iota_max<V, 1>;
@@ -116,12 +117,9 @@ template <typename V>
 
     ADD_TEST(Select) {
       std::tuple{test_iota<V, 0, 63>, test_iota<V, 1, 64>, T(2),
-                 M([](int i) { return 1 == (i & 1); })},
-      [](auto& t, const V x, const V y, const T z, const M k) {
-        t.verify_equal(k[0], false)(k);
-        if constexpr (V::size() > 1)
-          t.verify_equal(k[1], true)(k);
-
+                 M([](int i) { return 1 == (i & 1); }),
+                 M([](int i) { return 1 == (i % 3); })},
+      [](auto& t, const V x, const V y, const T z, const M k, const M k3) {
         t.verify_equal(select(M(true), x, y), x);
         t.verify_equal(select(M(false), x, y), y);
         t.verify_equal(select(M(true), y, x), y);
@@ -132,6 +130,7 @@ template <typename V>
         t.verify_equal(select(M(true), z, T()), z);
         t.verify_equal(select(M(true), T(), z), V());
         t.verify_equal(select(k, z, T()), V([](int i) { return (1 == (i & 1)) ? T(2) : T(); }));
+        t.verify_equal(select(k3, z, T()), V([](int i) { return (1 == (i % 3)) ? T(2) : T(); }));
       }
     };
   };

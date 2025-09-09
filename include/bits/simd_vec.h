@@ -264,6 +264,9 @@ namespace std::simd
       template <typename, typename>
         friend class basic_vec;
 
+      template <size_t, typename>
+        friend class basic_mask;
+
       static constexpr int _S_size = _Ap::_S_size;
 
       static constexpr int _S_full_size = __bit_ceil(unsigned(_S_size));
@@ -2342,7 +2345,9 @@ namespace std::simd
 
       using abi_type = _Ap;
 
-      using mask_type = typename _RealSimd::mask_type;
+      // We can't use _RealSimd::mask_type here because that would have the wrong value for _Bytes,
+      // which bites us in __select_impl(basic_mask, T, T) where sizeof(T) is constrained to _Bytes.
+      using mask_type = basic_mask<sizeof(_Tp), abi_type>;
 
       using iterator = __iterator<basic_vec>;
 
@@ -2389,6 +2394,19 @@ namespace std::simd
           else
             return tuple {_Vp(__rs, __is)..., resize_t<__rem, _Vp>(__rN, __iN)};
         }
+
+      template <typename _A0>
+        [[__gnu__::__always_inline__]]
+        static constexpr basic_vec
+        _S_concat(const basic_vec<value_type, _A0>& __x0) noexcept
+        { return static_cast<const basic_vec&>(__x0); }
+
+      template <typename... _As>
+        requires (sizeof...(_As) > 1)
+        [[__gnu__::__always_inline__]]
+        static constexpr basic_vec
+        _S_concat(const basic_vec<value_type, _As>&... __xs) noexcept
+        { return {_RealSimd::_S_concat(__xs._M_real...), _RealSimd::_S_concat(__xs._M_imag...) }; }
 
       basic_vec() = default;
 
@@ -2610,12 +2628,12 @@ namespace std::simd
       [[__gnu__::__always_inline__]]
       friend constexpr mask_type
       operator==(const basic_vec& __x, const basic_vec& __y) noexcept
-      { return __x._M_real == __y._M_real and __x._M_imag == __y._M_imag; }
+      { return mask_type(__x._M_real == __y._M_real and __x._M_imag == __y._M_imag); }
 
       [[__gnu__::__always_inline__]]
       friend constexpr mask_type
       operator!=(const basic_vec& __x, const basic_vec& __y) noexcept
-      { return __x._M_real != __y._M_real or __x._M_imag != __y._M_imag; }
+      { return mask_type(__x._M_real != __y._M_real or __x._M_imag != __y._M_imag); }
 
       // [simd.complex.access] complex-value accessors ------------------------
       // LWG4230: returns _RealSimd instead of auto
@@ -2644,8 +2662,9 @@ namespace std::simd
       friend constexpr basic_vec
       __select_impl(const mask_type& __k, const basic_vec& __t, const basic_vec& __f) noexcept
       {
-        return basic_vec(__select_impl(__k, __t._M_real, __f._M_real),
-                         __select_impl(__k, __t._M_imag, __f._M_imag));
+        typename basic_vec::_RealSimd::mask_type __kk(__k);
+        return basic_vec(__select_impl(__kk, __t._M_real, __f._M_real),
+                         __select_impl(__kk, __t._M_imag, __f._M_imag));
       }
 
       // [simd.complex.math] internals ---------------------------------------

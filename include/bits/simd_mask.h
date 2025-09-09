@@ -782,10 +782,17 @@ namespace std::simd
         friend constexpr vec<_T0, _S_size>
         __select_impl(const basic_mask& __k, const _T0& __t, const _T1& __f) noexcept
         {
-          if constexpr (not _S_use_bitmask)
+          using _Rp = vec<_T0, _S_size>;
+          static_assert(_Rp::abi_type::_S_nreg == 1);
+          if constexpr (_S_is_scalar)
             return __k._M_data ? __t : __f;
+          else if constexpr (_S_use_bitmask or __complex_like<_T0>)
+            return __select_impl(__k, _Rp(__t), _Rp(__f));
           else
-            return __select_impl(__k, vec<_T0, _S_size>(__t), vec<_T1, _S_size>(__f));
+            {
+              using _Tp = __vec_value_type<typename vec<_T0, _S_size>::_DataType>;
+              return vec<_T0, _S_size>::_S_init(__k._M_data ? _Tp(__t) : _Tp(__f));
+            }
         }
 
       // [simd.mask.reductions] implementation --------------------------------
