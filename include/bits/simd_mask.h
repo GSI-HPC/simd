@@ -523,7 +523,8 @@ namespace std::simd
                       if constexpr (_S_is_scalar)
                         return __gen(__simd_size_constant<0>);
                       else if constexpr (_S_use_bitmask)
-                        return ((_DataType(__gen(__simd_size_constant<_Is>)) << _Is) | ...);
+                        return ((_DataType(__gen(__simd_size_constant<_Is>))
+                                   << ((_S_use_2_for_1 + 1) * _Is)) | ...);
                       else if constexpr (_S_use_2_for_1)
                         { // for _CxIleav, the results of each __gen call need to initialize two
                           // neighboring elements

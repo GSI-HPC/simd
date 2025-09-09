@@ -118,6 +118,10 @@ template <typename V>
       std::tuple{test_iota<V, 0, 63>, test_iota<V, 1, 64>, T(2),
                  M([](int i) { return 1 == (i & 1); })},
       [](auto& t, const V x, const V y, const T z, const M k) {
+        t.verify_equal(k[0], false)(k);
+        if constexpr (V::size() > 1)
+          t.verify_equal(k[1], true)(k);
+
         t.verify_equal(select(M(true), x, y), x);
         t.verify_equal(select(M(false), x, y), y);
         t.verify_equal(select(M(true), y, x), y);
