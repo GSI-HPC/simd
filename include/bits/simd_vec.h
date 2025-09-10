@@ -692,13 +692,31 @@ namespace std::simd
           return _M_reduce_1(__binary_op)._M_reduce_tail(__rest, __binary_op);
       }
 
-      template <_ArchTraits _Traits = {}>
+#ifdef __SSE2__
+      template <int _Shift, _ArchTraits _Traits = {}>
+        [[__gnu__::__always_inline__]]
+        constexpr basic_vec
+        _M_elements_shifted_down() const
+        {
+          static_assert(_Shift < _S_size and _Shift > 0);
+          return _S_init(reinterpret_cast<_DataType>(
+                           __builtin_ia32_psrldqi128(
+                             reinterpret_cast<__vec_builtin_type_bytes<long long, 16>>(_M_data),
+                             _Shift * sizeof(value_type) * 8)));
+        }
+#endif
+
+      template <typename _BinaryOp, _ArchTraits _Traits = {}>
         [[__gnu__::__always_inline__]]
         constexpr value_type
-        _M_reduce(auto __binary_op) const
+        _M_reduce(_BinaryOp __binary_op) const
       {
         if constexpr (_S_size == 1)
           return operator[](0);
+        else if constexpr (_Traits.template _M_eval_as_f32<value_type>()
+                             and (is_same_v<_BinaryOp, plus<>>
+                                    or is_same_v<_BinaryOp, multiplies<>>))
+          return value_type(rebind_t<float, basic_vec>(*this)._M_reduce(__binary_op));
 #ifdef __SSE2__
         else if constexpr (is_integral_v<value_type> and sizeof(value_type) == 1
                              and is_same_v<decltype(__binary_op), multiplies<>>)
@@ -721,22 +739,34 @@ namespace std::simd
               {
                 static_assert(_S_size <= 16);
                 auto __x = *this;
+#ifdef __SSE2__
+                if constexpr (sizeof(_M_data) == 16 and is_integral_v<value_type>)
+                  {
+                    if constexpr (_S_size > 8)
+                      __x = __binary_op(__x, __x.template _M_elements_shifted_down<8>());
+                    if constexpr (_S_size > 4)
+                      __x = __binary_op(__x, __x.template _M_elements_shifted_down<4>());
+                    if constexpr (_S_size > 2)
+                      __x = __binary_op(__x, __x.template _M_elements_shifted_down<2>());
+                    return __binary_op(__x, __x.template _M_elements_shifted_down<1>())[0];
+                  }
+#endif
                 if constexpr (_S_size > 8)
                   __x = __binary_op(__x, _S_static_permute(__x, _SwapNeighbors<8>()));
                 if constexpr (_S_size > 4)
                   __x = __binary_op(__x, _S_static_permute(__x, _SwapNeighbors<4>()));
 #ifdef __SSE2__
                 // avoid pshufb by "promoting" to int
-                if constexpr (is_integral_v<value_type> and sizeof(value_type) <= 2)
+                if constexpr (is_integral_v<value_type> and sizeof(value_type) <= 1)
                   return resize_t<4, rebind_t<int, basic_vec>>(chunk<4>(__x)[0])
                            ._M_reduce(__binary_op);
 #endif
                 if constexpr (_S_size > 2)
                   __x = __binary_op(__x, _S_static_permute(__x, _SwapNeighbors<2>()));
-                if constexpr (is_integral_v<value_type> and sizeof(value_type) == 1)
-                  return __binary_op(vec<value_type, 1>(__x[0]), vec<value_type, 1>(__x[1]))[0];
-                else
+                if constexpr (is_integral_v<value_type> and sizeof(value_type) == 2)
                   return __binary_op(__x, _S_static_permute(__x, _SwapNeighbors<1>()))[0];
+                else
+                  return __binary_op(vec<value_type, 1>(__x[0]), vec<value_type, 1>(__x[1]))[0];
               }
           }
         else
@@ -1605,46 +1635,51 @@ namespace std::simd
           return _M_reduce_1(__binary_op)._M_reduce_tail(__rest, __binary_op);
       }
 
-      [[__gnu__::__always_inline__]]
-      constexpr value_type
-      _M_reduce(auto __binary_op) const
-      {
+      template <typename _BinaryOp, _TargetTraits _Traits = {}>
+        [[__gnu__::__always_inline__]]
+        constexpr value_type
+        _M_reduce(_BinaryOp __binary_op) const
+        {
+          if constexpr (_Traits.template _M_eval_as_f32<value_type>()
+                          and (is_same_v<_BinaryOp, plus<>>
+                                 or is_same_v<_BinaryOp, multiplies<>>))
+            return value_type(rebind_t<float, basic_vec>(*this)._M_reduce(__binary_op));
 #ifdef __SSE2__
-        if constexpr (is_integral_v<value_type> and sizeof(value_type) == 1
-                             and is_same_v<decltype(__binary_op), multiplies<>>)
-          {
-            // convert to unsigned short because of missing 8-bit mul instruction
-            // we don't need to preserve the order of elements
+          else if constexpr (is_integral_v<value_type> and sizeof(value_type) == 1
+                               and is_same_v<decltype(__binary_op), multiplies<>>)
+            {
+              // convert to unsigned short because of missing 8-bit mul instruction
+              // we don't need to preserve the order of elements
 #if 1
-            using _V16 = resize_t<_S_size / 2, rebind_t<unsigned short, basic_vec>>;
-            auto __a = __builtin_bit_cast(_V16, *this);
-            return __binary_op(__a, __a >> 8)._M_reduce(__binary_op);
+              using _V16 = resize_t<_S_size / 2, rebind_t<unsigned short, basic_vec>>;
+              auto __a = __builtin_bit_cast(_V16, *this);
+              return __binary_op(__a, __a >> 8)._M_reduce(__binary_op);
 #else
-            // alternative:
-            using _V16 = rebind_t<unsigned short, basic_vec>;
-            return _V16(*this)._M_reduce(__binary_op);
+              // alternative:
+              using _V16 = rebind_t<unsigned short, basic_vec>;
+              return _V16(*this)._M_reduce(__binary_op);
 #endif
-          }
+            }
 #endif
-        else if constexpr (_N0 == _N1)
-          return _M_reduce_1(__binary_op)._M_reduce(__binary_op);
+          else if constexpr (_N0 == _N1)
+            return _M_reduce_1(__binary_op)._M_reduce(__binary_op);
 #if 0 // needs benchmarking before we do this
-        else if constexpr (sizeof(_M_data0) == sizeof(_M_data1)
-                             and requires {
-                               __default_identity_element<value_type, decltype(__binary_op)>();
-                             })
-          { // extend to power-of-2 with identity element for more parallelism
-            _DataType0 __v1 = __builtin_bit_cast(_DataType0, _M_data1);
-            constexpr _DataType0 __id
-              = __default_identity_element<value_type, decltype(__binary_op)>();
-            constexpr auto __k = _DataType0::mask_type::_S_partial_mask_of_n(_N1);
-            __v1 = __select_impl(__k, __v1, __id);
-            return __binary_op(_M_data0, __v1)._M_reduce(__binary_op);
-          }
+          else if constexpr (sizeof(_M_data0) == sizeof(_M_data1)
+                               and requires {
+                                 __default_identity_element<value_type, decltype(__binary_op)>();
+                               })
+            { // extend to power-of-2 with identity element for more parallelism
+              _DataType0 __v1 = __builtin_bit_cast(_DataType0, _M_data1);
+              constexpr _DataType0 __id
+                = __default_identity_element<value_type, decltype(__binary_op)>();
+              constexpr auto __k = _DataType0::mask_type::_S_partial_mask_of_n(_N1);
+              __v1 = __select_impl(__k, __v1, __id);
+              return __binary_op(_M_data0, __v1)._M_reduce(__binary_op);
+            }
 #endif
-        else
-          return _M_data0._M_reduce_1(__binary_op)._M_reduce_tail(_M_data1, __binary_op);
-      }
+          else
+            return _M_data0._M_reduce_1(__binary_op)._M_reduce_tail(_M_data1, __binary_op);
+        }
 
       [[__gnu__::__always_inline__]]
       constexpr mask_type
