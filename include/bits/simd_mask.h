@@ -578,15 +578,15 @@ namespace std::simd
 
       [[__gnu__::__always_inline__]]
       constexpr _VecType
-      operator+() const noexcept
+      operator+() const noexcept requires destructible<_VecType>
       { return operator _VecType(); }
 
       constexpr _VecType
-      operator+() const noexcept requires (_S_use_2_for_1) = delete;
+      operator+() const noexcept = delete;
 
       [[__gnu__::__always_inline__]]
       constexpr _VecType
-      operator-() const noexcept
+      operator-() const noexcept requires destructible<_VecType>
       {
         using _Ip = typename _VecType::value_type;
         if constexpr (_S_is_scalar)
@@ -601,11 +601,11 @@ namespace std::simd
       }
 
       constexpr _VecType
-      operator-() const noexcept requires (_S_use_2_for_1) = delete;
+      operator-() const noexcept = delete;
 
       [[__gnu__::__always_inline__]]
       constexpr _VecType
-      operator~() const noexcept
+      operator~() const noexcept requires destructible<_VecType>
       {
         using _Ip = typename _VecType::value_type;
         if constexpr (_S_is_scalar)
@@ -620,7 +620,7 @@ namespace std::simd
       }
 
       constexpr _VecType
-      operator~() const noexcept requires (_S_use_2_for_1) = delete;
+      operator~() const noexcept = delete;
 
       // [simd.mask.conv] -----------------------------------------------------
       template <typename _Up, typename _UAbi>
@@ -1235,27 +1235,27 @@ namespace std::simd
 
       [[__gnu__::__always_inline__]]
       constexpr _VecType
-      operator+() const noexcept
+      operator+() const noexcept requires destructible<_VecType>
       { return _VecType::_S_init(+_M_data0, +_M_data1); }
 
       constexpr _VecType
-      operator+() const noexcept requires (_S_use_2_for_1) = delete;
+      operator+() const noexcept = delete;
 
       [[__gnu__::__always_inline__]]
       constexpr _VecType
-      operator-() const noexcept
+      operator-() const noexcept requires destructible<_VecType>
       { return _VecType::_S_init(-_M_data0, -_M_data1); }
 
       constexpr _VecType
-      operator-() const noexcept requires (_S_use_2_for_1) = delete;
+      operator-() const noexcept = delete;
 
       [[__gnu__::__always_inline__]]
       constexpr _VecType
-      operator~() const noexcept
+      operator~() const noexcept requires destructible<_VecType>
       { return _VecType::_S_init(~_M_data0, ~_M_data1); }
 
       constexpr _VecType
-      operator~() const noexcept requires (_S_use_2_for_1) = delete;
+      operator~() const noexcept = delete;
 
       // [simd.mask.conv] -----------------------------------------------------
       template <typename _Up, typename _UAbi>
