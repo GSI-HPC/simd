@@ -123,8 +123,7 @@ namespace std::simd
     { return basic_vec<_Tp, __deduce_abi_t<_Tp, (_Abis::_S_size + ...)>>::_S_concat(__xs...); }
 
   template<size_t _Bytes, typename... _Abis>
-    constexpr basic_mask<_Bytes, __deduce_abi_t<__integer_from<_Bytes>,
-                                                (basic_mask<_Bytes, _Abis>::size() + ...)>>
+    constexpr basic_mask<_Bytes, __deduce_abi_t<__integer_from<_Bytes>, (_Abis::_S_size + ...)>>
     cat(const basic_mask<_Bytes, _Abis>&... __xs) noexcept
     { static_assert(false, "TODO: cat"); }
 
