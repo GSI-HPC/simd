@@ -30,20 +30,12 @@ namespace std::simd
   template <__vectorizable _Tp, __simd_vec_type _Vp, _ArchTraits _Traits>
     //requires requires { typename __deduce_abi_t<_Tp, _Vp::size()>; }
     struct rebind<_Tp, _Vp, _Traits>
-    {
-      using _A1 = decltype(__abi_rebind<_Tp, _Vp::size(), typename _Vp::abi_type>());
-
-      using type = basic_vec<_Tp, _A1>;
-    };
+    { using type = __similar_vec<_Tp, _Vp::size(), typename _Vp::abi_type>; };
 
   template <__vectorizable _Tp, __simd_mask_type _Mp, _ArchTraits _Traits>
     //requires requires { typename __deduce_abi_t<_Tp, _Mp::size()>; }
     struct rebind<_Tp, _Mp, _Traits>
-    {
-      using _A1 = decltype(__abi_rebind<_Tp, _Mp::size(), typename _Mp::abi_type>());
-
-      using type = basic_mask<sizeof(_Tp), _A1>;
-    };
+    { using type = __similar_mask<_Tp, _Mp::size(), typename _Mp::abi_type>; };
 
   template <typename _Tp, typename _Vp>
     using rebind_t = typename rebind<_Tp, _Vp>::type;
@@ -57,11 +49,7 @@ namespace std::simd
     requires requires { typename _Vp::mask_type; }
     //requires requires { typename __deduce_abi_t<typename _Vp::value_type, _Np>; }
     struct resize<_Np, _Vp, _Traits>
-    {
-      using _A1 = decltype(__abi_rebind<typename _Vp::value_type, _Np, typename _Vp::abi_type>());
-
-      using type = basic_vec<typename _Vp::value_type, _A1>;
-    };
+    { using type = __similar_vec<typename _Vp::value_type, _Np, typename _Vp::abi_type>; };
 
   template <__simd_size_type _Np, __simd_mask_type _Mp, _ArchTraits _Traits>
     //requires requires { typename __deduce_abi_t<typename _Mp::value_type, _Np>; }
@@ -203,8 +191,9 @@ namespace std::simd
           }(make_integer_sequence<int, _S_full_size>());
       }();
 
-      using _VecType = basic_vec<__integer_from<_Bytes>,
-                                 decltype(__abi_rebind<__integer_from<_Bytes>, _S_size, _Ap>())>;
+      using _VecType = __simd_vec_from_mask_t<_Bytes, _Ap>;
+
+      static_assert(destructible<_VecType>);
 
       static constexpr bool _S_has_bool_member = _S_is_scalar;
 
@@ -951,8 +940,7 @@ namespace std::simd
 
       _Mask1 _M_data1;
 
-      using _VecType = basic_vec<__integer_from<_Bytes>,
-                                 decltype(__abi_rebind<__integer_from<_Bytes>, _S_size, _Ap>())>;
+      using _VecType = __simd_vec_from_mask_t<_Bytes, _Ap>;
 
       static constexpr bool _S_has_bool_member = _Mask1::_S_has_bool_member;
 

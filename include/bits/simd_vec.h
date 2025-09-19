@@ -421,8 +421,7 @@ namespace std::simd
           return __r;
         }
 
-      using _HalfVec
-        = basic_vec<value_type, decltype(__abi_rebind<value_type, _S_size / 2, _Ap>())>;
+      using _HalfVec = __similar_vec<value_type, _S_size / 2, _Ap>;
 
       [[__gnu__::__always_inline__]]
       constexpr void
@@ -1398,9 +1397,9 @@ namespace std::simd
 
       static constexpr int _N1 = _S_size - _N0;
 
-      using _DataType0 = basic_vec<_Tp, decltype(__abi_rebind<_Tp, _N0, _Ap>())>;
+      using _DataType0 = __similar_vec<_Tp, _N0, _Ap>;
 
-      using _DataType1 = basic_vec<_Tp, decltype(__abi_rebind<_Tp, _N1, _Ap>())>;
+      using _DataType1 = __similar_vec<_Tp, _N1, _Ap>;
 
       static_assert(_DataType0::abi_type::_S_nreg + _DataType1::abi_type::_S_nreg == _Ap::_S_nreg);
 

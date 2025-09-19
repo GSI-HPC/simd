@@ -1598,6 +1598,17 @@ namespace std::simd
       static_assert(false);
   }
 
+  template <__vectorizable _Tp, __simd_size_type _Np, __abi_tag _Ap>
+    using __similar_mask = basic_mask<sizeof(_Tp), decltype(__abi_rebind<_Tp, _Np, _Ap>())>;
+
+  // Allow _Tp to be _InvalidInteger for __integer_from<16>
+  template <typename _Tp, __simd_size_type _Np, __abi_tag _Ap>
+    using __similar_vec = basic_vec<_Tp, decltype(__abi_rebind<_Tp, _Np, _Ap>())>;
+
+  // LWG???? [simd.expos]
+  template <size_t _Bytes, typename _Ap>
+    using __simd_vec_from_mask_t = __similar_vec<__integer_from<_Bytes>, _Ap::_S_size, _Ap>;
+
 #ifdef _GLIBCXX_SIMD_CONSTEVAL_BROADCAST
   class bad_value_preserving_cast
   {};
