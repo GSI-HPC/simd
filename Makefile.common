@@ -80,15 +80,11 @@ else
 DIRECT := 1
 endif
 
-testarchs ::= athlon64 \
-	     nocona \
-	     core2 \
-	     westmere \
+testarchs ::= x86-64 \
+	     x86-64-v2 \
 	     ivybridge \
-	     bdver4 \
-	     skylake \
-	     znver4 \
-	     skylake-avx512 \
+	     x86-64-v3 \
+	     x86-64-v4 \
 	     graniterapids
 
 tests ::= $(patsubst tests/%.cpp,%,$(wildcard tests/*.cpp))
@@ -113,7 +109,7 @@ endif
 
 testtypes ::= $(subst ::,--,$(testtypes))
 
-testwidths ::= $(shell seq 1 67)
+testwidths ::= $(shell seq 1 64)
 
 getwidth = $(subst .,,$(suffix $(1)))
 gettype = $(subst -, ,$(subst complex-double,std::complex<double>,$(subst complex-float,std::complex<float>,$(subst complex-float16_t,std::complex<std::float16_t>,$(subst --,::,$(subst .,,$(basename $(notdir $(1)))))))))
