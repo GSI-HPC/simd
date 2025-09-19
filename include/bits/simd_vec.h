@@ -896,8 +896,7 @@ namespace std::simd
       { return _M_data; }
 
       // [simd.ctor] broadcast constructor ------------------------------------
-      template <typename _Up>
-        requires constructible_from<value_type, _Up>
+      template <__simd_vec_bcast<value_type> _Up>
         [[__gnu__::__always_inline__]]
         constexpr explicit(not __broadcast_constructible<_Up, value_type>)
         basic_vec(_Up&& __x) noexcept
@@ -905,12 +904,17 @@ namespace std::simd
         {}
 
 #ifdef _GLIBCXX_SIMD_CONSTEVAL_BROADCAST
-      template <convertible_to<value_type> _Up>
-        requires (is_arithmetic_v<_Up> and not __broadcast_constructible<_Up, value_type>)
+      template <__simd_vec_bcast_consteval<value_type> _Up>
         consteval
-        basic_vec(const _Up& __x)
-        : _M_data(_DataType() == _DataType() ? static_cast<value_type>(__x) : value_type())
-        { __throw_unless_value_preserving_conversion<value_type>(__x); }
+        basic_vec(_Up&& __x)
+        : _M_data(_DataType() == _DataType()
+                    ? __value_preserving_cast<value_type>(__x) : value_type())
+        {
+          // TODO: I would prefer the convertible_to check to be a constraint on this constructor.
+          // However, that would change the order in overload resolution, which 
+          static_assert(convertible_to<_Up, value_type>);
+          static_assert(is_arithmetic_v<remove_cvref_t<_Up>>);
+        }
 #endif
 
       // [simd.ctor] conversion constructor -----------------------------------
@@ -1734,8 +1738,7 @@ namespace std::simd
       { return _M_concat_data(); }
 
       // [simd.ctor] broadcast constructor ------------------------------------
-      template <typename _Up>
-        requires constructible_from<value_type, _Up>
+      template <__simd_vec_bcast<value_type> _Up>
         [[__gnu__::__always_inline__]]
         constexpr explicit(not __broadcast_constructible<_Up, value_type>)
         basic_vec(_Up&& __x) noexcept
@@ -1743,12 +1746,15 @@ namespace std::simd
         {}
 
 #ifdef _GLIBCXX_SIMD_CONSTEVAL_BROADCAST
-      template <convertible_to<value_type> _Up>
-        requires (is_arithmetic_v<_Up> and not __broadcast_constructible<_Up, value_type>)
+      template <__simd_vec_bcast_consteval<value_type> _Up>
         consteval
-        basic_vec(const _Up& __x)
-        : _M_data0(static_cast<value_type>(__x)), _M_data1(static_cast<value_type>(__x))
-        { __throw_unless_value_preserving_conversion<value_type>(__x); }
+        basic_vec(_Up&& __x)
+        : _M_data0(__value_preserving_cast<value_type>(__x)),
+          _M_data1(__value_preserving_cast<value_type>(__x))
+        {
+          static_assert(convertible_to<_Up, value_type>);
+          static_assert(is_arithmetic_v<remove_cvref_t<_Up>>);
+        }
 #endif
 
       // [simd.ctor] conversion constructor -----------------------------------

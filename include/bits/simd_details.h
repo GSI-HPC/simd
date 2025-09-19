@@ -1599,26 +1599,58 @@ namespace std::simd
   }
 
 #ifdef _GLIBCXX_SIMD_CONSTEVAL_BROADCAST
-  class __value_changing_conversion
+  class bad_value_preserving_cast
   {};
 
   template <typename _To, signed_integral _From>
-    consteval void
+    constexpr void
     __throw_unless_value_preserving_conversion(const _From& __x)
     {
       using _Up = make_unsigned_t<_From>;
       if (static_cast<_Up>(static_cast<_To>(__x)) != static_cast<_Up>(__x))
-        throw __value_changing_conversion();
+        __builtin_unreachable(); //throw bad_value_preserving_cast();
     }
 
   template <typename _To, typename _From>
     requires (is_arithmetic_v<_From> and not signed_integral<_From>)
-    consteval void
+    constexpr void
     __throw_unless_value_preserving_conversion(const _From& __x)
     {
       if (static_cast<_From>(static_cast<_To>(__x)) != __x)
-        throw __value_changing_conversion();
+        __builtin_unreachable(); //throw bad_value_preserving_cast();
     }
+
+  template <typename _To, typename _From>
+    constexpr _To
+    __value_preserving_cast(const _From& __x)
+    {
+      __throw_unless_value_preserving_conversion<_To>(__x);
+      return static_cast<_To>(__x);
+    }
+
+#ifndef PREFER_CONSTEVAL
+#define PREFER_CONSTEVAL 1
+#endif
+
+#if PREFER_CONSTEVAL
+  template <typename _From, typename _To>
+    concept __simd_vec_bcast = constructible_from<_To, _From>;
+
+  template <typename _From, typename _To>
+    concept __simd_vec_bcast_consteval
+      = __simd_vec_bcast<_From, _To> and convertible_to<_From, _To>
+          and is_arithmetic_v<remove_cvref_t<_From>>
+          and not __value_preserving_convertible_to<remove_cvref_t<_From>, _To>;
+#else
+  template <typename _From, typename _To>
+    concept __simd_vec_bcast_consteval = constructible_from<_To, _From>;
+
+  template <typename _From, typename _To>
+    concept __simd_vec_bcast = __simd_vec_bcast_consteval<_From, _To> and true;
+#endif
+#else
+  template <typename _From, typename _To>
+    concept __simd_vec_bcast = constructible_from<_To, _From>;
 #endif
 }
 
