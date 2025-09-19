@@ -30,46 +30,53 @@ namespace std::simd
     = 4;
 #endif
 
+  /** \internal
+   * Return a bit-mask for the given vector-mask.
+   *
+   * Caveats:
+   * 1. The bit-mask of 2-Byte vector-masks has duplicated entries (because of missing instruction)
+   * 2. The return type internally is 'int', but that fails on conversion to uint64 if the MSB of a
+   * YMM 1/2-Byte vector-mask is set (sign extension). Therefore these helper functions return
+   * unsigned instead.
+   * 3. ZMM inputs are not supported.
+   */
   [[__gnu__::__always_inline__]]
-  inline int
+  inline unsigned
   __x86_movmsk(__vec_builtin_type_bytes<__integer_from<8>, 16> __x)
   { return __builtin_ia32_movmskpd(__vec_bit_cast<double>(__x)); }
 
   [[__gnu__::__always_inline__]]
-  inline int
+  inline unsigned
   __x86_movmsk(__vec_builtin_type_bytes<__integer_from<8>, 32> __x)
-  {
-    return __builtin_ia32_movmskpd256(__vec_bit_cast<double>(__x));
-  }
+  { return __builtin_ia32_movmskpd256(__vec_bit_cast<double>(__x)); }
 
   [[__gnu__::__always_inline__]]
-  inline int
+  inline unsigned
   __x86_movmsk(__vec_builtin_type_bytes<__integer_from<4>, 16> __x)
   { return __builtin_ia32_movmskps(__vec_bit_cast<float>(__x)); }
 
   template <_ArchTraits _Traits = {}>
     [[__gnu__::__always_inline__]]
-    inline int
+    inline unsigned
     __x86_movmsk(__vec_builtin_type_bytes<__integer_from<4>, 8> __x)
     {
 #if __has_builtin(__builtin_ia32_pext_di)
       if constexpr (_Traits._M_have_bmi2())
         return __builtin_ia32_pext_di(__builtin_bit_cast(unsigned long long, __x),
                                       0x80000000'80000000ULL);
-#else
-      return __x86_movmsk(__vec_zero_pad_to_16(__x));
 #endif
+      return __x86_movmsk(__vec_zero_pad_to_16(__x));
     }
 
   [[__gnu__::__always_inline__]]
-  inline int
+  inline unsigned
   __x86_movmsk(__vec_builtin_type_bytes<__integer_from<4>, 32> __x)
   { return __builtin_ia32_movmskps256(__vec_bit_cast<float>(__x)); }
 
   template <__vec_builtin _TV, auto _Traits = _ArchTraits()>
     requires (sizeof(__vec_value_type<_TV>) <= 2)
     [[__gnu__::__always_inline__]]
-    inline int
+    inline unsigned
     __x86_movmsk(_TV __x)
     {
       static_assert(__width_of<_TV> > 1);
@@ -191,7 +198,7 @@ namespace std::simd
             }
           else if constexpr (not _Traits._M_have_sse4_1())
             {
-              constexpr int __valid_bits = (1 << (sizeof(_Tp) == 2 ? _Np * 2 : _Np)) - 1;
+              constexpr unsigned __valid_bits = (1u << (sizeof(_Tp) == 2 ? _Np * 2 : _Np)) - 1;
               return __x86_movmsk(__k) == __valid_bits;
             }
           else if constexpr (sizeof(__k) < 16)
@@ -207,7 +214,7 @@ namespace std::simd
         }
       else if constexpr (not _Traits._M_have_sse4_1())
         {
-          constexpr int __valid_bits = (1 << (sizeof(_Tp) == 2 ? _Np * 2 : _Np)) - 1;
+          constexpr unsigned __valid_bits = (1u << (sizeof(_Tp) == 2 ? _Np * 2 : _Np)) - 1;
           return (__x86_movmsk(__k) & __valid_bits) == __valid_bits;
         }
       else if constexpr (sizeof(__k) < 16)
@@ -235,7 +242,7 @@ namespace std::simd
         }
       else if constexpr (not _Traits._M_have_sse4_1())
         {
-          constexpr int __valid_bits = (1 << (sizeof(_Tp) == 2 ? _Np * 2 : _Np)) - 1;
+          constexpr unsigned __valid_bits = (1u << (sizeof(_Tp) == 2 ? _Np * 2 : _Np)) - 1;
           return (__x86_movmsk(__k) & __valid_bits) != 0;
         }
       else if constexpr (sizeof(__k) < 16)
@@ -263,7 +270,7 @@ namespace std::simd
         }
       else if constexpr (not _Traits._M_have_sse4_1())
         {
-          constexpr int __valid_bits = (1 << (sizeof(_Tp) == 2 ? _Np * 2 : _Np)) - 1;
+          constexpr unsigned __valid_bits = (1u << (sizeof(_Tp) == 2 ? _Np * 2 : _Np)) - 1;
           return (__x86_movmsk(__k) & __valid_bits) == 0;
         }
       else if constexpr (sizeof(__k) < 16)
