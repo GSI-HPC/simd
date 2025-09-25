@@ -143,7 +143,8 @@ template <typename V>
 
 template <typename V, typename T = typename V::value_type>
   concept usable_simd_or_mask
-    = std::is_nothrow_move_constructible_v<V>
+    = std::destructible<V>
+        and std::is_nothrow_move_constructible_v<V>
         and std::is_nothrow_move_assignable_v<V>
         and std::is_nothrow_default_constructible_v<V>
         and std::is_trivially_copyable_v<V>
@@ -226,12 +227,15 @@ template <template <typename> class Tpl>
     Tpl<unsigned long long> p;
 #ifdef __STDCPP_FLOAT16_T__
     Tpl<std::float16_t> q;
+    Tpl<std::complex<std::float16_t>> qc;
 #endif
 #ifdef __STDCPP_FLOAT32_T__
     Tpl<std::float32_t> r;
+    Tpl<std::complex<std::float32_t>> rc;
 #endif
 #ifdef __STDCPP_FLOAT64_T__
     Tpl<std::float64_t> s;
+    Tpl<std::complex<std::float64_t>> sc;
 #endif
 #if SIMD_STD_BYTE
     Tpl<std::byte> t;
