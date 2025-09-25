@@ -29,6 +29,25 @@ template <typename V>
         return x_max - x;
     }
 
+    ADD_TEST(Select) {
+      std::tuple{test_iota<V, 0, 63>, test_iota<V, 1, 64>, T(2),
+                 M([](int i) { return 1 == (i & 1); }),
+                 M([](int i) { return 1 == (i % 3); })},
+      [](auto& t, const V x, const V y, const T z, const M k, const M k3) {
+        t.verify_equal(select(M(true), x, y), x);
+        t.verify_equal(select(M(false), x, y), y);
+        t.verify_equal(select(M(true), y, x), y);
+        t.verify_equal(select(M(false), y, x), x);
+        t.verify_equal(select(k, x, T()),
+                       V([](int i) { return (1 == (i & 1)) ? T(i & 63) : T(); }));
+
+        t.verify_equal(select(M(true), z, T()), z);
+        t.verify_equal(select(M(true), T(), z), V());
+        t.verify_equal(select(k, z, T()), V([](int i) { return (1 == (i & 1)) ? T(2) : T(); }));
+        t.verify_equal(select(k3, z, T()), V([](int i) { return (1 == (i % 3)) ? T(2) : T(); }));
+      }
+    };
+
     ADD_TEST(Min, std::totally_ordered<T>) {
       std::tuple{test_iota<V, 0, -1>, reverse_iota(test_iota<V, 0, -1>), test_iota<V, 1>},
       [](auto& t, const V x, const V y, const V x1) {
@@ -112,25 +131,6 @@ template <typename V>
             t.verify_equal(clamp(V(T(-test_iota_max<V>)), -x, x), -x);
             t.verify_equal(clamp(V(T(test_iota_max<V>)), -x, x), x);
           }
-      }
-    };
-
-    ADD_TEST(Select) {
-      std::tuple{test_iota<V, 0, 63>, test_iota<V, 1, 64>, T(2),
-                 M([](int i) { return 1 == (i & 1); }),
-                 M([](int i) { return 1 == (i % 3); })},
-      [](auto& t, const V x, const V y, const T z, const M k, const M k3) {
-        t.verify_equal(select(M(true), x, y), x);
-        t.verify_equal(select(M(false), x, y), y);
-        t.verify_equal(select(M(true), y, x), y);
-        t.verify_equal(select(M(false), y, x), x);
-        t.verify_equal(select(k, x, T()),
-                       V([](int i) { return (1 == (i & 1)) ? T(i & 63) : T(); }));
-
-        t.verify_equal(select(M(true), z, T()), z);
-        t.verify_equal(select(M(true), T(), z), V());
-        t.verify_equal(select(k, z, T()), V([](int i) { return (1 == (i & 1)) ? T(2) : T(); }));
-        t.verify_equal(select(k3, z, T()), V([](int i) { return (1 == (i % 3)) ? T(2) : T(); }));
       }
     };
   };
