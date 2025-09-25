@@ -602,7 +602,7 @@ namespace std::simd
       template <typename _Tp>
         using _DataType = __canonical_vec_type_t<_Tp>;
 
-      static constexpr bool _S_use_2_for_1 = false;
+      static constexpr bool _S_is_cx_ileav = false;
 
       template <size_t>
         using _MaskDataType = bool;
@@ -658,28 +658,23 @@ namespace std::simd
                             return _Vp();
                           }());
 
-      // Use two values (bits, vector elements) per logical element of the mask.
-      // This is not used for _DataType<_Tp> because its _Tp can never be complex (cf. basic_vec
-      // partial specialization)
-      static constexpr bool _S_use_2_for_1 = __flags_test(_S_variant, _AbiVariant::_CxIleav);
+      static constexpr bool _S_is_cx_ileav = __flags_test(_S_variant, _AbiVariant::_CxIleav);
 
       template <size_t _Bytes>
         using _MaskDataType
           = decltype([] {
+              static_assert(not _S_is_cx_ileav);
               if constexpr (__flags_test(_S_variant, _AbiVariant::_BitMask))
                 {
                   if constexpr (_Nreg > 1)
                     return _InvalidInteger();
                   else
-                    return _UInt<__bit_ceil(__div_ceil<unsigned>(
-                                              _S_use_2_for_1 ? _S_size * 2 : _S_size,
-                                              __CHAR_BIT__))>();
+                    return _UInt<__bit_ceil(__div_ceil<unsigned>(_S_size, __CHAR_BIT__))>();
                 }
               else
                 {
                   constexpr unsigned __vbytes = _Bytes * __bit_ceil(unsigned(_S_size));
-                  using _Vp [[__gnu__::__vector_size__(__vbytes)]]
-                    = __integer_from<_S_use_2_for_1 ? _Bytes / 2 : _Bytes>;
+                  using _Vp [[__gnu__::__vector_size__(__vbytes)]] = __integer_from<_Bytes>;
                   return _Vp();
                 }
             }());
@@ -1189,8 +1184,8 @@ namespace std::simd
           else if constexpr (__complex_like<_Tp>)
             return _Abi<_Np, __nreg, _A0::_S_variant | _AbiVariant::_CxIleav>();
 
-          else if constexpr (_Np == 1)
-            return _ScalarAbi<1>();
+          else if constexpr (_Np == __nreg)
+            return _ScalarAbi<_Np>();
 
           else
             return _Abi<_Np, __nreg, _A0::_S_variant & _AbiVariant::_MaskVariants>();

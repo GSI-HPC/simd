@@ -170,23 +170,6 @@ namespace std::simd
   struct _LoadCtorTag
   {};
 
-  template <unsigned _Np>
-    struct _SwapNeighbors
-    {
-      consteval unsigned
-      operator()(unsigned __i, unsigned __size) const
-      {
-        if (__size % (2 * _Np) != 0)
-          __builtin_abort(); // swap_neighbors<N> permutation requires a multiple of 2N elements
-        else if (std::has_single_bit(_Np))
-          return __i ^ _Np;
-        else if (__i % (2 * _Np) >= _Np)
-          return __i - _Np;
-        else
-          return __i + _Np;
-      }
-    };
-
   template <typename _Cx, __vec_builtin _TV, _TargetTraits = {}>
     [[__gnu__::__cold__]]
     constexpr _TV
@@ -660,13 +643,40 @@ namespace std::simd
         static constexpr basic_vec
         _S_concat(const basic_vec<value_type, _As>&... __xs) noexcept
         {
+          using _A0 = _As...[0];
+          using _A1 = _As...[1];
           if constexpr (not _S_is_partial
                           and ((not basic_vec<value_type, _As>::_S_is_partial
                                   and _As::_S_size * sizeof...(_As) == _S_size) and ...))
             return basic_vec::_S_init(__vec_concat(__xs._M_concat_data()...));
 
           else
-            return basic_vec::_S_init(__vec_concat_sized<__xs.size()...>(__xs._M_concat_data()...));
+            {
+              constexpr bool __simple_inserts
+                = sizeof...(_As) == 2 and _A1::_S_size <= 2
+                    and is_same_v<_DataType, typename basic_vec<value_type, _A0>::_DataType>;
+              if (not __builtin_is_constant_evaluated() and __simple_inserts)
+                {
+                  if constexpr (__simple_inserts)
+                    {
+                      const auto& __x0 = __xs...[0];
+                      const auto& __x1 = __xs...[1];
+                      basic_vec __r;
+                      __r._M_data = __x0._M_data;
+                      if constexpr (_A1::_S_size == 1)
+                        __r._M_data[_S_size - 1] = __x1[0];
+                      else
+                        {
+                          for (int __i = __x0.size.value; __i < _S_size; ++__i)
+                            __r._M_data[__i] = __x1._M_data[__i - __x0.size.value];
+                        }
+                      return __r;
+                    }
+                }
+              else
+                return basic_vec::_S_init(__vec_concat_sized<_As::_S_size...>(
+                                            __xs._M_concat_data()...));
+            }
         }
 
       [[__gnu__::__always_inline__]]
@@ -695,19 +705,33 @@ namespace std::simd
           return _M_reduce_1(__binary_op)._M_reduce_tail(__rest, __binary_op);
       }
 
-#ifdef __SSE2__
       template <int _Shift, _ArchTraits _Traits = {}>
         [[__gnu__::__always_inline__]]
         constexpr basic_vec
         _M_elements_shifted_down() const
         {
           static_assert(_Shift < _S_size and _Shift > 0);
-          return _S_init(reinterpret_cast<_DataType>(
-                           __builtin_ia32_psrldqi128(
-                             reinterpret_cast<__vec_builtin_type_bytes<long long, 16>>(_M_data),
-                             _Shift * sizeof(value_type) * 8)));
-        }
+#ifdef __SSE2__
+          if (not __builtin_is_constant_evaluated() and not _M_is_constprop())
+            {
+              if constexpr (sizeof(_M_data) == 16)
+                return reinterpret_cast<_DataType>(
+                         __builtin_ia32_psrldqi128(__vec_bit_cast<long long>(_M_data),
+                                                   _Shift * sizeof(value_type) * 8));
+              else
+                {
+                  const auto __x = reinterpret_cast<__vec_builtin_type_bytes<long long, 16>>(
+                                     __vec_zero_pad_to_16(_M_data));
+                  const auto __shifted = __builtin_ia32_psrldqi128(
+                                           __x, _Shift * sizeof(value_type) * 8);
+                  return _VecOps<_DataType>::_S_extract(__vec_bit_cast<value_type>(__shifted));
+                }
+            }
 #endif
+          return _S_static_permute(*this, [](int __i) {
+                   return __i + _Shift >= _S_size ? zero_element : __i + _Shift;
+                 });
+        }
 
       template <typename _BinaryOp, _ArchTraits _Traits = {}>
         [[__gnu__::__always_inline__]]
@@ -743,7 +767,7 @@ namespace std::simd
                 static_assert(_S_size <= 16);
                 auto __x = *this;
 #ifdef __SSE2__
-                if constexpr (sizeof(_M_data) == 16 and is_integral_v<value_type>)
+                if constexpr (sizeof(_M_data) <= 16 and is_integral_v<value_type>)
                   {
                     if constexpr (_S_size > 8)
                       __x = __binary_op(__x, __x.template _M_elements_shifted_down<8>());
@@ -1393,27 +1417,62 @@ namespace std::simd
       { return __y <= __x; }
 
       // [simd.cond] ---------------------------------------------------------
-      [[__gnu__::__always_inline__]]
-      friend constexpr basic_vec
-      __select_impl(const mask_type& __k, const basic_vec& __t, const basic_vec& __f) noexcept
-      {
-        if constexpr (_S_size == 1)
-          return __k[0] ? __t : __f;
-        else if constexpr (_S_use_bitmask)
-          {
+      template <_TargetTraits _Traits = {}>
+        [[__gnu__::__always_inline__]]
+        friend constexpr basic_vec
+        __select_impl(const mask_type& __k, const basic_vec& __t, const basic_vec& __f) noexcept
+        {
+          if constexpr (_S_size == 1)
+            return __k[0] ? __t : __f;
+          else if constexpr (_S_use_bitmask)
+            {
 #if _GLIBCXX_SIMD_HAVE_SSE
-            if (__builtin_is_constant_evaluated()
-                  or (__k._M_is_constprop() and __t._M_is_constprop() and __f._M_is_constprop()))
-              return basic_vec([&](int __i) { return __k[__i] ? __t[__i] : __f[__i]; });
-            else
-              return __x86_bitmask_blend(__k._M_data, __t._M_data, __f._M_data);
+              if (__builtin_is_constant_evaluated()
+                    or (__k._M_is_constprop() and __t._M_is_constprop() and __f._M_is_constprop()))
+                return basic_vec([&](int __i) { return __k[__i] ? __t[__i] : __f[__i]; });
+              else
+                return __x86_bitmask_blend(__k._M_data, __t._M_data, __f._M_data);
 #else
-            static_assert(false, "TODO");
+              static_assert(false, "TODO");
 #endif
-          }
-        else
-          return __k._M_data ? __t._M_data : __f._M_data;
-      }
+            }
+          else if (__builtin_is_constant_evaluated())
+            return __k._M_data ? __t._M_data : __f._M_data;
+          else
+            {
+              using _VO = _VecOps<_DataType>;
+              if (_VO::_S_is_constprop_equal_to(__f._M_data, 0))
+                {
+                  if (is_integral_v<value_type> and sizeof(_M_data) >= 8
+                        and _VO::_S_is_constprop_equal_to(__t._M_data, 1))
+                    return basic_vec((-__k)._M_abs());
+                  /*                  else if (is_integral_v<value_type> and sizeof(_M_data) >= 8
+                             and _VO::_S_is_constprop_equal_to(__t._M_data, value_type(-1)))
+                    return basic_vec(-__k);*/
+                  else
+                    return __vec_and(reinterpret_cast<_DataType>(__k._M_data), __t._M_data);
+                }
+              else if (_VecOps<_DataType>::_S_is_constprop_equal_to(__t._M_data, 0))
+                {
+                  if (is_integral_v<value_type> and sizeof(_M_data) >= 8
+                        and _VO::_S_is_constprop_equal_to(__f._M_data, 1))
+                    return value_type(1) + basic_vec(-__k);
+                  else
+                    return __vec_andnot(reinterpret_cast<_DataType>(__k._M_data), __f._M_data);
+                }
+              else
+                {
+#if _GLIBCXX_SIMD_HAVE_SSE
+                  // this works around bad code-gen when the compiler can't see that __k is a vector-mask.
+                  // This pattern, is recognized to match the x86 blend instructions, which only consider
+                  // the sign bit of the mask register. Also, without SSE4, if the compiler knows that __k
+                  // is a vector-mask, then the '< 0' is elided.
+                  return __k._M_data < 0 ? __t._M_data : __f._M_data;
+#endif
+                  return __k._M_data ? __t._M_data : __f._M_data;
+                }
+            }
+        }
     };
 
   template <__vectorizable _Tp, __abi_tag _Ap>
@@ -1617,7 +1676,7 @@ namespace std::simd
         _S_concat(const basic_vec<value_type, _A0>& __x0,
                   const basic_vec<value_type, _As>&... __xs) noexcept
         {
-          if constexpr (is_same_v<basic_vec<value_type, _A0>, _DataType0>)
+          if constexpr (_A0::_S_size == _N0)
             {
               if constexpr (sizeof...(_As) == 1)
                 return _S_init(__x0, __xs...);
@@ -1994,774 +2053,6 @@ namespace std::simd
       }
     };
 
-  template <__vectorizable _Tp, __abi_tag _Ap>
-    requires __complex_like<_Tp>
-      and (__flags_test(_Ap::_S_variant, _AbiVariant::_CxIleav))
-    class basic_vec<_Tp, _Ap>
-    : _BinaryOps<_Tp, _Ap>
-    {
-      template <typename, typename>
-        friend class basic_vec;
-
-      static constexpr int _S_size = _Ap::_S_size;
-
-      static constexpr int _S_full_size = __bit_ceil(unsigned(_S_size));
-
-      using _T0 = typename _Tp::value_type;
-
-      using _TSimd = basic_vec<_T0, decltype(__abi_rebind<_T0, 2 * _S_size, _Ap>())>;
-
-      using _RealSimd = basic_vec<_T0, decltype(__abi_rebind<_T0, _S_size, _Ap>())>;
-
-      _TSimd _M_data = {};
-
-      static constexpr bool _S_use_bitmask = __flags_test(_Ap::_S_variant, _AbiVariant::_BitMask);
-
-      static constexpr bool _S_is_partial = sizeof(_M_data) > sizeof(_Tp) * _S_size;
-
-      [[__gnu__::__always_inline__]]
-      static constexpr basic_vec
-      _S_init(const _TSimd& __x)
-      {
-        basic_vec __r;
-        __r._M_data = __x;
-        return __r;
-      }
-
-    public:
-      using value_type = _Tp;
-
-      using abi_type = _Ap;
-
-      using mask_type = basic_mask<sizeof(_Tp), abi_type>;
-
-      using iterator = __iterator<basic_vec>;
-
-      using const_iterator = __iterator<const basic_vec>;
-
-      constexpr iterator
-      begin() noexcept
-      { return {*this, 0}; }
-
-      constexpr const_iterator
-      begin() const noexcept
-      { return {*this, 0}; }
-
-      constexpr const_iterator
-      cbegin() const noexcept
-      { return {*this, 0}; }
-
-      constexpr default_sentinel_t
-      end() const noexcept
-      { return {}; }
-
-      constexpr default_sentinel_t
-      cend() const noexcept
-      { return {}; }
-
-      static constexpr auto size = __simd_size_constant<_S_size>;
-
-      [[__gnu__::__always_inline__]]
-      constexpr bool
-      _M_is_constprop() const
-      { return _M_data._M_is_constprop(); }
-
-      template <typename _Vp>
-        [[__gnu__::__always_inline__]]
-        constexpr auto
-        _M_chunk() const noexcept
-        {
-          constexpr int __n = _S_size / _Vp::_S_size;
-          constexpr int __rem = _S_size % _Vp::_S_size;
-          const auto __chunked = _M_data.template _M_chunk<typename _Vp::_TSimd>();
-          if constexpr (__rem == 0)
-            return _GLIBCXX_SIMD_INT_PACK(__n, _Is, {
-                     return array<_Vp, __n> {_Vp::_S_init(__chunked[_Is])...};
-                   });
-          else
-            {
-              using _Rest = resize_t<__rem, _Vp>;
-              return _GLIBCXX_SIMD_INT_PACK(__n, _Is, {
-                       return tuple {_Vp::_S_init(get<_Is>(__chunked))...,
-                                     _Rest::_S_init(get<__n>(__chunked))};
-                     });
-            }
-        }
-
-      template <typename _A0>
-        [[__gnu__::__always_inline__]]
-        static constexpr basic_vec
-        _S_concat(const basic_vec<value_type, _A0>& __x0) noexcept
-        { return static_cast<const basic_vec&>(__x0); }
-
-      template <typename... _As>
-        requires (sizeof...(_As) > 1)
-        [[__gnu__::__always_inline__]]
-        static constexpr basic_vec
-        _S_concat(const basic_vec<value_type, _As>&... __xs) noexcept
-        { return basic_vec::_S_init(_TSimd::_S_concat(__xs._M_data...)); }
-
-      basic_vec() = default;
-
-      // TODO: conversion extensions
-
-      // [simd.ctor] broadcast constructor ------------------------------------
-      template <typename _Up>
-        requires constructible_from<value_type, _Up>
-        [[__gnu__::__always_inline__]]
-        constexpr explicit(not __broadcast_constructible<_Up, value_type>)
-        basic_vec(_Up&& __x) noexcept
-          : _M_data([&](int __i) {
-              if constexpr (__complex_like<_Up>)
-                return (__i & 1) == 0 ? __x.real() : __x.imag();
-              else
-                return (__i & 1) == 0 ? __x : _T0();
-            })
-        {}
-
-#ifdef _GLIBCXX_SIMD_CONSTEVAL_BROADCAST
-      template <convertible_to<value_type> _Up>
-        requires (is_arithmetic_v<_Up> and not __broadcast_constructible<_Up, value_type>)
-        consteval
-        basic_vec(const _Up& __x)
-        : basic_vec(static_cast<value_type>(__x))
-        { __throw_unless_value_preserving_conversion<_T0>(__x); }
-#endif
-
-      // [simd.ctor] conversion constructor -----------------------------------
-      // FIXME: Handle __flags_test(_Ap::_S_variant, _AbiVariant::_CxCtgus)
-      template <__complex_like _Up, typename _UAbi>
-        requires(__simd_size_v<_Up, _UAbi> == size.value
-                   and std::constructible_from<value_type, _Up>)
-        [[__gnu__::__always_inline__]]
-        constexpr
-        explicit(not convertible_to<_Up, value_type>)
-        basic_vec(const basic_vec<_Up, _UAbi>& __x) noexcept
-        : _M_data(__x._M_data)
-        {}
-
-      template <typename _Up, typename _UAbi> // _Up is not complex!
-        requires (__simd_size_v<_Up, _UAbi> == _S_size)
-          and std::constructible_from<value_type, _Up>
-          and (not is_same_v<_T0, _Up>)
-        [[__gnu__::__always_inline__]]
-        constexpr
-        explicit(not convertible_to<_Up, value_type>)
-        basic_vec(const basic_vec<_Up, _UAbi>& __x) noexcept
-        : basic_vec(basic_vec<_T0, decltype(__abi_rebind<_T0, _S_size, _UAbi>())>(__x))
-        {}
-
-      // [simd.ctor] generator constructor ------------------------------------
-      template <__simd_generator_invokable<value_type, _S_size> _Fp>
-        [[__gnu__::__always_inline__]]
-        constexpr explicit
-        basic_vec(_Fp&& __gen)
-        : _M_data([&] {
-            using _Arr = std::array<value_type, sizeof(_TSimd) / sizeof(value_type)>;
-            const _Arr __tmp
-              = _GLIBCXX_SIMD_INT_PACK(size.value, _Is, {
-                  return _Arr{
-                    static_cast<value_type>(__gen(__simd_size_constant<_Is>))...
-                  };
-                });
-            return __builtin_bit_cast(_TSimd, __tmp);
-          }())
-        {}
-
-      template <__almost_simd_generator_invokable<value_type, _S_size> _Fp>
-        constexpr explicit
-        basic_vec(_Fp&& )
-          = _GLIBCXX_DELETE_MSG("Invalid return type of the generator function: "
-                                "Requires value-preserving conversion or implicitly "
-                                "convertible user-defined type.");
-
-      // [simd.ctor] load constructor -----------------------------------------
-      template <__complex_like _Up>
-        [[__gnu__::__always_inline__]]
-        constexpr
-        basic_vec(_LoadCtorTag, const _Up* __ptr)
-          : _M_data(_LoadCtorTag(), reinterpret_cast<const typename _Up::value_type*>(__ptr))
-        {}
-
-      template <typename _Up>
-        [[__gnu__::__always_inline__]]
-        constexpr
-        basic_vec(_LoadCtorTag, const _Up* __ptr)
-          : basic_vec(_RealSimd(_LoadCtorTag(), __ptr))
-        {}
-
-      template <__static_sized_range<size.value> _Rg, typename... _Flags>
-        // FIXME: see load ctor above
-        [[__gnu__::__always_inline__]]
-        constexpr
-        basic_vec(_Rg&& __range, flags<_Flags...> __flags = {})
-          : basic_vec(_LoadCtorTag(), __flags.template _S_adjust_pointer<basic_vec>(
-                                        std::ranges::data(__range)))
-        {
-          static_assert(__loadstore_convertible_to<std::ranges::range_value_t<_Rg>, value_type,
-                                                   _Flags...>);
-        }
-
-      // [simd.ctor] complex init ---------------------------------------------
-      // This uses _RealSimd as proposed in LWG4230
-      [[__gnu__::__always_inline__]]
-      constexpr
-      basic_vec(const _RealSimd& __re, const _RealSimd& __im = {}) noexcept
-        : _M_data([&](int __i) { return ((__i & 1) == 0 ? __re : __im)[__i / 2]; })
-      {}
-
-      // [simd.subscr] --------------------------------------------------------
-      [[__gnu__::__always_inline__]]
-      constexpr value_type
-      operator[](__simd_size_type __i) const
-      { return value_type(_M_data[__i * 2], _M_data[__i * 2 + 1]); }
-
-      // [simd.unary] unary operators -----------------------------------------
-      [[__gnu__::__always_inline__]]
-      constexpr basic_vec&
-      operator++() noexcept requires requires(value_type __a) { ++__a; }
-      {
-        _M_data += value_type(_T0(1));
-        return *this;
-      }
-
-      [[__gnu__::__always_inline__]]
-      constexpr basic_vec
-      operator++(int) noexcept requires requires(value_type __a) { __a++; }
-      {
-        basic_vec __r = *this;
-        _M_data += value_type(_T0(1));
-        return __r;
-      }
-
-      [[__gnu__::__always_inline__]]
-      constexpr basic_vec&
-      operator--() noexcept requires requires(value_type __a) { --__a; }
-      {
-        _M_data -= value_type(_T0(1));
-        return *this;
-      }
-
-      [[__gnu__::__always_inline__]]
-      constexpr basic_vec
-      operator--(int) noexcept requires requires(value_type __a) { __a--; }
-      {
-        basic_vec __r = *this;
-        _M_data -= value_type(_T0(1));
-        return __r;
-      }
-
-      [[__gnu__::__always_inline__]]
-      constexpr mask_type
-      operator!() const noexcept requires requires(value_type __a) { !__a; }
-      { return _S_init(!_M_data); }
-
-      [[__gnu__::__always_inline__]]
-      constexpr basic_vec
-      operator+() const noexcept requires requires(value_type __a) { +__a; }
-      { return *this; }
-
-      [[__gnu__::__always_inline__]]
-      constexpr basic_vec
-      operator-() const noexcept requires requires(value_type __a) { -__a; }
-      {
-        basic_vec __r = *this;
-        __r._M_data = -_M_data;
-        return __r;
-      }
-
-      // [simd.cassign] compound assignment -----------------------------------
-      [[__gnu__::__always_inline__]]
-      friend constexpr basic_vec&
-      operator+=(basic_vec& __x, const basic_vec& __y) noexcept
-      requires requires(value_type __a) { __a + __a; }
-      {
-        __x._M_data += __y._M_data;
-        return __x;
-      }
-
-      [[__gnu__::__always_inline__]]
-      friend constexpr basic_vec&
-      operator-=(basic_vec& __x, const basic_vec& __y) noexcept
-      requires requires(value_type __a) { __a - __a; }
-      {
-        __x._M_data -= __y._M_data;
-        return __x;
-      }
-
-      [[__gnu__::__always_inline__]]
-      friend constexpr basic_vec&
-      operator*=(basic_vec& __x, const basic_vec& __y) noexcept
-      requires requires(value_type __a) { __a * __a; }
-      {
-        __x._M_data.template _M_complex_multiply_with<basic_vec>(__y._M_data);
-        return __x;
-      }
-
-      template <int _RemoveMe = 0>
-      [[__gnu__::__always_inline__]]
-      friend constexpr basic_vec&
-      operator/=(basic_vec& __x, const basic_vec& __y) noexcept
-      requires requires(value_type __a) { __a / __a; }
-      {
-        static_assert(false, "TODO");
-      }
-
-      // [simd.comparison] compare operators ----------------------------------
-      [[__gnu__::__always_inline__]]
-      friend constexpr mask_type
-      operator==(const basic_vec& __x, const basic_vec& __y) noexcept
-      { return mask_type::_S_and_neighbors(__x._M_data == __y._M_data); }
-
-      [[__gnu__::__always_inline__]]
-      friend constexpr mask_type
-      operator!=(const basic_vec& __x, const basic_vec& __y) noexcept
-      { return mask_type::_S_or_neighbors(__x._M_data != __y._M_data); }
-
-      // [simd.complex.access] complex-value accessors ------------------------
-      // LWG4230: returns _RealSimd instead of auto
-      [[__gnu__::__always_inline__]]
-      constexpr _RealSimd
-      real() const noexcept
-      { return permute<_S_size>(_M_data, [](int __i) { return __i * 2; }); }
-
-      [[__gnu__::__always_inline__]]
-      constexpr _RealSimd
-      imag() const noexcept
-      { return permute<_S_size>(_M_data, [](int __i) { return __i * 2 + 1; }); }
-
-      [[__gnu__::__always_inline__]]
-      constexpr void
-      real(const _RealSimd& __x) noexcept
-      { _M_data._M_complex_set_real(__x); }
-
-      [[__gnu__::__always_inline__]]
-      constexpr void
-      imag(const _RealSimd& __x) noexcept
-      { _M_data._M_complex_set_imag(__x); }
-
-      // [simd.cond] ---------------------------------------------------------
-      [[__gnu__::__always_inline__]]
-      friend constexpr basic_vec
-      __select_impl(const mask_type& __k, const basic_vec& __t, const basic_vec& __f) noexcept
-      {
-        // __t._M_data and __f._M_data unwrap the underlying basic_vec<_T0> object
-        return _S_init(__select_impl(__k._M_unwrap_complex(), __t._M_data, __f._M_data));
-      }
-
-      // [simd.complex.math] internals ---------------------------------------
-      [[__gnu__::__always_inline__]]
-      constexpr _RealSimd
-      _M_abs() const; // TODO
-
-      // associated functions
-      [[__gnu__::__always_inline__]]
-      constexpr _RealSimd
-      _M_norm() const
-      {
-#if 0
-        return (_M_data * _M_data)._M_hadd();
-#elif 0
-        const auto __squared = _M_data * _M_data;
-        return permute<size.value>(
-                 __squared + __squared._M_swap_neighbors(),
-                 [](unsigned __i) { return __i * 2; });
-#elif 0
-        const auto __squared = _M_data * _M_data;
-        return permute<size.value>(__squared, [](int __i) { return __i * 2; })
-                 + permute<size.value>(__squared, [](int __i) { return __i * 2 + 1; });
-#elif 1
-        auto __re = real();
-        auto __im = imag();
-        return __re * __re + __im * __im;
-#endif
-      }
-
-      [[__gnu__::__always_inline__]]
-      constexpr basic_vec
-      _M_conj() const
-      { return _S_init(_M_data._M_complex_conj()); }
-    };
-
-  template <__vectorizable _Tp, __abi_tag _Ap>
-    requires __complex_like<_Tp>
-      //and (_Ap::_S_nreg == 1)
-      and (__flags_test(_Ap::_S_variant, _AbiVariant::_CxCtgus)
-             or is_same_v<_Ap, _ScalarAbi<_Ap::_S_size>>)
-    class basic_vec<_Tp, _Ap>
-    : _BinaryOps<_Tp, _Ap>
-    {
-      template <typename, typename>
-        friend class basic_vec;
-
-      static constexpr int _S_size = _Ap::_S_size;
-
-      static constexpr int _S_full_size = __bit_ceil(unsigned(_S_size));
-
-      using _T0 = typename _Tp::value_type;
-
-      using _RealSimd = basic_vec<_T0, decltype(__abi_rebind<_T0, _S_size, _Ap>())>;
-
-      _RealSimd _M_real = {};
-
-      _RealSimd _M_imag = {};
-
-      static constexpr bool _S_is_scalar = is_same_v<_Ap, _ScalarAbi<_S_size>>;
-
-      static_assert(_S_is_scalar == _RealSimd::_S_is_scalar);
-
-      static constexpr bool _S_use_bitmask = _RealSimd::_S_use_bitmask;
-
-      static constexpr bool _S_is_partial = _RealSimd::_S_is_partial;
-
-    public:
-      using value_type = _Tp;
-
-      using abi_type = _Ap;
-
-      // We can't use _RealSimd::mask_type here because that would have the wrong value for _Bytes,
-      // which bites us in __select_impl(basic_mask, T, T) where sizeof(T) is constrained to _Bytes.
-      using mask_type = basic_mask<sizeof(_Tp), abi_type>;
-
-      using iterator = __iterator<basic_vec>;
-
-      using const_iterator = __iterator<const basic_vec>;
-
-      constexpr iterator
-      begin() noexcept
-      { return {*this, 0}; }
-
-      constexpr const_iterator
-      begin() const noexcept
-      { return {*this, 0}; }
-
-      constexpr const_iterator
-      cbegin() const noexcept
-      { return {*this, 0}; }
-
-      constexpr default_sentinel_t
-      end() const noexcept
-      { return {}; }
-
-      constexpr default_sentinel_t
-      cend() const noexcept
-      { return {}; }
-
-      static constexpr auto size = __simd_size_constant<_S_size>;
-
-      [[__gnu__::__always_inline__]]
-      constexpr bool
-      _M_is_constprop() const
-      { return _M_real._M_is_constprop() and _M_imag._M_is_constprop(); }
-
-      template <typename _Vp>
-        [[__gnu__::__always_inline__]]
-        constexpr auto
-        _M_chunk() const noexcept
-        {
-          constexpr int __n = _S_size / _Vp::_S_size;
-          constexpr int __rem = _S_size % _Vp::_S_size;
-          const auto [...__rs, __rN] = _M_real.template _M_chunk<typename _Vp::_RealSimd>();
-          const auto [...__is, __iN] = _M_imag.template _M_chunk<typename _Vp::_RealSimd>();
-          if constexpr (__rem == 0)
-            return array<_Vp, __n> {_Vp(__rs, __is)..., _Vp(__rN, __iN)};
-          else
-            return tuple {_Vp(__rs, __is)..., resize_t<__rem, _Vp>(__rN, __iN)};
-        }
-
-      template <typename _A0>
-        [[__gnu__::__always_inline__]]
-        static constexpr basic_vec
-        _S_concat(const basic_vec<value_type, _A0>& __x0) noexcept
-        { return static_cast<const basic_vec&>(__x0); }
-
-      template <typename... _As>
-        requires (sizeof...(_As) > 1)
-        [[__gnu__::__always_inline__]]
-        static constexpr basic_vec
-        _S_concat(const basic_vec<value_type, _As>&... __xs) noexcept
-        { return {_RealSimd::_S_concat(__xs._M_real...), _RealSimd::_S_concat(__xs._M_imag...) }; }
-
-      basic_vec() = default;
-
-      // TODO: conversion extensions
-
-      // [simd.ctor] broadcast constructor ------------------------------------
-      template <__complex_like _Up>
-        requires constructible_from<value_type, _Up>
-        [[__gnu__::__always_inline__]]
-        constexpr explicit(not __broadcast_constructible<_Up, value_type>)
-        basic_vec(_Up&& __x) noexcept
-          : _M_real(__x.real()), _M_imag(__x.imag())
-        {}
-
-      template <typename _Up>
-        requires constructible_from<value_type, _Up>
-        [[__gnu__::__always_inline__]]
-        constexpr explicit(not __broadcast_constructible<_Up, value_type>)
-        basic_vec(_Up&& __x) noexcept
-          : _M_real(__x), _M_imag()
-        {}
-
-#ifdef _GLIBCXX_SIMD_CONSTEVAL_BROADCAST
-      template <convertible_to<value_type> _Up>
-        requires (is_arithmetic_v<_Up> and not __broadcast_constructible<_Up, value_type>)
-        consteval
-        basic_vec(const _Up& __x)
-        : _M_real(__x), _M_imag()
-        { __throw_unless_value_preserving_conversion<_T0>(__x); }
-#endif
-
-      // [simd.ctor] conversion constructor -----------------------------------
-      template <__complex_like _Up, typename _UAbi>
-        requires(__simd_size_v<_Up, _UAbi> == size.value
-                   and std::constructible_from<value_type, _Up>)
-        [[__gnu__::__always_inline__]]
-        constexpr
-        explicit(not convertible_to<_Up, value_type>)
-        basic_vec(const basic_vec<_Up, _UAbi>& __x) noexcept
-        : _M_real(__x._M_real), _M_imag(__x._M_imag)
-        {}
-
-      template <typename _Up, typename _UAbi> // _Up is not complex!
-        requires (__simd_size_v<_Up, _UAbi> == _S_size)
-          and std::constructible_from<value_type, _Up>
-          and (not is_same_v<_T0, _Up>)
-        [[__gnu__::__always_inline__]]
-        constexpr
-        explicit(not convertible_to<_Up, value_type>)
-        basic_vec(const basic_vec<_Up, _UAbi>& __x) noexcept
-        : _M_real(__x), _M_imag()
-        {}
-
-      // [simd.ctor] generator constructor ------------------------------------
-      template <__simd_generator_invokable<value_type, _S_size> _Fp>
-        [[__gnu__::__always_inline__]]
-        constexpr explicit
-        basic_vec(_Fp&& __gen)
-        : _M_real(),
-          _M_imag([&] {
-            _T0 __re[sizeof(_RealSimd) / sizeof(_T0)] = {};
-            _T0 __im[sizeof(_RealSimd) / sizeof(_T0)] = {};
-            template for (constexpr int __i : __iota<int[_S_size]>)
-              {
-                const value_type __c = static_cast<value_type>(__gen(__simd_size_constant<__i>));
-                __re[__i] = __c.real();
-                __im[__i] = __c.imag();
-              }
-            _M_real = __builtin_bit_cast(_RealSimd, __re);
-            return __builtin_bit_cast(_RealSimd, __im);
-          }())
-        {}
-
-      template <__almost_simd_generator_invokable<value_type, _S_size> _Fp>
-        constexpr explicit
-        basic_vec(_Fp&& )
-          = _GLIBCXX_DELETE_MSG("Invalid return type of the generator function: "
-                                "Requires value-preserving conversion or implicitly "
-                                "convertible user-defined type.");
-
-      // [simd.ctor] load constructor -----------------------------------------
-      template <__complex_like _Up>
-        [[__gnu__::__always_inline__]]
-        constexpr
-        basic_vec(_LoadCtorTag, const _Up* __ptr)
-        : _M_real([&](int __i) -> _T0 { return __ptr[__i].real(); }),
-          _M_imag([&](int __i) -> _T0 { return __ptr[__i].imag(); })
-        {}
-
-      template <typename _Up>
-        [[__gnu__::__always_inline__]]
-        constexpr
-        basic_vec(_LoadCtorTag, const _Up* __ptr)
-        : _M_real(_LoadCtorTag(), __ptr), _M_imag()
-        {}
-
-      template <__static_sized_range<size.value> _Rg, typename... _Flags>
-        // FIXME: see load ctor above
-        [[__gnu__::__always_inline__]]
-        constexpr
-        basic_vec(_Rg&& __range, flags<_Flags...> __flags = {})
-        : basic_vec(_LoadCtorTag(), __flags.template _S_adjust_pointer<basic_vec>(
-                                      std::ranges::data(__range)))
-        {
-          static_assert(__loadstore_convertible_to<std::ranges::range_value_t<_Rg>, value_type,
-                                                   _Flags...>);
-        }
-
-      // [simd.ctor] complex init ---------------------------------------------
-      // This uses _RealSimd as proposed in LWG4230
-      [[__gnu__::__always_inline__]]
-      constexpr
-      basic_vec(const _RealSimd& __re, const _RealSimd& __im = {}) noexcept
-      : _M_real(__re), _M_imag(__im)
-      {}
-
-      // [simd.subscr] --------------------------------------------------------
-      [[__gnu__::__always_inline__]]
-      constexpr value_type
-      operator[](__simd_size_type __i) const
-      { return value_type(_M_real[__i], _M_imag[__i]); }
-
-      // [simd.unary] unary operators -----------------------------------------
-      [[__gnu__::__always_inline__]]
-      constexpr basic_vec&
-      operator++() noexcept requires requires(value_type __a) { ++__a; }
-      {
-        ++_M_real;
-        return *this;
-      }
-
-      [[__gnu__::__always_inline__]]
-      constexpr basic_vec
-      operator++(int) noexcept requires requires(value_type __a) { __a++; }
-      {
-        basic_vec __r = *this;
-        ++_M_real;
-        return __r;
-      }
-
-      [[__gnu__::__always_inline__]]
-      constexpr basic_vec&
-      operator--() noexcept requires requires(value_type __a) { --__a; }
-      {
-        --_M_real;
-        return *this;
-      }
-
-      [[__gnu__::__always_inline__]]
-      constexpr basic_vec
-      operator--(int) noexcept requires requires(value_type __a) { __a--; }
-      {
-        basic_vec __r = *this;
-        --_M_real;
-        return __r;
-      }
-
-      [[__gnu__::__always_inline__]]
-      constexpr mask_type
-      operator!() const noexcept requires requires(value_type __a) { !__a; }
-      { return !_M_real and !_M_imag; }
-
-      [[__gnu__::__always_inline__]]
-      constexpr basic_vec
-      operator+() const noexcept requires requires(value_type __a) { +__a; }
-      { return *this; }
-
-      [[__gnu__::__always_inline__]]
-      constexpr basic_vec
-      operator-() const noexcept requires requires(value_type __a) { -__a; }
-      { return basic_vec(-_M_real, -_M_imag); }
-
-      // [simd.cassign] compound assignment -----------------------------------
-      [[__gnu__::__always_inline__]]
-      friend constexpr basic_vec&
-      operator+=(basic_vec& __x, const basic_vec& __y) noexcept
-      requires requires(value_type __a) { __a + __a; }
-      {
-        __x._M_real += __y._M_real;
-        __x._M_imag += __y._M_imag;
-        return __x;
-      }
-
-      [[__gnu__::__always_inline__]]
-      friend constexpr basic_vec&
-      operator-=(basic_vec& __x, const basic_vec& __y) noexcept
-      requires requires(value_type __a) { __a - __a; }
-      {
-        __x._M_real -= __y._M_real;
-        __x._M_imag -= __y._M_imag;
-        return __x;
-      }
-
-
-      template <_TargetTraits _Traits = {}>
-        [[__gnu__::__always_inline__]]
-        friend constexpr basic_vec&
-        operator*=(basic_vec& __x, const basic_vec& __y) noexcept
-        requires requires(value_type __a) { __a * __a; }
-        {
-          _RealSimd::template _S_cxctgus_mul<value_type>(
-            __x._M_real, __x._M_imag, __y._M_real, __y._M_imag);
-          return __x;
-        }
-
-      [[__gnu__::__always_inline__]]
-      friend constexpr basic_vec&
-      operator/=(basic_vec& __x, const basic_vec& __y) noexcept
-      requires requires(value_type __a) { __a / __a; }
-      {
-        const _RealSimd __r =  __x._M_real * __y._M_real + __x._M_imag * __y._M_imag;
-        const _RealSimd __n = __y._M_norm();
-        __x._M_imag = (__x._M_imag * __y._M_real - __x._M_real * __y._M_imag) / __n;
-        __x._M_real = __r / __n;
-        return __x;
-      }
-
-      // [simd.comparison] compare operators ----------------------------------
-      [[__gnu__::__always_inline__]]
-      friend constexpr mask_type
-      operator==(const basic_vec& __x, const basic_vec& __y) noexcept
-      { return mask_type(__x._M_real == __y._M_real and __x._M_imag == __y._M_imag); }
-
-      [[__gnu__::__always_inline__]]
-      friend constexpr mask_type
-      operator!=(const basic_vec& __x, const basic_vec& __y) noexcept
-      { return mask_type(__x._M_real != __y._M_real or __x._M_imag != __y._M_imag); }
-
-      // [simd.complex.access] complex-value accessors ------------------------
-      // LWG4230: returns _RealSimd instead of auto
-      [[__gnu__::__always_inline__]]
-      constexpr _RealSimd
-      real() const noexcept
-      { return _M_real; }
-
-      [[__gnu__::__always_inline__]]
-      constexpr _RealSimd
-      imag() const noexcept
-      { return _M_imag; }
-
-      [[__gnu__::__always_inline__]]
-      constexpr void
-      real(const _RealSimd& __x) noexcept
-      { _M_real = __x; }
-
-      [[__gnu__::__always_inline__]]
-      constexpr void
-      imag(const _RealSimd& __x) noexcept
-      { _M_imag = __x; }
-
-      // [simd.cond] ---------------------------------------------------------
-      [[__gnu__::__always_inline__]]
-      friend constexpr basic_vec
-      __select_impl(const mask_type& __k, const basic_vec& __t, const basic_vec& __f) noexcept
-      {
-        typename basic_vec::_RealSimd::mask_type __kk(__k);
-        return basic_vec(__select_impl(__kk, __t._M_real, __f._M_real),
-                         __select_impl(__kk, __t._M_imag, __f._M_imag));
-      }
-
-      // [simd.complex.math] internals ---------------------------------------
-      [[__gnu__::__always_inline__]]
-      constexpr _RealSimd
-      _M_abs() const
-      {
-        // FIXME: avoid overflow & underflow in _M_norm
-        return sqrt(_M_norm());
-      }
-
-      // associated functions
-      [[__gnu__::__always_inline__]]
-      constexpr _RealSimd
-      _M_norm() const
-      { return _M_real * _M_real + _M_imag * _M_imag; }
-
-      [[__gnu__::__always_inline__]]
-      constexpr basic_vec
-      _M_conj() const
-      { return basic_vec(_M_real, -_M_imag); }
-    };
-
   // [simd.overview] deduction guide ------------------------------------------
   template <__static_sized_range _Rg, typename... _Ts>
     basic_vec(_Rg&& __r, _Ts...)
@@ -2792,15 +2083,6 @@ namespace std::simd
     inline constexpr basic_vec<_Tp, _Abi>
     __iota<basic_vec<_Tp, _Abi>> = basic_vec<_Tp, _Abi>([](_Tp __i) -> _Tp {
       static_assert(__simd_size_v<_Tp, _Abi> - 1 <= numeric_limits<_Tp>::max(),
-                    "iota object would overflow");
-      return __i;
-    });
-
-  template <__complex_like _Tp, typename _Abi>
-    inline constexpr basic_vec<_Tp, _Abi>
-    __iota<basic_vec<_Tp, _Abi>> = basic_vec<_Tp, _Abi>([](typename _Tp::value_type __i)
-                                                          -> typename _Tp::value_type {
-      static_assert(__simd_size_v<_Tp, _Abi> - 1 <= numeric_limits<typename _Tp::value_type>::max(),
                     "iota object would overflow");
       return __i;
     });

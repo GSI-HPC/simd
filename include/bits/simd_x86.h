@@ -684,6 +684,7 @@ namespace std::simd
     constexpr _UInt<_InputBits <= 4 ? 1 : 2>
     __duplicate_each_bit(_UInt<1> __x)
     {
+      static_assert(_InputBits >= 1);
       static_assert(_InputBits <= 8);
       constexpr _UInt<2> __mask = 0x5555u >> ((8 - _InputBits) * 2);
       if constexpr (_InputBits == 1)
@@ -710,7 +711,7 @@ namespace std::simd
     }
 
   template <int _InputBits = 16, _ArchTraits _Traits = {}>
-    constexpr _UInt<4>
+    constexpr _UInt<_InputBits <= 4 ? 1 : _InputBits <= 8 ? 2 : 4>
     __duplicate_each_bit(_UInt<2> __x)
     {
       if constexpr (_InputBits <= 8)
@@ -733,7 +734,7 @@ namespace std::simd
     }
 
   template <int _InputBits = 32, _ArchTraits _Traits = {}>
-    constexpr _UInt<8>
+    constexpr _UInt<_InputBits <= 4 ? 1 : _InputBits <= 8 ? 2 : _InputBits <= 16 ? 4 : 8>
     __duplicate_each_bit(_UInt<4> __x)
     {
       if constexpr (_InputBits <= 8)
@@ -764,6 +765,32 @@ namespace std::simd
           __y &= 0x3333'3333'3333'3333ull;
           return ((__y + 0x2222'2222'2222'2222ull) & __mask) * 3;
         }
+    }
+
+  template <int _InputBits = 64>
+    constexpr auto
+    __duplicate_each_bit(_UInt<8> __x)
+    {
+      if constexpr (_InputBits <= 32)
+        return __duplicate_each_bit<_InputBits>(_UInt<4>(__x));
+      else
+        return pair { __duplicate_each_bit(_UInt<4>(__x)),
+                      __duplicate_each_bit<_InputBits - 32>(_UInt<4>(__x >> 32)) };
+    }
+
+  template <int _InputBits = -1, typename _U0, typename _U1>
+    constexpr auto
+    __duplicate_each_bit(pair<_U0, _U1> __x)
+    {
+      constexpr int __input_bits = _InputBits == -1 ? (sizeof(_U0) + sizeof(_U1)) * 8
+                                                    : _InputBits;
+      constexpr int __in0 = sizeof(_U0) * 8;
+      constexpr int __in1 = __input_bits - __in0;
+      if constexpr (__input_bits <= __in0)
+        return __duplicate_each_bit<__input_bits>(__x.first);
+      else
+        return pair { __duplicate_each_bit<__in0>(__x.first),
+                      __duplicate_each_bit<__in1>(__x.second) };
     }
 
   template <__vec_builtin _TV, _ArchTraits _Traits = {}>
@@ -864,6 +891,76 @@ namespace std::simd
                             __x86_cvt_f16c<__half_vec_builtin_t<_UV>>(__vec_split_hi(__v)));
       else
         static_assert(false);
+    }
+
+  /** \internal
+   * AVX instructions typically work per 128-bit chunk. Horizontal operations thus produce vectors
+   * where the two 128-bit chunks in the center are swapped. This function works as a fix-up step.
+   */
+  template <__vec_builtin _TV>
+    [[__gnu__::__always_inline__]]
+    inline _TV
+    __x86_swizzle4x64_acbd(_TV __x)
+    {
+      static_assert(sizeof(_TV) == 32);
+      using _UV = __vec_builtin_type_bytes<long long, 32>;
+      return reinterpret_cast<_TV>(__builtin_shufflevector(reinterpret_cast<_UV>(__x), _UV(),
+                                                           0, 2, 1, 3));
+    }
+
+  /** \internal
+   * Like __builtin_convertvector but with a precondition that input values are either 0 or -1.
+   */
+  template <__vec_builtin _To, __vec_builtin _From>
+    [[__gnu__::__always_inline__]]
+    inline _To
+    __x86_cvt_vecmask(_From __k)
+    {
+      using _T0 = __vec_value_type<_From>;
+      using _T1 = __vec_value_type<_To>;
+      if constexpr (sizeof(_From) > sizeof(_To) and sizeof(_From) < 16)
+        {
+          using _ToPadded = __vec_builtin_type_bytes<_T1, sizeof(_To) * 16 / sizeof(_From)>;
+          return _VecOps<_To>::_S_extract(__x86_cvt_vecmask<_ToPadded>(__vec_zero_pad_to_16(__k)));
+        }
+      else if constexpr (sizeof(_T0) == 2 and sizeof(_T1) == 1) // -> packsswb
+        {
+          if constexpr (sizeof(__k) == 16)
+            return reinterpret_cast<_To>(__vec_split_lo(__builtin_ia32_packsswb128(__k, __k)));
+          else if constexpr (sizeof(__k) == 32)
+            return reinterpret_cast<_To>(
+                     __vec_split_lo(__x86_swizzle4x64_acbd(
+                                      __builtin_ia32_packsswb256(__k, __k))));
+          else
+            static_assert(false);
+        }
+      else
+        static_assert(false, "TODO");
+    }
+
+  /** \internal
+   * Overload that concatenates \p __k0 and \p __k1 while converting.
+   */
+  template <__vec_builtin _To, __vec_builtin _From>
+    [[__gnu__::__always_inline__]]
+    inline _To
+    __x86_cvt_vecmask(_From __k0, _From __k1)
+    {
+      using _T0 = __vec_value_type<_From>;
+      using _T1 = __vec_value_type<_To>;
+      static_assert(sizeof(_From) >= 16);
+      if constexpr (sizeof(_T0) == 2 and sizeof(_T1) == 1) // -> packsswb
+        {
+          if constexpr (sizeof(__k0) == 16)
+            return reinterpret_cast<_To>(__builtin_ia32_packsswb128(__k0, __k1));
+          else if constexpr (sizeof(__k0) == 32)
+            return reinterpret_cast<_To>(__x86_swizzle4x64_acbd(
+                                           __builtin_ia32_packsswb256(__k0, __k1)));
+          else
+            static_assert(false);
+        }
+      else
+        static_assert(false, "TODO");
     }
 }
 

@@ -284,6 +284,23 @@ namespace std::simd
     __vec_cast(_TV __v)
     { return __vec_cast<__vec_builtin_type<_Up, __width_of<_TV>>>(__v); }
 
+  /** \internal
+   * As above, but with additional precondition on possible values of the argument.
+   *
+   * Precondition: __k[i] is either 0 or -1 for all i.
+   */
+  template <__vec_builtin _UV, __vec_builtin _TV>
+    [[__gnu__::__always_inline__]]
+    constexpr _UV
+    __vec_mask_cast(_TV __k)
+    {
+      static_assert(signed_integral<__vec_value_type<_UV>>);
+      static_assert(signed_integral<__vec_value_type<_TV>>);
+      // TODO: __builtin_convertvector cannot be optimal because it doesn't consider input and
+      // output can only be 0 or -1.
+      return __builtin_convertvector(__k, _UV);
+    }
+
   template <__vec_builtin _TV>
     _GLIBCXX_SIMD_INTRINSIC constexpr _TV
     __vec_xor(_TV __a, _TV __b)
