@@ -327,6 +327,10 @@
 #endif
 #endif
 
+#ifndef _GLIBCXX_SIMD_NOEXCEPT
+#define _GLIBCXX_SIMD_NOEXCEPT noexcept
+#endif
+
 #if __cpp_deleted_function >= 202403L
 #define _GLIBCXX_DELETE_MSG(msg) delete(msg)
 #else

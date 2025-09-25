@@ -128,7 +128,7 @@ namespace std::simd
 
       [[__gnu__::__always_inline__]]
       friend constexpr _Vp
-      operator<<(const _Vp& __x, const _Vp& __y) noexcept
+      operator<<(const _Vp& __x, const _Vp& __y) _GLIBCXX_SIMD_NOEXCEPT
       requires requires (_Tp __a) { __a << __a; }
       {
         _Vp __r = __x;
@@ -138,7 +138,7 @@ namespace std::simd
 
       [[__gnu__::__always_inline__]]
       friend constexpr _Vp
-      operator<<(const _Vp& __x, __simd_size_type __y) noexcept
+      operator<<(const _Vp& __x, __simd_size_type __y) _GLIBCXX_SIMD_NOEXCEPT
       requires requires (_Tp __a, __simd_size_type __b) { __a << __b; }
       {
         _Vp __r = __x;
@@ -148,7 +148,7 @@ namespace std::simd
 
       [[__gnu__::__always_inline__]]
       friend constexpr _Vp
-      operator>>(const _Vp& __x, const _Vp& __y) noexcept
+      operator>>(const _Vp& __x, const _Vp& __y) _GLIBCXX_SIMD_NOEXCEPT
       requires requires (_Tp __a) { __a >> __a; }
       {
         _Vp __r = __x;
@@ -158,7 +158,7 @@ namespace std::simd
 
       [[__gnu__::__always_inline__]]
       friend constexpr _Vp
-      operator>>(const _Vp& __x, __simd_size_type __y) noexcept
+      operator>>(const _Vp& __x, __simd_size_type __y) _GLIBCXX_SIMD_NOEXCEPT
       requires requires (_Tp __a, __simd_size_type __b) { __a >> __b; }
       {
         _Vp __r = __x;
@@ -254,6 +254,10 @@ namespace std::simd
       __re0 = __cr.real();
       __im0 = __cr.imag();
     }
+
+  template <integral _Tp>
+    inline constexpr _Tp __max_shift
+      = (sizeof(_Tp) < sizeof(int) ? sizeof(int) : sizeof(_Tp)) * __CHAR_BIT__;
 
   template <__vectorizable _Tp, __abi_tag _Ap>
     requires (_Ap::_S_nreg == 1)
@@ -1075,8 +1079,6 @@ namespace std::simd
       _GLIBCXX_SIMD_DEFINE_OP(&)
       _GLIBCXX_SIMD_DEFINE_OP(|)
       _GLIBCXX_SIMD_DEFINE_OP(^)
-      _GLIBCXX_SIMD_DEFINE_OP(<<)
-      _GLIBCXX_SIMD_DEFINE_OP(>>)
 
 #undef _GLIBCXX_SIMD_DEFINE_OP
 
@@ -1243,18 +1245,50 @@ namespace std::simd
 
       [[__gnu__::__always_inline__]]
       friend constexpr basic_vec&
-      operator<<=(basic_vec& __x, __simd_size_type __y) noexcept
+      operator<<=(basic_vec& __x, const basic_vec& __y) _GLIBCXX_SIMD_NOEXCEPT
+      requires requires(value_type __a) { __a << __a; }
+      {
+        __glibcxx_simd_precondition(is_unsigned_v<value_type> or all_of(__y >= value_type()),
+                                    "negative shift is undefined behavior");
+        __glibcxx_simd_precondition(all_of(__y < __max_shift<value_type>),
+                                    "too large shift invokes undefined behavior");
+        __x._M_data <<= __y._M_data;
+        return __x;
+      }
+
+      [[__gnu__::__always_inline__]]
+      friend constexpr basic_vec&
+      operator>>=(basic_vec& __x, const basic_vec& __y) _GLIBCXX_SIMD_NOEXCEPT
+      requires requires(value_type __a) { __a >> __a; }
+      {
+        __glibcxx_simd_precondition(is_unsigned_v<value_type> or all_of(__y >= value_type()),
+                                    "negative shift is undefined behavior");
+        __glibcxx_simd_precondition(all_of(__y < __max_shift<value_type>),
+                                    "too large shift invokes undefined behavior");
+        __x._M_data >>= __y._M_data;
+        return __x;
+      }
+
+      [[__gnu__::__always_inline__]]
+      friend constexpr basic_vec&
+      operator<<=(basic_vec& __x, __simd_size_type __y) _GLIBCXX_SIMD_NOEXCEPT
       requires requires(value_type __a, __simd_size_type __b) { __a << __b; }
       {
+        __glibcxx_simd_precondition(__y >= 0, "negative shift is undefined behavior");
+        __glibcxx_simd_precondition(__y < int(__max_shift<value_type>),
+                                    "too large shift invokes undefined behavior");
         __x._M_data <<= __y;
         return __x;
       }
 
       [[__gnu__::__always_inline__]]
       friend constexpr basic_vec&
-      operator>>=(basic_vec& __x, __simd_size_type __y) noexcept
+      operator>>=(basic_vec& __x, __simd_size_type __y) _GLIBCXX_SIMD_NOEXCEPT
       requires requires(value_type __a, __simd_size_type __b) { __a >> __b; }
       {
+        __glibcxx_simd_precondition(__y >= 0, "negative shift is undefined behavior");
+        __glibcxx_simd_precondition(__y < int(__max_shift<value_type>),
+                                    "too large shift invokes undefined behavior");
         __x._M_data >>= __y;
         return __x;
       }
@@ -1879,7 +1913,7 @@ namespace std::simd
 #define _GLIBCXX_SIMD_DEFINE_OP(sym)                                 \
       [[__gnu__::__always_inline__]]                                 \
       friend constexpr basic_vec&                                    \
-      operator sym##=(basic_vec& __x, const basic_vec& __y) noexcept \
+      operator sym##=(basic_vec& __x, const basic_vec& __y) _GLIBCXX_SIMD_NOEXCEPT \
       {                                                              \
         __x._M_data0 sym##= __y._M_data0;                            \
         __x._M_data1 sym##= __y._M_data1;                            \
@@ -1901,7 +1935,7 @@ namespace std::simd
 
       [[__gnu__::__always_inline__]]
       friend constexpr basic_vec&
-      operator<<=(basic_vec& __x, __simd_size_type __y) noexcept
+      operator<<=(basic_vec& __x, __simd_size_type __y) _GLIBCXX_SIMD_NOEXCEPT
       requires requires(value_type __a, __simd_size_type __b) { __a << __b; }
       {
         __x._M_data0 <<= __y;
@@ -1911,7 +1945,7 @@ namespace std::simd
 
       [[__gnu__::__always_inline__]]
       friend constexpr basic_vec&
-      operator>>=(basic_vec& __x, __simd_size_type __y) noexcept
+      operator>>=(basic_vec& __x, __simd_size_type __y) _GLIBCXX_SIMD_NOEXCEPT
       requires requires(value_type __a, __simd_size_type __b) { __a >> __b; }
       {
         __x._M_data0 >>= __y;

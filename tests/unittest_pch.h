@@ -27,6 +27,9 @@ namespace test
   } while(false)
 }
 
+#undef _GLIBCXX_SIMD_NOEXCEPT
+#define _GLIBCXX_SIMD_NOEXCEPT noexcept(false)
+
 #include "../include/simd"
 #include "constexpr_wrapper.h"
 
@@ -369,19 +372,21 @@ struct constexpr_verifier
   bool okay = true;
 
   constexpr ignore_the_rest
-  verify_precondition_failure(std::string_view /*expected_msg*/, auto&& /*f*/) &
+  verify_precondition_failure(std::string_view expected_msg, auto&& f) &
   {
-#if 0 // This is waiting for constexpr exceptions to be implemented
     try
       {
         f();
         okay = false;
       }
     catch (const test::precondition_failure& failure)
-      { okay = okay and failure.msg == expected_msg; }
+      {
+        okay = okay and failure.msg == expected_msg;
+      }
     catch (...)
-      { okay = false; }
-#endif
+      {
+        okay = false;
+      }
     return {};
   }
 
@@ -443,7 +448,14 @@ consteval bool
 constexpr_test(auto&& fun, auto&&... args)
 {
   constexpr_verifier t;
-  fun(t, args...);
+  try
+    {
+      fun(t, args...);
+    }
+  catch(const test::precondition_failure& fail)
+    {
+      return false;
+    }
   return t.okay;
 }
 
