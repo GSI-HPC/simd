@@ -35,6 +35,7 @@ f1(simd::vec<float, 4> x)
 
 /* codegen
 ^"f2(
+?vmovapd	xmm1, xmm0
 v(unpckh|permil)pd
 vaddsd	xmm0
 ret
@@ -62,9 +63,11 @@ f3(simd::vec<unsigned short, 8> x)
 /* codegen
 ^"f4(
 vpaddw
-vpshuflw
+?vmovq
+vp(shuflw|srldq)
 vpaddw
-vpshuflw
+?vmovq
+vp(shuflw|srldq)
 vpaddw
 vpextrw	eax, xmm., 0
 ret

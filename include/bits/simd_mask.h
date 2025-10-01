@@ -38,6 +38,35 @@ namespace std::simd
       }
     };
 
+  template <size_t _Np, size_t _Mp>
+    constexpr auto
+    __bitset_split(const bitset<_Mp>& __b)
+    {
+      constexpr auto __bits_per_word = __CHAR_BIT__ * __SIZEOF_LONG__;
+      if constexpr (_Np % __bits_per_word == 0)
+        {
+          struct _Tmp
+          {
+            bitset<_Np> _M_lo;
+            bitset<_Mp - _Np> _M_hi;
+          };
+          return __builtin_bit_cast(_Tmp, __b);
+        }
+      else
+        {
+          constexpr auto __bits_per_ullong = __CHAR_BIT__ * __SIZEOF_LONG_LONG__;
+          static_assert(_Mp <= __bits_per_ullong);
+          using _Lo = _Bitmask<_Np>;
+          using _Hi = _Bitmask<_Mp - _Np>;
+          struct _Tmp
+          {
+            _Lo _M_lo;
+            _Hi _M_hi;
+          };
+          return _Tmp {static_cast<_Lo>(__b.to_ullong()), static_cast<_Hi>(__b.to_ullong() >> _Np)};
+        }
+    }
+
   // [simd.traits]
   // --- rebind ---
   template <typename _Tp, typename _Vp, _ArchTraits _Traits = {}>
@@ -259,6 +288,11 @@ namespace std::simd
         return __r;
       }
 
+      [[__gnu__::__always_inline__]]
+      static constexpr basic_mask
+      _S_init(unsigned_integral auto __bits)
+      { return basic_mask(__bits); }
+
       /** \internal
        * Bit-cast the given object \p __x to basic_mask.
        *
@@ -440,24 +474,25 @@ namespace std::simd
         basic_mask(const basic_mask<_UBytes, _UAbi>& __x) noexcept
           : _M_data([&] [[__gnu__::__always_inline__]] {
               using _UV = basic_mask<_UBytes, _UAbi>;
+              // bool to bool
               if constexpr (_S_is_scalar)
                 return __x[0];
+
+              // converting from an "array of bool"
               else if constexpr (_UV::_S_is_scalar)
                 return _GLIBCXX_SIMD_INT_PACK(_S_size, _Is, {
                          return _DataType{__vec_value_type<_DataType>(-__x[_Is])...};
                        });
-              else if constexpr (_S_use_bitmask) // vec-/bit-mask to bit-mask
-                return __x._M_to_uint();
 
+              // vec-/bit-mask to bit-mask | bit-mask to vec-mask
+              else if constexpr (_S_use_bitmask or _UV::_S_use_bitmask)
+                return basic_mask(__x.to_bitset())._M_data;
+
+              // vec-mask to vec-mask
               // 2-mask-elements wrapper to plain mask
               else if constexpr (_UAbi::_S_is_cx_ileav)
                 {
-                  // bit-mask to vec-mask
-                  if constexpr (_UV::_S_use_bitmask)
-                    static_assert(false, "TODO");
-
-                  // vec-mask to vec-mask
-                  else if constexpr (sizeof(__x) == sizeof(_M_data) and _Bytes == _UBytes
+                  if constexpr (sizeof(__x) == sizeof(_M_data) and _Bytes == _UBytes
                                     and _UV::_S_padding_bytes == 0)
                     {
                       static_assert(not _S_has_bool_member and not _UV::_S_has_bool_member);
@@ -489,8 +524,6 @@ namespace std::simd
                                                   __integer_from<_UBytes>, sizeof(__xv)>>(__xv));
                     }
                 }
-              else if constexpr (_UV::_S_use_bitmask) // bit-mask to vec-mask
-                static_assert(false, "TODO");
               else if constexpr (sizeof(__x) == sizeof(_M_data) and _Bytes == _UBytes
                                    and not _S_has_bool_member and not _UV::_S_has_bool_member
                                    and not _UV::_S_use_bitmask and _UV::_S_padding_bytes == 0)
@@ -536,7 +569,8 @@ namespace std::simd
                       if constexpr (_S_is_scalar)
                         return __gen(__simd_size_constant<0>);
                       else if constexpr (_S_use_bitmask)
-                        return ((_DataType(__gen(__simd_size_constant<_Is>)) << _Is) | ...);
+                        return _DataType(((_DataType(__gen(__simd_size_constant<_Is>)) << _Is)
+                                            | ...));
                       else
                         return _DataType{__vec_value_type<_DataType>(
                                            __gen(__simd_size_constant<_Is>) ? -1 : 0)...};
@@ -549,20 +583,68 @@ namespace std::simd
           = _GLIBCXX_DELETE_MSG("Invalid return type of the mask generator function: "
                                 "Needs to be 'bool'.");
 
-      // [simd.mask.ctor] TODO: bitset constructor ----------------------------------
+      // [simd.mask.ctor] bitset constructor ----------------------------------
       [[__gnu__::__always_inline__]]
       constexpr
-      basic_mask(const bitset<size()>& __b) noexcept;
+      basic_mask(const bitset<size()>& __b) noexcept
+      : basic_mask(static_cast<_Bitmask<_S_size>>(__b.to_ullong()))
+      {
+        static_assert(_S_size <= 64); // more than 64 elements in one register? not yet.
+      }
 
-      // [simd.mask.ctor] uint constructor ------------------------------------------
+      // [simd.mask.ctor] uint constructor ------------------------------------
       [[__gnu__::__always_inline__]]
       constexpr explicit
       basic_mask(unsigned_integral auto __val) noexcept
       : _M_data([&] [[__gnu__::__always_inline__]] () {
           if constexpr (_S_use_bitmask)
             return __val;
+          else if constexpr (_S_is_scalar)
+            return bool(__val & 1);
+          else if (__builtin_is_constant_evaluated() or __builtin_constant_p(__val))
+            return _GLIBCXX_SIMD_INT_PACK(_S_size, _Is, {
+                     return _DataType {__vec_value_type<_DataType>((__val & (1ull << _Is)) == 0
+                                                                     ? 0 : -1)...};
+                   });
           else
-            static_assert(false, "TODO");
+            {
+              using _Ip = typename _VecType::value_type;
+              _VecType __v0 = _Ip(__val);
+              constexpr int __bits_per_element = sizeof(_Ip) * __CHAR_BIT__;
+              constexpr _VecType __pow2 = _VecType(1) << (__iota<_VecType> % __bits_per_element);
+              if constexpr (_S_size < __bits_per_element)
+                return ((__v0 & __pow2) > 0)._M_concat_data();
+              else if constexpr (_S_size == __bits_per_element)
+                return ((__v0 & __pow2) != 0)._M_concat_data();
+              else
+                {
+                  static_assert(_Bytes == 1);
+                  static_assert(sizeof(_Ip) == 1);
+                  _Bitmask<_S_size> __bits = __val;
+                  static_assert(sizeof(_VecType) % sizeof(__bits) == 0);
+                  if constexpr (sizeof(_DataType) == 32)
+                    {
+                      __vec_builtin_type<_UInt<8>, 4> __v1 = {
+                        0xffu & (__bits >> (0 * __CHAR_BIT__)),
+                        0xffu & (__bits >> (1 * __CHAR_BIT__)),
+                        0xffu & (__bits >> (2 * __CHAR_BIT__)),
+                        0xffu & (__bits >> (3 * __CHAR_BIT__)),
+                      };
+                      __v1 *= 0x0101'0101'0101'0101ull;
+                      __v0 = __builtin_bit_cast(_VecType, __v1);
+                      return ((__v0 & __pow2) != 0)._M_data;
+                    }
+                  else
+                    {
+                      using _V1 = vec<_Ip, sizeof(__bits)>;
+                      _V1 __v1 = __builtin_bit_cast(_V1, __bits);
+                      __v0 = _VecType::_S_static_permute(__v1, [](int __i) {
+                               return __i / __CHAR_BIT__;
+                             });
+                      return ((__v0 & __pow2) != 0)._M_data;
+                    }
+                }
+            }
         }())
       {}
 
@@ -658,29 +740,38 @@ namespace std::simd
       // [simd.mask.namedconv] ------------------------------------------------
       [[__gnu__::__always_inline__]]
       constexpr bitset<_S_size>
-      to_bitset() const noexcept;
+      to_bitset() const noexcept
+      {
+        static_assert(_S_size <= 64); // more than 64 elements in one register? not yet.
+        return to_ullong();
+      }
 
-      // TODO: support more than 64 bits for to_bitset
+      /** \internal
+       * Return the mask as the smallest possible unsigned integer (up to 64 bits).
+       *
+       * \tparam _Offset       Adjust the return type & value to start at bit \p _Offset.
+       * \tparam _Use_2_for_1  Store the value of every second element into one bit of the result.
+       *                       (precondition: each even/odd pair stores the same value)
+       */
       template <int _Offset = 0, bool _Use_2_for_1 = false, _ArchTraits _Traits = {}>
         [[__gnu__::__always_inline__]]
-        constexpr _UInt<min(8u, __bit_ceil(unsigned(__div_ceil(_S_size + _Offset, __CHAR_BIT__))))>
+        constexpr _Bitmask<_S_size / (_Use_2_for_1 + 1) + _Offset>
         _M_to_uint() const
         {
+          constexpr int __nbits = _S_size / (_Use_2_for_1 + 1);
+          static_assert(__nbits + _Offset <= 64);
           static_assert(not (_S_is_scalar and _Use_2_for_1));
           // before shifting
-          using _U0 = _UInt<min(8u, __bit_ceil(unsigned(__div_ceil(_S_size, __CHAR_BIT__))))>;
+          using _U0 = _Bitmask<__nbits>;
           // potentially wider type needed for shift by _Offset
-          using _Ur = _UInt<min(8u, __bit_ceil(
-                                      unsigned(__div_ceil(_S_size + _Offset, __CHAR_BIT__))))>;
-          if constexpr (_Offset >= 64) // TODO: this should turn into a static_assert
-            return {};
-          else if constexpr (_S_is_scalar or _S_use_bitmask)
+          using _Ur = _Bitmask<__nbits + _Offset>;
+          if constexpr (_S_is_scalar or _S_use_bitmask)
             {
               auto __bits = _M_data;
               if constexpr (_S_is_partial)
                 __bits &= _S_implicit_mask;
               if constexpr (_Use_2_for_1)
-                __bits = __bit_extract_even<_S_size / 2>(__bits);
+                __bits = __bit_extract_even<__nbits>(__bits);
               return _Ur(__bits) << _Offset;
             }
           else if constexpr (_Bytes == 8 and _Use_2_for_1)
@@ -703,7 +794,7 @@ namespace std::simd
               else
                 static_assert(false);
             }
-          else if constexpr (_Use_2_for_1 and _S_size == 2)
+          else if constexpr (_Use_2_for_1 and __nbits == 1)
             return _Ur(operator[](0)) << _Offset;
           else
             {
@@ -719,9 +810,9 @@ namespace std::simd
                   else if constexpr (_Bytes != 2) // movmskb would duplicate each bit
                     __uint = __x86_movmsk(_M_data);
                   else if constexpr (_Bytes == 2 and _Traits._M_have_bmi2())
-                    __uint = __bit_extract_even<_S_size>(__x86_movmsk(_M_data));
+                    __uint = __bit_extract_even<__nbits>(__x86_movmsk(_M_data));
                   else if constexpr (_Bytes == 2)
-                    return __similar_mask<char, _S_size, _Ap>(*this).template _M_to_uint<_Offset>();
+                    return __similar_mask<char, __nbits, _Ap>(*this).template _M_to_uint<_Offset>();
                   else
                     static_assert(false);
                   return _Ur(__uint) << _Offset;
@@ -732,10 +823,17 @@ namespace std::simd
                 }
 #endif
               using _IV = conditional_t<_Use_2_for_1,
-                                        __similar_vec<__integer_from<_Bytes * 2>, _S_size / 2, _Ap>,
+                                        __similar_vec<__integer_from<_Bytes * 2>, __nbits, _Ap>,
                                         _VecType>;
               static_assert(destructible<_IV>);
-              typename _IV::mask_type __k = __builtin_bit_cast(typename _IV::mask_type, _M_data);
+              const typename _IV::mask_type& __k = [&] [[__gnu__::__always_inline__]] () {
+                if constexpr (_Use_2_for_1)
+                  return typename _IV::mask_type(__to_cx_ileav(*this));
+                else if constexpr (is_same_v<typename _IV::mask_type, basic_mask>)
+                  return *this;
+                else
+                  return typename _IV::mask_type(*this);
+              }();
               constexpr int __n = _IV::size();
               if constexpr (_Bytes * __CHAR_BIT__ >= __n) // '1 << __iota' cannot overflow
                 {
@@ -762,8 +860,8 @@ namespace std::simd
                         });
                   _U0 __bits = __builtin_bit_cast(
                                  __similar_vec<_U0, __n * _Bytes / sizeof(_U0), _Ap>, __x)[0];
-                  if constexpr (not __has_single_bit(unsigned(_S_size)))
-                    __bits &= (_U0(1) << _S_size) - 1;
+                  if constexpr (not __has_single_bit(unsigned(__nbits)))
+                    __bits &= (_U0(1) << __nbits) - 1;
                   return _Ur(__bits) << _Offset;
                 }
             }
@@ -1099,23 +1197,23 @@ namespace std::simd
 
       [[__gnu__::__always_inline__]]
       static constexpr basic_mask
-      _S_init(unsigned_integral auto __bits) requires _S_use_bitmask
+      _S_init(unsigned_integral auto __bits)
       { return basic_mask(__bits); }
 
       template <typename _U0, typename _U1>
         [[__gnu__::__always_inline__]]
         static constexpr basic_mask
-        _S_init(const pair<_U0, _U1>& __bits) requires _S_use_bitmask
+        _S_init(const __trivial_pair<_U0, _U1>& __bits)
         {
           if constexpr (is_unsigned_v<_U0>)
             {
               static_assert(is_unsigned_v<_U1>);
-              return _S_init(_Mask0(__bits.first), _Mask1(__bits.second));
+              return _S_init(_Mask0(__bits._M_first), _Mask1(__bits._M_second));
             }
           else if constexpr (is_unsigned_v<_U1>)
-            return _S_init(_Mask0::_S_init(__bits.first), _Mask1(__bits.second));
+            return _S_init(_Mask0::_S_init(__bits._M_first), _Mask1(__bits._M_second));
           else
-            return _S_init(_Mask0::_S_init(__bits.first), _Mask1::_S_init(__bits.second));
+            return _S_init(_Mask0::_S_init(__bits._M_first), _Mask1::_S_init(__bits._M_second));
         }
 
       template <size_t _UBytes, typename _UAbi>
@@ -1143,7 +1241,7 @@ namespace std::simd
         if constexpr (_S_use_bitmask)
           {
             static_assert(_S_size <= sizeof(0ull) * __CHAR_BIT__, "cannot concat more than 64 bits");
-            using _Up = _UInt<__bit_ceil(__div_ceil<unsigned>(_S_size, __CHAR_BIT__))>;
+            using _Up = _Bitmask<_S_size>;
             return _Up(_M_data0._M_concat_data() | (_Up(_M_data1._M_concat_data()) << _N0));
           }
         else
@@ -1295,17 +1393,20 @@ namespace std::simd
       // [simd.mask.ctor] TODO: bitset constructor ----------------------------------
       [[__gnu__::__always_inline__]]
       constexpr
-      basic_mask(const bitset<size()>& __b) noexcept;
+      basic_mask(const bitset<size()>& __b) noexcept
+      : _M_data0(__bitset_split<_N0>(__b)._M_lo), _M_data1(__bitset_split<_N0>(__b)._M_hi)
+      {}
 
       // [simd.mask.ctor] uint constructor ------------------------------------------
       [[__gnu__::__always_inline__]]
       constexpr explicit
       basic_mask(unsigned_integral auto __val) noexcept
-      : _M_data0(__val),
+      : _M_data0(static_cast<_Bitmask<_N0>>(__val)),
         // the following cast to unsigned is necessary if __val would otherwise promote to int,
         // which could sign-extend and thus invent bits that were not there before
-        _M_data1(conditional_t<sizeof(__val) < sizeof(int),
-                               unsigned, decltype(__val)>(__val) >> _N0)
+        _M_data1(static_cast<_Bitmask<_N1>>(
+                   conditional_t<sizeof(__val) < sizeof(int),
+                                 unsigned, decltype(__val)>(__val) >> _N0))
       {}
 
       // [simd.mask.subscr] ---------------------------------------------------
@@ -1407,34 +1508,62 @@ namespace std::simd
       // [simd.mask.namedconv] ------------------------------------------------
       [[__gnu__::__always_inline__]]
       constexpr bitset<_S_size>
-      to_bitset() const noexcept;
+      to_bitset() const noexcept
+      {
+        if constexpr (_S_size <= 64)
+          return to_ullong();
+        else
+          {
+            static_assert(_N0 % 64 == 0);
+            struct _Tmp
+            {
+              bitset<_N0> _M_lo;
+              bitset<_N1> _M_hi;
+            } __tmp = {_M_data0.to_bitset(), _M_data1.to_bitset()};
+            return __builtin_bit_cast(bitset<_S_size>, __tmp);
+          }
+      }
 
       template <int _Offset = 0, bool _Use_2_for_1 = false, _ArchTraits _Traits = {}>
         [[__gnu__::__always_inline__]]
         constexpr auto
         _M_to_uint() const
         {
-          if constexpr (_N0 / (1 + _Use_2_for_1) + _Offset >= __CHAR_BIT__ * sizeof(0ull))
-            return _M_data0.template _M_to_uint<_Offset, _Use_2_for_1>();
+          constexpr int _N0x = _Use_2_for_1 ? _N0 / 2 : _N0;
+          if constexpr (_N0x >= 64)
+            {
+              static_assert(_Offset == 0);
+              return __trivial_pair {
+                _M_data0.template _M_to_uint<0, _Use_2_for_1>(),
+                _M_data1.template _M_to_uint<0, _Use_2_for_1>()
+              };
+            }
+          else
+            {
 #if _GLIBCXX_SIMD_HAVE_SSE
-          if constexpr (_Bytes == 2 and not _Traits._M_have_bmi2() and _Ap::_S_nreg == 2
-                          and not _S_use_bitmask and not _Use_2_for_1)
-            return __similar_mask<char, _S_size, _Ap>(*this).template _M_to_uint<_Offset>();
+              if constexpr (_Bytes == 2 and not _Traits._M_have_bmi2() and _Ap::_S_nreg == 2
+                              and not _S_use_bitmask and not _Use_2_for_1)
+                return __similar_mask<char, _S_size, _Ap>(*this).template _M_to_uint<_Offset>();
 #endif
-          auto __uint = _M_data1.template _M_to_uint<_N0 / (1 + _Use_2_for_1) + _Offset,
-                                                     _Use_2_for_1>();
-          __uint |= _M_data0.template _M_to_uint<_Offset, _Use_2_for_1>();
-          return __uint;
+              auto __uint = _M_data1.template _M_to_uint<_N0x + _Offset, _Use_2_for_1>();
+              __uint |= _M_data0.template _M_to_uint<_Offset, _Use_2_for_1>();
+              return __uint;
+            }
         }
 
       [[__gnu__::__always_inline__]]
       constexpr unsigned long long
       to_ullong() const
       {
-        if constexpr (_N0 < 64)
+        if constexpr (_S_size <= 64)
           return _M_to_uint();
         else
-          return _M_data0.to_ullong();
+          {
+            __glibcxx_simd_precondition(_M_data1.to_ullong() == 0,
+                                        "to_ullong called on mask with 'true' elements at indices"
+                                        "higher than 64");
+            return _M_data0.to_ullong();
+          }
       }
 
       // [simd.mask.binary]

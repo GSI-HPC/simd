@@ -571,7 +571,7 @@ namespace std::simd
     }
 
   template <int _OutputBits = 4, _ArchTraits _Traits = {}>
-    constexpr _UInt<1>
+    constexpr _Bitmask<1>
     __bit_extract_even(_UInt<1> __x)
     {
       static_assert(_OutputBits <= 4);
@@ -589,7 +589,7 @@ namespace std::simd
     }
 
   template <int _OutputBits = 8, _ArchTraits _Traits = {}>
-    constexpr _UInt<1>
+    constexpr _Bitmask<1>
     __bit_extract_even(_UInt<2> __x)
     {
       if constexpr (_OutputBits <= 4)
@@ -613,7 +613,7 @@ namespace std::simd
     }
 
   template <int _OutputBits = 16, _ArchTraits _Traits = {}>
-    constexpr _UInt<_OutputBits <= 8 ? 1 : 2>
+    constexpr _Bitmask<_OutputBits>
     __bit_extract_even(_UInt<4> __x)
     {
       if constexpr (_OutputBits <= 4)
@@ -641,7 +641,7 @@ namespace std::simd
     }
 
   template <int _OutputBits = 32, _ArchTraits _Traits = {}>
-    constexpr _UInt<_OutputBits <= 8 ? 1 : _OutputBits <= 16 ? 2 : 4>
+    constexpr _Bitmask<_OutputBits>
     __bit_extract_even(_UInt<8> __x)
     {
       if constexpr (_OutputBits <= 4)
@@ -680,49 +680,44 @@ namespace std::simd
     }
 
   // input bits must be 0 for all bits > _InputBits
-  template <int _InputBits = 8, _ArchTraits _Traits = {}>
-    constexpr _UInt<_InputBits <= 4 ? 1 : 2>
-    __duplicate_each_bit(_UInt<1> __x)
+  template <int _InputBits = -1, _ArchTraits _Traits = {}>
+    constexpr auto
+    __duplicate_each_bit(unsigned_integral auto __x)
     {
-      static_assert(_InputBits >= 1);
-      static_assert(_InputBits <= 8);
-      constexpr _UInt<2> __mask = 0x5555u >> ((8 - _InputBits) * 2);
-      if constexpr (_InputBits == 1)
-        return __x * 3;
+      constexpr int __input_bits = _InputBits == -1 ? sizeof(__x) * __CHAR_BIT__ : _InputBits;
+      static_assert(__input_bits >= 1);
+      static_assert(sizeof(__x) * __CHAR_BIT__ >= __input_bits);
+      if constexpr (__input_bits <= 8)
+        {
+          constexpr _UInt<2> __mask = 0x5555u >> ((8 - __input_bits) * 2);
+          if constexpr (__input_bits == 1)
+            return _UInt<1>(__x * 3u);
 #if __has_builtin(__builtin_ia32_pdep_si)
-      else if constexpr (_Traits._M_have_bmi2())
-        return 3 * __builtin_ia32_pdep_si(__x, __mask);
+          else if constexpr (_Traits._M_have_bmi2())
+            return _Bitmask<__input_bits * 2>(3u * __builtin_ia32_pdep_si(__x, __mask));
 #endif
-      else if constexpr (_InputBits == 2) // 0000'00BA
-        return ((__x + 0b0010u) & 0b0101u) * 3; // 0B?A -> 0B0A -> BBAA
-      else if constexpr (_InputBits <= 4) // 0000'DCBA
-        {
-          __x = ((__x << 2) | __x ) & 0b0011'0011u; // 00DC'??BA -> 00DC'00BA
-          return ((__x + 0b0010'0010u) & __mask) * 3;     // -> DDCC'BBAA
+          else if constexpr (__input_bits == 2) // 0000'00BA
+            return _UInt<1>(((__x + 0b0010u) & 0b0101u) * 3u); // 0B?A -> 0B0A -> BBAA
+          else if constexpr (__input_bits <= 4) // 0000'DCBA
+            {
+              __x = ((__x << 2) | __x ) & 0b0011'0011u; // 00DC'??BA -> 00DC'00BA
+              return _UInt<1>(((__x + 0b0010'0010u) & __mask) * 3u);     // -> DDCC'BBAA
+            }
+          else
+            { // HGFE'DCBA
+              _UInt<2> __y = ((__x << 4) | __x) & 0x0F0Fu; // HGFE'0000'DCBA
+              __y |= __y << 2; // 00HG'??FE'00DC'??BA
+              __y &= 0x3333u;  // 00HG'00FE'00DC'00BA
+              __y += 0x2222u;  // 0H?G'0F?E'0D?C'0B?A
+              return _UInt<2>((__y & __mask) * 3u); // HHGG'FFEE'DDCC'BBAA
+            }
         }
-      else
-        { // HGFE'DCBA
-          _UInt<2> __y = ((__x << 4) | __x) & 0x0F0Fu; // HGFE'0000'DCBA
-          __y |= __y << 2; // 00HG'??FE'00DC'??BA
-          __y &= 0x3333u;  // 00HG'00FE'00DC'00BA
-          __y += 0x2222u;  // 0H?G'0F?E'0D?C'0B?A
-          return (__y & __mask) * 3; // HHGG'FFEE'DDCC'BBAA
-        }
-    }
-
-  template <int _InputBits = 16, _ArchTraits _Traits = {}>
-    constexpr _UInt<_InputBits <= 4 ? 1 : _InputBits <= 8 ? 2 : 4>
-    __duplicate_each_bit(_UInt<2> __x)
-    {
-      if constexpr (_InputBits <= 8)
-        return __duplicate_each_bit<_InputBits>(_UInt<1>(__x));
-      else
+      else if constexpr (__input_bits <= 16)
         {
-          static_assert(_InputBits <= 16);
-          constexpr _UInt<4> __mask = 0x5555'5555u >> ((16 - _InputBits) * 2);
+          constexpr _UInt<4> __mask = 0x5555'5555u >> ((16 - __input_bits) * 2);
 #if __has_builtin(__builtin_ia32_pdep_si)
           if constexpr (_Traits._M_have_bmi2())
-            return 3 * __builtin_ia32_pdep_si(__x, __mask);
+            return 3u * __builtin_ia32_pdep_si(__x, __mask);
 #endif
           _UInt<4> __y = ((__x << 8) | __x) & 0x00FF00FFu;
           __y |= __y << 4;
@@ -731,28 +726,17 @@ namespace std::simd
           __y &= 0x3333'3333u;
           return ((__y + 0x2222'2222u) & __mask) * 3;
         }
-    }
-
-  template <int _InputBits = 32, _ArchTraits _Traits = {}>
-    constexpr _UInt<_InputBits <= 4 ? 1 : _InputBits <= 8 ? 2 : _InputBits <= 16 ? 4 : 8>
-    __duplicate_each_bit(_UInt<4> __x)
-    {
-      if constexpr (_InputBits <= 8)
-        return __duplicate_each_bit<_InputBits>(_UInt<1>(__x));
-      else if constexpr (_InputBits <= 16)
-        return __duplicate_each_bit<_InputBits>(_UInt<2>(__x));
-      else
+      else if constexpr (__input_bits <= 32)
         {
-          static_assert(_InputBits <= 32);
-          constexpr _UInt<8> __mask = 0x5555'5555'5555'5555u >> ((32 - _InputBits) * 2);
+          constexpr _UInt<8> __mask = 0x5555'5555'5555'5555u >> ((32 - __input_bits) * 2);
 #if __has_builtin(__builtin_ia32_pdep_si)
           if constexpr (_Traits._M_have_bmi2())
             {
 #if __has_builtin(__builtin_ia32_pdep_di)
-              return 3 * __builtin_ia32_pdep_di(__x, __mask);
+              return 3ull * __builtin_ia32_pdep_di(__x, __mask);
 #else
               const _UInt<8> __hi = 3 * __builtin_ia32_pdep_si(__x >> 16, __mask >> 32);
-              return (3 * __builtin_ia32_pdep_si(__x, static_cast<unsigned>(__mask))) | __hi << 32;
+              return (3u * __builtin_ia32_pdep_si(__x, static_cast<unsigned>(__mask))) | __hi << 32;
 #endif
             }
 #endif
@@ -765,32 +749,26 @@ namespace std::simd
           __y &= 0x3333'3333'3333'3333ull;
           return ((__y + 0x2222'2222'2222'2222ull) & __mask) * 3;
         }
-    }
-
-  template <int _InputBits = 64>
-    constexpr auto
-    __duplicate_each_bit(_UInt<8> __x)
-    {
-      if constexpr (_InputBits <= 32)
-        return __duplicate_each_bit<_InputBits>(_UInt<4>(__x));
       else
-        return pair { __duplicate_each_bit(_UInt<4>(__x)),
-                      __duplicate_each_bit<_InputBits - 32>(_UInt<4>(__x >> 32)) };
+        return __trivial_pair { __duplicate_each_bit(_UInt<4>(__x)),
+                                __duplicate_each_bit<__input_bits - 32>(
+                                  _Bitmask<__input_bits - 32>(__x >> 32)) };
     }
 
   template <int _InputBits = -1, typename _U0, typename _U1>
     constexpr auto
-    __duplicate_each_bit(pair<_U0, _U1> __x)
+    __duplicate_each_bit(const __trivial_pair<_U0, _U1>& __x)
     {
-      constexpr int __input_bits = _InputBits == -1 ? (sizeof(_U0) + sizeof(_U1)) * 8
+      constexpr int __input_bits = _InputBits == -1 ? (sizeof(_U0) + sizeof(_U1)) * __CHAR_BIT__
                                                     : _InputBits;
-      constexpr int __in0 = sizeof(_U0) * 8;
+      constexpr int __in0 = min(int(sizeof(_U0)) * __CHAR_BIT__, __input_bits);
       constexpr int __in1 = __input_bits - __in0;
-      if constexpr (__input_bits <= __in0)
-        return __duplicate_each_bit<__input_bits>(__x.first);
+      static_assert(is_unsigned_v<_U1>);
+      if constexpr (__in1 == 0)
+        return __duplicate_each_bit<__in0>(__x._M_first);
       else
-        return pair { __duplicate_each_bit<__in0>(__x.first),
-                      __duplicate_each_bit<__in1>(__x.second) };
+        return __trivial_pair { __duplicate_each_bit<__in0>(__x._M_first),
+                                __duplicate_each_bit<__in1>(__x._M_second) };
     }
 
   template <__vec_builtin _TV, _ArchTraits _Traits = {}>

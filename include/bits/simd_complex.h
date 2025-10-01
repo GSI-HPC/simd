@@ -31,6 +31,84 @@ namespace std::simd
     __to_cx_ileav(const _Mp& __k)
     { return __cx_ileav_mask<_Mp>::_S_init(__k); }
 
+  constexpr void
+  __check_hi_bits_for_zero(unsigned_integral auto __x)
+  {
+    __glibcxx_simd_precondition(__x == 0,
+                                "to_ullong called on mask with 'true' elements at indices"
+                                "higher than 64");
+  }
+
+  template <typename _T0, typename _T1>
+    constexpr void
+    __check_hi_bits_for_zero(const __trivial_pair<_T0, _T1>& __p)
+    {
+      __check_hi_bits_for_zero(__p._M_first);
+      __check_hi_bits_for_zero(__p._M_second);
+    }
+
+  constexpr unsigned long long
+  __unwrap_pairs_to_ullong(unsigned_integral auto __x)
+  { return __x; }
+
+  template <typename _T0, typename _T1>
+    constexpr unsigned long long
+    __unwrap_pairs_to_ullong(const __trivial_pair<_T0, _T1>& __p)
+    {
+      __check_hi_bits_for_zero(__p._M_second);
+      return __unwrap_pairs_to_ullong(__p._M_first);
+    }
+
+  template <int _Np>
+    constexpr bitset<_Np>
+    __unwrap_pairs_to_bitset(unsigned_integral auto __x)
+    {
+      static_assert(_Np <= 64);
+      return __x;
+    }
+
+  template <size_t _Np, typename _T0, typename _T1>
+    constexpr bitset<_Np>
+    __unwrap_pairs_to_bitset(const __trivial_pair<_T0, _T1>& __p)
+    {
+      constexpr size_t _N0 = __bit_floor(_Np);
+      constexpr size_t _N1 = _Np - _N0;
+      static_assert(_N0 % 64 == 0);
+      struct _Tmp
+      {
+        bitset<__bit_floor(_Np)> _M_lo;
+        bitset<_Np - __bit_floor(_Np)> _M_hi;
+      };
+      _Tmp __tmp = {__unwrap_pairs_to_bitset<_N0>(__p._M_first),
+                    __unwrap_pairs_to_bitset<_N1>(__p._M_second)};
+      return __builtin_bit_cast(bitset<_Np>, __tmp);
+    }
+
+  template <size_t _Bytes>
+    consteval auto
+    __tree_of_ulong()
+    {
+      static constexpr size_t _N0 = __bit_floor(_Bytes - 1);
+      static constexpr size_t _N1 = _Bytes - _N0;
+      if constexpr (_Bytes <= sizeof(unsigned long))
+        return 0ul;
+      else
+        return __trivial_pair {__tree_of_ulong<_N0>(), __tree_of_ulong<_N1>()};
+    }
+
+  template <size_t _Bytes>
+    using __tree_of_ulong_t = decltype(__tree_of_ulong<_Bytes>());
+
+  template <size_t _Np>
+    constexpr auto
+    __bitset_to_pairs(const bitset<_Np>& __b) noexcept
+    {
+      if constexpr (_Np <= 64)
+        return __b.to_ullong();
+      else
+        return __builtin_bit_cast(__tree_of_ulong_t<__div_ceil(_Np, size_t(__CHAR_BIT__))>, __b);
+    }
+
   template <size_t _Bytes, __abi_tag _Ap>
     requires _Ap::_S_is_cx_ileav
     class basic_mask<_Bytes, _Ap>
@@ -257,12 +335,14 @@ namespace std::simd
           = _GLIBCXX_DELETE_MSG("Invalid return type of the mask generator function: "
                                 "Needs to be 'bool'.");
 
-      // [simd.mask.ctor] TODO: bitset constructor ----------------------------------
+      // [simd.mask.ctor] bitset constructor ----------------------------------
       [[__gnu__::__always_inline__]]
       constexpr
-      basic_mask(const bitset<size()>& __b) noexcept;
+      basic_mask(const bitset<_S_size>& __b) noexcept
+      : _M_data(_DataType::_S_init(__duplicate_each_bit<_S_size>(__bitset_to_pairs(__b))))
+      {}
 
-      // [simd.mask.ctor] TODO: uint constructor ------------------------------------
+      // [simd.mask.ctor] uint constructor ------------------------------------
       [[__gnu__::__always_inline__]]
       constexpr explicit
       basic_mask(unsigned_integral auto __val) noexcept
@@ -331,7 +411,8 @@ namespace std::simd
       // [simd.mask.namedconv] ------------------------------------------------
       [[__gnu__::__always_inline__]]
       constexpr bitset<_S_size>
-      to_bitset() const noexcept;
+      to_bitset() const noexcept
+      { return __unwrap_pairs_to_bitset<_S_size>(_M_to_uint()); }
 
       template <int _Offset = 0, _ArchTraits _Traits = {}>
         [[__gnu__::__always_inline__]]
@@ -342,7 +423,7 @@ namespace std::simd
       [[__gnu__::__always_inline__]]
       constexpr unsigned long long
       to_ullong() const
-      { return _M_to_uint(); }
+      { return __unwrap_pairs_to_ullong(_M_to_uint()); }
 
       // [simd.mask.binary] ---------------------------------------------------
       [[__gnu__::__always_inline__]]

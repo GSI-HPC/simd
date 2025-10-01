@@ -12,7 +12,7 @@
 #include <complex>
 
 #include <bits/ranges_base.h>
-#include <bits/utility.h>
+#include <bits/utility.h> // integer_sequence, etc.
 
 #ifndef __clang__
 #include <bits/c++config.h>
@@ -526,6 +526,10 @@ namespace std::simd
     __div_ceil(_Tp __x, _Tp __y)
     { return (__x + __y - 1) / __y; }
 
+  template <int _NBits>
+    requires (_NBits > 0 and _NBits <= 64)
+    using _Bitmask = _UInt<__div_ceil(__bit_ceil(unsigned(_NBits)), unsigned(__CHAR_BIT__))>;
+
   template <typename _Tp>
     struct __canonical_vec_type
     { using type = _Tp; };
@@ -669,7 +673,7 @@ namespace std::simd
                   if constexpr (_Nreg > 1)
                     return _InvalidInteger();
                   else
-                    return _UInt<__bit_ceil(__div_ceil<unsigned>(_S_size, __CHAR_BIT__))>();
+                    return _Bitmask<_S_size>();
                 }
               else
                 {
@@ -1142,7 +1146,7 @@ namespace std::simd
     __deduce_abi()
     {
       constexpr auto __native = __native_abi<_Tp>();
-      if constexpr (0 == __native._S_size)
+      if constexpr (0 == __native._S_size or _Np <= 0)
         return _InvalidAbi();
       else if constexpr (_Np == __native._S_size)
         return __native;
@@ -1662,6 +1666,16 @@ namespace std::simd
   template <typename _From, typename _To>
     concept __simd_vec_bcast = constructible_from<_To, _From>;
 #endif
+
+  /** \internal
+   * std::pair is not trivially copyable, this one is
+   */
+  template <typename _T0, typename _T1>
+    struct __trivial_pair
+    {
+      _T0 _M_first;
+      _T1 _M_second;
+    };
 }
 
 #pragma GCC diagnostic pop
