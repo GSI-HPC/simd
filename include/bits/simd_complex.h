@@ -256,6 +256,9 @@ namespace std::simd
         : _M_data(__x)
       {}
 
+      // LWG4382
+      basic_mask(signed_integral auto) = delete("use unsigned integral bitmasks instead");
+
       // [simd.mask.ctor] conversion constructor ------------------------------
       template <size_t _UBytes, typename _UAbi>
         requires (_S_size == _UAbi::_S_size)
