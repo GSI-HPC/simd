@@ -142,18 +142,16 @@ template <typename V>
   };
 
 template <typename V, typename T = typename V::value_type>
-  concept usable_simd_or_mask
+  concept usable_vec_or_mask
     = std::destructible<V>
         and std::is_nothrow_move_constructible_v<V>
         and std::is_nothrow_move_assignable_v<V>
         and std::is_nothrow_default_constructible_v<V>
         and std::is_trivially_copyable_v<V>
         and std::is_standard_layout_v<V>
-#if SIMD_IS_A_RANGE
         and std::ranges::random_access_range<V&>
         and not std::ranges::output_range<V&, T>
-#endif
-        and std::constructible_from<V, V> // broadcast
+        and std::constructible_from<V, T> // broadcast
 #if SIMD_CONCEPTS
         and simd::regular<V>
         and simd::equality_comparable<V>
@@ -162,8 +160,8 @@ template <typename V, typename T = typename V::value_type>
       ;
 
 template <typename V, typename T = typename V::value_type>
-  concept usable_simd
-    = usable_simd_or_mask<V, T>
+  concept usable_vec
+    = usable_vec_or_mask<V, T>
         and not std::convertible_to<V, std::array<T, V::size()>>
         and std::convertible_to<std::array<T, V::size()>, V>
 #if SIMD_CONCEPTS
@@ -176,33 +174,50 @@ template <typename V, typename T = typename V::value_type>
 #endif
       ;
 
+template <typename M, typename T = typename M::value_type>
+  concept usable_mask
+    = std::is_same_v<T, bool>
+        and usable_vec_or_mask<M, T>
+        and std::convertible_to<std::bitset<M::size()>, M>
+        and std::constructible_from<M, unsigned long long>
+        and std::constructible_from<M, unsigned char>
+        and not std::convertible_to<unsigned long long, M>
+        and not std::convertible_to<unsigned char, M>
+        and not std::convertible_to<bool, M>
+        and not std::constructible_from<M, std::bitset<M::size() + 1>>
+        and not std::constructible_from<M, std::bitset<M::size() - 1>>
+        and not std::constructible_from<M, int>
+        and not std::constructible_from<M, float>
+      ;
+
 template <typename T>
   struct test_usable_simd
   {
-    static_assert(not usable_simd<simd::vec<T, 0>>);
+    static_assert(not usable_vec<simd::vec<T, 0>>);
     static_assert(not has_static_size<simd::vec<T, 0>>);
-    static_assert(usable_simd<simd::vec<T, 1>>);
-    static_assert(usable_simd<simd::vec<T, 2>>);
-    static_assert(usable_simd<simd::vec<T, 3>>);
-    static_assert(usable_simd<simd::vec<T, 4>>);
-    static_assert(usable_simd<simd::vec<T, 7>>);
-    static_assert(usable_simd<simd::vec<T, 8>>);
-    static_assert(usable_simd<simd::vec<T, 16>>);
-    static_assert(usable_simd<simd::vec<T, 32>>);
-    static_assert(usable_simd<simd::vec<T, 63>>);
-    static_assert(usable_simd<simd::vec<T, 64>>);
+    static_assert(usable_vec<simd::vec<T, 1>>);
+    static_assert(usable_vec<simd::vec<T, 2>>);
+    static_assert(usable_vec<simd::vec<T, 3>>);
+    static_assert(usable_vec<simd::vec<T, 4>>);
+    static_assert(usable_vec<simd::vec<T, 7>>);
+    static_assert(usable_vec<simd::vec<T, 8>>);
+    static_assert(usable_vec<simd::vec<T, 16>>);
+    static_assert(usable_vec<simd::vec<T, 32>>);
+    static_assert(usable_vec<simd::vec<T, 63>>);
+    static_assert(usable_vec<simd::vec<T, 64>>);
 
+    static_assert(not usable_mask<simd::mask<T, 0>>);
     static_assert(not has_static_size<simd::mask<T, 0>>);
-    static_assert(usable_simd_or_mask<simd::mask<T, 1>>);
-    static_assert(usable_simd_or_mask<simd::mask<T, 2>>);
-    static_assert(usable_simd_or_mask<simd::mask<T, 3>>);
-    static_assert(usable_simd_or_mask<simd::mask<T, 4>>);
-    static_assert(usable_simd_or_mask<simd::mask<T, 7>>);
-    static_assert(usable_simd_or_mask<simd::mask<T, 8>>);
-    static_assert(usable_simd_or_mask<simd::mask<T, 16>>);
-    static_assert(usable_simd_or_mask<simd::mask<T, 32>>);
-    static_assert(usable_simd_or_mask<simd::mask<T, 63>>);
-    static_assert(usable_simd_or_mask<simd::mask<T, 64>>);
+    static_assert(usable_mask<simd::mask<T, 1>>);
+    static_assert(usable_mask<simd::mask<T, 2>>);
+    static_assert(usable_mask<simd::mask<T, 3>>);
+    static_assert(usable_mask<simd::mask<T, 4>>);
+    static_assert(usable_mask<simd::mask<T, 7>>);
+    static_assert(usable_mask<simd::mask<T, 8>>);
+    static_assert(usable_mask<simd::mask<T, 16>>);
+    static_assert(usable_mask<simd::mask<T, 32>>);
+    static_assert(usable_mask<simd::mask<T, 63>>);
+    static_assert(usable_mask<simd::mask<T, 64>>);
   };
 
 template <template <typename> class Tpl>

@@ -247,7 +247,7 @@ $(objdir)/codegen.depend: $(objdir) $(codegen_files)
 
 include $(objdir)/codegen.depend
 
-$(objdir)/constexpr.%.s: $(objdir)/%.hpp.gch
+$(objdir)/constexpr.%.s: $(objdir)/%.hpp.gch constexpr_tests.cpp
 	@printf -- '$(msg_build) constexpr tests for $*\n'
 	@$(call call_compiler, $(CXXFLAGS) -march=$* -include $(objdir)/$*.hpp -S -o $@ constexpr_tests.cpp)
 

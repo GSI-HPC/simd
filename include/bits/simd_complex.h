@@ -252,12 +252,9 @@ namespace std::simd
       // [simd.mask.ctor] broadcast constructor -------------------------------
       [[__gnu__::__always_inline__]]
       constexpr explicit
-      basic_mask(bool __x) noexcept
+      basic_mask(same_as<bool> auto __x) noexcept
         : _M_data(__x)
       {}
-
-      // LWG4382
-      basic_mask(signed_integral auto) = delete("use unsigned integral bitmasks instead");
 
       // [simd.mask.ctor] conversion constructor ------------------------------
       template <size_t _UBytes, typename _UAbi>
@@ -341,16 +338,18 @@ namespace std::simd
       // [simd.mask.ctor] bitset constructor ----------------------------------
       [[__gnu__::__always_inline__]]
       constexpr
-      basic_mask(const bitset<_S_size>& __b) noexcept
+      basic_mask(const same_as<bitset<_S_size>> auto& __b) noexcept
       : _M_data(_DataType::_S_init(__duplicate_each_bit<_S_size>(__bitset_to_pairs(__b))))
       {}
 
       // [simd.mask.ctor] uint constructor ------------------------------------
-      [[__gnu__::__always_inline__]]
-      constexpr explicit
-      basic_mask(unsigned_integral auto __val) noexcept
-      : _M_data(__duplicate_each_bit<_S_size>(__val))
-      {}
+      template <unsigned_integral _Tp>
+        requires (not same_as<_Tp, bool>)
+        [[__gnu__::__always_inline__]]
+        constexpr explicit
+        basic_mask(_Tp __val) noexcept
+        : _M_data(__duplicate_each_bit<_S_size>(__val))
+        {}
 
       // [simd.mask.subscr] ---------------------------------------------------
       [[__gnu__::__always_inline__]]

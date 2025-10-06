@@ -462,12 +462,9 @@ namespace std::simd
       // [simd.mask.ctor] broadcast constructor -------------------------------
       [[__gnu__::__always_inline__]]
       constexpr explicit
-      basic_mask(bool __x) noexcept
+      basic_mask(same_as<bool> auto __x) noexcept
         : _M_data(__x ? _S_implicit_mask : _DataType())
       {}
-
-      // LWG4382
-      basic_mask(signed_integral auto) = delete("use unsigned integral bitmasks instead");
 
       // [simd.mask.ctor] conversion constructor ------------------------------
       template <size_t _UBytes, typename _UAbi>
@@ -589,67 +586,69 @@ namespace std::simd
       // [simd.mask.ctor] bitset constructor ----------------------------------
       [[__gnu__::__always_inline__]]
       constexpr
-      basic_mask(const bitset<size()>& __b) noexcept
+      basic_mask(const same_as<bitset<size()>> auto& __b) noexcept
       : basic_mask(static_cast<_Bitmask<_S_size>>(__b.to_ullong()))
       {
         static_assert(_S_size <= 64); // more than 64 elements in one register? not yet.
       }
 
       // [simd.mask.ctor] uint constructor ------------------------------------
-      [[__gnu__::__always_inline__]]
-      constexpr explicit
-      basic_mask(unsigned_integral auto __val) noexcept
-      : _M_data([&] [[__gnu__::__always_inline__]] () {
-          if constexpr (_S_use_bitmask)
-            return __val;
-          else if constexpr (_S_is_scalar)
-            return bool(__val & 1);
-          else if (__builtin_is_constant_evaluated() or __builtin_constant_p(__val))
-            return _GLIBCXX_SIMD_INT_PACK(_S_size, _Is, {
-                     return _DataType {__vec_value_type<_DataType>((__val & (1ull << _Is)) == 0
-                                                                     ? 0 : -1)...};
-                   });
-          else
-            {
-              using _Ip = typename _VecType::value_type;
-              _VecType __v0 = _Ip(__val);
-              constexpr int __bits_per_element = sizeof(_Ip) * __CHAR_BIT__;
-              constexpr _VecType __pow2 = _VecType(1) << (__iota<_VecType> % __bits_per_element);
-              if constexpr (_S_size < __bits_per_element)
-                return ((__v0 & __pow2) > 0)._M_concat_data();
-              else if constexpr (_S_size == __bits_per_element)
-                return ((__v0 & __pow2) != 0)._M_concat_data();
-              else
-                {
-                  static_assert(_Bytes == 1);
-                  static_assert(sizeof(_Ip) == 1);
-                  _Bitmask<_S_size> __bits = __val;
-                  static_assert(sizeof(_VecType) % sizeof(__bits) == 0);
-                  if constexpr (sizeof(_DataType) == 32)
-                    {
-                      __vec_builtin_type<_UInt<8>, 4> __v1 = {
-                        0xffu & (__bits >> (0 * __CHAR_BIT__)),
-                        0xffu & (__bits >> (1 * __CHAR_BIT__)),
-                        0xffu & (__bits >> (2 * __CHAR_BIT__)),
-                        0xffu & (__bits >> (3 * __CHAR_BIT__)),
-                      };
-                      __v1 *= 0x0101'0101'0101'0101ull;
-                      __v0 = __builtin_bit_cast(_VecType, __v1);
-                      return ((__v0 & __pow2) != 0)._M_data;
-                    }
-                  else
-                    {
-                      using _V1 = vec<_Ip, sizeof(__bits)>;
-                      _V1 __v1 = __builtin_bit_cast(_V1, __bits);
-                      __v0 = _VecType::_S_static_permute(__v1, [](int __i) {
-                               return __i / __CHAR_BIT__;
-                             });
-                      return ((__v0 & __pow2) != 0)._M_data;
-                    }
-                }
-            }
-        }())
-      {}
+      template <unsigned_integral _Tp>
+        requires (not same_as<_Tp, bool>)
+        [[__gnu__::__always_inline__]]
+        constexpr explicit
+        basic_mask(_Tp __val) noexcept
+        : _M_data([&] [[__gnu__::__always_inline__]] () {
+            if constexpr (_S_use_bitmask)
+              return __val;
+            else if constexpr (_S_is_scalar)
+              return bool(__val & 1);
+            else if (__builtin_is_constant_evaluated() or __builtin_constant_p(__val))
+              return _GLIBCXX_SIMD_INT_PACK(_S_size, _Is, {
+                       return _DataType {__vec_value_type<_DataType>((__val & (1ull << _Is)) == 0
+                                                                       ? 0 : -1)...};
+                     });
+            else
+              {
+                using _Ip = typename _VecType::value_type;
+                _VecType __v0 = _Ip(__val);
+                constexpr int __bits_per_element = sizeof(_Ip) * __CHAR_BIT__;
+                constexpr _VecType __pow2 = _VecType(1) << (__iota<_VecType> % __bits_per_element);
+                if constexpr (_S_size < __bits_per_element)
+                  return ((__v0 & __pow2) > 0)._M_concat_data();
+                else if constexpr (_S_size == __bits_per_element)
+                  return ((__v0 & __pow2) != 0)._M_concat_data();
+                else
+                  {
+                    static_assert(_Bytes == 1);
+                    static_assert(sizeof(_Ip) == 1);
+                    _Bitmask<_S_size> __bits = __val;
+                    static_assert(sizeof(_VecType) % sizeof(__bits) == 0);
+                    if constexpr (sizeof(_DataType) == 32)
+                      {
+                        __vec_builtin_type<_UInt<8>, 4> __v1 = {
+                          0xffu & (__bits >> (0 * __CHAR_BIT__)),
+                          0xffu & (__bits >> (1 * __CHAR_BIT__)),
+                          0xffu & (__bits >> (2 * __CHAR_BIT__)),
+                          0xffu & (__bits >> (3 * __CHAR_BIT__)),
+                        };
+                        __v1 *= 0x0101'0101'0101'0101ull;
+                        __v0 = __builtin_bit_cast(_VecType, __v1);
+                        return ((__v0 & __pow2) != 0)._M_data;
+                      }
+                    else
+                      {
+                        using _V1 = vec<_Ip, sizeof(__bits)>;
+                        _V1 __v1 = __builtin_bit_cast(_V1, __bits);
+                        __v0 = _VecType::_S_static_permute(__v1, [](int __i) {
+                                 return __i / __CHAR_BIT__;
+                               });
+                        return ((__v0 & __pow2) != 0)._M_data;
+                      }
+                  }
+              }
+          }())
+        {}
 
       //Effects: Initializes the first M elements to the corresponding bit values in val, where M is
       //the smaller of size() and the number of bits in the value representation
@@ -1343,12 +1342,9 @@ namespace std::simd
       // [simd.mask.ctor] broadcast constructor -------------------------------
       [[__gnu__::__always_inline__]]
       constexpr explicit
-      basic_mask(bool __x) noexcept
+      basic_mask(same_as<bool> auto __x) noexcept
         : _M_data0(__x), _M_data1(__x)
       {}
-
-      // LWG4382
-      basic_mask(signed_integral auto) = delete("use unsigned integral bitmasks instead");
 
       // [simd.mask.ctor] conversion constructor ------------------------------
       template <size_t _UBytes, typename _UAbi>
@@ -1396,24 +1392,23 @@ namespace std::simd
           = _GLIBCXX_DELETE_MSG("Invalid return type of the mask generator function: "
                                 "Needs to be 'bool'.");
 
-      // [simd.mask.ctor] TODO: bitset constructor ----------------------------------
+      // [simd.mask.ctor] bitset constructor ----------------------------------
       [[__gnu__::__always_inline__]]
       constexpr
-      basic_mask(const bitset<size()>& __b) noexcept
+      basic_mask(const same_as<bitset<size()>> auto& __b) noexcept
       : _M_data0(__bitset_split<_N0>(__b)._M_lo), _M_data1(__bitset_split<_N0>(__b)._M_hi)
       {}
 
       // [simd.mask.ctor] uint constructor ------------------------------------------
-      [[__gnu__::__always_inline__]]
-      constexpr explicit
-      basic_mask(unsigned_integral auto __val) noexcept
-      : _M_data0(static_cast<_Bitmask<_N0>>(__val)),
-        // the following cast to unsigned is necessary if __val would otherwise promote to int,
-        // which could sign-extend and thus invent bits that were not there before
-        _M_data1(static_cast<_Bitmask<_N1>>(
-                   conditional_t<sizeof(__val) < sizeof(int),
-                                 unsigned, decltype(__val)>(__val) >> _N0))
-      {}
+      template <unsigned_integral _Tp>
+        requires (not same_as<_Tp, bool>)
+        [[__gnu__::__always_inline__]]
+        constexpr explicit
+        basic_mask(_Tp __val) noexcept
+        : _M_data0(static_cast<_Bitmask<_N0>>(__val)),
+          _M_data1(sizeof(_Tp) * __CHAR_BIT__ > _N0
+                     ? static_cast<_Bitmask<_N1>>(__val >> _N0) : _Bitmask<_N1>())
+        {}
 
       // [simd.mask.subscr] ---------------------------------------------------
       [[__gnu__::__always_inline__]]
