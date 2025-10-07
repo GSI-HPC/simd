@@ -8,7 +8,7 @@
 
 #include "vec_ops.h"
 
-#if not _GLIBCXX_SIMD_HAVE_SSE
+#if not _GLIBCXX_X86
 #error "wrong include for this target"
 #endif
 

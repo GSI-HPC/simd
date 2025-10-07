@@ -241,7 +241,7 @@ namespace std::simd
         return __vec_zero_pad_to<_Bytes>(__vec_concat(__x, _TV()));
     }
 
-#if _GLIBCXX_SIMD_HAVE_SSE
+#if _GLIBCXX_X86
   template <__vec_builtin _UV, __vec_builtin _TV>
     inline _UV
     __x86_cvt_f16c(_TV __v);
@@ -258,7 +258,7 @@ namespace std::simd
     __vec_cast(_TV __v)
     {
       static_assert(__width_of<_UV> == __width_of<_TV>);
-#if _GLIBCXX_SIMD_HAVE_SSE
+#if _GLIBCXX_X86
       constexpr bool __to_f16 = is_same_v<__vec_value_type<_UV>, _Float16>;
       constexpr bool __from_f16 = is_same_v<__vec_value_type<_TV>, _Float16>;
       constexpr bool __needs_f16c = _Traits._M_have_f16c() and not _Traits._M_have_avx512fp16()

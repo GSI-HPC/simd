@@ -512,7 +512,7 @@ namespace std::simd
             }
           else
             {
-#if _GLIBCXX_SIMD_HAVE_SSE
+#if _GLIBCXX_X86
               if (_Traits._M_have_fma() and not __builtin_is_constant_evaluated()
                     and not (__builtin_constant_p(__x) and __builtin_constant_p(__y)))
                 {
@@ -857,7 +857,7 @@ namespace std::simd
             return mask_type(std::isinf(_M_data));
           else if (__builtin_is_constant_evaluated() or __builtin_constant_p(_M_data))
             return mask_type([&](int __i) { return std::isinf(_M_data[__i]); });
-#ifdef _GLIBCXX_SIMD_HAVE_SSE
+#ifdef _GLIBCXX_X86
           else if constexpr (_S_use_bitmask)
             return mask_type::_S_init(__x86_bitmask_isinf(_M_data));
           else if constexpr (_Traits._M_have_avx512dq())
@@ -899,7 +899,7 @@ namespace std::simd
             return mask_type(false);
           else if constexpr (_S_is_scalar)
             return mask_type(std::isunordered(_M_data, __y._M_data));
-#ifdef _GLIBCXX_SIMD_HAVE_SSE
+#ifdef _GLIBCXX_X86
           else if constexpr (_S_use_bitmask)
             return _M_bitmask_cmp<_X86Cmp::_Unord>(__y._M_data);
 #endif
@@ -1318,7 +1318,7 @@ namespace std::simd
       }
 
       // [simd.comparison] ----------------------------------------------------
-#if _GLIBCXX_SIMD_HAVE_SSE
+#if _GLIBCXX_X86
       template <_X86Cmp _Cmp>
         [[__gnu__::__always_inline__]]
         constexpr mask_type
@@ -1362,7 +1362,7 @@ namespace std::simd
       friend constexpr mask_type
       operator==(const basic_vec& __x, const basic_vec& __y) noexcept
       {
-#if _GLIBCXX_SIMD_HAVE_SSE
+#if _GLIBCXX_X86
         if constexpr (_S_use_bitmask)
           return __x._M_bitmask_cmp<_X86Cmp::_Eq>(__y._M_data);
         else
@@ -1374,7 +1374,7 @@ namespace std::simd
       friend constexpr mask_type
       operator!=(const basic_vec& __x, const basic_vec& __y) noexcept
       {
-#if _GLIBCXX_SIMD_HAVE_SSE
+#if _GLIBCXX_X86
         if constexpr (_S_use_bitmask)
           return __x._M_bitmask_cmp<_X86Cmp::_Neq>(__y._M_data);
         else
@@ -1386,7 +1386,7 @@ namespace std::simd
       friend constexpr mask_type
       operator<(const basic_vec& __x, const basic_vec& __y) noexcept
       {
-#if _GLIBCXX_SIMD_HAVE_SSE
+#if _GLIBCXX_X86
         if constexpr (_S_use_bitmask)
           return __x._M_bitmask_cmp<_X86Cmp::_Lt>(__y._M_data);
         else
@@ -1398,7 +1398,7 @@ namespace std::simd
       friend constexpr mask_type
       operator<=(const basic_vec& __x, const basic_vec& __y) noexcept
       {
-#if _GLIBCXX_SIMD_HAVE_SSE
+#if _GLIBCXX_X86
         if constexpr (_S_use_bitmask)
           return __x._M_bitmask_cmp<_X86Cmp::_Le>(__y._M_data);
         else
@@ -1426,7 +1426,7 @@ namespace std::simd
             return __k[0] ? __t : __f;
           else if constexpr (_S_use_bitmask)
             {
-#if _GLIBCXX_SIMD_HAVE_SSE
+#if _GLIBCXX_X86
               if (__builtin_is_constant_evaluated()
                     or (__k._M_is_constprop() and __t._M_is_constprop() and __f._M_is_constprop()))
                 return basic_vec([&](int __i) { return __k[__i] ? __t[__i] : __f[__i]; });
@@ -1462,7 +1462,7 @@ namespace std::simd
                 }
               else
                 {
-#if _GLIBCXX_SIMD_HAVE_SSE
+#if _GLIBCXX_X86
                   // this works around bad code-gen when the compiler can't see that __k is a vector-mask.
                   // This pattern, is recognized to match the x86 blend instructions, which only consider
                   // the sign bit of the mask register. Also, without SSE4, if the compiler knows that __k

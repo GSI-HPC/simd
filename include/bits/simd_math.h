@@ -55,7 +55,7 @@ namespace std::simd
   // FIXME: The __fast_<fn>[_2x] and __<fn>[_2x] functions currently use a _TargetTraits template
   // parameter, which is way too coarse.
 
-#if _GLIBCXX_SIMD_HAVE_SSE
+#if _GLIBCXX_X86
 
   // A pair<V0, V1> would always return via MEMORY, not SSE, according to the AMD64 psABI.
   // However, in this case we *really* could use return via two registers: [xyz]mm0 and [xyz]mm1. It

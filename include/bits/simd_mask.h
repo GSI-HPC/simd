@@ -8,7 +8,7 @@
 
 #include "simd_iterator.h"
 #include "vec_ops.h"
-#if _GLIBCXX_SIMD_HAVE_SSE
+#if _GLIBCXX_X86
 #include "simd_x86.h"
 #endif
 
@@ -539,7 +539,7 @@ namespace std::simd
                 }
               else
                 {
-#if _GLIBCXX_SIMD_HAVE_SSE
+#if _GLIBCXX_X86
                   // TODO: turn this into a __vec_mask_cast overload in simd_x86.h
                   if constexpr (_Bytes == 1 and _UBytes == 2)
                     if (not __builtin_is_constant_evaluated() and not __x._M_is_constprop())
@@ -800,7 +800,7 @@ namespace std::simd
             return _Ur(operator[](0)) << _Offset;
           else
             {
-#if _GLIBCXX_SIMD_HAVE_SSE
+#if _GLIBCXX_X86
               if (not __builtin_is_constant_evaluated() and not _M_is_constprop())
                 {
                   _U0 __uint;
@@ -963,7 +963,7 @@ namespace std::simd
       {
         if constexpr (not _S_use_bitmask)
           {
-#if _GLIBCXX_SIMD_HAVE_SSE
+#if _GLIBCXX_X86
             // this works around bad code-gen when the compiler can't see that __k is a vector-mask.
             // This pattern, is recognized to match the x86 blend instructions, which only consider
             // the sign bit of the mask register. Also, without SSE4, if the compiler knows that __k
@@ -1017,7 +1017,7 @@ namespace std::simd
             else
               return _M_data == _S_implicit_mask;
           }
-#if _GLIBCXX_SIMD_HAVE_SSE
+#if _GLIBCXX_X86
         else if (not (__builtin_is_constant_evaluated() or __builtin_constant_p(_M_data)))
           return __x86_vecmask_all<_S_size>(_M_data);
 #endif
@@ -1039,7 +1039,7 @@ namespace std::simd
             else
               return _M_data != 0;
           }
-#if _GLIBCXX_SIMD_HAVE_SSE
+#if _GLIBCXX_X86
         else if (not (__builtin_is_constant_evaluated() or __builtin_constant_p(_M_data)))
           return __x86_vecmask_any<_S_size>(_M_data);
 #endif
@@ -1061,7 +1061,7 @@ namespace std::simd
             else
               return _M_data == 0;
           }
-#if _GLIBCXX_SIMD_HAVE_SSE
+#if _GLIBCXX_X86
         else if (not (__builtin_is_constant_evaluated() or __builtin_constant_p(_M_data)))
           return __x86_vecmask_none<_S_size>(_M_data);
 #endif
@@ -1541,7 +1541,7 @@ namespace std::simd
             }
           else
             {
-#if _GLIBCXX_SIMD_HAVE_SSE
+#if _GLIBCXX_X86
               if constexpr (_Bytes == 2 and not _Traits._M_have_bmi2() and _Ap::_S_nreg == 2
                               and not _S_use_bitmask and not _Use_2_for_1)
                 return __similar_mask<char, _S_size, _Ap>(*this).template _M_to_uint<_Offset>();

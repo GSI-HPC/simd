@@ -30,266 +30,14 @@
 
 // x86 macros {
 
-#ifdef __MMX__
-#define _GLIBCXX_SIMD_HAVE_MMX 1ull
-#else
-#define _GLIBCXX_SIMD_HAVE_MMX 0ull
+#if defined __x86_64__ && !__SSE2__
+#error "Use of SSE2 is required on x86-64"
 #endif
 
-#if defined __SSE__ || defined __x86_64__
-#define _GLIBCXX_SIMD_HAVE_SSE 1ull
+#if defined __x86_64__ or defined __i386__
+#define _GLIBCXX_X86 1
 #else
-#define _GLIBCXX_SIMD_HAVE_SSE 0ull
-#endif
-
-#if defined __SSE2__ || defined __x86_64__
-#define _GLIBCXX_SIMD_HAVE_SSE2 1ull
-#else
-#define _GLIBCXX_SIMD_HAVE_SSE2 0ull
-#endif
-
-#ifdef __SSE3__
-#define _GLIBCXX_SIMD_HAVE_SSE3 1ull
-#else
-#define _GLIBCXX_SIMD_HAVE_SSE3 0ull
-#endif
-
-#ifdef __SSSE3__
-#define _GLIBCXX_SIMD_HAVE_SSSE3 1ull
-#else
-#define _GLIBCXX_SIMD_HAVE_SSSE3 0ull
-#endif
-
-#ifdef __SSE4_1__
-#define _GLIBCXX_SIMD_HAVE_SSE4_1 1ull
-#else
-#define _GLIBCXX_SIMD_HAVE_SSE4_1 0ull
-#endif
-
-#ifdef __SSE4_2__
-#define _GLIBCXX_SIMD_HAVE_SSE4_2 1ull
-#else
-#define _GLIBCXX_SIMD_HAVE_SSE4_2 0ull
-#endif
-
-#ifdef __XOP__
-#define _GLIBCXX_SIMD_HAVE_XOP 1ull
-#else
-#define _GLIBCXX_SIMD_HAVE_XOP 0ull
-#endif
-
-#ifdef __AVX__
-#define _GLIBCXX_SIMD_HAVE_AVX 1ull
-#else
-#define _GLIBCXX_SIMD_HAVE_AVX 0ull
-#endif
-
-#ifdef __AVX2__
-#define _GLIBCXX_SIMD_HAVE_AVX2 1ull
-#else
-#define _GLIBCXX_SIMD_HAVE_AVX2 0ull
-#endif
-
-#ifdef __BMI__
-#define _GLIBCXX_SIMD_HAVE_BMI 1ull
-#else
-#define _GLIBCXX_SIMD_HAVE_BMI 0ull
-#endif
-
-#ifdef __BMI2__
-#define _GLIBCXX_SIMD_HAVE_BMI2 1ull
-#else
-#define _GLIBCXX_SIMD_HAVE_BMI2 0ull
-#endif
-
-#ifdef __LZCNT__
-#define _GLIBCXX_SIMD_HAVE_LZCNT 1ull
-#else
-#define _GLIBCXX_SIMD_HAVE_LZCNT 0ull
-#endif
-
-#ifdef __SSE4A__
-#define _GLIBCXX_SIMD_HAVE_SSE4A 1ull
-#else
-#define _GLIBCXX_SIMD_HAVE_SSE4A 0ull
-#endif
-
-#ifdef __FMA__
-#define _GLIBCXX_SIMD_HAVE_FMA 1ull
-#else
-#define _GLIBCXX_SIMD_HAVE_FMA 0ull
-#endif
-
-#ifdef __FMA4__
-#define _GLIBCXX_SIMD_HAVE_FMA4 1ull
-#else
-#define _GLIBCXX_SIMD_HAVE_FMA4 0ull
-#endif
-
-#ifdef __F16C__
-#define _GLIBCXX_SIMD_HAVE_F16C 1ull
-#else
-#define _GLIBCXX_SIMD_HAVE_F16C 0ull
-#endif
-
-#ifdef __AVXIFMA__
-#define _GLIBCXX_SIMD_HAVE_AVXIFMA 1ull
-#else
-#define _GLIBCXX_SIMD_HAVE_AVXIFMA 0ull
-#endif
-
-#ifdef __AVXNECONVERT__
-#define _GLIBCXX_SIMD_HAVE_AVXNECONVERT 1ull
-#else
-#define _GLIBCXX_SIMD_HAVE_AVXNECONVERT 0ull
-#endif
-
-#ifdef __AVXVNNI__
-#define _GLIBCXX_SIMD_HAVE_AVXVNNI 1ull
-#else
-#define _GLIBCXX_SIMD_HAVE_AVXVNNI 0ull
-#endif
-
-#ifdef __AVXVNNIINT8__
-#define _GLIBCXX_SIMD_HAVE_AVXVNNIINT8 1ull
-#else
-#define _GLIBCXX_SIMD_HAVE_AVXVNNIINT8 0ull
-#endif
-
-#ifdef __AVXVNNIINT16__
-#define _GLIBCXX_SIMD_HAVE_AVXVNNIINT16 1ull
-#else
-#define _GLIBCXX_SIMD_HAVE_AVXVNNIINT16 0ull
-#endif
-
-#ifdef __POPCNT__
-#define _GLIBCXX_SIMD_HAVE_POPCNT 1ull
-#else
-#define _GLIBCXX_SIMD_HAVE_POPCNT 0ull
-#endif
-
-#ifdef __AVX512F__
-#define _GLIBCXX_SIMD_HAVE_AVX512F 1ull
-#else
-#define _GLIBCXX_SIMD_HAVE_AVX512F 0ull
-#endif
-
-#ifdef __AVX512DQ__
-#define _GLIBCXX_SIMD_HAVE_AVX512DQ 1ull
-#else
-#define _GLIBCXX_SIMD_HAVE_AVX512DQ 0ull
-#endif
-
-#ifdef __AVX512VL__
-#define _GLIBCXX_SIMD_HAVE_AVX512VL 1ull
-#else
-#define _GLIBCXX_SIMD_HAVE_AVX512VL 0ull
-#endif
-
-#ifdef __AVX512BW__
-#define _GLIBCXX_SIMD_HAVE_AVX512BW 1ull
-#else
-#define _GLIBCXX_SIMD_HAVE_AVX512BW 0ull
-#endif
-
-#ifdef __AVX512BITALG__
-#define _GLIBCXX_SIMD_HAVE_AVX512BITALG 1ull
-#else
-#define _GLIBCXX_SIMD_HAVE_AVX512BITALG 0ull
-#endif
-
-#ifdef __AVX512VBMI2__
-#define _GLIBCXX_SIMD_HAVE_AVX512VBMI2 1ull
-#else
-#define _GLIBCXX_SIMD_HAVE_AVX512VBMI2 0ull
-#endif
-
-#ifdef __AVX512VBMI__
-#define _GLIBCXX_SIMD_HAVE_AVX512VBMI 1ull
-#else
-#define _GLIBCXX_SIMD_HAVE_AVX512VBMI 0ull
-#endif
-
-#ifdef __AVX512IFMA__
-#define _GLIBCXX_SIMD_HAVE_AVX512IFMA 1ull
-#else
-#define _GLIBCXX_SIMD_HAVE_AVX512IFMA 0ull
-#endif
-
-#ifdef __AVX512CD__
-#define _GLIBCXX_SIMD_HAVE_AVX512CD 1ull
-#else
-#define _GLIBCXX_SIMD_HAVE_AVX512CD 0ull
-#endif
-
-#ifdef __AVX512VNNI__
-#define _GLIBCXX_SIMD_HAVE_AVX512VNNI 1ull
-#else
-#define _GLIBCXX_SIMD_HAVE_AVX512VNNI 0ull
-#endif
-
-#ifdef __AVX512VPOPCNTDQ__
-#define _GLIBCXX_SIMD_HAVE_AVX512VPOPCNTDQ 1ull
-#else
-#define _GLIBCXX_SIMD_HAVE_AVX512VPOPCNTDQ 0ull
-#endif
-
-#ifdef __AVX512VP2INTERSECT__
-#define _GLIBCXX_SIMD_HAVE_AVX512VP2INTERSECT 1ull
-#else
-#define _GLIBCXX_SIMD_HAVE_AVX512VP2INTERSECT 0ull
-#endif
-
-#ifdef __AVX512FP16__
-#define _GLIBCXX_SIMD_HAVE_AVX512FP16 1ull
-#else
-#define _GLIBCXX_SIMD_HAVE_AVX512FP16 0ull
-#endif
-
-#ifdef __AVX512BF16__
-#define _GLIBCXX_SIMD_HAVE_AVX512BF16 1ull
-#else
-#define _GLIBCXX_SIMD_HAVE_AVX512BF16 0ull
-#endif
-
-#if _GLIBCXX_SIMD_HAVE_SSE
-#define _GLIBCXX_SIMD_HAVE_SSE_ABI 1ull
-#else
-#define _GLIBCXX_SIMD_HAVE_SSE_ABI 0ull
-#endif
-
-#if _GLIBCXX_SIMD_HAVE_SSE2
-#define _GLIBCXX_SIMD_HAVE_FULL_SSE_ABI 1ull
-#else
-#define _GLIBCXX_SIMD_HAVE_FULL_SSE_ABI 0ull
-#endif
-
-#if _GLIBCXX_SIMD_HAVE_AVX
-#define _GLIBCXX_SIMD_HAVE_AVX_ABI 1ull
-#else
-#define _GLIBCXX_SIMD_HAVE_AVX_ABI 0ull
-#endif
-
-#if _GLIBCXX_SIMD_HAVE_AVX2
-#define _GLIBCXX_SIMD_HAVE_FULL_AVX_ABI 1ull
-#else
-#define _GLIBCXX_SIMD_HAVE_FULL_AVX_ABI 0ull
-#endif
-
-#if _GLIBCXX_SIMD_HAVE_AVX512F
-#define _GLIBCXX_SIMD_HAVE_AVX512_ABI 1ull
-#else
-#define _GLIBCXX_SIMD_HAVE_AVX512_ABI 0ull
-#endif
-
-#if _GLIBCXX_SIMD_HAVE_AVX512BW
-#define _GLIBCXX_SIMD_HAVE_FULL_AVX512_ABI 1ull
-#else
-#define _GLIBCXX_SIMD_HAVE_FULL_AVX512_ABI 0ull
-#endif
-
-#if defined __x86_64__ && !_GLIBCXX_SIMD_HAVE_SSE2
-#error "Use of SSE2 is required on AMD64"
+#define _GLIBCXX_X86 0
 #endif
 
 //}
@@ -894,46 +642,60 @@ namespace std::simd
       { return is_same_v<_Tp, _Float16>; }
   };
 
-#elif _GLIBCXX_SIMD_HAVE_SSE
+#elif _GLIBCXX_X86
+
+  consteval bool
+  __streq_to_1(const char* __s)
+  { return __s != nullptr and __s[0] == '1' and __s[1] == '\0'; }
+
+#define _GLIBCXX_SIMD_ARCH_FLAG(off, feat) \
+  (static_cast<__UINT64_TYPE__>(std::simd::__streq_to_1(_GLIBCXX_SIMD_TOSTRING_IMPL(feat))) << off)
+
+#define _GLIBCXX_SIMD_ARCH_TRAITS_INIT {                      \
+  _GLIBCXX_SIMD_ARCH_FLAG(0, __MMX__)                         \
+    | _GLIBCXX_SIMD_ARCH_FLAG( 1, __SSE__)                    \
+    | _GLIBCXX_SIMD_ARCH_FLAG( 2, __SSE2__)                   \
+    | _GLIBCXX_SIMD_ARCH_FLAG( 3, __SSE3__)                   \
+    | _GLIBCXX_SIMD_ARCH_FLAG( 4, __SSSE3__)                  \
+    | _GLIBCXX_SIMD_ARCH_FLAG( 5, __SSE4_1__)                 \
+    | _GLIBCXX_SIMD_ARCH_FLAG( 6, __SSE4_2__)                 \
+    | _GLIBCXX_SIMD_ARCH_FLAG( 7, __POPCNT__)                 \
+    | _GLIBCXX_SIMD_ARCH_FLAG( 8, __AVX__)                    \
+    | _GLIBCXX_SIMD_ARCH_FLAG( 9, __F16C__)                   \
+    | _GLIBCXX_SIMD_ARCH_FLAG(10, __BMI__)                    \
+    | _GLIBCXX_SIMD_ARCH_FLAG(11, __BMI2__)                   \
+    | _GLIBCXX_SIMD_ARCH_FLAG(12, __LZCNT__)                  \
+    | _GLIBCXX_SIMD_ARCH_FLAG(13, __AVX2__)                   \
+    | _GLIBCXX_SIMD_ARCH_FLAG(14, __FMA__)                    \
+    | _GLIBCXX_SIMD_ARCH_FLAG(15, __AVX512F__)                \
+    | _GLIBCXX_SIMD_ARCH_FLAG(16, __AVX512CD__)               \
+    | _GLIBCXX_SIMD_ARCH_FLAG(17, __AVX512DQ__)               \
+    | _GLIBCXX_SIMD_ARCH_FLAG(18, __AVX512BW__)               \
+    | _GLIBCXX_SIMD_ARCH_FLAG(19, __AVX512VL__)               \
+    | _GLIBCXX_SIMD_ARCH_FLAG(20, __AVX512BITALG__)           \
+    | _GLIBCXX_SIMD_ARCH_FLAG(21, __AVX512VBMI__)             \
+    | _GLIBCXX_SIMD_ARCH_FLAG(22, __AVX512VBMI2__)            \
+    | _GLIBCXX_SIMD_ARCH_FLAG(23, __AVX512IFMA__)             \
+    | _GLIBCXX_SIMD_ARCH_FLAG(24, __AVX512VNNI__)             \
+    | _GLIBCXX_SIMD_ARCH_FLAG(25, __AVX512VPOPCNTDQ__)        \
+    | _GLIBCXX_SIMD_ARCH_FLAG(26, __AVX512FP16__)             \
+    | _GLIBCXX_SIMD_ARCH_FLAG(27, __AVX512BF16__)             \
+    | _GLIBCXX_SIMD_ARCH_FLAG(28, __AVXIFMA__)                \
+    | _GLIBCXX_SIMD_ARCH_FLAG(29, __AVXNECONVERT__)           \
+    | _GLIBCXX_SIMD_ARCH_FLAG(30, __AVXVNNI__)                \
+    | _GLIBCXX_SIMD_ARCH_FLAG(31, __AVXVNNIINT8__)            \
+    | _GLIBCXX_SIMD_ARCH_FLAG(32, __AVXVNNIINT16__)           \
+    | _GLIBCXX_SIMD_ARCH_FLAG(33, __AVX10_1__)                \
+    | _GLIBCXX_SIMD_ARCH_FLAG(34, __AVX10_2__)                \
+    | _GLIBCXX_SIMD_ARCH_FLAG(35, __AVX512VP2INTERSECT__)     \
+    | _GLIBCXX_SIMD_ARCH_FLAG(36, __SSE4A__)                  \
+    | _GLIBCXX_SIMD_ARCH_FLAG(37, __FMA4__)                   \
+    | _GLIBCXX_SIMD_ARCH_FLAG(38, __XOP__)                    \
+  }
 
   struct _ArchTraits
   {
-    __UINT64_TYPE__ _M_flags = (_GLIBCXX_SIMD_HAVE_MMX << 0)
-                          | (_GLIBCXX_SIMD_HAVE_SSE << 1)
-                          | (_GLIBCXX_SIMD_HAVE_SSE2 << 2)
-                          | (_GLIBCXX_SIMD_HAVE_SSE3 << 3)
-                          | (_GLIBCXX_SIMD_HAVE_SSSE3 << 4)
-                          | (_GLIBCXX_SIMD_HAVE_SSE4_1 << 5)
-                          | (_GLIBCXX_SIMD_HAVE_SSE4_2 << 6)
-                          | (_GLIBCXX_SIMD_HAVE_XOP << 7)
-                          | (_GLIBCXX_SIMD_HAVE_AVX << 8)
-                          | (_GLIBCXX_SIMD_HAVE_AVX2 << 9)
-                          | (_GLIBCXX_SIMD_HAVE_BMI << 10)
-                          | (_GLIBCXX_SIMD_HAVE_BMI2 << 11)
-                          | (_GLIBCXX_SIMD_HAVE_LZCNT << 12)
-                          | (_GLIBCXX_SIMD_HAVE_SSE4A << 13)
-                          | (_GLIBCXX_SIMD_HAVE_FMA << 14)
-                          | (_GLIBCXX_SIMD_HAVE_FMA4 << 15)
-                          | (_GLIBCXX_SIMD_HAVE_F16C << 16)
-                          | (_GLIBCXX_SIMD_HAVE_POPCNT << 17)
-                          | (_GLIBCXX_SIMD_HAVE_AVX512F << 18)
-                          | (_GLIBCXX_SIMD_HAVE_AVX512DQ << 19)
-                          | (_GLIBCXX_SIMD_HAVE_AVX512VL << 20)
-                          | (_GLIBCXX_SIMD_HAVE_AVX512BW << 21)
-                          | (_GLIBCXX_SIMD_HAVE_AVX512BITALG << 22)
-                          | (_GLIBCXX_SIMD_HAVE_AVX512VBMI << 23)
-                          | (_GLIBCXX_SIMD_HAVE_AVX512VBMI2 << 24)
-                          | (_GLIBCXX_SIMD_HAVE_AVX512IFMA << 25)
-                          | (_GLIBCXX_SIMD_HAVE_AVX512CD << 26)
-                          | (_GLIBCXX_SIMD_HAVE_AVX512VNNI << 27)
-                          | (_GLIBCXX_SIMD_HAVE_AVX512VPOPCNTDQ << 28)
-                          | (_GLIBCXX_SIMD_HAVE_AVX512VP2INTERSECT << 29)
-                          | (_GLIBCXX_SIMD_HAVE_AVX512FP16 << 30)
-                          | (_GLIBCXX_SIMD_HAVE_AVXIFMA << 31)
-                          | (_GLIBCXX_SIMD_HAVE_AVXNECONVERT << 32)
-                          | (_GLIBCXX_SIMD_HAVE_AVXVNNI << 33)
-                          | (_GLIBCXX_SIMD_HAVE_AVXVNNIINT8 << 34)
-                          | (_GLIBCXX_SIMD_HAVE_AVXVNNIINT16 << 35);
+    __UINT64_TYPE__ _M_flags = _GLIBCXX_SIMD_ARCH_TRAITS_INIT;
 
     consteval bool
     _M_test(int __bit) const
@@ -968,7 +730,7 @@ namespace std::simd
     { return _M_test(6); }
 
     consteval bool
-    _M_have_xop() const
+    _M_have_popcnt() const
     { return _M_test(7); }
 
     consteval bool
@@ -976,7 +738,7 @@ namespace std::simd
     { return _M_test(8); }
 
     consteval bool
-    _M_have_avx2() const
+    _M_have_f16c() const
     { return _M_test(9); }
 
     consteval bool
@@ -992,7 +754,7 @@ namespace std::simd
     { return _M_test(12); }
 
     consteval bool
-    _M_have_sse4a() const
+    _M_have_avx2() const
     { return _M_test(13); }
 
     consteval bool
@@ -1000,68 +762,100 @@ namespace std::simd
     { return _M_test(14); }
 
     consteval bool
-    _M_have_fma4() const
+    _M_have_avx512f() const
     { return _M_test(15); }
 
     consteval bool
-    _M_have_f16c() const
+    _M_have_avx512cd() const
     { return _M_test(16); }
 
     consteval bool
-    _M_have_popcnt() const
+    _M_have_avx512dq() const
     { return _M_test(17); }
 
     consteval bool
-    _M_have_avx512f() const
+    _M_have_avx512bw() const
     { return _M_test(18); }
 
     consteval bool
-    _M_have_avx512dq() const
+    _M_have_avx512vl() const
     { return _M_test(19); }
 
     consteval bool
-    _M_have_avx512vl() const
+    _M_have_avx512bitalg() const
     { return _M_test(20); }
 
     consteval bool
-    _M_have_avx512bw() const
+    _M_have_avx512vbmi() const
     { return _M_test(21); }
 
     consteval bool
-    _M_have_avx512bitalg() const
+    _M_have_avx512vbmi2() const
     { return _M_test(22); }
 
     consteval bool
-    _M_have_avx512vbmi() const
+    _M_have_avx512ifma() const
     { return _M_test(23); }
 
     consteval bool
-    _M_have_avx512vbmi2() const
+    _M_have_avx512vnni() const
     { return _M_test(24); }
 
     consteval bool
-    _M_have_avx512ifma() const
+    _M_have_avx512vpopcntdq() const
     { return _M_test(25); }
 
     consteval bool
-    _M_have_avx512cd() const
+    _M_have_avx512fp16() const
     { return _M_test(26); }
 
     consteval bool
-    _M_have_avx512vnni() const
+    _M_have_avx512bf16() const
     { return _M_test(27); }
 
     consteval bool
-    _M_have_avx512vpopcntdq() const
+    _M_have_avxifma() const
     { return _M_test(28); }
 
     consteval bool
-    _M_have_avx512vp2intersect() const
+    _M_have_avxneconvert() const
     { return _M_test(29); }
 
     consteval bool
-    _M_have_avx512fp16() const
+    _M_have_avxvnni() const
     { return _M_test(30); }
+
+    consteval bool
+    _M_have_avxvnniint8() const
+    { return _M_test(31); }
+
+    consteval bool
+    _M_have_avxvnniint16() const
+    { return _M_test(32); }
+
+    consteval bool
+    _M_have_avx10_1() const
+    { return _M_test(33); }
+
+    consteval bool
+    _M_have_avx10_2() const
+    { return _M_test(34); }
+
+    consteval bool
+    _M_have_avx512vp2intersect() const
+    { return _M_test(35); }
+
+    consteval bool
+    _M_have_sse4a() const
+    { return _M_test(36); }
+
+    consteval bool
+    _M_have_fma4() const
+    { return _M_test(37); }
+
+    consteval bool
+    _M_have_xop() const
+    { return _M_test(38); }
 
     template <typename _Tp>
       consteval bool
@@ -1234,7 +1028,7 @@ namespace std::simd
       else if constexpr (__from_cx and _IsOnlyResize and _Bytes == 2 * sizeof(_Float16))
         return __abi_rebind<complex<_Float16>, _Np, _A0>();
 
-#if _GLIBCXX_SIMD_HAVE_SSE
+#if _GLIBCXX_X86
       // AVX w/o AVX2:
       // e.g. resize_t<8, mask<float, Whatever>> needs to be _Abi<8, 1> not _Abi<8, 2>
       // We determine whether _A0 identifies an AVX vector by looking at the size of a native
