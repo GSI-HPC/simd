@@ -145,11 +145,6 @@ namespace std::simd
     inline constexpr auto&
     __iota<_Tp[_Np]> = __iota_array<_Tp, make_integer_sequence<_Tp, _Np>>::_S_data;
 #endif
-
-  template <auto _Value0, auto... _Values>
-    requires (is_same_v<decltype(_Value0), decltype(_Values)> and ...)
-    inline constexpr type_identity_t<decltype(_Value0)[1 + sizeof...(_Values)]>
-    __static_array = {_Value0, _Values...};
 }
 
 #if __cpp_structured_bindings >= 202411L
