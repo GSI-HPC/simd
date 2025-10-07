@@ -101,7 +101,8 @@ namespace std::simd
    * Helper function to work around Clang not allowing v[i] in constant expressions.
    */
   template <__vec_builtin _TV>
-    _GLIBCXX_SIMD_INTRINSIC constexpr __vec_value_type<_TV>
+    [[__gnu__::__always_inline__]]
+    constexpr __vec_value_type<_TV>
     __vec_get(_TV __v, int __i)
     {
 #ifdef _GLIBCXX_CLANG
@@ -117,7 +118,8 @@ namespace std::simd
    * expressions.
    */
   template <__vec_builtin _TV>
-    _GLIBCXX_SIMD_INTRINSIC constexpr void
+    [[__gnu__::__always_inline__]]
+    constexpr void
     __vec_set(_TV& __v, int __i, __vec_value_type<_TV> __x)
     {
       if (__builtin_is_constant_evaluated())
@@ -140,8 +142,8 @@ namespace std::simd
    * Return vector builtin with all values from \p __a and \p __b.
    */
   template <__vec_builtin _TV>
-    _GLIBCXX_SIMD_INTRINSIC constexpr
-    __vec_builtin_type<__vec_value_type<_TV>, __width_of<_TV> * 2>
+    [[__gnu__::__always_inline__]]
+    constexpr __vec_builtin_type<__vec_value_type<_TV>, __width_of<_TV> * 2>
     __vec_concat(_TV __a, _TV __b)
     {
       constexpr int _N0 = __width_of<_TV>;
@@ -220,7 +222,8 @@ namespace std::simd
    * Return a type with sizeof 16. If the input type is smaller, add zero-padding to \p __x.
    */
   template <__vec_builtin _TV>
-    _GLIBCXX_SIMD_INTRINSIC constexpr auto
+    [[__gnu__::__always_inline__]]
+    constexpr auto
     __vec_zero_pad_to_16(_TV __x)
     {
       static_assert(sizeof(_TV) < 16);
@@ -231,7 +234,8 @@ namespace std::simd
 
   /// Return \p __x zero-padded to \p _Bytes bytes.
   template <size_t _Bytes, __vec_builtin _TV>
-    _GLIBCXX_SIMD_INTRINSIC constexpr auto
+    [[__gnu__::__always_inline__]]
+    constexpr auto
     __vec_zero_pad_to(_TV __x)
     {
       static_assert(sizeof(_TV) <= _Bytes);
@@ -302,7 +306,8 @@ namespace std::simd
     }
 
   template <__vec_builtin _TV>
-    _GLIBCXX_SIMD_INTRINSIC constexpr _TV
+    [[__gnu__::__always_inline__]]
+    constexpr _TV
     __vec_xor(_TV __a, _TV __b)
     {
       using _Tp = __vec_value_type<_TV>;
@@ -317,7 +322,8 @@ namespace std::simd
     }
 
   template <__vec_builtin _TV>
-    _GLIBCXX_SIMD_INTRINSIC constexpr _TV
+    [[__gnu__::__always_inline__]]
+    constexpr _TV
     __vec_or(_TV __a, _TV __b)
     {
       using _Tp = __vec_value_type<_TV>;
@@ -332,7 +338,8 @@ namespace std::simd
     }
 
   template <__vec_builtin _TV>
-    _GLIBCXX_SIMD_INTRINSIC constexpr _TV
+    [[__gnu__::__always_inline__]]
+    constexpr _TV
     __vec_and(_TV __a, _TV __b)
     {
       using _Tp = __vec_value_type<_TV>;
@@ -347,7 +354,8 @@ namespace std::simd
     }
 
   template <__vec_builtin _TV>
-    _GLIBCXX_SIMD_INTRINSIC constexpr _TV
+    [[__gnu__::__always_inline__]]
+    constexpr _TV
     __vec_andnot(_TV __a, _TV __b)
     {
       using _Tp = __vec_value_type<_TV>;
@@ -357,7 +365,8 @@ namespace std::simd
     }
 
   template <__vec_builtin _TV>
-    _GLIBCXX_SIMD_INTRINSIC constexpr _TV
+    [[__gnu__::__always_inline__]]
+    constexpr _TV
     __vec_not(_TV __a)
     {
       using _UV = __vec_builtin_type_bytes<unsigned, sizeof(_TV)>;
@@ -376,18 +385,21 @@ namespace std::simd
 
   // work around __builtin_constant_p returning false unless passed a variable
   // (__builtin_constant_p(x[0]) is false while __is_constprop(x[0]) is true)
-  _GLIBCXX_SIMD_ALWAYS_INLINE constexpr bool
+  [[__gnu__::__always_inline__]]
+  constexpr bool
   __is_constprop(const auto& __x)
   { return __builtin_is_constant_evaluated() or __builtin_constant_p(__x); }
 
-  _GLIBCXX_SIMD_ALWAYS_INLINE constexpr bool
+  [[__gnu__::__always_inline__]]
+  constexpr bool
   __is_constprop(const __complex_like auto& __x)
   {
     return __builtin_is_constant_evaluated()
              or (__is_constprop(__x.real()) and __is_constprop(__x.imag()));
   }
 
-  _GLIBCXX_SIMD_INTRINSIC constexpr bool
+  [[__gnu__::__always_inline__]]
+  constexpr bool
   __is_constprop_equal_to(const auto& __x, const auto& __expect)
   { return (__builtin_is_constant_evaluated() or __builtin_constant_p(__x)) and __x == __expect; }
 

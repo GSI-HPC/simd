@@ -101,7 +101,8 @@ namespace std::simd
     : _LoadStoreTag
     {
       template <typename, typename _Up>
-        _GLIBCXX_SIMD_ALWAYS_INLINE static _Up*
+        [[__gnu__::__always_inline__]]
+        static _Up*
         _S_adjust_pointer(_Up* __ptr)
         {
           // one read: 0, 0

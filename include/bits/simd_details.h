@@ -65,17 +65,10 @@
 #endif
 // }
 
-#ifndef _GLIBCXX_SIMD_INTRINSIC
-#ifdef _GLIBCXX_SIMD_NO_ALWAYS_INLINE
-#define _GLIBCXX_SIMD_INTRINSIC inline
-#define _GLIBCXX_SIMD_ALWAYS_INLINE
-#else
-#define _GLIBCXX_SIMD_INTRINSIC [[__gnu__::__always_inline__, __gnu__::__artificial__]] inline
-#define _GLIBCXX_SIMD_ALWAYS_INLINE [[__gnu__::__always_inline__]]
-#endif
-#endif
-
 #ifndef _GLIBCXX_SIMD_NOEXCEPT
+/** \internal
+ * For unit-testing preconditions, use this macro to remove noexcept.
+ */
 #define _GLIBCXX_SIMD_NOEXCEPT noexcept
 #endif
 
@@ -115,7 +108,8 @@
 namespace std::simd
 {
   template <typename... _Args>
-    [[noreturn]] _GLIBCXX_SIMD_ALWAYS_INLINE inline void
+    [[noreturn, __gnu__::__always_inline__]]
+    inline void
     __invoke_ub([[maybe_unused]] const char* __msg, [[maybe_unused]] const _Args&... __args)
     {
 #ifdef _GLIBCXX_ASSERTIONS
