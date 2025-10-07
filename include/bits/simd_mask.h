@@ -230,9 +230,10 @@ namespace std::simd
         else if constexpr (_S_use_bitmask)
           return _DataType((_DataType(1) << _S_size) - 1);
         else
-          return []<int... _Is> (integer_sequence<int, _Is...>) {
-            return _DataType{ (_Is < _S_size ? -1 : 0)... };
-          }(make_integer_sequence<int, _S_full_size>());
+          {
+            constexpr auto [...__is] = __iota<int[_S_full_size]>;
+            return _DataType{ (__is < _S_size ? -1 : 0)... };
+          }
       }();
 
       using _VecType = __simd_vec_from_mask_t<_Bytes, _Ap>;
@@ -377,6 +378,7 @@ namespace std::simd
           constexpr int __n = _S_size / _Mp::_S_size;
           constexpr int __rem = _S_size % _Mp::_S_size;
           constexpr int __stride = _Mp::_S_size;
+          constexpr auto [...__is] = __iota<int[__n]>;
           if constexpr (_S_is_scalar)
             {
               if constexpr (__n == 0)
@@ -391,56 +393,48 @@ namespace std::simd
             {
               static_assert(is_unsigned_v<_DataType>);
               if constexpr (__rem == 0)
-                return _GLIBCXX_SIMD_INT_PACK(__n, _Is, {
-                         return array<_Mp, __n> {_Mp::_S_init(_M_data >> (_Is * __stride))...};
-                       });
+                return array<_Mp, __n> {_Mp::_S_init(_M_data >> (__is * __stride))...};
               else
                 {
                   using _Rest = resize_t<__rem, _Mp>;
-                  return _GLIBCXX_SIMD_INT_PACK(__n, _Is, {
-                           return tuple {_Mp::_S_init(_M_data >> (_Is * __stride))...,
-                                         _Rest::_S_init([&] [[__gnu__::__always_inline__]]() {
-                                           if constexpr (is_same_v<typename _Rest::_DataType, bool>)
-                                             return operator[](__n * _Mp::_S_size);
-                                           else
-                                             return _M_data >> (__n * __stride);
-                                         }())};
-                         });
+                  return tuple {_Mp::_S_init(_M_data >> (__is * __stride))...,
+                                _Rest::_S_init([&] [[__gnu__::__always_inline__]]() {
+                                  if constexpr (is_same_v<typename _Rest::_DataType, bool>)
+                                    return operator[](__n * _Mp::_S_size);
+                                  else
+                                    return _M_data >> (__n * __stride);
+                                }())};
                 }
             }
           else if constexpr (__rem == 0)
             {
               if constexpr (_Mp::_S_size == 1)
-                return _GLIBCXX_SIMD_INT_PACK(__n, _Is, {
-                         return array<_Mp, __n> {_Mp(operator[](_Is))...};
-                       });
+                return array<_Mp, __n> {_Mp(operator[](__is))...};
               else
-                return _GLIBCXX_SIMD_INT_PACK(__n, _Is, {
-                         static_assert(is_same_v<__vec_value_type<typename _Mp::_DataType>,
-                                                 __vec_value_type<_DataType>>);
-                         return array<_Mp, __n> {
-                           _Mp::_S_init(
-                             _VecOps<typename _Mp::_DataType>::_S_extract(
-                               _M_data, integral_constant<int, _Is * __stride>()))...};
-                       });
+                {
+                  static_assert(is_same_v<__vec_value_type<typename _Mp::_DataType>,
+                                          __vec_value_type<_DataType>>);
+                  return array<_Mp, __n> {
+                    _Mp::_S_init(
+                      _VecOps<typename _Mp::_DataType>::_S_extract(
+                        _M_data, integral_constant<int, __is * __stride>()))...};
+                }
             }
           else
             {
               using _Rest = resize_t<__rem, _Mp>;
-              return _GLIBCXX_SIMD_INT_PACK(__n, _Is, {
-                       return tuple {
-                         _Mp::_S_init(
-                           _VecOps<typename _Mp::_DataType>::_S_extract(
-                             _M_data, integral_constant<int, _Is * __stride>()))...,
-                         _Rest::_S_init([&] [[__gnu__::__always_inline__]]() {
-                           if constexpr (is_same_v<typename _Rest::_DataType, bool>)
-                             return operator[](__n * _Mp::_S_size);
-                           else
-                             return _VecOps<typename _Rest::_DataType>::_S_extract(
-                                      _M_data, integral_constant<int, __n * __stride>());
-                         }())
-                       };
-                     });
+              return tuple {
+                _Mp::_S_init(
+                  _VecOps<typename _Mp::_DataType>::_S_extract(
+                    _M_data, integral_constant<int, __is * __stride>()))...,
+                _Rest::_S_init([&] [[__gnu__::__always_inline__]]() {
+                  if constexpr (is_same_v<typename _Rest::_DataType, bool>)
+                    return operator[](__n * _Mp::_S_size);
+                  else
+                    return _VecOps<typename _Rest::_DataType>::_S_extract(
+                             _M_data, integral_constant<int, __n * __stride>());
+                }())
+              };
             }
         }
 
@@ -480,9 +474,10 @@ namespace std::simd
 
               // converting from an "array of bool"
               else if constexpr (_UV::_S_is_scalar)
-                return _GLIBCXX_SIMD_INT_PACK(_S_size, _Is, {
-                         return _DataType{__vec_value_type<_DataType>(-__x[_Is])...};
-                       });
+                {
+                  constexpr auto [...__is] = __iota<int[_S_size]>;
+                  return _DataType{__vec_value_type<_DataType>(-__x[__is])...};
+                }
 
               // vec-/bit-mask to bit-mask | bit-mask to vec-mask
               else if constexpr (_S_use_bitmask or _UV::_S_use_bitmask)
@@ -506,9 +501,10 @@ namespace std::simd
                       return __tmp;
                     }
                   else if constexpr (_UBytes / _Bytes == 16) // ughh
-                    return _GLIBCXX_SIMD_INT_PACK(_S_size, _Is, {
-                             return _DataType{__vec_value_type<_DataType>(-__x[_Is])...};
-                           });
+                    {
+                      constexpr auto [...__is] = __iota<int[_S_size]>;
+                      return _DataType{__vec_value_type<_DataType>(-__x[__is])...};
+                    }
                   else if constexpr (_Bytes > 1)
                     {
                       return reinterpret_cast<_DataType>(
@@ -565,16 +561,17 @@ namespace std::simd
         [[__gnu__::__always_inline__]]
         constexpr explicit
         basic_mask(_Fp&& __gen)
-          : _M_data(_GLIBCXX_SIMD_INT_PACK(_S_size, _Is, {
-                      if constexpr (_S_is_scalar)
-                        return __gen(__simd_size_constant<0>);
-                      else if constexpr (_S_use_bitmask)
-                        return _DataType(((_DataType(__gen(__simd_size_constant<_Is>)) << _Is)
-                                            | ...));
-                      else
-                        return _DataType{__vec_value_type<_DataType>(
-                                           __gen(__simd_size_constant<_Is>) ? -1 : 0)...};
-                    }))
+          : _M_data([&] [[__gnu__::__always_inline__]] {
+              constexpr auto [...__is] = __iota<int[_S_size]>;
+              if constexpr (_S_is_scalar)
+                return __gen(__simd_size_constant<0>);
+              else if constexpr (_S_use_bitmask)
+                return _DataType(((_DataType(__gen(__simd_size_constant<__is>)) << __is)
+                                    | ...));
+              else
+                return _DataType{__vec_value_type<_DataType>(
+                                   __gen(__simd_size_constant<__is>) ? -1 : 0)...};
+            }())
         {}
 
       template <__almost_simd_generator_invokable<bool, _S_size> _Fp>
@@ -604,10 +601,11 @@ namespace std::simd
             else if constexpr (_S_is_scalar)
               return bool(__val & 1);
             else if (__builtin_is_constant_evaluated() or __builtin_constant_p(__val))
-              return _GLIBCXX_SIMD_INT_PACK(_S_size, _Is, {
-                       return _DataType {__vec_value_type<_DataType>((__val & (1ull << _Is)) == 0
-                                                                       ? 0 : -1)...};
-                     });
+              {
+                constexpr auto [...__is] = __iota<int[_S_size]>;
+                return _DataType {__vec_value_type<_DataType>((__val & (1ull << __is)) == 0
+                                                                ? 0 : -1)...};
+              }
             else
               {
                 using _Ip = typename _VecType::value_type;
@@ -1296,6 +1294,7 @@ namespace std::simd
         {
           constexpr int __n = _S_size / _Mp::_S_size;
           constexpr int __rem = _S_size % _Mp::_S_size;
+          [[maybe_unused]] constexpr auto [...__is] = __iota<int[__n]>;
           if constexpr (_N0 == _Mp::_S_size)
             {
               if constexpr (__rem == 0 and is_same_v<_Mp, _Mask0>)
@@ -1315,22 +1314,18 @@ namespace std::simd
                 }
               else
                 {
-                  return _GLIBCXX_SIMD_INT_PACK(__n, _Is, {
-                           return _Rp {_Mp([&](int __i) {
-                                         return (*this)[__i + _Is * _Mp::_S_size];
-                                       })...};
-                         });
+                  return _Rp {_Mp([&](int __i) { return (*this)[__i + __is * _Mp::_S_size]; })...};
                 }
             }
           else
-            return _GLIBCXX_SIMD_INT_PACK(__n, _Is, {
-                     using _Rest = resize_t<__rem, _Mp>;
-                     // can't bit-cast because the member order of tuple is reversed
-                     return tuple {
-                       _Mp  ([&](int __i) { return (*this)[__i + _Is * _Mp::_S_size]; })...,
-                       _Rest([&](int __i) { return (*this)[__i + __n * _Mp::_S_size]; })
-                     };
-            });
+            {
+              using _Rest = resize_t<__rem, _Mp>;
+              // can't bit-cast because the member order of tuple is reversed
+              return tuple {
+                _Mp  ([&](int __i) { return (*this)[__i + __is * _Mp::_S_size]; })...,
+                _Rest([&](int __i) { return (*this)[__i + __n * _Mp::_S_size]; })
+              };
+            }
         }
 
       // [simd.mask.overview] default constructor -----------------------------

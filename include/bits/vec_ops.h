@@ -129,9 +129,8 @@ namespace std::simd
           __arr[__i] = __x;
           __v = __builtin_bit_cast(_TV, __arr);
 #else
-          __v = _GLIBCXX_SIMD_INT_PACK(__width_of<_TV>, __j, {
-                  return _TV{(__i == __j ? __x : __v[__j])...};
-                });
+          constexpr auto [...__j] = __iota<int[__width_of<_TV>]>;
+          __v = _TV{(__i == __j ? __x : __v[__j])...};
 #endif
         }
       else
@@ -189,12 +188,11 @@ namespace std::simd
                                  __bit_ceil(unsigned(_N0 + (_N1 + ... + _Ns)))>
     __vec_concat_sized(const _TV0& __a, const _TV1& __b, const _TVs&... __rest)
     {
-      const auto __ab = _GLIBCXX_SIMD_INT_PACK(__bit_ceil(unsigned(_N0 + _N1)), _Is, {
-          return __builtin_shufflevector(
-                   __a, __b, (_Is < _N0 ? _Is
-                                        : _Is < _N0 + _N1 ? _Is - _N0 + __width_of<_TV0>
-                                                          : -1)...);
-          });
+      constexpr auto [...__is] = __iota<int[__bit_ceil(unsigned(_N0 + _N1))]>;
+      const auto __ab = __builtin_shufflevector(
+                          __a, __b, (__is < _N0 ? __is
+                                                : __is < _N0 + _N1 ? __is - _N0 + __width_of<_TV0>
+                                                                   : -1)...);
       if constexpr (sizeof...(__rest) == 0)
         return __ab;
       else
@@ -213,9 +211,8 @@ namespace std::simd
     __vec_split_hi(_TV __v)
     {
       constexpr int __n = __width_of<_TV> / 2;
-      return _GLIBCXX_SIMD_INT_PACK(__n, _Is, {
-               return __half_vec_builtin_t<_TV> {__v[(__n + _Is)]...};
-             });
+      constexpr auto [...__is] = __iota<int[__n]>;
+      return __half_vec_builtin_t<_TV> {__v[(__n + __is)]...};
     }
 
   /**

@@ -675,9 +675,8 @@ template <std::ranges::sized_range R>
   is_constprop(const R& arr)
   {
     constexpr std::size_t N = std::ranges::size(arr);
-    return _GLIBCXX_SIMD_INT_PACK(N, Is, {
-      return (is_constprop(arr[Is]) and ...);
-    });
+    constexpr auto [...is] = std::simd::__iota<int[N]>;
+    return (is_constprop(arr[is]) and ...);
   }
 
 [[gnu::always_inline, gnu::flatten]]

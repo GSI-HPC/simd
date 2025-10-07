@@ -314,14 +314,15 @@ namespace std::simd
         [[__gnu__::__always_inline__]]
         constexpr explicit
         basic_mask(_Fp&& __gen)
-        : _M_data(_GLIBCXX_SIMD_INT_PACK(_S_size, _Is, {
-                    // for _CxIleav, the results of each __gen call need to initialize two
-                    // neighboring elements
-                    bool __tmp[_S_size] = {__gen(__simd_size_constant<_Is>)...};
-                    return _DataType([&] [[__gnu__::__always_inline__]] (auto __i) {
-                             return __tmp[__i / 2];
-                           });
-                  }))
+        : _M_data([&] [[__gnu__::__always_inline__]] {
+            // for _CxIleav, the results of each __gen call need to initialize two
+            // neighboring elements
+            constexpr auto [...__is] = __iota<int[_S_size]>;
+            bool __tmp[_S_size] = {__gen(__simd_size_constant<__is>)...};
+            return _DataType([&] [[__gnu__::__always_inline__]] (size_t __i) {
+                     return __tmp[__i / 2];
+                   });
+          }())
         {}
 
       template <__almost_simd_generator_invokable<bool, _S_size> _Fp>
@@ -639,17 +640,14 @@ namespace std::simd
           constexpr int __n = _S_size / _Vp::_S_size;
           constexpr int __rem = _S_size % _Vp::_S_size;
           const auto __chunked = _M_data.template _M_chunk<typename _Vp::_TSimd>();
+          constexpr auto [...__is] = __iota<int[__n]>;
           if constexpr (__rem == 0)
-            return _GLIBCXX_SIMD_INT_PACK(__n, _Is, {
-                     return array<_Vp, __n> {_Vp::_S_init(__chunked[_Is])...};
-                   });
+            return array<_Vp, __n> {_Vp::_S_init(__chunked[__is])...};
           else
             {
               using _Rest = resize_t<__rem, _Vp>;
-              return _GLIBCXX_SIMD_INT_PACK(__n, _Is, {
-                       return tuple {_Vp::_S_init(get<_Is>(__chunked))...,
-                                     _Rest::_S_init(get<__n>(__chunked))};
-                     });
+              return tuple {_Vp::_S_init(get<__is>(__chunked))...,
+                            _Rest::_S_init(get<__n>(__chunked))};
             }
         }
 
@@ -724,12 +722,8 @@ namespace std::simd
         basic_vec(_Fp&& __gen)
         : _M_data([&] {
             using _Arr = std::array<value_type, sizeof(_TSimd) / sizeof(value_type)>;
-            const _Arr __tmp
-              = _GLIBCXX_SIMD_INT_PACK(size.value, _Is, {
-                  return _Arr{
-                    static_cast<value_type>(__gen(__simd_size_constant<_Is>))...
-                  };
-                });
+            constexpr auto [...__is] = __iota<int[_S_size]>;
+            const _Arr __tmp = { static_cast<value_type>(__gen(__simd_size_constant<__is>))... };
             return __builtin_bit_cast(_TSimd, __tmp);
           }())
         {}

@@ -381,28 +381,22 @@ namespace std::simd
                     return __simd_size_constant<__j>;
                   }
               };
-              constexpr bool __needs_zero_element
-                = _GLIBCXX_SIMD_INT_PACK(_S_size, _Is, {
-                    return ((__idxmap2(__simd_size_constant<_Is>).value == simd::zero_element)
-                              || ...);
-                  });
+              constexpr bool __needs_zero_element = [&] {
+                constexpr auto [...__is] = __iota<int[_S_size]>;
+                return ((__idxmap2(__simd_size_constant<__is>).value == simd::zero_element) || ...);
+              }();
+              constexpr auto [...__is] = __iota<int[_S_full_size]>;
               if constexpr (_A0::_S_nreg == 2 and not __needs_zero_element)
                 {
-                  __r._M_data
-                     = _GLIBCXX_SIMD_INT_PACK(_S_full_size, _Is, {
-                         return __builtin_shufflevector(
+                  __r._M_data = __builtin_shufflevector(
                                   __x._M_data0._M_data, __x._M_data1._M_data,
-                                  __adj_idx(__idxmap2(__simd_size_constant<_Is>)).value...);
-                       });
+                                  __adj_idx(__idxmap2(__simd_size_constant<__is>)).value...);
                 }
               else
                 {
-                  __r._M_data
-                     = _GLIBCXX_SIMD_INT_PACK(_S_full_size, _Is, {
-                         return __builtin_shufflevector(
+                  __r._M_data = __builtin_shufflevector(
                                   __x._M_concat_data(), decltype(__x._M_concat_data())(),
-                                  __adj_idx(__idxmap2(__simd_size_constant<_Is>)).value...);
-                       });
+                                  __adj_idx(__idxmap2(__simd_size_constant<__is>)).value...);
                 }
             }
           return __r;
@@ -415,10 +409,10 @@ namespace std::simd
       _M_complex_set_real(const _HalfVec& __x) requires ((_S_size & 1) == 0)
       {
         if (_M_is_constprop() and __x._M_is_constprop())
-          _M_data = _GLIBCXX_SIMD_INT_PACK(_S_size, _Is, {
-                      return _DataType { ((_Is & 1) == 0 ? value_type(__x[_Is / 2])
-                                                         : _M_data[_Is])...};
-                    });
+          {
+            constexpr auto [...__is] = __iota<int[_S_size]>;
+            _M_data = _DataType { ((__is & 1) == 0 ? value_type(__x[__is / 2]) : _M_data[__is])...};
+          }
         else if constexpr (_S_size == 2)
           _M_data[0] = __x[0];
         else
@@ -430,10 +424,10 @@ namespace std::simd
       _M_complex_set_imag(const _HalfVec& __x) requires ((_S_size & 1) == 0)
       {
         if (_M_is_constprop() and __x._M_is_constprop())
-          _M_data = _GLIBCXX_SIMD_INT_PACK(_S_size, _Is, {
-                      return _DataType { ((_Is & 1) == 1 ? value_type(__x[_Is / 2])
-                                                         : _M_data[_Is])...};
-                    });
+          {
+            constexpr auto [...__is] = __iota<int[_S_size]>;
+            _M_data = _DataType { ((__is & 1) == 1 ? value_type(__x[__is / 2]) : _M_data[__is])...};
+          }
         else if constexpr (_S_size == 2)
           _M_data[1] = __x[0];
         else
@@ -575,18 +569,17 @@ namespace std::simd
         {
           constexpr int __n = _S_size / _Vp::_S_size;
           constexpr int __rem = _S_size % _Vp::_S_size;
+          constexpr auto [...__is] = __iota<int[__n]>;
           if constexpr (__rem == 0)
             {
-              return _GLIBCXX_SIMD_INT_PACK(__n, _Is, {
-                       if constexpr (_Vp::_S_is_scalar)
-                         return array<_Vp, __n> {_Vp::_S_init(_M_data[_Is])...};
-                       else
-                         return array<_Vp, __n> {
-                           _Vp::_S_init(
-                             _VecOps<typename _Vp::_DataType>::_S_extract(
-                               _M_data, integral_constant<int, _Is * _Vp::_S_size>()))...
-                         };
-                     });
+              if constexpr (_Vp::_S_is_scalar)
+                return array<_Vp, __n> {_Vp::_S_init(_M_data[__is])...};
+              else
+                return array<_Vp, __n> {
+                  _Vp::_S_init(
+                    _VecOps<typename _Vp::_DataType>::_S_extract(
+                      _M_data, integral_constant<int, __is * _Vp::_S_size>()))...
+              };
             }
           else
             {
@@ -597,14 +590,12 @@ namespace std::simd
                            _M_data, integral_constant<int, __n * _Vp::_S_size>());
               else
                 __rest = _M_data[__n * _Vp::_S_size];
-              return _GLIBCXX_SIMD_INT_PACK(__n, _Is, {
-                       return tuple {
-                         _Vp::_S_init(
-                           _VecOps<typename _Vp::_DataType>::_S_extract(
-                             _M_data, integral_constant<int, _Is * _Vp::_S_size>()))...,
-                         __rest
-                       };
-                     });
+              return tuple {
+                _Vp::_S_init(
+                  _VecOps<typename _Vp::_DataType>::_S_extract(
+                    _M_data, integral_constant<int, __is * _Vp::_S_size>()))...,
+                __rest
+              };
             }
         }
 
@@ -966,9 +957,10 @@ namespace std::simd
         [[__gnu__::__always_inline__]]
         constexpr explicit
         basic_vec(_Fp&& __gen)
-        : _M_data(_GLIBCXX_SIMD_INT_PACK(_S_size, _Is, {
-                    return _DataType{static_cast<value_type>(__gen(__simd_size_constant<_Is>))...};
-                  }))
+        : _M_data([&] [[__gnu__::__always_inline__]] {
+            constexpr auto [...__is] = __iota<int[_S_size]>;
+            return _DataType{static_cast<value_type>(__gen(__simd_size_constant<__is>))...};
+          }())
         {}
 
       template <__almost_simd_generator_invokable<value_type, _S_size> _Fp>
@@ -989,9 +981,8 @@ namespace std::simd
             _M_data = static_cast<value_type>(__ptr[0]);
           else if (__builtin_is_constant_evaluated())
             {
-              _GLIBCXX_SIMD_INT_PACK(_S_size, _Is, {
-                _M_data = _DataType{__ptr[_Is]...};
-              });
+              constexpr auto [...__is] = __iota<int[_S_size]>;
+              _M_data = _DataType{__ptr[__is]...};
             }
           else if constexpr (is_integral_v<_Up> == is_integral_v<value_type>
                                and is_floating_point_v<_Up> == is_floating_point_v<value_type>
@@ -1328,30 +1319,28 @@ namespace std::simd
           if (__builtin_is_constant_evaluated()
                 or (__builtin_constant_p(_M_data) and __builtin_constant_p(__y)))
             {
-              return mask_type::_S_init(
-                       _GLIBCXX_SIMD_INT_PACK(_S_size, _Is, {
-                         constexpr auto __cmp_op = [] [[__gnu__::__always_inline__]]
-                                                     (value_type __a, value_type __b) {
-                           if constexpr (_Cmp == _X86Cmp::_Eq)
-                             return __a == __b;
-                           else if constexpr (_Cmp == _X86Cmp::_Lt)
-                             return __a < __b;
-                           else if constexpr (_Cmp == _X86Cmp::_Le)
-                             return __a <= __b;
-                           else if constexpr (_Cmp == _X86Cmp::_Unord)
-                             return std::isunordered(__a, __b);
-                           else if constexpr (_Cmp == _X86Cmp::_Neq)
-                             return __a != __b;
-                           else if constexpr (_Cmp == _X86Cmp::_Nlt)
-                             return not (__a < __b);
-                           else if constexpr (_Cmp == _X86Cmp::_Nle)
-                             return not (__a <= __b);
-                           else
-                             static_assert(false);
-                         };
-                         return ((__cmp_op(__vec_get(_M_data, _Is), __vec_get(__y, _Is))
-                                    ? (1ULL << _Is) : 0) | ...);
-                       }));
+              constexpr auto [...__is] = __iota<int[_S_size]>;
+              constexpr auto __cmp_op = [] [[__gnu__::__always_inline__]]
+                                          (value_type __a, value_type __b) {
+                if constexpr (_Cmp == _X86Cmp::_Eq)
+                  return __a == __b;
+                else if constexpr (_Cmp == _X86Cmp::_Lt)
+                  return __a < __b;
+                else if constexpr (_Cmp == _X86Cmp::_Le)
+                  return __a <= __b;
+                else if constexpr (_Cmp == _X86Cmp::_Unord)
+                  return std::isunordered(__a, __b);
+                else if constexpr (_Cmp == _X86Cmp::_Neq)
+                  return __a != __b;
+                else if constexpr (_Cmp == _X86Cmp::_Nlt)
+                  return not (__a < __b);
+                else if constexpr (_Cmp == _X86Cmp::_Nle)
+                  return not (__a <= __b);
+                else
+                  static_assert(false);
+              };
+              return mask_type::_S_init(((__cmp_op(__vec_get(_M_data, __is), __vec_get(__y, __is))
+                                            ? (1ULL << __is) : 0) | ...));
               }
             else
               return mask_type::_S_init(__x86_bitmask_cmp<_Cmp>(_M_data, __y));
@@ -1628,22 +1617,20 @@ namespace std::simd
                 }
               else
                 {
-                  return _GLIBCXX_SIMD_INT_PACK(__n, _Is, {
-                           return _Rp {_Vp([&](int __i) {
-                                         return (*this)[__i + _Is * _Vp::_S_size];
-                                       })...};
-                         });
+                  constexpr auto [...__is] = __iota<int[__n]>;
+                  return _Rp {_Vp([&](int __i) { return (*this)[__i + __is * _Vp::_S_size]; })...};
                 }
             }
           else
-            return _GLIBCXX_SIMD_INT_PACK(__n, _Is, {
-                     using _Rest = resize_t<__rem, _Vp>;
-                     // can't bit-cast because the member order of tuple is reversed
-                     return tuple {
-                       _Vp  ([&](int __i) { return (*this)[__i + _Is * _Vp::_S_size]; })...,
-                       _Rest([&](int __i) { return (*this)[__i + __n * _Vp::_S_size]; })
-                     };
-            });
+            {
+              constexpr auto [...__is] = __iota<int[__n]>;
+              using _Rest = resize_t<__rem, _Vp>;
+              // can't bit-cast because the member order of tuple is reversed
+              return tuple {
+                _Vp  ([&](int __i) { return (*this)[__i + __is * _Vp::_S_size]; })...,
+                _Rest([&](int __i) { return (*this)[__i + __n * _Vp::_S_size]; })
+              };
+            }
         }
 
       template <typename _A0, typename... _As>

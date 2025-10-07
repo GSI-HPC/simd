@@ -96,9 +96,8 @@ namespace std::simd
     inline _TV                                                                                     \
     __fast_##fn(_TV __x)                                                                           \
     {                                                                                              \
-      return _GLIBCXX_SIMD_INT_PACK(__width_of<_TV>, _Is, {                                        \
-               return _TV{std::fn(__x[_Is])...};                                                   \
-             });                                                                                   \
+      constexpr auto [...__is] = __iota<int[__width_of<_TV>]>;                                     \
+      return _TV{std::fn(__x[__is])...};                                                           \
     }                                                                                              \
                                                                                                    \
   template <typename _Vp, _TargetTraits = {}>                                                      \
@@ -160,9 +159,8 @@ namespace std::simd
     inline _TV                                                                                     \
     __fast_##fn(_TV __x0, _TV __x1)                                                                \
     {                                                                                              \
-      return _GLIBCXX_SIMD_INT_PACK(__width_of<_TV>, _Is, {                                        \
-               return _TV{std::fn(__x0[_Is], __x1[_Is])...};                                       \
-             });                                                                                   \
+      constexpr auto [...__is] = __iota<int[__width_of<_TV>]>;                                     \
+      return _TV{std::fn(__x0[__is], __x1[__is])...};                                              \
     }                                                                                              \
                                                                                                    \
   template <typename _TV, _TargetTraits = {}>                                                      \

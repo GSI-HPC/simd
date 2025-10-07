@@ -147,18 +147,6 @@ namespace std::simd
 #endif
 }
 
-#if __cpp_structured_bindings >= 202411L
-#define _GLIBCXX_SIMD_INT_PACK(N, pack, ...)                                            \
-  [&] [[__gnu__::__always_inline__]] {                                                  \
-    constexpr auto [...pack] = std::simd::__iota<int[N]>;                               \
-    __VA_ARGS__                                                                         \
-  }()
-#else
-#define _GLIBCXX_SIMD_INT_PACK(N, pack, ...)                                            \
-  [&]<int... pack> [[__gnu__::__always_inline__]] (std::integer_sequence<int, pack...>) \
-  __VA_ARGS__ (std::make_integer_sequence<int, N>())
-#endif
-
 namespace std::simd
 {
   // [simd.general] vectorizable types
