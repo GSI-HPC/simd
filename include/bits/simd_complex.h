@@ -268,13 +268,8 @@ namespace std::simd
                 return _DataType([&](int __i) { return __x[__i / 2]; });
               else if constexpr (__flags_test(_UAbi::_S_variant, _AbiVariant::_CxIleav))
                 return __x._M_data; // calls conversion ctor on _DataType
-              else if constexpr (_S_use_bitmask)
-                {
-                  static_assert(__x.size() <= 64, "limited to 64-bit bitmasks at this point");
-                  return _DataType::_S_init(__duplicate_each_bit<_S_size>(__x._M_to_uint()));
-                }
-              else if constexpr (_UV::_S_use_bitmask) // bit-mask to vec-mask
-                static_assert(false, "TODO");
+              else if constexpr (_S_use_bitmask or _UV::_S_use_bitmask)
+                return _DataType::_S_init(__duplicate_each_bit<_S_size>(__x._M_to_uint()));
               else if constexpr (sizeof(__x) == sizeof(_M_data) and _Bytes == _UBytes
                                    and _UV::_S_padding_bytes == 0)
                 {

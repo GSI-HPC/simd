@@ -759,11 +759,11 @@ namespace std::simd
     constexpr auto
     __duplicate_each_bit(const __trivial_pair<_U0, _U1>& __x)
     {
+      static_assert(_InputBits != -1 or is_unsigned_v<_U1>);
       constexpr int __input_bits = _InputBits == -1 ? (sizeof(_U0) + sizeof(_U1)) * __CHAR_BIT__
                                                     : _InputBits;
       constexpr int __in0 = min(int(sizeof(_U0)) * __CHAR_BIT__, __input_bits);
       constexpr int __in1 = __input_bits - __in0;
-      static_assert(is_unsigned_v<_U1>);
       if constexpr (__in1 == 0)
         return __duplicate_each_bit<__in0>(__x._M_first);
       else
