@@ -11,12 +11,9 @@
 #include <limits>
 #include <complex>
 
+#include <bits/c++config.h>
 #include <bits/ranges_base.h>
 #include <bits/utility.h> // integer_sequence, etc.
-
-#ifndef __clang__
-#include <bits/c++config.h>
-#endif
 
 #if __CHAR_BIT__ != 8
 // There are simply too many constants and bit operators that currently depend on CHAR_BIT == 8.
@@ -27,6 +24,11 @@
 // psabi warnings are bogus because the ABI of the internal types never leaks into user code
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpsabi"
+
+// Work around _GLIBCXX_CLANG not being defined with older libstdc++ when compiling with Clang
+#if __GLIBCXX__ < 20250922 and defined __clang__ and __GNUC_MINOR__ == 2 and not defined _GLIBCXX_CLANG
+#define _GLIBCXX_CLANG __clang__
+#endif
 
 // x86 macros {
 
