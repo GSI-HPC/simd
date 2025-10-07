@@ -98,7 +98,7 @@ debug:
 	@echo "prefix: $(prefix)"
 	@$(MAKE) -f Makefile.more $@
 
-more_checks := check check10 check1 check-failed check-passed check-untested check-fast-math rerun
+more_checks := ci check check10 check1 check-failed check-passed check-untested check-fast-math rerun
 
 .PHONY: $(more_checks)
 $(more_checks): $(check_targets)

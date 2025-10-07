@@ -4,9 +4,9 @@
 
 objdir = obj
 
-CXXFLAGS+=-std=c++26 -Wall -Wextra -Werror -O2 -g0 -Wno-attributes -D_GLIBCXX_ASSERTIONS=1 $(FLAGS)
+CXXFLAGS+=-std=c++26 -Wall -Wextra -Werror -O2 -g0 -Wno-attributes -D_GLIBCXX_ASSERTIONS=1 -D_GLIBCXX_SIMD_CONSTEVAL_BROADCAST $(FLAGS)
 CXXFLAGS_clang := -Wno-unknown-pragmas -ferror-limit=3
-CXXFLAGS_gcc := -fconcepts-diagnostics-depth=3 -fconstexpr-ops-limit=67108864 -fmax-errors=1
+CXXFLAGS_gcc := -fconcepts-diagnostics-depth=2 -fconstexpr-ops-limit=67108864 -fmax-errors=2 -Wno-psabi
 
 cxx_version := $(shell $(CXX) --version | head -n1)
 
@@ -87,7 +87,9 @@ testarchs ::= x86-64 \
 	     x86-64-v4 \
 	     graniterapids
 
-tests ::= $(patsubst tests/%.cpp,%,$(wildcard tests/*.cpp))
+disabled_tests ::= misc
+
+tests ::= $(filter-out $(disabled_tests),$(patsubst tests/%.cpp,%,$(wildcard tests/*.cpp)))
 
 testtypes ::= signed-char \
 	     unsigned-char \

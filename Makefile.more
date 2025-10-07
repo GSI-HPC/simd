@@ -40,6 +40,8 @@ endif
 .PHONY: check check10 check1
 check: check-constexpr $(shuffled_checks) $(codegen_targets)
 
+ci: check-constexpr $(wordlist 1,40,$(shuffled_checks)) $(codegen_targets)
+
 check1: check-constexpr $(wordlist 1,$(total1),$(shuffled_checks)) $(codegen_targets)
 
 check10: check-constexpr $(wordlist 1,$(total10),$(shuffled_checks)) $(codegen_targets)

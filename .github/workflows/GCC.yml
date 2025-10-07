@@ -6,7 +6,7 @@ name: GCC
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, rewrite ]
   pull_request:
 
 jobs:
@@ -14,17 +14,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: [14, 15, master]
+        version: [16]
 
     runs-on: ubuntu-latest
 
     container:
-      image: ghcr.io/mattkretz/cplusplus-ci/latest
+      image: ghcr.io/mattkretz/cplusplus-ci/gcc${{ matrix.version }}
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Run test suite
         env:
-          CXX: g++-${{ matrix.version }}
-        run: make -j2 check-constexpr check/simd_bit.ivybridge/unsigned-short.39 check/simd_alg.core2/signed-int.9 check/arithmetic.skylake/float.41
+          CXX: g++
+        run: make -j2 ci
