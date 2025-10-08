@@ -3,8 +3,14 @@
  *                       Matthias Kretz <m.kretz@gsi.de>
  */
 
-#ifndef INCLUDE_BITS_SIMD_MATH_H_
-#define INCLUDE_BITS_SIMD_MATH_H_
+#ifndef _GLIBCXX_SIMD_MATH_H
+#define _GLIBCXX_SIMD_MATH_H 1
+
+#ifdef _GLIBCXX_SYSHDR
+#pragma GCC system_header
+#endif
+
+#if __cplusplus >= 202400L
 
 // psabi warnings are bogus because the ABI of the internal types never leaks into user code
 #pragma GCC diagnostic push
@@ -981,5 +987,5 @@ namespace std
 }
 
 #pragma GCC diagnostic pop
-
-#endif  // INCLUDE_BITS_SIMD_MATH_H_
+#endif // C++26
+#endif // _GLIBCXX_SIMD_MATH_H

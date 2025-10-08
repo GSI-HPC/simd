@@ -3,8 +3,14 @@
  *                       Matthias Kretz <m.kretz@gsi.de>
  */
 
-#ifndef INCLUDE_BITS_SIMD_MASK_H_
-#define INCLUDE_BITS_SIMD_MASK_H_
+#ifndef _GLIBCXX_SIMD_MASK_H
+#define _GLIBCXX_SIMD_MASK_H 1
+
+#ifdef _GLIBCXX_SYSHDR
+#pragma GCC system_header
+#endif
+
+#if __cplusplus >= 202400L
 
 #include "simd_iterator.h"
 #include "vec_ops.h"
@@ -1722,5 +1728,5 @@ namespace std::simd
 }
 
 #pragma GCC diagnostic pop
-
-#endif  // INCLUDE_BITS_SIMD_MASK_H_
+#endif // C++26
+#endif // _GLIBCXX_SIMD_MASK_H

@@ -3,8 +3,14 @@
  *                       Matthias Kretz <m.kretz@gsi.de>
  */
 
-#ifndef INCLUDE_BITS_SIMD_FLAGS_H_
-#define INCLUDE_BITS_SIMD_FLAGS_H_
+#ifndef _GLIBCXX_SIMD_FLAGS_H
+#define _GLIBCXX_SIMD_FLAGS_H 1
+
+#ifdef _GLIBCXX_SYSHDR
+#pragma GCC system_header
+#endif
+
+#if __cplusplus >= 202400L
 
 #include "simd_details.h"
 
@@ -238,4 +244,5 @@ namespace std::simd
 #endif
 }
 
-#endif  // INCLUDE_BITS_SIMD_FLAGS_H_
+#endif // C++26
+#endif // _GLIBCXX_SIMD_FLAGS_H

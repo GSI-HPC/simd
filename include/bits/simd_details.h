@@ -3,8 +3,14 @@
  *                       Matthias Kretz <m.kretz@gsi.de>
  */
 
-#ifndef BITS_SIMD_DETAILS_H_
-#define BITS_SIMD_DETAILS_H_
+#ifndef _GLIBCXX_SIMD_DETAILS_H
+#define _GLIBCXX_SIMD_DETAILS_H 1
+
+#ifdef _GLIBCXX_SYSHDR
+#pragma GCC system_header
+#endif
+
+#if __cplusplus >= 202400L
 
 #include <bit>
 #include <concepts>
@@ -1449,5 +1455,5 @@ namespace std::simd
 }
 
 #pragma GCC diagnostic pop
-
-#endif  // BITS_SIMD_DETAILS_H_
+#endif // C++26
+#endif // _GLIBCXX_SIMD_DETAILS_H
