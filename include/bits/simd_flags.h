@@ -39,10 +39,20 @@ namespace std::simd
   struct _LoadStoreTag
   {};
 
+  /** @internal
+   * <tt>struct convert-flag</tt>
+   *
+   * C++26 [simd.expos] / [simd.flags]
+   */
   struct __convert_flag
   : _LoadStoreTag
   {};
 
+  /** @internal
+   * <tt>struct aligned-flag</tt>
+   *
+   * C++26 [simd.expos] / [simd.flags]
+   */
   struct __aligned_flag
   : _LoadStoreTag
   {
@@ -62,6 +72,13 @@ namespace std::simd
       }
   };
 
+  /** @internal
+   * <tt>template<size_t N> struct overaligned-flag</tt>
+   *
+   * @tparam _Np  alignment in bytes
+   *
+   * C++26 [simd.expos] / [simd.flags]
+   */
   template <size_t _Np>
     struct __overaligned_flag
     : _LoadStoreTag

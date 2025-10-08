@@ -74,7 +74,7 @@
 // }
 
 #ifndef _GLIBCXX_SIMD_NOEXCEPT
-/** \internal
+/** @internal
  * For unit-testing preconditions, use this macro to remove noexcept.
  */
 #define _GLIBCXX_SIMD_NOEXCEPT noexcept
@@ -200,6 +200,9 @@ namespace std::simd
           and (__builtin_bit_cast(_Arr2<typename _Tp::value_type>, __complex_object<_Tp, 1, 2>)
                  ._M_data[0] == 1);
 
+  /** @internal
+   * Satisfied if @p _Tp implements the std::complex interface.
+   */
   template <typename _Tp>
     concept __complex_like = __complex_like_impl<remove_cvref_t<_Tp>>;
 
@@ -209,12 +212,16 @@ namespace std::simd
           and ((integral<_Tp> and sizeof(_Tp) <= sizeof(0ULL) and not same_as<_Tp, bool>)
                  or (floating_point<_Tp> and sizeof(_Tp) <= sizeof(double)));
 
+  // [simd.general] p2
   template <typename _Tp>
     concept __vectorizable
       = __vectorizable_scalar<_Tp>
           or (__complex_like_impl<_Tp> and __vectorizable_scalar<typename _Tp::value_type>
                 and floating_point<typename _Tp::value_type>);
 
+  /** @internal
+   * Describes variants of _Abi.
+   */
   enum _AbiVariant : unsigned long long
   {
     _VecMask = 1 << 0, // default uses vector masks
@@ -225,13 +232,24 @@ namespace std::simd
     _CxVariants = _CxIleav | _CxCtgus,
   };
 
+  /** @internal
+   * Return true iff @p __x is set in @p __flags.
+   */
   consteval bool
   __flags_test(_AbiVariant __flags, _AbiVariant __x)
   { return (__flags | __x) == __flags; }
 
+  /** @internal
+   * Type used whenever no valid integer/value type exists.
+   */
   struct _InvalidInteger
   {};
 
+  /** @internal
+   * Alias for a signed integer type T such that sizeof(T) equals _Bytes.
+   *
+   * C++26 [simd.expos.defn]
+   */
   template <size_t _Bytes>
     using __integer_from
       = decltype([] {
@@ -247,18 +265,35 @@ namespace std::simd
             return _InvalidInteger();
         }());
 
+  /** @internal
+   * Alias for an unsigned integer type T such that sizeof(T) equals _Bytes.
+   */
   template <size_t _Bytes>
     using _UInt = make_unsigned_t<__integer_from<_Bytes>>;
 
+  /** @internal
+   * Divide @p __x by @p __y while rounding up instead of down.
+   *
+   * Preconditions: __x >= 0 and __y > 0.
+   */
   template <typename _Tp>
     constexpr _Tp
     __div_ceil(_Tp __x, _Tp __y)
     { return (__x + __y - 1) / __y; }
 
+  /** @internal
+   * Alias for an unsigned integer type that can store at least @p _NBits bits.
+   */
   template <int _NBits>
     requires (_NBits > 0 and _NBits <= 64)
     using _Bitmask = _UInt<__div_ceil(__bit_ceil(unsigned(_NBits)), unsigned(__CHAR_BIT__))>;
 
+  /** @internal
+   * Map a given type @p _Tp to an equivalent type.
+   *
+   * This helps with reducing the necessary branches and casts in the implementation as well as
+   * reducing the number of template instantiations.
+   */
   template <typename _Tp>
     struct __canonical_vec_type
     { using type = _Tp; };
@@ -323,6 +358,13 @@ namespace std::simd
     struct __canonical_vec_type<_Float32>
     { using type = float; };
 
+  /** @internal
+   * This ABI tag describes basic_vec objects that store one element per data member and basic_mask
+   * objects that store one bool data members.
+   *
+   * @tparam _Np   The number of elements, which also matches the number of data members in
+   *               basic_vec and basic_mask.
+   */
   template <int _Np = 1>
     struct _ScalarAbi
     {
@@ -349,6 +391,17 @@ namespace std::simd
         }
     };
 
+  /** @internal
+   * This ABI tag describes basic_vec objects that store one or more objects declared with the
+   * [[gnu::vector_size(N)]] attribute.
+   * Applied to basic_mask objects, this ABI tag either describes corresponding vector-mask objects
+   * or bit-mask objects. Which one is used is determined via @p _Var.
+   *
+   * @tparam _Np    The number of elements.
+   * @tparam _Nreg  The number of registers needed to store @p _Np elements.
+   * @tparam _Var   Determines how complex value-types are layed out and whether mask types use
+   *                bit-masks or vector-masks.
+   */
   template <int _Np, int _Nreg, underlying_type_t<_AbiVariant> _Var
 #ifdef __AVX512F__
               = _AbiVariant::_BitMask
@@ -423,9 +476,16 @@ namespace std::simd
         }
     };
 
+  /** @internal
+   * This type is used whenever ABI tag deduction can't give a useful answer.
+   */
   struct _InvalidAbi
   { static constexpr int _S_size = 0; };
 
+  /** @internal
+   * Satisfied if @p _Tp is a valid simd ABI tag. This is a necessary but not sufficient condition
+   * for an enabled basic_vec/basic_mask specialization.
+   */
   template <typename _Tp>
     concept __abi_tag
       = same_as<decltype(_Tp::_S_variant), const _AbiVariant>
@@ -448,6 +508,10 @@ namespace std::simd
   __handle_fpexcept_impl(float)
   { return true; }
 
+  /** @internal
+   * This type can be used as a template parameter for avoiding ODR violations, where code needs to
+   * differ depending on optimization flags (mostly fp-math related).
+   */
   struct _OptTraits
   {
     consteval bool
@@ -904,7 +968,7 @@ namespace std::simd
 
 #endif
 
-  /**@internal
+  /** @internal
    * You must use this type as template argument to function templates that are not declared
    * always_inline (to avoid issues when linking code compiled with different compiler flags).
    */
@@ -912,7 +976,14 @@ namespace std::simd
   : _ArchTraits, _OptTraits
   {};
 
-  // [simd.expos.abi]
+  /** @internal
+   * Alias for an ABI tag such that basic_vec<_Tp, __native_abi_t_<_Tp>> stores one SIMD register of
+   * optimal width.
+   *
+   * @tparam _Tp  A vectorizable type.
+   *
+   * C++26 [simd.expos.abi]
+   */
   template <typename _Tp>
     using __native_abi_t = decltype(__native_abi<_Tp>());
 
@@ -929,10 +1000,18 @@ namespace std::simd
         return __native.template _M_resize<_Np>();
     }
 
+  /** @internal
+   * Alias for an ABI tag @c A such that <tt>basic_vec<_Tp, A></tt> stores @p _Np elements.
+   *
+   * C++26 [simd.expos.abi]
+   */
   template <typename _Tp, int _Np>
     using __deduce_abi_t = decltype(__deduce_abi<_Tp, _Np>());
 
-  // rebind for basic_vec, and basic_mask where we know the destination value-type
+  /** @internal
+   * \c rebind implementation detail for basic_vec, and basic_mask where we know the destination
+   * value-type
+   */
   template <typename _Tp, int _Np, __abi_tag _A0, _ArchTraits = {}>
     consteval auto
     __abi_rebind()
@@ -971,12 +1050,16 @@ namespace std::simd
         }
     }
 
-  // rebind for basic_mask. The important difference here is that we have no information about the
-  // actual value-type other than its sizeof. So _Bytes == 8 could mean complex<float>, double, or
-  // int64_t. E.g. _Np == 4 with AVX w/o AVX2 that's 'vector(4) int', 'vector(4) long long', or
-  // '2x vector(2) long long'.
-  // That's why this overload has the additional _IsOnlyResize parameter, which tells us that the
-  // value-type doesn't change.
+  /** @internal
+   * @c rebind implementation detail for basic_mask.
+   *
+   * The important difference here is that we have no information about the actual value-type other
+   * than its @c sizeof. So <tt>_Bytes == 8</tt> could mean <tt>complex<float></tt>, @c double, or
+   * @c int64_t. E.g. <tt>_Np == 4</tt> with AVX w/o AVX2 that's <tt>vector(4) int</tt>,
+   * <tt>vector(4) long long</tt>, or <tt>2x vector(2) long long</tt>.
+   * That's why this overload has the additional @p _IsOnlyResize parameter, which tells us that the
+   * value-type doesn't change.
+   */
   template <size_t _Bytes, int _Np, __abi_tag _A0, bool _IsOnlyResize, _ArchTraits _Traits = {}>
     consteval auto
     __abi_rebind()
@@ -1034,6 +1117,14 @@ namespace std::simd
         return __abi_rebind<__integer_from<_Bytes>, _Np, _A0>();
     }
 
+  /** @internal
+   * Returns true unless _GLIBCXX_SIMD_COND_EXPLICIT_MASK_CONVERSION is defined.
+   *
+   * On IvyBridge, (vec<float> == 0.f) == (rebind_t<int, vec<float>> == 0) does not compile. It does
+   * compile on basically every other target, though. This is due to the difference in ABI tag:
+   * _Abi<8, 1, 1> vs. _Abi<8, 2, 1>. I know how to define this funtion for libstdc++ to avoid
+   * interconvertible masks. The question is whether we can specify this in general for C++29.
+   */
   template <typename _To, typename _From>
   consteval bool
     __is_mask_conversion_explicit(size_t __b0, size_t __b1)
@@ -1082,9 +1173,22 @@ namespace std::simd
 #endif
     }
 
-  // [simd.expos]
+  /** @internal
+   * An alias for a signed integer type.
+   *
+   * libstdc++ unconditionally uses @c int here, since it matches the return type of
+   * 'Bit Operation Builtins' in GCC.
+   *
+   * C++26 [simd.expos.defn]
+   */
   using __simd_size_type = int;
 
+  /** @internal
+   * The width of <tt>basic_vec<T, Abi></tt> if the specialization <tt>basic_vec<T, Abi></tt> is
+   * enabled, or @c 0 otherwise.
+   *
+   * C++26 [simd.expos.defn]
+   */
   template <typename _Tp, typename _Abi>
     constexpr __simd_size_type __simd_size_v = 0;
 
@@ -1108,7 +1212,11 @@ namespace std::simd
   template <typename _Tp, __simd_size_type _Np = __simd_size_v<_Tp, __native_abi_t<_Tp>>>
     using mask = basic_mask<sizeof(_Tp), __deduce_abi_t<_Tp, _Np>>;
 
-  // [simd.general] data-parallel types
+  /** @internal
+   * Satisfied if @p _Tp is a data-parallel type.
+   *
+   * C++26 [simd.general]
+   */
   template <typename _Tp>
     concept __data_parallel_type
       = __vectorizable<typename _Tp::value_type>
@@ -1146,16 +1254,28 @@ namespace std::simd
           and numeric_limits<_From>::max() <= numeric_limits<_To>::max()
           and numeric_limits<_From>::lowest() >= numeric_limits<_To>::lowest();
 
+  /** @internal
+   * Satisfied if the conversion from @p _From to @p _To is a value-preserving conversion.
+   *
+   * C++26 [simd.general]
+   */
   template <typename _From, typename _To>
     concept __value_preserving_convertible_to
       = __arithmetic_only_value_preserving_convertible_to<_From, _To>
           or (__complex_like<_To> and __arithmetic_only_value_preserving_convertible_to<
                                         _From, typename _To::value_type>);
 
-  // [simd.expos]
+  /** @internal
+   * The value of the @c _Bytes template argument to a @c basic_mask specialization.
+   *
+   * C++26 [simd.expos.defn]
+   */
   template <typename _Tp>
     constexpr size_t __mask_element_size = 0;
 
+  /** @internal
+   * C++26 [simd.expos]
+   */
   template<typename _Tp>
     concept __constexpr_wrapper_like
       = convertible_to<_Tp, decltype(_Tp::value)>
@@ -1349,6 +1469,9 @@ namespace std::simd
         { __binary_op(__v, __v) } -> same_as<vec<_Tp, 1>>;
       };
 
+  /** @internal
+   * Returns the lowest index @c i where <tt>(__bits >> i) & 1</tt> equals @c 1.
+   */
   [[__gnu__::__always_inline__]]
   constexpr __simd_size_type
   __lowest_bit(std::integral auto __bits)
@@ -1363,6 +1486,9 @@ namespace std::simd
       static_assert(false);
   }
 
+  /** @internal
+   * Returns the highest index @c i where <tt>(__bits >> i) & 1</tt> equals @c 1.
+   */
   [[__gnu__::__always_inline__]]
   constexpr __simd_size_type
   __highest_bit(std::integral auto __bits)
@@ -1443,7 +1569,7 @@ namespace std::simd
     concept __simd_vec_bcast = constructible_from<_To, _From>;
 #endif
 
-  /** \internal
+  /** @internal
    * std::pair is not trivially copyable, this one is
    */
   template <typename _T0, typename _T1>

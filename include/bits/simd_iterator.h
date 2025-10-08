@@ -16,7 +16,11 @@
 
 namespace std::simd
 {
-  // [simd.iterator] ----------------------------------------------------------
+  /** @internal
+   * Iterator type for basic_vec and basic_mask.
+   *
+   * C++26 [simd.iterator]
+   */
   template <typename _Vp>
     class __iterator
     {
