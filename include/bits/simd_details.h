@@ -101,7 +101,7 @@ namespace std::simd
       __builtin_fprintf(stderr, __msg, __args...);
       __builtin_fprintf(stderr, "\n");
       __builtin_abort();
-#elif _GLIBCXX_HARDEN >= 3
+#elif _GLIBCXX_SIMD_TRAP_ON_UB
       __builtin_trap();
 #else
       __builtin_unreachable();
