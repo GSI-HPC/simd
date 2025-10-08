@@ -12,6 +12,8 @@
 
 #if __cplusplus >= 202400L
 
+#include "simd_mask.h"
+
 // psabi warnings are bogus because the ABI of the internal types never leaks into user code
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpsabi"

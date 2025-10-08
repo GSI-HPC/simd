@@ -12,6 +12,8 @@
 
 #if __cplusplus >= 202400L
 
+#include "simd_vec.h"
+
 // psabi warnings are bogus because the ABI of the internal types never leaks into user code
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpsabi"
@@ -58,7 +60,7 @@ namespace std::simd
     reduce(const basic_vec<_Tp, _Ap>& __x, const typename basic_vec<_Tp, _Ap>::mask_type& __mask,
            _BinaryOperation __binary_op = {}, type_identity_t<_Tp> __identity_element
              = __default_identity_element<_Tp, _BinaryOperation>())
-    { return reduce(select(__mask, __x, __identity_element), __binary_op); }
+    { return reduce(__select_impl(__mask, __x, __identity_element), __binary_op); }
 
   template <totally_ordered _Tp, typename _Ap>
     [[__gnu__::__always_inline__]]
@@ -66,7 +68,7 @@ namespace std::simd
     reduce_min(const basic_vec<_Tp, _Ap>& __x) noexcept
     {
       return reduce(__x, []<typename _UV>(const _UV& __a, const _UV& __b) {
-               return select(__a < __b, __a, __b);
+               return __select_impl(__a < __b, __a, __b);
              });
     }
 
@@ -76,9 +78,9 @@ namespace std::simd
     reduce_min(const basic_vec<_Tp, _Ap>& __x,
                const typename basic_vec<_Tp, _Ap>::mask_type& __mask) noexcept
     {
-      return reduce(select(__mask, __x, numeric_limits<_Tp>::max()),
+      return reduce(__select_impl(__mask, __x, numeric_limits<_Tp>::max()),
                     []<typename _UV>(const _UV& __a, const _UV& __b) {
-                      return select(__a < __b, __a, __b);
+                      return __select_impl(__a < __b, __a, __b);
                     });
     }
 
@@ -88,7 +90,7 @@ namespace std::simd
     reduce_max(const basic_vec<_Tp, _Ap>& __x) noexcept
     {
       return reduce(__x, []<typename _UV>(const _UV& __a, const _UV& __b) {
-               return select(__a < __b, __b, __a);
+               return __select_impl(__a < __b, __b, __a);
              });
     }
 
@@ -98,9 +100,9 @@ namespace std::simd
     reduce_max(const basic_vec<_Tp, _Ap>& __x,
                const typename basic_vec<_Tp, _Ap>::mask_type& __mask) noexcept
     {
-      return reduce(select(__mask, __x, numeric_limits<_Tp>::lowest()),
+      return reduce(__select_impl(__mask, __x, numeric_limits<_Tp>::lowest()),
                     []<typename _UV>(const _UV& __a, const _UV& __b) {
-                      return select(__a < __b, __b, __a);
+                      return __select_impl(__a < __b, __b, __a);
                     });
     }
 }
