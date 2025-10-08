@@ -36,8 +36,6 @@
 #define _GLIBCXX_CLANG __clang__
 #endif
 
-// x86 macros {
-
 #if defined __x86_64__ && !__SSE2__
 #error "Use of SSE2 is required on x86-64"
 #endif
@@ -48,30 +46,9 @@
 #define _GLIBCXX_X86 0
 #endif
 
-//}
-
-// ARM macros {
-#if defined __ARM_NEON
-#define _GLIBCXX_SIMD_HAVE_NEON 1
-#else
-#define _GLIBCXX_SIMD_HAVE_NEON 0
+#if !_GLIBCXX_X86
+#error "Not implemented yet. Only supported on x86 for now."
 #endif
-#if defined __ARM_NEON && (__ARM_ARCH >= 8 || defined __aarch64__)
-#define _GLIBCXX_SIMD_HAVE_NEON_A32 1
-#else
-#define _GLIBCXX_SIMD_HAVE_NEON_A32 0
-#endif
-#if defined __ARM_NEON && defined __aarch64__
-#define _GLIBCXX_SIMD_HAVE_NEON_A64 1
-#else
-#define _GLIBCXX_SIMD_HAVE_NEON_A64 0
-#endif
-#if (__ARM_FEATURE_SVE_BITS > 0 && __ARM_FEATURE_SVE_VECTOR_OPERATORS==1)
-#define _GLIBCXX_SIMD_HAVE_SVE 1
-#else
-#define _GLIBCXX_SIMD_HAVE_SVE 0
-#endif
-// }
 
 #ifndef _GLIBCXX_SIMD_NOEXCEPT
 /** @internal
@@ -151,10 +128,7 @@ namespace std::simd
     inline constexpr auto&
     __iota<_Tp[_Np]> = __iota_array<_Tp, make_integer_sequence<_Tp, _Np>>::_S_data;
 #endif
-}
 
-namespace std::simd
-{
   // [simd.general] vectorizable types
   template <typename _Cp, auto __re, auto __im, typename _Tp = typename _Cp::value_type>
     constexpr _Cp __complex_object = _Cp {_Tp(__re), _Tp(__im)};
@@ -613,14 +587,39 @@ namespace std::simd
         ;
   };
 
-#if _GLIBCXX_SIMD_HAVE_NEON or _GLIBCXX_SIMD_HAVE_SVE
+  /** @internal
+   * Return true iff @p __s equals "1".
+   */
+  consteval bool
+  __streq_to_1(const char* __s)
+  { return __s != nullptr and __s[0] == '1' and __s[1] == '\0'; }
+
+  /** @internal
+   * If the macro given as @p feat is defined to 1, expands to a bit set at position @p off.
+   * Otherwise, expand to zero.
+   */
+#define _GLIBCXX_SIMD_ARCH_FLAG(off, feat) \
+  (static_cast<__UINT64_TYPE__>(std::simd::__streq_to_1(_GLIBCXX_SIMD_TOSTRING_IMPL(feat))) << off)
+
+#if __ARM_ARCH
+
+#if __ARM_ARCH >= 8
+#define _GLIBCXX_SIMD_HAVE_ARMv8 1
+#endif
+#if __ARM_FEATURE_SVE_BITS > 0 and __ARM_FEATURE_SVE_VECTOR_OPERATORS == 1
+#define _GLIBCXX_SIMD_HAVE_SVE 1
+#endif
+
+#define _GLIBCXX_SIMD_ARCH_TRAITS_INIT {                      \
+  _GLIBCXX_SIMD_ARCH_FLAG(0, __ARM_NEON)                      \
+    | _GLIBCXX_SIMD_ARCH_FLAG( 1, __aarch64__)                \
+    | _GLIBCXX_SIMD_ARCH_FLAG( 2, _GLIBCXX_SIMD_HAVE_ARMv8)   \
+    | _GLIBCXX_SIMD_ARCH_FLAG( 3, _GLIBCXX_SIMD_HAVE_SVE)     \
+}
 
   struct _ArchTraits
   {
-    __UINT64_TYPE__ _M_flags = (_GLIBCXX_SIMD_HAVE_NEON << 0)
-                          | (_GLIBCXX_SIMD_HAVE_NEON_A32 << 1)
-                          | (_GLIBCXX_SIMD_HAVE_NEON_A64 << 2)
-                          | (_GLIBCXX_SIMD_HAVE_SVE << 3);
+    __UINT64_TYPE__ _M_flags = _GLIBCXX_SIMD_ARCH_TRAITS_INIT;
 
     consteval bool
     _M_test(int __bit) const
@@ -632,11 +631,11 @@ namespace std::simd
 
     consteval bool
     _M_have_neon_a32() const
-    { return _M_test(1); }
+    { return _M_have_neon() and (_M_have_neon_a64() or _M_test(2)); }
 
     consteval bool
     _M_have_neon_a64() const
-    { return _M_test(2); }
+    { return _M_have_neon() and _M_test(1); }
 
     consteval bool
     _M_have_sve() const
@@ -650,23 +649,18 @@ namespace std::simd
 
 #elif __powerpc__
 
+#define _GLIBCXX_SIMD_ARCH_TRAITS_INIT {                      \
+  (_GLIBCXX_SIMD_ARCH_FLAG(0, __ALTIVEC__)                    \
+     + _GLIBCXX_SIMD_ARCH_FLAG(0, __VSX__)                    \
+     + _GLIBCXX_SIMD_ARCH_FLAG(0, __POWER8_VECTOR__)          \
+     + _GLIBCXX_SIMD_ARCH_FLAG(0, __POWER9_VECTOR__))         \
+}
+
   struct _ArchTraits
   {
-    __UINT64_TYPE__ _M_flags = 0
-#ifdef _ARCH_PWR10
-                          + 5
-#elif defined __POWER9_VECTOR__
-                          + 4
-#elif defined __POWER8_VECTOR__
-                          + 3
-#elif defined __VSX__
-                          + 2
-#elif defined __VMX__
-                          + 1
-#endif
-                        ;
+    __UINT64_TYPE__ _M_flags = _GLIBCXX_SIMD_ARCH_TRAITS_INIT;
 
-    consteval bool _M_vmx()
+    consteval bool _M_altivec()
     { return (_M_flags & 0xf) >= 1; }
 
     consteval bool _M_vsx()
@@ -678,9 +672,6 @@ namespace std::simd
     consteval bool _M_power9()
     { return (_M_flags & 0xf) >= 4; }
 
-    consteval bool _M_power10()
-    { return (_M_flags & 0xf) >= 5; }
-
     template <typename _Tp>
       consteval bool
       _M_eval_as_f32() const
@@ -688,13 +679,6 @@ namespace std::simd
   };
 
 #elif _GLIBCXX_X86
-
-  consteval bool
-  __streq_to_1(const char* __s)
-  { return __s != nullptr and __s[0] == '1' and __s[1] == '\0'; }
-
-#define _GLIBCXX_SIMD_ARCH_FLAG(off, feat) \
-  (static_cast<__UINT64_TYPE__>(std::simd::__streq_to_1(_GLIBCXX_SIMD_TOSTRING_IMPL(feat))) << off)
 
 #define _GLIBCXX_SIMD_ARCH_TRAITS_INIT {                      \
   _GLIBCXX_SIMD_ARCH_FLAG(0, __MMX__)                         \
@@ -737,6 +721,9 @@ namespace std::simd
     | _GLIBCXX_SIMD_ARCH_FLAG(37, __FMA4__)                   \
     | _GLIBCXX_SIMD_ARCH_FLAG(38, __XOP__)                    \
   }
+  // Should this include __APX_F__? I don't think it's relevant for use in constexpr-if branches =>
+  // no ODR issue? The same could be said about several other flags above that are not checked
+  // anywhere.
 
   struct _ArchTraits
   {
