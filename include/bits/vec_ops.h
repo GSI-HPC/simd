@@ -421,11 +421,6 @@ namespace std::simd
 
       [[__gnu__::__always_inline__]]
       static constexpr _TV
-      _S_broadcast(_Tp __init)
-      { return _TV {((void)_Is, __init)...}; }
-
-      [[__gnu__::__always_inline__]]
-      static constexpr _TV
       _S_broadcast_to_even(_Tp __init)
       { return _TV {((_Is & 1) == 0 ? __init : _Tp())...}; }
 
@@ -464,20 +459,6 @@ namespace std::simd
       _S_swap_neighbors(_TV __x)
       { return __builtin_shufflevector(__x, __x, (_Is ^ 1)...); }
 
-      [[__gnu__::__always_inline__]]
-      static constexpr _TV
-      _S_move_carry(_TV __x)
-      {
-        return __builtin_shufflevector(__x, _TV(), ((_Is & 1) == 0 ? __width_of<_TV>
-                                                                   : _Is - 1)...);
-      }
-
-      // duplicate each element, duplicating the vector in sizeof
-      [[__gnu__::__always_inline__]]
-      static constexpr _TV
-      _S_dup_each(_HV __x) requires (_Np > 1)
-      { return __builtin_shufflevector(__x, __x, (_Is >> 1)...); }
-
       // duplicate even indexed elements, dropping the odd ones
       [[__gnu__::__always_inline__]]
       static constexpr _TV
@@ -489,21 +470,6 @@ namespace std::simd
       static constexpr _TV
       _S_dup_odd(_TV __x)
       { return __builtin_shufflevector(__x, __x, (_Is | 1)...); }
-
-      // return even indexed elements alternating from x and y
-      [[__gnu__::__always_inline__]]
-      static constexpr _TV
-      _S_blend_even(_TV __x, _TV __y)
-      { return __builtin_shufflevector(__x, __y, ((_Is & ~1) + __width_of<_TV> * (_Is & 1))...); }
-
-      // return odd indexed elements alternating from x and y
-      [[__gnu__::__always_inline__]]
-      static constexpr _TV
-      _S_blend_odd(_TV __x, _TV __y)
-      {
-        return __builtin_shufflevector(__x, __y,
-                                       ((_Is & ~1) + 1 + __width_of<_TV> * (_Is & 1))...);
-      }
 
       [[__gnu__::__always_inline__]]
       static constexpr void
@@ -553,31 +519,6 @@ namespace std::simd
         __xh = __builtin_shufflevector(__xh, __y, ((_Is & 1) == 1 ? __nh + _Is / 2 : _Is)...);
       }
 
-      // implementation in bits/detail.h
-      [[__gnu__::__always_inline__]]
-      static constexpr _TV
-      _S_hadd(_TV __x, _TV __y);
-
-      [[__gnu__::__always_inline__]]
-      static constexpr _TV
-      _S_compress_even(__double_vec_builtin_t<_TV> __x)
-      { return __builtin_shufflevector(__x, __x, (_Is * 2)...); }
-
-      [[__gnu__::__always_inline__]]
-      static constexpr _TV
-      _S_compress_odd(__double_vec_builtin_t<_TV> __x)
-      { return __builtin_shufflevector(__x, __x, (_Is * 2 + 1)...); }
-
-      [[__gnu__::__always_inline__]]
-      static constexpr _TV
-      _S_compress_even(_TV __x, _TV __y)
-      { return __builtin_shufflevector(__x, __y, (_Is * 2)...); }
-
-      [[__gnu__::__always_inline__]]
-      static constexpr _TV
-      _S_compress_odd(_TV __x, _TV __y)
-      { return __builtin_shufflevector(__x, __y, (_Is * 2 + 1)...); }
-
       // negate every even element (real part of interleaved complex)
       [[__gnu__::__always_inline__]]
       static constexpr _TV
@@ -610,11 +551,6 @@ namespace std::simd
       _S_is_constprop_equal_to(_TV __x, _Tp __ref)
       { return (__is_constprop_equal_to(__x[_Is], __ref) and ...); }
 
-      [[__gnu__::__always_inline__]]
-      static constexpr bool
-      _S_complex_real_is_zero(_TV __x)
-      { return (((_Is & 1) == 1 or (__x[_Is] == _Tp())) and ...); }
-
       // True iff all elements at even indexes are zero. This includes signed zeros only when
       // -fno-signed-zeros is in effect.
       template <_OptTraits _Traits = {}>
@@ -632,21 +568,6 @@ namespace std::simd
             return (((_Is & 1) == 1 or __is_constprop_equal_to(__x[_Is], _Tp())) and ...);
       }
 
-      [[__gnu__::__always_inline__]]
-      static constexpr bool
-      _S_complex_real_is_one(_TV __x)
-      { return (((_Is & 1) == 1 or (__x[_Is] == _Tp(1))) and ...); }
-
-      [[__gnu__::__always_inline__]]
-      static constexpr bool
-      _S_complex_real_is_constprop_one(_TV __x)
-      { return (((_Is & 1) == 1 or __is_constprop_equal_to(__x[_Is], _Tp(1))) and ...); }
-
-      [[__gnu__::__always_inline__]]
-      static constexpr bool
-      _S_complex_imag_is_zero(_TV __x)
-      { return (((_Is & 1) == 0 or (__x[_Is] == _Tp())) and ...); }
-
       // True iff all elements at odd indexes are zero. This includes signed zeros only when
       // -fno-signed-zeros is in effect.
       template <_OptTraits _Traits = {}>
@@ -663,16 +584,6 @@ namespace std::simd
           else
             return (((_Is & 1) == 0 or __is_constprop_equal_to(__x[_Is], _Tp())) and ...);
         }
-
-      [[__gnu__::__always_inline__]]
-      static constexpr bool
-      _S_complex_imag_is_one(_TV __x)
-      { return (((_Is & 1) == 0 or (__x[_Is] == _Tp(1))) and ...); }
-
-      [[__gnu__::__always_inline__]]
-      static constexpr bool
-      _S_complex_imag_is_constprop_one(_TV __x)
-      { return (((_Is & 1) == 0 or __is_constprop_equal_to(__x[_Is], _Tp(1))) and ...); }
     };
 }
 
