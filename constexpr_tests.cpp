@@ -252,9 +252,6 @@ template <template <typename> class Tpl>
     Tpl<std::float64_t> s;
     Tpl<std::complex<std::float64_t>> sc;
 #endif
-#if SIMD_STD_BYTE
-    Tpl<std::byte> t;
-#endif
     Tpl<std::complex<float>> u;
     Tpl<std::complex<double>> v;
   };
