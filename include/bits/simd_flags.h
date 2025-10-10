@@ -22,11 +22,6 @@ namespace std::simd
     struct alignment
     {};
 
-  template <size_t _Bytes, typename _Abi>
-    struct alignment<basic_mask<_Bytes, _Abi>, bool>
-    : integral_constant<size_t, alignof(basic_mask<_Bytes, _Abi>)>
-    {};
-
   template <typename _Tp, typename _Abi, __vectorizable _Up>
     struct alignment<basic_vec<_Tp, _Abi>, _Up>
     : integral_constant<size_t, alignof(basic_vec<_Tp, _Abi>)>
@@ -67,7 +62,8 @@ namespace std::simd
           }
         else
           {
-            return static_cast<_Up*>(__builtin_assume_aligned(__ptr, simd::alignment_v<_Tp, _Up>));
+            return static_cast<_Up*>(__builtin_assume_aligned(
+                                       __ptr, simd::alignment_v<_Tp, remove_cv_t<_Up>>));
           }
       }
   };
