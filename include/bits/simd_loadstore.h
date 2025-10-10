@@ -1,0 +1,387 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later WITH GCC-exception-3.1 */
+/* Copyright © 2025      GSI Helmholtzzentrum fuer Schwerionenforschung GmbH
+ *                       Matthias Kretz <m.kretz@gsi.de>
+ */
+
+#ifndef _GLIBCXX_SIMD_LOADSTORE_H
+#define _GLIBCXX_SIMD_LOADSTORE_H 1
+
+#ifdef _GLIBCXX_SYSHDR
+#pragma GCC system_header
+#endif
+
+#if __cplusplus >= 202400L
+
+#include "simd_vec.h"
+
+// psabi warnings are bogus because the ABI of the internal types never leaks into user code
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpsabi"
+
+// [simd.reductions] ----------------------------------------------------------
+namespace std::simd
+{
+  template <typename _Vp, typename _Tp>
+    struct __vec_load_return
+    { using type = _Vp; };
+
+  template <typename _Tp>
+    struct __vec_load_return<void, _Tp>
+    { using type = basic_vec<_Tp>; };
+
+  template <typename _Vp, typename _Tp>
+    using __vec_load_return_t = typename __vec_load_return<_Vp, _Tp>::type;
+
+  template <typename _Vp, typename _Tp>
+    using __load_mask_type_t = typename __vec_load_return_t<_Vp, _Tp>::mask_type;
+
+  template <typename _Tp>
+    concept __sized_contiguous_range
+      = ranges::contiguous_range<_Tp> and ranges::sized_range<_Tp>;
+
+  template <typename _Vp = void, __sized_contiguous_range _Rg, typename... _Flags>
+    [[__gnu__::__always_inline__]]
+    constexpr __vec_load_return_t<_Vp, ranges::range_value_t<_Rg>>
+    unchecked_load(_Rg&& __r, flags<_Flags...> __f = {})
+    {
+      using _Tp = ranges::range_value_t<_Rg>;
+      using _RV = __vec_load_return_t<_Vp, _Tp>;
+      using _Rp = typename _RV::value_type;
+      static_assert(__loadstore_convertible_to<ranges::range_value_t<_Rg>, _Rp, _Flags...>,
+                    "The converting load is not value-preserving. "
+                    "Pass 'flag_convert' if lossy conversion matches the intent.");
+
+      constexpr bool __allow_out_of_bounds
+        = (... or is_same_v<_Flags, __partial_loadstore_flag>);
+      constexpr size_t __static_size = __static_range_size(__r);
+
+      static_assert(__static_size >= _RV::size.value or __allow_out_of_bounds
+                      or __static_size == dynamic_extent, "Out-of-bounds simd load");
+
+      const auto* __ptr = __f.template _S_adjust_pointer<_RV>(ranges::data(__r));
+      const auto __rg_size = std::ranges::size(__r);
+      if constexpr (not __allow_out_of_bounds)
+        __glibcxx_simd_precondition(
+          std::ranges::size(__r) >= _RV::size(),
+          "Input range is too small. Did you mean to use 'partial_load'?");
+
+      if consteval
+        {
+          if constexpr (__complex_like<_Rp> and not __complex_like<_Tp>)
+            return _RV([&](size_t __i) {
+                     return __i < __rg_size ? static_cast<typename _Rp::value_type>(__r[__i])
+                                            : _Rp();
+                   });
+          else
+            return _RV([&](size_t __i) {
+                     return __i < __rg_size ? static_cast<_Rp>(__r[__i]) : _Rp();
+                   });
+        }
+      else
+        {
+          if constexpr ((__static_size != dynamic_extent and __static_size >= size_t(_RV::size()))
+                          or not __allow_out_of_bounds)
+            return _RV(_LoadCtorTag(), __ptr);
+          else
+            return _RV::_S_partial_load(__ptr, __rg_size);
+        }
+    }
+
+  template <typename _Vp = void, __sized_contiguous_range _Rg, typename... _Flags>
+    [[__gnu__::__always_inline__]]
+    constexpr __vec_load_return_t<_Vp, ranges::range_value_t<_Rg>>
+    unchecked_load(_Rg&& __r, const __load_mask_type_t<_Vp, ranges::range_value_t<_Rg>>& __mask,
+                   flags<_Flags...> __f = {})
+    {
+      using _RV = __vec_load_return_t<_Vp, ranges::range_value_t<_Rg>>;
+      using _Rp = typename _RV::value_type;
+      static_assert(__loadstore_convertible_to<ranges::range_value_t<_Rg>, _Rp, _Flags...>,
+                    "The converting load is not value-preserving. "
+                    "Pass 'flag_convert' if lossy conversion matches the intent.");
+
+      constexpr bool __allow_out_of_bounds = (... or is_same_v<_Flags, __partial_loadstore_flag>);
+      constexpr auto __static_size = __static_range_size(__r);
+
+      static_assert(__static_size >= _RV::size.value or __allow_out_of_bounds
+                      or __static_size == dynamic_extent, "Out-of-bounds simd load");
+
+      const auto* __ptr = __f.template _S_adjust_pointer<_RV>(ranges::data(__r));
+
+      if constexpr (not __allow_out_of_bounds)
+        __glibcxx_simd_precondition(
+          ranges::size(__r) >= size_t(_RV::size()),
+          "Input range is too small. Did you mean to use 'partial_load'?");
+
+      const size_t __rg_size = ranges::size(__r);
+      if (__builtin_is_constant_evaluated())
+        {
+          if constexpr (__allow_out_of_bounds)
+            return _RV([&](size_t __i) { return __i < __rg_size and __mask[int(__i)] ? __r[__i]
+                                                                                     : _Rp(); });
+          else
+            return _RV([&](size_t __i) { return __mask[int(__i)] ? __r[__i] : _Rp(); });
+        }
+      else if constexpr (not __allow_out_of_bounds
+                           or (__static_size != dynamic_extent
+                                 and __static_size >= size_t(_RV::size.value)))
+        return _RV::_S_masked_load(__ptr, __mask);
+      else if (__rg_size >= size_t(_RV::size()))
+        return _RV::_S_masked_load(__ptr, __mask);
+      else if (__rg_size > 0)
+        return _RV::_S_masked_load(
+                 __ptr, __mask and _RV::mask_type::_S_partial_mask_of_n(int(__rg_size)));
+      else
+        return _RV();
+    }
+
+  template <typename _Vp = void, contiguous_iterator _It, typename... _Flags>
+    [[__gnu__::__always_inline__]]
+    constexpr __vec_load_return_t<_Vp, iter_value_t<_It>>
+    unchecked_load(_It __first, iter_difference_t<_It> __n, flags<_Flags...> __f = {})
+    { return unchecked_load<_Vp>(span<const iter_value_t<_It>>(__first, __n), __f); }
+
+  template <typename _Vp = void, contiguous_iterator _It, typename... _Flags>
+    [[__gnu__::__always_inline__]]
+    constexpr __vec_load_return_t<_Vp, iter_value_t<_It>>
+    unchecked_load(_It __first, iter_difference_t<_It> __n,
+                   const __load_mask_type_t<_Vp, iter_value_t<_It>>& __mask,
+                   flags<_Flags...> __f = {})
+    { return unchecked_load<_Vp>(span<const iter_value_t<_It>>(__first, __n), __mask, __f); }
+
+  template <typename _Vp = void, contiguous_iterator _It, sized_sentinel_for<_It> _Sp,
+            typename... _Flags>
+    [[__gnu__::__always_inline__]]
+    constexpr __vec_load_return_t<_Vp, iter_value_t<_It>>
+    unchecked_load(_It __first, _Sp __last, flags<_Flags...> __f = {})
+    { return unchecked_load<_Vp>(span<const iter_value_t<_It>>(__first, __last), __f); }
+
+  template <typename _Vp = void, contiguous_iterator _It, sized_sentinel_for<_It> _Sp,
+            typename... _Flags>
+    [[__gnu__::__always_inline__]]
+    constexpr __vec_load_return_t<_Vp, iter_value_t<_It>>
+    unchecked_load(_It __first, _Sp __last,
+                   const __load_mask_type_t<_Vp, iter_value_t<_It>>& __mask,
+                   flags<_Flags...> __f = {})
+    { return unchecked_load<_Vp>(span<const iter_value_t<_It>>(__first, __last), __mask, __f); }
+
+  template <typename _Vp = void, __sized_contiguous_range _Rg, typename... _Flags>
+    [[__gnu__::__always_inline__]]
+    constexpr __vec_load_return_t<_Vp, ranges::range_value_t<_Rg>>
+    partial_load(_Rg&& __r, flags<_Flags...> __f = {})
+    { return unchecked_load<_Vp>(__r, __f | __allow_partial_loadstore); }
+
+  template <typename _Vp = void, __sized_contiguous_range _Rg, typename... _Flags>
+    [[__gnu__::__always_inline__]]
+    constexpr __vec_load_return_t<_Vp, ranges::range_value_t<_Rg>>
+    partial_load(_Rg&& __r, const __load_mask_type_t<_Vp, ranges::range_value_t<_Rg>>& __mask,
+                 flags<_Flags...> __f = {})
+    { return unchecked_load<_Vp>(__r, __mask, __f | __allow_partial_loadstore); }
+
+  template <typename _Vp = void, contiguous_iterator _It, typename... _Flags>
+    [[__gnu__::__always_inline__]]
+    constexpr __vec_load_return_t<_Vp, iter_value_t<_It>>
+    partial_load(_It __first, iter_difference_t<_It> __n, flags<_Flags...> __f = {})
+    { return partial_load<_Vp>(span<const iter_value_t<_It>>(__first, __n), __f); }
+
+  template <typename _Vp = void, contiguous_iterator _It, typename... _Flags>
+    [[__gnu__::__always_inline__]]
+    constexpr __vec_load_return_t<_Vp, iter_value_t<_It>>
+    partial_load(_It __first, iter_difference_t<_It> __n,
+                 const __load_mask_type_t<_Vp, iter_value_t<_It>>& __mask,
+                 flags<_Flags...> __f = {})
+    { return partial_load<_Vp>(span<const iter_value_t<_It>>(__first, __n), __mask, __f); }
+
+  template <typename _Vp = void, contiguous_iterator _It, sized_sentinel_for<_It> _Sp,
+            typename... _Flags>
+    [[__gnu__::__always_inline__]]
+    constexpr __vec_load_return_t<_Vp, iter_value_t<_It>>
+    partial_load(_It __first, _Sp __last, flags<_Flags...> __f = {})
+    { return partial_load<_Vp>(span<const iter_value_t<_It>>(__first, __last), __f); }
+
+  template <typename _Vp = void, contiguous_iterator _It, sized_sentinel_for<_It> _Sp,
+            typename... _Flags>
+    [[__gnu__::__always_inline__]]
+    constexpr __vec_load_return_t<_Vp, iter_value_t<_It>>
+    partial_load(_It __first, _Sp __last, const __load_mask_type_t<_Vp, iter_value_t<_It>>& __mask,
+                 flags<_Flags...> __f = {})
+    { return partial_load<_Vp>(span<const iter_value_t<_It>>(__first, __last), __mask, __f); }
+
+  template <typename _Tp, typename _Ap, __sized_contiguous_range _Rg, typename... _Flags>
+    requires indirectly_writable<ranges::iterator_t<_Rg>, _Tp>
+    [[__gnu__::__always_inline__]]
+    constexpr void
+    unchecked_store(const basic_vec<_Tp, _Ap>& __v, _Rg&& __r, flags<_Flags...> __f = {})
+    {
+      using _TV = basic_vec<_Tp, _Ap>;
+      static_assert(destructible<_TV>);
+      static_assert(__loadstore_convertible_to<_Tp, ranges::range_value_t<_Rg>, _Flags...>,
+                    "The converting store is not value-preserving. "
+                    "Pass 'flag_convert' if lossy conversion matches the intent.");
+
+      constexpr bool __allow_out_of_bounds = (... or is_same_v<_Flags, __partial_loadstore_flag>);
+      constexpr auto __static_size = __static_range_size(__r);
+
+      static_assert(__static_size >= _TV::size.value or __allow_out_of_bounds
+                      or __static_size == dynamic_extent, "Out-of-bounds simd store");
+
+      auto* __ptr = __f.template _S_adjust_pointer<_TV>(ranges::data(__r));
+      const auto __rg_size = ranges::size(__r);
+      if constexpr (not __allow_out_of_bounds)
+        __glibcxx_simd_precondition(
+          ranges::size(__r) >= _TV::size(),
+          "output range is too small. Did you mean to use 'partial_store'?");
+
+      if (__builtin_is_constant_evaluated())
+        {
+          for (unsigned __i = 0; __i < (__allow_out_of_bounds ? __rg_size : _TV::size()); ++__i)
+            __ptr[__i] = static_cast<ranges::range_value_t<_Rg>>(__v[__i]);
+        }
+      else if constexpr ((__static_size != dynamic_extent and __static_size >= _TV::size())
+                        or not __allow_out_of_bounds)
+        __v._M_store(__ptr);
+      else if (__builtin_constant_p(__rg_size))
+        {
+          if (__rg_size >= _TV::size())
+            __v._M_store(__ptr);
+          else
+            {
+              for (unsigned __i = 0; __i < __rg_size; ++__i)
+                __ptr[__i] = static_cast<std::ranges::range_value_t<_Rg>>(__v[__i]);
+            }
+        }
+      else
+        _TV::_S_partial_store(__v, __ptr, __rg_size);
+    }
+
+  template <typename _Tp, typename _Ap, __sized_contiguous_range _Rg, typename... _Flags>
+    requires indirectly_writable<ranges::iterator_t<_Rg>, _Tp>
+    [[__gnu__::__always_inline__]]
+    constexpr void
+    unchecked_store(const basic_vec<_Tp, _Ap>& __v, _Rg&& __r,
+                    const typename basic_vec<_Tp, _Ap>::mask_type& __mask,
+                    flags<_Flags...> __f = {})
+    {
+      using _TV = basic_vec<_Tp, _Ap>;
+      static_assert(__loadstore_convertible_to<_Tp, ranges::range_value_t<_Rg>, _Flags...>,
+                    "The converting store is not value-preserving. "
+                    "Pass 'flag_convert' if lossy conversion matches the intent.");
+
+      constexpr bool __allow_out_of_bounds = (... or is_same_v<_Flags, __partial_loadstore_flag>);
+      constexpr auto __static_size = __static_range_size(__r);
+
+      static_assert(__static_size >= _TV::size.value or __allow_out_of_bounds
+                      or __static_size == dynamic_extent, "Out-of-bounds simd store");
+
+      auto* __ptr = __f.template _S_adjust_pointer<_TV>(ranges::data(__r));
+
+      if constexpr (not __allow_out_of_bounds)
+        __glibcxx_simd_precondition(
+          ranges::size(__r) >= size_t(_TV::size()),
+          "output range is too small. Did you mean to use 'partial_store'?");
+
+      const size_t __rg_size = ranges::size(__r);
+      if (__builtin_is_constant_evaluated())
+        {
+          for (int __i = 0; __i < _TV::size(); ++__i)
+            {
+              if (__mask[__i] and (not __allow_out_of_bounds or size_t(__i) < __rg_size))
+                __ptr[__i] = static_cast<ranges::range_value_t<_Rg>>(__v[__i]);
+            }
+        }
+      else if (__allow_out_of_bounds && __rg_size < size_t(_TV::size()))
+        _TV::_S_masked_store(__v, __ptr,
+                             __mask && _TV::mask_type::_S_partial_mask_of_n(int(__rg_size)));
+      else
+        _TV::_S_masked_store(__v, __ptr, __mask);
+    }
+
+  template <typename _Tp, typename _Ap, contiguous_iterator _It, typename... _Flags>
+    requires indirectly_writable<_It, _Tp>
+    [[__gnu__::__always_inline__]]
+    constexpr void
+    unchecked_store(const basic_vec<_Tp, _Ap>& __v, _It __first,
+                    iter_difference_t<_It> __n, flags<_Flags...> __f = {})
+    { unchecked_store(__v, std::span<iter_value_t<_It>>(__first, __n), __f); }
+
+  template <typename _Tp, typename _Ap, contiguous_iterator _It, typename... _Flags>
+    requires indirectly_writable<_It, _Tp>
+    [[__gnu__::__always_inline__]]
+    constexpr void
+    unchecked_store(const basic_vec<_Tp, _Ap>& __v, _It __first, iter_difference_t<_It> __n,
+                    const typename basic_vec<_Tp, _Ap>::mask_type& __mask,
+                    flags<_Flags...> __f = {})
+    { unchecked_store(__v, std::span<iter_value_t<_It>>(__first, __n), __mask, __f); }
+
+  template <typename _Tp, typename _Ap, contiguous_iterator _It, sized_sentinel_for<_It> _Sp,
+            typename... _Flags>
+    requires indirectly_writable<_It, _Tp>
+    [[__gnu__::__always_inline__]]
+    constexpr void
+    unchecked_store(const basic_vec<_Tp, _Ap>& __v, _It __first, _Sp __last,
+                    flags<_Flags...> __f = {})
+    { unchecked_store(__v, std::span<iter_value_t<_It>>(__first, __last), __f); }
+
+  template <typename _Tp, typename _Ap, contiguous_iterator _It, sized_sentinel_for<_It> _Sp,
+            typename... _Flags>
+    requires indirectly_writable<_It, _Tp>
+    [[__gnu__::__always_inline__]]
+    constexpr void
+    unchecked_store(const basic_vec<_Tp, _Ap>& __v, _It __first, _Sp __last,
+                    const typename basic_vec<_Tp, _Ap>::mask_type& __mask,
+                    flags<_Flags...> __f = {})
+    { unchecked_store(__v, std::span<iter_value_t<_It>>(__first, __last), __mask, __f); }
+
+  template <typename _Tp, typename _Ap, __sized_contiguous_range _Rg, typename... _Flags>
+    requires indirectly_writable<ranges::iterator_t<_Rg>, _Tp>
+    [[__gnu__::__always_inline__]]
+    constexpr void
+    partial_store(const basic_vec<_Tp, _Ap>& __v, _Rg&& __r, flags<_Flags...> __f = {})
+    { unchecked_store(__v, __r, __f | __allow_partial_loadstore); }
+
+  template <typename _Tp, typename _Ap, __sized_contiguous_range _Rg, typename... _Flags>
+    requires indirectly_writable<ranges::iterator_t<_Rg>, _Tp>
+    [[__gnu__::__always_inline__]]
+    constexpr void
+    partial_store(const basic_vec<_Tp, _Ap>& __v, _Rg&& __r,
+                  const typename basic_vec<_Tp, _Ap>::mask_type& __mask,
+                  flags<_Flags...> __f = {})
+    { unchecked_store(__v, __r, __mask, __f | __allow_partial_loadstore); }
+
+  template <typename _Tp, typename _Ap, contiguous_iterator _It, typename... _Flags>
+    requires indirectly_writable<_It, _Tp>
+    [[__gnu__::__always_inline__]]
+    constexpr void
+    partial_store(const basic_vec<_Tp, _Ap>& __v, _It __first, iter_difference_t<_It> __n,
+                  flags<_Flags...> __f = {})
+    { partial_store(__v, span(__first, __n), __f); }
+
+  template <typename _Tp, typename _Ap, contiguous_iterator _It, typename... _Flags>
+    requires indirectly_writable<_It, _Tp>
+    [[__gnu__::__always_inline__]]
+    constexpr void
+    partial_store(const basic_vec<_Tp, _Ap>& __v, _It __first, iter_difference_t<_It> __n,
+                  const typename basic_vec<_Tp, _Ap>::mask_type& __mask, flags<_Flags...> __f = {})
+    { partial_store(__v, span(__first, __n), __mask, __f); }
+
+  template <typename _Tp, typename _Ap, contiguous_iterator _It, sized_sentinel_for<_It> _Sp,
+            typename... _Flags>
+    requires indirectly_writable<_It, _Tp>
+    [[__gnu__::__always_inline__]]
+    constexpr void
+    partial_store(const basic_vec<_Tp, _Ap>& __v, _It __first, _Sp __last,
+                  flags<_Flags...> __f = {})
+    { partial_store(__v, span(__first, __last), __f); }
+
+  template <typename _Tp, typename _Ap, contiguous_iterator _It, sized_sentinel_for<_It> _Sp,
+            typename... _Flags>
+    requires indirectly_writable<_It, _Tp>
+    [[__gnu__::__always_inline__]]
+    constexpr void
+    partial_store(const basic_vec<_Tp, _Ap>& __v, _It __first, _Sp __last,
+                  const typename basic_vec<_Tp, _Ap>::mask_type& __mask, flags<_Flags...> __f = {})
+    { partial_store(__v, span(__first, __last), __mask, __f); }
+}
+
+#pragma GCC diagnostic pop
+#endif // C++26
+#endif // _GLIBCXX_SIMD_LOADSTORE_H

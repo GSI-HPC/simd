@@ -1223,17 +1223,23 @@ namespace std::simd
     concept __static_sized_range
       = ranges::contiguous_range<_Tp> and ranges::sized_range<_Tp>
           and requires(_Tp&& __r) {
-#if 1 // PR117849
             typename integral_constant<size_t, ranges::size(__r)>;
-#else
-            requires (decltype(std::span(__r))::extent != dynamic_extent);
-#endif
 #ifdef __clang__
             requires (_Np == 0 or ranges::size(__static_sized_range_obj<_Tp>) == _Np);
 #else
             requires (_Np == 0 or ranges::size(__r) == _Np);
 #endif
           };
+
+  template <typename _Rg>
+    consteval size_t
+    __static_range_size(_Rg&& __r)
+    {
+      if constexpr (requires { typename integral_constant<size_t, ranges::size(__r)>; })
+        return ranges::size(__r);
+      else
+        return dynamic_extent;
+    }
 
   // [simd.general] value-reserving
   template <typename _From, typename _To>
@@ -1568,6 +1574,116 @@ namespace std::simd
       _T0 _M_first;
       _T1 _M_second;
     };
+
+  template <typename _From, typename _To>
+    concept __converts_trivially = convertible_to<_From, _To>
+                                     and sizeof(_From) == sizeof(_To)
+                                     and is_integral_v<_From> == is_integral_v<_To>
+                                     and is_floating_point_v<_From> == is_floating_point_v<_To>;
+
+  [[__gnu__::__always_inline__]]
+  constexpr void
+  __bit_foreach(unsigned_integral auto __bits, auto&& __fun)
+  {
+    static_assert(sizeof(__bits) >= sizeof(int)); // avoid promotion to int
+    while (__bits)
+      {
+        __fun(__countr_zero(__bits));
+        __bits &= (__bits - 1);
+      }
+  }
+
+  /** @internal
+   * Optimized memcpy for use in partial loads and stores.
+   *
+   * @tparam _Chunk   Copies @p __n times @p _Chunk bytes.
+   * @tparam _Max     Copy no more than @p _Max bytes.
+   *
+   * @param  __dst    The destination pointer.
+   * @param  __src    The source pointer.
+   * @param  __n      Thu number of chunks that need to be copied.
+   */
+  template <size_t _Chunk, size_t _Max>
+    inline void
+    __memcpy_chunks(byte* __restrict__ __dst, const byte* __restrict__ __src,
+                    size_t __n)
+    {
+      static_assert(_Max <= 64);
+      static_assert(__has_single_bit(_Chunk) and _Chunk <= 8);
+      size_t __bytes = _Chunk * __n;
+      if (__bytes > 32 and _Max > 32)
+        {
+          __builtin_memcpy(__dst, __src, 32);
+          __bytes -= 32;
+          __builtin_memcpy(__dst + __bytes, __src + __bytes, 32);
+        }
+      else if (__bytes > 16 and _Max > 16)
+        {
+          __builtin_memcpy(__dst, __src, 16);
+          if constexpr (_Chunk == 8)
+            {
+              __bytes -= 8;
+              __builtin_memcpy(__dst + __bytes, __src + __bytes, 8);
+            }
+          else
+            {
+              __bytes -= 16;
+              __builtin_memcpy(__dst + __bytes, __src + __bytes, 16);
+            }
+        }
+      else if (__bytes > 8 and _Max > 8)
+        {
+          __builtin_memcpy(__dst, __src, 8);
+          if constexpr (_Chunk == 4)
+            {
+              __bytes -= 4;
+              __builtin_memcpy(__dst + __bytes, __src + __bytes, 4);
+            }
+          else if constexpr (_Chunk < 4)
+            {
+              __bytes -= 8;
+              __builtin_memcpy(__dst + __bytes, __src + __bytes, 8);
+            }
+        }
+      else if (__bytes > 4 and _Max > 4)
+        {
+          __builtin_memcpy(__dst, __src, 4);
+          if constexpr (_Chunk == 2)
+            {
+              __bytes -= 2;
+              __builtin_memcpy(__dst + __bytes, __src + __bytes, 2);
+            }
+          else if constexpr (_Chunk == 1)
+            {
+              __bytes -= 4;
+              __builtin_memcpy(__dst + __bytes, __src + __bytes, 4);
+            }
+        }
+      else if (__bytes >= 2)
+        {
+          __builtin_memcpy(__dst, __src, 2);
+          if constexpr (_Chunk == 2)
+            {
+              __bytes -= 2;
+              __builtin_memcpy(__dst + __bytes, __src + __bytes, 2);
+            }
+          else if constexpr (_Chunk == 1)
+            {
+              __bytes -= 1;
+              __builtin_memcpy(__dst + __bytes, __src + __bytes, 1);
+            }
+        }
+      else if (__bytes == 1)
+        __builtin_memcpy(__dst, __src, 1);
+    }
+
+  [[__gnu__::__always_inline__]]
+  constexpr bool
+  __ptr_is_aligned_to(const void* __ptr, size_t __align)
+  {
+    const auto __addr = __builtin_bit_cast(__UINTPTR_TYPE__, __ptr);
+    return (__addr % __align) == 0;
+  }
 }
 
 #pragma GCC diagnostic pop

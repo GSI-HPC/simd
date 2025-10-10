@@ -906,6 +906,210 @@ namespace std::simd
                    });
         }
 
+      /** @internal
+       * Implementation of @ref partial_load.
+       *
+       * @param __mem  A pointer to an array of @p __n values. Can be complex or real.
+       * @param __n    Read no more than @p __n values from memory. However, depending on @p __mem
+       *               alignment, out of bounds reads are benign.
+       */
+      template <typename _Up, _ArchTraits _Traits = {}>
+        static inline basic_vec
+        _S_partial_load(const _Up* __mem, size_t __n)
+        {
+          if constexpr (_S_is_scalar)
+            return __n == 0 ? basic_vec() : basic_vec(static_cast<value_type>(*__mem));
+          else if constexpr (__converts_trivially<_Up, value_type>)
+            {
+#if _GLIBCXX_X86
+              if constexpr (_Traits._M_have_avx512f()
+                              or (_Traits._M_have_avx() and sizeof(_Up) >= 4))
+                {
+                  const auto __k = __n < _S_size ? mask_type::_S_partial_mask_of_n(int(__n))
+                                                 : mask_type(true);
+                  return _S_masked_load(__mem, mask_type::_S_partial_mask_of_n(int(__n)));
+                }
+#endif
+              if (__n >= size_t(_S_size)) [[unlikely]]
+                return basic_vec(_LoadCtorTag(), __mem);
+#if _GLIBCXX_X86 // TODO: where else is this "safe"?
+              // allow out-of-bounds read when it cannot lead to a #GP
+              else if (__is_constprop_equal_to(
+                         __ptr_is_aligned_to(__mem, sizeof(_Up) * _S_full_size), true))
+                return __select_impl(mask_type::_S_partial_mask_of_n(int(__n)),
+                                     basic_vec(_LoadCtorTag(), __mem), basic_vec());
+#endif
+              else if constexpr (_S_size > 4)
+                {
+                  alignas(_DataType) byte __dst[sizeof(_DataType)] = {};
+                  const byte* __src = reinterpret_cast<const byte*>(__mem);
+                  __memcpy_chunks<sizeof(_Up), sizeof(_DataType)>(__dst, __src, __n);
+                  return __builtin_bit_cast(_DataType, __dst);
+                }
+              else if (__n == 0) [[unlikely]]
+                return basic_vec();
+              else if constexpr (_S_size == 2)
+                return _DataType {static_cast<value_type>(__mem[0]), 0};
+              else
+                {
+                  constexpr auto [...__is] = __iota<int[_S_size - 2]>;
+                  return _DataType{
+                    static_cast<value_type>(__mem[0]),
+                    static_cast<value_type>(__is + 1 < __n ? __mem[__is + 1] : 0)...
+                  };
+                }
+            }
+          else
+            return static_cast<basic_vec>(rebind_t<_Up, basic_vec>::_S_partial_load(__mem, __n));
+        }
+
+      /** @internal
+       * Implementation of @ref masked_load.
+       */
+      template <typename _Up, _ArchTraits _Traits = {}>
+        static inline basic_vec
+        _S_masked_load(const _Up* __mem, mask_type __k)
+        {
+#if _GLIBCXX_X86
+          if constexpr (_Traits._M_have_avx512f())
+            return __x86_masked_load<_DataType>(__mem, __k._M_data);
+          else if constexpr (_Traits._M_have_avx() and (sizeof(_Up) == 4 or sizeof(_Up) == 8))
+            {
+              if constexpr (__converts_trivially<_Up, value_type>)
+                return __x86_masked_load<_DataType>(__mem, __k._M_data);
+              else
+                {
+                  using _UV = rebind_t<_Up, basic_vec>;
+                  return basic_vec(_UV::_S_masked_load(__mem, typename _UV::mask_type(__k)));
+                }
+            }
+#endif
+          if (__k._M_none_of()) [[unlikely]]
+            return basic_vec();
+          else if constexpr (_S_is_scalar)
+            return basic_vec(static_cast<value_type>(*__mem));
+          else
+            {
+              // Use at least 4-byte __bits in __bit_foreach for better code-gen
+              _Bitmask<_S_size < 32 ? 32 : _S_size> __bits = __k._M_to_uint();
+              [[assume(__bits != 0)]]; // because of '__k._M_none_of()' branch above
+              if constexpr (__converts_trivially<_Up, value_type>)
+                {
+                  _DataType __r = {};
+                  __bit_foreach(__bits, [&] [[__gnu__::__always_inline__]] (int __i) {
+                    __r[__i] = __mem[__i];
+                  });
+                  return __r;
+                }
+              else
+                {
+                  using _UV = rebind_t<_Up, basic_vec>;
+                  alignas(_UV) _Up __tmp[sizeof(_UV) / sizeof(_Up)] = {};
+                  __bit_foreach(__bits, [&] [[__gnu__::__always_inline__]] (int __i) {
+                    __tmp[__i] = __mem[__i];
+                  });
+                  return basic_vec(__builtin_bit_cast(_UV, __tmp));
+                }
+            }
+        }
+
+      template <typename _Up>
+        [[__gnu__::__always_inline__]]
+        inline void
+        _M_store(_Up* __mem) const
+        {
+          if constexpr (__converts_trivially<value_type, _Up>)
+            __builtin_memcpy(__mem, &_M_data, sizeof(_Up) * _S_size);
+          else
+            rebind_t<_Up, basic_vec>(*this)._M_store(__mem);
+        }
+
+      /** @internal
+       * Implementation of @ref partial_store.
+       *
+       * @note This is a static function to allow passing @p __v via register in case the function
+       * is not inlined.
+       *
+       * @note The function is not marked @c __always_inline__ since code-gen can become fairly
+       * long.
+       */
+      template <typename _Up, _ArchTraits _Traits = {}>
+        static inline void
+        _S_partial_store(const basic_vec __v, _Up* __mem, size_t __n)
+        {
+#if _GLIBCXX_X86
+          if constexpr (_Traits._M_have_avx512f() and not _S_is_scalar)
+            {
+              const auto __k = __n < _S_size ? mask_type::_S_partial_mask_of_n(int(__n))
+                                             : mask_type(true);
+              return _S_masked_store(__v, __mem, __k);
+            }
+#endif
+          if (__n >= _S_size) [[unlikely]]
+            __v._M_store(__mem);
+          else if (__n == 0) [[unlikely]]
+            return;
+          else if constexpr (__converts_trivially<value_type, _Up>)
+            {
+              byte* __dst = reinterpret_cast<byte*>(__mem);
+              const byte* __src = reinterpret_cast<const byte*>(&__v._M_data);
+              __memcpy_chunks<sizeof(_Up), sizeof(_M_data)>(__dst, __src, __n);
+            }
+          else
+            {
+              using _UV = rebind_t<_Up, basic_vec>;
+              _UV::_S_partial_store(_UV(__v), __mem, __n);
+            }
+        }
+
+      template <typename _Up, _ArchTraits _Traits = {}>
+        //[[__gnu__::__always_inline__]]
+        static inline void
+        _S_masked_store(const basic_vec __v, _Up* __mem, const mask_type __k)
+        {
+#if _GLIBCXX_X86
+          if constexpr (_Traits._M_have_avx512f())
+            {
+              __x86_masked_store(__v._M_data, __mem, __k._M_data);
+              return;
+            }
+          else if constexpr (_Traits._M_have_avx() and (sizeof(_Up) == 4 or sizeof(_Up) == 8))
+            {
+              if constexpr (__converts_trivially<value_type, _Up>)
+                __x86_masked_store(__v._M_data, __mem, __k._M_data);
+              else
+                {
+                  using _UV = rebind_t<_Up, basic_vec>;
+                  _UV::_S_masked_store(_UV(__v), __mem, typename _UV::mask_type(__k));
+                }
+              return;
+            }
+#endif
+          if (__k._M_none_of()) [[unlikely]]
+            return;
+          else if constexpr (_S_is_scalar)
+            __mem[0] = __v._M_data;
+          else
+            {
+              // Use at least 4-byte __bits in __bit_foreach for better code-gen
+              _Bitmask<_S_size < 32 ? 32 : _S_size> __bits = __k._M_to_uint();
+              [[assume(__bits != 0)]]; // because of '__k._M_none_of()' branch above
+              if constexpr (__converts_trivially<value_type, _Up>)
+                {
+                  __bit_foreach(__bits, [&] [[__gnu__::__always_inline__]] (int __i) {
+                    __mem[__i] = __v[__i];
+                  });
+                }
+              else
+                {
+                  const rebind_t<_Up, basic_vec> __cvted(__v);
+                  __bit_foreach(__bits, [&] [[__gnu__::__always_inline__]] (int __i) {
+                    __mem[__i] = __cvted[__i];
+                  });
+                }
+            }
+        }
+
       // [simd.overview] default constructor ----------------------------------
       basic_vec() = default;
 
@@ -987,11 +1191,9 @@ namespace std::simd
           else if (__builtin_is_constant_evaluated())
             {
               constexpr auto [...__is] = __iota<int[_S_size]>;
-              _M_data = _DataType{__ptr[__is]...};
+              _M_data = _DataType{static_cast<value_type>(__ptr[__is])...};
             }
-          else if constexpr (is_integral_v<_Up> == is_integral_v<value_type>
-                               and is_floating_point_v<_Up> == is_floating_point_v<value_type>
-                               and sizeof(_Up) == sizeof(value_type))
+          else if constexpr (__converts_trivially<_Up, value_type>)
             {
               // This assumes std::floatN_t to be bitwise equal to float/double
               __builtin_memcpy(&_M_data, __ptr, sizeof(value_type) * _S_size);
@@ -1796,6 +1998,61 @@ namespace std::simd
       constexpr basic_vec
       _M_fabs() const
       { return _S_init(_M_data0._M_fabs(), _M_data1._M_fabs()); }
+
+      template <typename _Up>
+        [[__gnu__::__always_inline__]]
+        static inline basic_vec
+        _S_partial_load(const _Up* __mem, size_t __n)
+        {
+          if (__n >= _N0)
+            return _S_init(_DataType0(_LoadCtorTag(), __mem),
+                           _DataType1::_S_partial_load(__mem + _N0, __n - _N0));
+          else
+            return _S_init(_DataType0::_S_partial_load(__mem, __n),
+                           _DataType1());
+        }
+
+      template <typename _Up, _ArchTraits _Traits = {}>
+        static inline basic_vec
+        _S_masked_load(const _Up* __mem, mask_type __k)
+        {
+          return _S_init(_DataType0::_S_masked_load(__mem, __k._M_data0),
+                         _DataType1::_S_masked_load(__mem + _N0, __k._M_data1));
+        }
+
+      template <typename _Up>
+        [[__gnu__::__always_inline__]]
+        inline void
+        _M_store(_Up* __mem) const
+        {
+          _M_data0._M_store(__mem);
+          _M_data1._M_store(__mem + _N0);
+        }
+
+      template <typename _Up>
+        [[__gnu__::__always_inline__]]
+        static inline void
+        _S_partial_store(const basic_vec& __v, _Up* __mem, size_t __n)
+        {
+          if (__n >= _N0)
+            {
+              __v._M_data0._M_store(__mem);
+              _DataType1::_S_partial_store(__v._M_data1, __mem + _N0, __n - _N0);
+            }
+          else
+            {
+              _DataType0::_S_partial_store(__v._M_data0, __mem, __n);
+            }
+        }
+
+      template <typename _Up>
+        [[__gnu__::__always_inline__]]
+        static inline void
+        _S_masked_store(const basic_vec& __v, _Up* __mem, const mask_type& __k)
+        {
+          _DataType0::_S_masked_store(__v._M_data0, __mem, __k._M_data0);
+          _DataType1::_S_masked_store(__v._M_data1, __mem + _N0, __k._M_data1);
+        }
 
       basic_vec() = default;
 

@@ -7,6 +7,7 @@
 #define SIMD_
 
 #include "bits/simd_vec.h"
+#include "bits/simd_loadstore.h"
 #include "bits/simd_mask_reductions.h"
 #include "bits/simd_reductions.h"
 #include "bits/simd_alg.h"

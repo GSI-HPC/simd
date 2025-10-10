@@ -97,15 +97,15 @@ namespace std::simd
         }
     };
 
+  struct __partial_loadstore_flag
+  : _LoadStoreTag
+  {};
+
 #if 0
   template <typename _To>
     struct __convert_to_flag
     : _LoadStoreTag
     { using type = _To; };
-
-  struct __partial_loadstore_flag
-  : _LoadStoreTag
-  {};
 
   struct __throw_flag
   : _LoadStoreTag
@@ -241,12 +241,15 @@ namespace std::simd
     requires(__has_single_bit(_Np))
     inline constexpr flags<__overaligned_flag<_Np>> flag_overaligned {};
 
+  /** @internal
+   * Pass to unchecked_load or unchecked_store to make it behave like partial_load / partial_store.
+   */
+  inline constexpr flags<__partial_loadstore_flag> __allow_partial_loadstore {};
+
 #if 0
   // extensions
   template <typename _To>
     inline constexpr flags<__convert_to_flag<_To>> __flag_convert_to {};
-
-  inline constexpr flags<__partial_loadstore_flag> __allow_partial_loadstore {};
 
   inline constexpr flags<__throw_flag> __flag_throw {};
 

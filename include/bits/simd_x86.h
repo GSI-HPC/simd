@@ -349,6 +349,28 @@ namespace std::simd
             return __integer_from<sizeof(_Tp)>();
         }());
 
+  template <typename _Tp>
+    using __x86_intrin_type
+      = decltype([] {
+          if constexpr (is_integral_v<_Tp> or sizeof(_Tp) <= 2)
+            return __x86_intrin_int<_Tp>();
+          else
+            return __canonical_vec_type_t<_Tp>();
+        }());
+
+  template <typename _Tp>
+    using __x86_intel_intrin_value_type
+      = decltype([] {
+          if constexpr (is_integral_v<_Tp>)
+            return 0ll;
+          else if constexpr (sizeof(_Tp) == 8)
+            return 0.;
+          else if constexpr (sizeof(_Tp) == 4)
+            return 0.f;
+          else if constexpr (sizeof(_Tp) == 2)
+            return 0.f16;
+        }());
+
   template <_X86Cmp _Cmp, __vec_builtin _TV, _ArchTraits _Traits = {}>
     requires is_integral_v<__vec_value_type<_TV>>
     [[__gnu__::__always_inline__]]
@@ -945,6 +967,368 @@ namespace std::simd
         }
       else
         static_assert(false, "TODO");
+    }
+
+  /** @internal
+   * AVX512 masked (converting) loads
+   *
+   * @note AVX512VL and AVX512BW is required
+   */
+  template <__vec_builtin _TV, typename _Up, _ArchTraits _Traits = {}>
+    [[__gnu__::__always_inline__]]
+    inline _TV
+    __x86_masked_load(const _Up* __mem, unsigned_integral auto __k)
+    {
+      static_assert(_Traits._M_have_avx512vl() and _Traits._M_have_avx512bw());
+      using _Tp = __vec_value_type<_TV>;
+      constexpr int __n = __width_of<_TV>;
+      if constexpr (not __converts_trivially<_Up, _Tp>)
+        {
+          const auto __uvec
+            = __x86_masked_load<__vec_builtin_type<__canonical_vec_type_t<_Up>, __n>>(__mem, __k);
+          return __vec_cast<_TV>(__uvec);
+        }
+      else if constexpr (sizeof(_TV) < 16)
+        {
+          return _VecOps<_TV>::_S_extract(
+                   __x86_masked_load<__vec_builtin_type_bytes<_Tp, 16>>(__mem, __k));
+        }
+      else if constexpr (sizeof(_TV) > 64)
+        {
+          return __vec_concat(
+                   __x86_masked_load<__vec_builtin_type<_Tp, __n / 2>>(__mem, __k),
+                   __x86_masked_load<__vec_builtin_type<_Tp, __n / 2>>(__mem, __k >> __n / 2)
+                 );
+        }
+      else if constexpr (sizeof(_TV) == 64)
+        {
+          const auto* __src = reinterpret_cast<const __x86_intrin_type<_Up>*>(__mem);
+          const __vec_builtin_type_bytes<__x86_intrin_type<_Up>, 64> __z = {};
+          if constexpr (is_floating_point_v<_Tp> and sizeof(_Tp) == 4)
+            return __builtin_ia32_loadups512_mask(__src, __z, __k);
+          else if constexpr (is_floating_point_v<_Tp> and sizeof(_Tp) == 8)
+            return __builtin_ia32_loadupd512_mask(__src, __z, __k);
+          else if constexpr (sizeof(_Tp) == 1)
+            return reinterpret_cast<_TV>(__builtin_ia32_loaddquqi512_mask(__src, __z, __k));
+          else if constexpr (sizeof(_Tp) == 2)
+            return reinterpret_cast<_TV>(__builtin_ia32_loaddquhi512_mask(__src, __z, __k));
+          else if constexpr (sizeof(_Tp) == 4)
+            return reinterpret_cast<_TV>(__builtin_ia32_loaddqusi512_mask(__src, __z, __k));
+          else if constexpr (sizeof(_Tp) == 8)
+            return reinterpret_cast<_TV>(__builtin_ia32_loaddqudi512_mask(__src, __z, __k));
+          else
+            static_assert(false);
+        }
+      else if constexpr (sizeof(_TV) == 32)
+        {
+          const auto* __src = reinterpret_cast<const __x86_intrin_type<_Up>*>(__mem);
+          const __vec_builtin_type_bytes<__x86_intrin_type<_Up>, 32> __z = {};
+          if constexpr (is_floating_point_v<_Tp> and sizeof(_Tp) == 4)
+            return __builtin_ia32_loadups256_mask(__src, __z, __k);
+          else if constexpr (is_floating_point_v<_Tp> and sizeof(_Tp) == 8)
+            return __builtin_ia32_loadupd256_mask(__src, __z, __k);
+          else if constexpr (sizeof(_Tp) == 1)
+            return reinterpret_cast<_TV>(__builtin_ia32_loaddquqi256_mask(__src, __z, __k));
+          else if constexpr (sizeof(_Tp) == 2)
+            return reinterpret_cast<_TV>(__builtin_ia32_loaddquhi256_mask(__src, __z, __k));
+          else if constexpr (sizeof(_Tp) == 4)
+            return reinterpret_cast<_TV>(__builtin_ia32_loaddqusi256_mask(__src, __z, __k));
+          else if constexpr (sizeof(_Tp) == 8)
+            return reinterpret_cast<_TV>(__builtin_ia32_loaddqudi256_mask(__src, __z, __k));
+          else
+            static_assert(false);
+        }
+      else if constexpr (sizeof(_TV) == 16)
+        {
+          const auto* __src = reinterpret_cast<const __x86_intrin_type<_Up>*>(__mem);
+          const __vec_builtin_type_bytes<__x86_intrin_type<_Up>, 16> __z = {};
+          if constexpr (is_floating_point_v<_Tp> and sizeof(_Tp) == 4)
+            return __builtin_ia32_loadups128_mask(__src, __z, __k);
+          else if constexpr (is_floating_point_v<_Tp> and sizeof(_Tp) == 8)
+            return __builtin_ia32_loadupd128_mask(__src, __z, __k);
+          else if constexpr (sizeof(_Tp) == 1)
+            return reinterpret_cast<_TV>(__builtin_ia32_loaddquqi128_mask(__src, __z, __k));
+          else if constexpr (sizeof(_Tp) == 2)
+            return reinterpret_cast<_TV>(__builtin_ia32_loaddquhi128_mask(__src, __z, __k));
+          else if constexpr (sizeof(_Tp) == 4)
+            return reinterpret_cast<_TV>(__builtin_ia32_loaddqusi128_mask(__src, __z, __k));
+          else if constexpr (sizeof(_Tp) == 8)
+            return reinterpret_cast<_TV>(__builtin_ia32_loaddqudi128_mask(__src, __z, __k));
+          else
+            static_assert(false);
+        }
+      else
+        static_assert(false);
+    }
+
+  /** @internal
+   * AVX(2) masked loads (only trivial conversions)
+   */
+  template <__vec_builtin _TV, typename _Up, __vec_builtin _KV, _ArchTraits _Traits = {}>
+    [[__gnu__::__always_inline__]]
+    inline _TV
+    __x86_masked_load(const _Up* __mem, const _KV __k)
+    {
+      using _Tp = __vec_value_type<_TV>;
+      static_assert(_Traits._M_have_avx() and __converts_trivially<_Up, _Tp> and sizeof(_Up) >= 4);
+      constexpr int __n = __width_of<_TV>;
+      using _IV = __vec_builtin_type<__x86_intrin_int<_Tp>, __n>;
+      const auto __vk = reinterpret_cast<_IV>(__k);
+      if constexpr (sizeof(_TV) < 16)
+        return _VecOps<_TV>::_S_extract(__x86_masked_load<__vec_builtin_type_bytes<_Tp, 16>>(
+                                          __mem, __vec_zero_pad_to_16(__k)));
+      else if constexpr (_Traits._M_have_avx2() and is_integral_v<_Up>)
+        {
+          const auto* __src
+            = reinterpret_cast<const __vec_builtin_type<__x86_intrin_int<_Up>, __n>*>(__mem);
+          if constexpr (sizeof(_Up) == 4 and sizeof(_TV) == 32)
+            return reinterpret_cast<_TV>(__builtin_ia32_maskloadd256(__src, __vk));
+          else if constexpr (sizeof(_Up) == 4 and sizeof(_TV) == 16)
+            return reinterpret_cast<_TV>(__builtin_ia32_maskloadd(__src, __vk));
+          else if constexpr (sizeof(_Up) == 8 and sizeof(_TV) == 32)
+            return reinterpret_cast<_TV>(__builtin_ia32_maskloadq256(__src, __vk));
+          else if constexpr (sizeof(_Up) == 8 and sizeof(_TV) == 16)
+            return reinterpret_cast<_TV>(__builtin_ia32_maskloadq(__src, __vk));
+          else
+            static_assert(false);
+        }
+      else if constexpr (sizeof(_Up) == 4)
+        {
+          const auto* __src = reinterpret_cast<const __vec_builtin_type<float, __n>*>(__mem);
+          if constexpr (sizeof(_TV) == 32)
+            return reinterpret_cast<_TV>(__builtin_ia32_maskloadps256(__src, __vk));
+          else if constexpr (sizeof(_TV) == 16)
+            return reinterpret_cast<_TV>(__builtin_ia32_maskloadps(__src, __vk));
+          else
+            static_assert(false);
+        }
+      else
+        {
+          const auto* __src = reinterpret_cast<const __vec_builtin_type<double, __n>*>(__mem);
+          if constexpr (sizeof(_TV) == 32)
+            return reinterpret_cast<_TV>(__builtin_ia32_maskloadpd256(__src, __vk));
+          else if constexpr (sizeof(_TV) == 16)
+            return reinterpret_cast<_TV>(__builtin_ia32_maskloadpd(__src, __vk));
+          else
+            static_assert(false);
+        }
+    }
+
+  /** @internal
+   * AVX512 masked stores
+   *
+   * @note AVX512VL is required
+   */
+  template <__vec_builtin _TV, typename _Up>
+    [[__gnu__::__always_inline__]]
+    inline void
+    __x86_masked_store(const _TV __v, _Up* __mem, unsigned_integral auto __k)
+    {
+      using _Tp = __vec_value_type<_TV>;
+      constexpr int __n = __width_of<_TV>;
+      [[maybe_unused]] const auto __w = __vec_bit_cast<__x86_intrin_type<_Tp>>(__v);
+      if constexpr (sizeof(_TV) == 64)
+        {
+          if constexpr (sizeof(_Tp) > sizeof(_Up) and is_integral_v<_Tp> and is_integral_v<_Up>)
+            {
+              auto* __dst = reinterpret_cast<
+                              __vec_builtin_type<__x86_intrin_int<_Up>, __n>*>(__mem);
+              if constexpr (sizeof(_Tp) == 2)
+                __builtin_ia32_pmovwb512mem_mask(__dst, __w, __k);
+              else if constexpr (sizeof(_Tp) == 4 and sizeof(_Up) == 1)
+                __builtin_ia32_pmovdb512mem_mask(__dst, __w, __k);
+              else if constexpr (sizeof(_Tp) == 4 and sizeof(_Up) == 2)
+                __builtin_ia32_pmovdw512mem_mask(__dst, __w, __k);
+              else if constexpr (sizeof(_Tp) == 8 and sizeof(_Up) == 1)
+                __builtin_ia32_pmovqb512mem_mask(__dst, __w, __k);
+              else if constexpr (sizeof(_Tp) == 8 and sizeof(_Up) == 2)
+                __builtin_ia32_pmovqw512mem_mask(__dst, __w, __k);
+              else if constexpr (sizeof(_Tp) == 8 and sizeof(_Up) == 4)
+                __builtin_ia32_pmovqd512mem_mask(__dst, __w, __k);
+              else
+                static_assert(false);
+            }
+          else if constexpr (__converts_trivially<_Tp, _Up>)
+            {
+              auto* __dst = reinterpret_cast<__x86_intrin_type<_Up>*>(__mem);
+              if constexpr (is_floating_point_v<_Tp> and sizeof(_Tp) == 4)
+                __builtin_ia32_storeups512_mask(__dst, __w, __k);
+              else if constexpr (is_floating_point_v<_Tp> and sizeof(_Tp) == 8)
+                __builtin_ia32_storeupd512_mask(__dst, __w, __k);
+              else if constexpr (sizeof(_Tp) == 1)
+                __builtin_ia32_storedquqi512_mask(__dst, __w, __k);
+              else if constexpr (sizeof(_Tp) == 2)
+                __builtin_ia32_storedquhi512_mask(__dst, __w, __k);
+              else if constexpr (sizeof(_Tp) == 4)
+                __builtin_ia32_storedqusi512_mask(__dst, __w, __k);
+              else if constexpr (sizeof(_Tp) == 8)
+                __builtin_ia32_storedqudi512_mask(__dst, __w, __k);
+              else
+                static_assert(false);
+            }
+          else if constexpr (sizeof(_Tp) >= sizeof(_Up))
+            {
+              if constexpr (is_floating_point_v<_Tp> and is_integral_v<_Up>
+                              and sizeof(_Tp) > sizeof(_Up))
+                __x86_masked_store(__vec_cast<__integer_from<sizeof(_Tp)>>(__v), __mem, __k);
+              else
+                __x86_masked_store(__vec_cast<_Up>(__v), __mem, __k);
+            }
+          else
+            {
+              __x86_masked_store(__vec_split_lo(__v), __mem, _Bitmask<__n / 2>(__k));
+              __x86_masked_store(__vec_split_hi(__v), __mem + __n / 2,
+                                 _Bitmask<__n / 2>(__k >> (__n / 2)));
+            }
+        }
+      else if constexpr (sizeof(_TV) == 32)
+        {
+          if constexpr (sizeof(_Tp) > sizeof(_Up) and is_integral_v<_Tp> and is_integral_v<_Up>)
+            {
+              auto* __dst = reinterpret_cast<
+                              __vec_builtin_type<__x86_intrin_int<_Up>, __n>*>(__mem);
+              if constexpr (sizeof(_Tp) == 2)
+                __builtin_ia32_pmovwb256mem_mask(__dst, __w, __k);
+              else if constexpr (sizeof(_Tp) == 4 and sizeof(_Up) == 1)
+                __builtin_ia32_pmovdb256mem_mask(__dst, __w, __k);
+              else if constexpr (sizeof(_Tp) == 4 and sizeof(_Up) == 2)
+                __builtin_ia32_pmovdw256mem_mask(__dst, __w, __k);
+              else if constexpr (sizeof(_Tp) == 8 and sizeof(_Up) == 1)
+                __builtin_ia32_pmovqb256mem_mask(__dst, __w, __k);
+              else if constexpr (sizeof(_Tp) == 8 and sizeof(_Up) == 2)
+                __builtin_ia32_pmovqw256mem_mask(__dst, __w, __k);
+              else if constexpr (sizeof(_Tp) == 8 and sizeof(_Up) == 4)
+                __builtin_ia32_pmovqd256mem_mask(__dst, __w, __k);
+              else
+                static_assert(false);
+            }
+          else if constexpr (__converts_trivially<_Tp, _Up>)
+            {
+              auto* __dst = reinterpret_cast<__x86_intrin_type<_Up>*>(__mem);
+              if constexpr (is_floating_point_v<_Tp> and sizeof(_Tp) == 4)
+                __builtin_ia32_storeups256_mask(__dst, __w, __k);
+              else if constexpr (is_floating_point_v<_Tp> and sizeof(_Tp) == 8)
+                __builtin_ia32_storeupd256_mask(__dst, __w, __k);
+              else if constexpr (sizeof(_Tp) == 1)
+                __builtin_ia32_storedquqi256_mask(__dst, __w, __k);
+              else if constexpr (sizeof(_Tp) == 2)
+                __builtin_ia32_storedquhi256_mask(__dst, __w, __k);
+              else if constexpr (sizeof(_Tp) == 4)
+                __builtin_ia32_storedqusi256_mask(__dst, __w, __k);
+              else if constexpr (sizeof(_Tp) == 8)
+                __builtin_ia32_storedqudi256_mask(__dst, __w, __k);
+              else
+                static_assert(false);
+            }
+          else if constexpr (2 * sizeof(_Tp) >= sizeof(_Up))
+            {
+              __x86_masked_store(__vec_cast<_Up>(__v), __mem, __k);
+            }
+          else
+            {
+              __x86_masked_store(__vec_split_lo(__v), __mem, _Bitmask<__n / 2>(__k));
+              __x86_masked_store(__vec_split_hi(__v), __mem + __n / 2,
+                                 _Bitmask<__n / 2>(__k >> (__n / 2)));
+            }
+        }
+      else if constexpr (sizeof(_TV) == 16)
+        {
+          if constexpr (sizeof(_Tp) > sizeof(_Up) and is_integral_v<_Tp> and is_integral_v<_Up>)
+            {
+              auto* __dst = reinterpret_cast<
+                              __vec_builtin_type<__x86_intrin_int<_Up>, __n>*>(__mem);
+              if constexpr (sizeof(_Tp) == 2)
+                __builtin_ia32_pmovwb128mem_mask(__dst, __w, __k);
+              else if constexpr (sizeof(_Tp) == 4 and sizeof(_Up) == 1)
+                __builtin_ia32_pmovdb128mem_mask(__dst, __w, __k);
+              else if constexpr (sizeof(_Tp) == 4 and sizeof(_Up) == 2)
+                __builtin_ia32_pmovdw128mem_mask(__dst, __w, __k);
+              else if constexpr (sizeof(_Tp) == 8 and sizeof(_Up) == 1)
+                __builtin_ia32_pmovqb128mem_mask(__dst, __w, __k);
+              else if constexpr (sizeof(_Tp) == 8 and sizeof(_Up) == 2)
+                __builtin_ia32_pmovqw128mem_mask(__dst, __w, __k);
+              else if constexpr (sizeof(_Tp) == 8 and sizeof(_Up) == 4)
+                __builtin_ia32_pmovqd128mem_mask(reinterpret_cast<unsigned long long*>(__mem),
+                                                 __w, __k);
+              else
+                static_assert(false);
+            }
+          else if constexpr (__converts_trivially<_Tp, _Up>)
+            {
+              auto* __dst = reinterpret_cast<__x86_intrin_type<_Up>*>(__mem);
+              if constexpr (is_floating_point_v<_Tp> and sizeof(_Tp) == 4)
+                __builtin_ia32_storeups128_mask(__dst, __w, __k);
+              else if constexpr (is_floating_point_v<_Tp> and sizeof(_Tp) == 8)
+                __builtin_ia32_storeupd128_mask(__dst, __w, __k);
+              else if constexpr (sizeof(_Tp) == 1)
+                __builtin_ia32_storedquqi128_mask(__dst, __w, __k);
+              else if constexpr (sizeof(_Tp) == 2)
+                __builtin_ia32_storedquhi128_mask(__dst, __w, __k);
+              else if constexpr (sizeof(_Tp) == 4)
+                __builtin_ia32_storedqusi128_mask(__dst, __w, __k);
+              else if constexpr (sizeof(_Tp) == 8)
+                __builtin_ia32_storedqudi128_mask(__dst, __w, __k);
+              else
+                static_assert(false);
+            }
+          else if constexpr (4 * sizeof(_Tp) >= sizeof(_Up))
+            {
+              __x86_masked_store(__vec_cast<_Up>(__v), __mem, __k);
+            }
+          else
+            {
+              __x86_masked_store(__vec_cast<_Up>(__vec_split_lo(__v)), __mem,
+                                 _Bitmask<__n / 2>(__k));
+              __x86_masked_store(__vec_cast<_Up>(__vec_split_hi(__v)), __mem + __n / 2,
+                                 _Bitmask<__n / 2>(__k >> (__n / 2)));
+            }
+        }
+      else
+        __x86_masked_store(__vec_zero_pad_to_16(__v), __mem, __k);
+    }
+
+  /** @internal
+   * AVX(2) masked stores
+   */
+  template <__vec_builtin _TV, typename _Up, __vec_builtin _KV, _ArchTraits _Traits = {}>
+    [[__gnu__::__always_inline__]]
+    inline void
+    __x86_masked_store(const _TV __v, _Up* __mem, const _KV __k)
+    {
+      using _Tp = __vec_value_type<_TV>;
+      constexpr int __n = __width_of<_TV>;
+      static_assert(sizeof(_Tp) == 4 or sizeof(_Tp) == 8);
+      auto* __dst = reinterpret_cast<
+                      __vec_builtin_type<__x86_intrin_type<_Up>, __n>*>(__mem);
+      [[maybe_unused]] const auto __w = __vec_bit_cast<__x86_intrin_type<_Tp>>(__v);
+      if constexpr (sizeof(_TV) < 16)
+        __x86_masked_store(__vec_zero_pad_to_16(__v), __mem, __vec_zero_pad_to_16(__k));
+      else if constexpr (_Traits._M_have_avx2() and is_integral_v<_Tp>)
+        {
+          if constexpr (sizeof(_TV) == 32 and sizeof(_Tp) == 4)
+            __builtin_ia32_maskstored256(__dst, __k, __w);
+          else if constexpr (sizeof(_TV) == 16 and sizeof(_Tp) == 4)
+            __builtin_ia32_maskstored(__dst, __k, __w);
+          else if constexpr (sizeof(_TV) == 32 and sizeof(_Tp) == 8)
+            __builtin_ia32_maskstoreq256(__dst, __k, __w);
+          else if constexpr (sizeof(_TV) == 16 and sizeof(_Tp) == 8)
+            __builtin_ia32_maskstoreq(__dst, __k, __w);
+          else
+            static_assert(false);
+        }
+      else
+        {
+          if constexpr (sizeof(_TV) == 32 and sizeof(_Tp) == 4)
+            __builtin_ia32_maskstoreps256(__dst, __k, __w);
+          else if constexpr (sizeof(_TV) == 16 and sizeof(_Tp) == 4)
+            __builtin_ia32_maskstoreps(__dst, __k, __w);
+          else if constexpr (sizeof(_TV) == 32 and sizeof(_Tp) == 8)
+            __builtin_ia32_maskstorepd256(__dst, __k, __w);
+          else if constexpr (sizeof(_TV) == 16 and sizeof(_Tp) == 8)
+            __builtin_ia32_maskstorepd(__dst, __k, __w);
+          else
+            static_assert(false);
+        }
     }
 }
 

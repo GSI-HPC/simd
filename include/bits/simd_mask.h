@@ -324,30 +324,50 @@ namespace std::simd
           return _M_data;
       }
 
+      /** @internal
+       * Returns a mask where the first @p __n elements are true. All remaining elements are false.
+       *
+       * @pre @p __n > 0 and @p __n < _S_size
+       */
       template <_ArchTraits _Traits = {}>
         [[__gnu__::__always_inline__]]
         static constexpr basic_mask
         _S_partial_mask_of_n(int __n)
         {
-          // assume __n > 0 and __n < _S_size
           static_assert(not _S_is_scalar);
           if constexpr (not _S_use_bitmask)
-            return _VecType([&](__integer_from<_Bytes> __i) { return __i; })
-                     < __integer_from<_Bytes>(__n);
+            {
+              using _Ip = __integer_from<_Bytes>;
+              __glibcxx_simd_precondition(__n >= 0 and __n <= numeric_limits<_Ip>::max(),
+                                          "_S_partial_mask_of_n without _S_use_bitmask requires "
+                                          "positive __n that does not overflow.");
+              constexpr _VecType __0123([&](_Ip __i) { return __i; });
+              return __0123 < _Ip(__n);
+            }
           else
             {
+              __glibcxx_simd_precondition(__n >= 0 and __n <= 255,
+                                          "The x86 BZHI instruction requires __n to "
+                                          "only use bits 0:7");
 #if __has_builtin(__builtin_ia32_bzhi_si)
               if constexpr (_S_size <= 32 and _Traits._M_have_bmi2())
-                return __builtin_ia32_bzhi_si(~0u >> (32 - _S_size), unsigned(__n));
+                return _S_init(_Bitmask<_S_size>(
+                                 __builtin_ia32_bzhi_si(~0u >> (32 - _S_size), unsigned(__n))));
 #endif
 #if __has_builtin(__builtin_ia32_bzhi_di)
-              if constexpr (_S_size <= 64 and _Traits._M_have_bmi2())
-                return __builtin_ia32_bzhi_di(~0ull >> (64 - _S_size), unsigned(__n));
+              else if constexpr (_S_size <= 64 and _Traits._M_have_bmi2())
+                return _S_init(__builtin_ia32_bzhi_di(~0ull >> (64 - _S_size), unsigned(__n)));
 #endif
               if constexpr (_S_size <= 32)
-                return (1u << unsigned(__n)) - 1;
+                {
+                  __glibcxx_simd_precondition(__n < 32, "invalid shift");
+                  return _S_init(_Bitmask<_S_size>((1u << unsigned(__n)) - 1));
+                }
               else if constexpr (_S_size <= 64)
-                return (1ull << unsigned(__n)) - 1;
+                {
+                  __glibcxx_simd_precondition(__n < 64, "invalid shift");
+                  return _S_init((1ull << unsigned(__n)) - 1);
+                }
               else
                 static_assert(false);
             }

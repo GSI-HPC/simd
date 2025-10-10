@@ -669,6 +669,59 @@ namespace std::simd
         _S_concat(const basic_vec<value_type, _As>&... __xs) noexcept
         { return basic_vec::_S_init(_TSimd::_S_concat(__xs._M_data...)); }
 
+      template <typename _Up>
+        [[__gnu__::__always_inline__]]
+        static inline basic_vec
+        _S_partial_load(const _Up* __mem, size_t __n)
+        {
+          if constexpr (__complex_like<_Up>)
+            return _S_init(_TSimd::_S_partial_load(
+                             reinterpret_cast<const typename _Up::value_type*>(__mem), __n * 2));
+          else
+            return basic_vec(_RealSimd::_S_partial_load(__mem, __n));
+        }
+
+      template <typename _Up, _ArchTraits _Traits = {}>
+        static inline basic_vec
+        _S_masked_load(const _Up* __mem, mask_type __k)
+        {
+          if constexpr (__complex_like<_Up>)
+            return _S_init(_TSimd::_S_masked_load(
+                             reinterpret_cast<const typename _Up::value_type*>(__mem),
+                             __k._M_data));
+          else
+            return basic_vec(_RealSimd::_S_masked_load(__mem, typename _RealSimd::mask_type(__k)));
+        }
+
+      template <typename _Up>
+        [[__gnu__::__always_inline__]]
+        inline void
+        _M_store(_Up* __mem) const
+        {
+          static_assert(__complex_like<_Up>);
+          _M_data._M_store(reinterpret_cast<typename _Up::value_type*>(__mem));
+        }
+
+      template <typename _Up>
+        [[__gnu__::__always_inline__]]
+        static inline void
+        _S_partial_store(const basic_vec& __v, _Up* __mem, size_t __n)
+        {
+          static_assert(__complex_like<_Up>);
+          _TSimd::_S_partial_store(__v._M_data, reinterpret_cast<typename _Up::value_type*>(__mem),
+                                   __n * 2);
+        }
+
+      template <typename _Up>
+        [[__gnu__::__always_inline__]]
+        static inline void
+        _S_masked_store(const basic_vec& __v, _Up* __mem, const mask_type& __k)
+        {
+          static_assert(__complex_like<_Up>);
+          _TSimd::_S_masked_store(__v._M_data, reinterpret_cast<typename _Up::value_type*>(__mem),
+                                  __k._M_data);
+        }
+
       basic_vec() = default;
 
       // TODO: conversion extensions
@@ -1042,6 +1095,83 @@ namespace std::simd
         static constexpr basic_vec
         _S_concat(const basic_vec<value_type, _As>&... __xs) noexcept
         { return {_RealSimd::_S_concat(__xs._M_real...), _RealSimd::_S_concat(__xs._M_imag...) }; }
+
+      /** @internal
+       * Implementation of @ref partial_load.
+       *
+       * If @p __mem stores complex numbers, this needs to load @c abcdefgh from memory into two
+       * basic_vec: @c aceg and @c bdfh.
+       *
+       * @param __mem  A pointer to an array of @p __n values. Can be complex or real.
+       * @param __n    Read no more than @p __n values from memory.
+       *
+       * @todo Optimize with deinterleaving loads or loads + deinterleaving fixup.
+       */
+      template <typename _Up>
+        [[__gnu__::__always_inline__]]
+        static inline basic_vec
+        _S_partial_load(const _Up* __mem, size_t __n)
+        {
+          if constexpr (__complex_like<_Up>)
+            return basic_vec(
+                     _RealSimd([&](size_t __i) -> _T0 {
+                       return __i < __n ? __mem[__i].real() : _T0();
+                     }),
+                     _RealSimd([&](size_t __i) -> _T0 {
+                       return __i < __n ? __mem[__i].imag() : _T0();
+                     }));
+          else
+            return basic_vec(_RealSimd::_S_partial_load(__mem, __n));
+        }
+
+      /** @internal
+       *
+       * @todo Optimize with deinterleaving loads or loads + deinterleaving fixup.
+       */
+      template <typename _Up, _ArchTraits _Traits = {}>
+        static inline basic_vec
+        _S_masked_load(const _Up* __mem, mask_type __k)
+        {
+          if constexpr (__complex_like<_Up>)
+            static_assert(false, "TODO");
+          else
+            return basic_vec(_RealSimd::_S_masked_load(__mem, typename _RealSimd::mask_type(__k)));
+        }
+
+      template <typename _Up>
+        [[__gnu__::__always_inline__]]
+        inline void
+        _M_store(_Up* __mem) const
+        {
+          static_assert(__complex_like<_Up>);
+          for (int __i = 0; __i < _S_size; ++__i)
+            {
+              __mem[__i].real(_M_real[__i]);
+              __mem[__i].imag(_M_imag[__i]);
+            }
+        }
+
+      template <typename _Up>
+        [[__gnu__::__always_inline__]]
+        static inline void
+        _S_partial_store(const basic_vec& __v, _Up* __mem, size_t __n)
+        {
+          static_assert(__complex_like<_Up>);
+          for (size_t __i = 0; __i < std::min(__n, size_t(_S_size)); ++__i)
+            {
+              __mem[__i].real(__v._M_real[__i]);
+              __mem[__i].imag(__v._M_imag[__i]);
+            }
+        }
+
+      template <typename _Up>
+        [[__gnu__::__always_inline__]]
+        static inline void
+        _S_masked_store(const basic_vec& __v, _Up* __mem, const mask_type& __k)
+        {
+          static_assert(__complex_like<_Up>);
+          static_assert(false, "TODO");
+        }
 
       basic_vec() = default;
 
