@@ -67,33 +67,41 @@
 #define _GLIBCXX_SIMD_TOSTRING(x) _GLIBCXX_SIMD_TOSTRING_IMPL(x)
 #define _GLIBCXX_SIMD_LOC __FILE__ ":" _GLIBCXX_SIMD_TOSTRING(__LINE__) ": "
 
-#if not IFNDR_SIMD_PRECONDITIONS
-#define __glibcxx_simd_precondition(expr, msg, ...)                                                \
+#define __glibcxx_simd_erroneous_unless(expr)                                                      \
   do {                                                                                             \
-    if (__builtin_expect(!bool(expr), false))                                                      \
-      std::simd::__invoke_ub(                                                                      \
-        _GLIBCXX_SIMD_LOC "precondition failure in '%s':\n" msg " ('" #expr "' does not hold)",    \
-        __PRETTY_FUNCTION__ __VA_OPT__(,) __VA_ARGS__);                                            \
+    const bool __cond = !bool(expr);                                                               \
+    if (__builtin_is_constant_evaluated() && __cond)                                               \
+      __builtin_trap(); /* erroneous behavior in a constant expression */                          \
+    else if (__builtin_constant_p(__cond) && __cond)                                               \
+      []() __attribute__((__noinline__, __noipa__, __error__("erroneous behavior detected."        \
+        "\n" _GLIBCXX_SIMD_LOC "note: '" #expr "' does not hold")))                                \
+      { __builtin_unreachable(); }();                                                              \
   } while(false)
-#else
+
+#ifndef _GLIBCXX_SIMD_TRAP_ON_UB
+#define _GLIBCXX_SIMD_TRAP_ON_UB 1
+#endif
+
 #define __glibcxx_simd_precondition(expr, msg, ...)                                                \
   do {                                                                                             \
     const bool __precondition_result = !bool(expr);                                                \
     if (__builtin_constant_p(__precondition_result) && __precondition_result)                      \
-      []() __attribute__((__noinline__, __noipa__, __error__("precondition failure."               \
-        "\n" _GLIBCXX_SIMD_LOC "note: " msg " (precondition '" #expr "' does not hold)")))         \
-      { __builtin_unreachable(); }();                                                              \
-    else if (__builtin_expect(__precondition_result, false))                                       \
+      []() __attribute__((__noipa__, __warning__(                                                  \
+        "precondition failure. \n" _GLIBCXX_SIMD_LOC "note: " msg " (precondition '" #expr         \
+        "' does not hold)"))) {}();                                                                \
+    if (__builtin_expect(__precondition_result, false))                                            \
       std::simd::__invoke_ub(                                                                      \
         _GLIBCXX_SIMD_LOC "precondition failure in '%s':\n" msg " ('" #expr "' does not hold)",    \
         __PRETTY_FUNCTION__ __VA_OPT__(,) __VA_ARGS__);                                            \
   } while(false)
-#endif
 
 namespace std::simd
 {
   template <typename... _Args>
-    [[noreturn, __gnu__::__always_inline__]]
+    [[noreturn, __gnu__::__cold__]]
+#if not defined _GLIBCXX_ASSERTIONS
+    [[__gnu__::__always_inline__]]
+#endif
     inline void
     __invoke_ub([[maybe_unused]] const char* __msg, [[maybe_unused]] const _Args&... __args)
     {
