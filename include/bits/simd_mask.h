@@ -833,7 +833,7 @@ namespace std::simd
                       __uint = __x86_movmsk(__vec_bit_cast<__integer_from<_Bytes * 2>>(_M_data));
                     }
                   else if constexpr (_Bytes != 2) // movmskb would duplicate each bit
-                    __uint = __x86_movmsk(_M_data);
+                    __uint = _U0(__x86_movmsk(_M_data));
                   else if constexpr (_Bytes == 2 and _Traits._M_have_bmi2())
                     __uint = __bit_extract_even<__nbits>(__x86_movmsk(_M_data));
                   else if constexpr (_Bytes == 2)

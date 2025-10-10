@@ -63,15 +63,16 @@ namespace std::simd
 
   template <_ArchTraits _Traits = {}>
     [[__gnu__::__always_inline__]]
-    inline unsigned
+    inline _Bitmask<8>
     __x86_movmsk(__vec_builtin_type_bytes<__integer_from<4>, 8> __x)
     {
 #if __has_builtin(__builtin_ia32_pext_di)
       if constexpr (_Traits._M_have_bmi2())
-        return __builtin_ia32_pext_di(__builtin_bit_cast(unsigned long long, __x),
-                                      0x80000000'80000000ULL);
+        return _Bitmask<8>(__builtin_ia32_pext_di(
+                             __builtin_bit_cast(unsigned long long, __x),
+                             0x80000000'80000000ULL));
 #endif
-      return __x86_movmsk(__vec_zero_pad_to_16(__x));
+      return _Bitmask<8>(__x86_movmsk(__vec_zero_pad_to_16(__x)));
     }
 
   [[__gnu__::__always_inline__]]
