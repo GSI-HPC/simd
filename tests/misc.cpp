@@ -8,6 +8,10 @@
 #include "unittest.h"
 #include <numeric>
 
+#ifdef __SSE__
+#include <x86intrin.h>
+#endif
+
 using namespace vir::literals;
 
 template <typename V>

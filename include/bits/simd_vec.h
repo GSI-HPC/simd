@@ -1120,8 +1120,28 @@ namespace std::simd
       {}
 
       constexpr
-      operator _DataType() requires (not _S_is_scalar)
+      operator _DataType() const
+      requires (not _S_is_scalar)
       { return _M_data; }
+
+#if _GLIBCXX_X86
+      template <__vec_builtin _IV>
+        requires same_as<__x86_intel_intrin_value_type<value_type>, __vec_value_type<_IV>>
+          and (sizeof(_IV) == sizeof(_DataType) and sizeof(_IV) >= 16
+                 and not is_same_v<_IV, _DataType>)
+        constexpr
+        basic_vec(_IV __x)
+        : _M_data(reinterpret_cast<_DataType>(__x))
+        {}
+
+      template <__vec_builtin _IV>
+        requires same_as<__x86_intel_intrin_value_type<value_type>, __vec_value_type<_IV>>
+          and (sizeof(_IV) == sizeof(_DataType) and sizeof(_IV) >= 16
+                 and not is_same_v<_IV, _DataType>)
+        constexpr
+        operator _IV() const
+        { return reinterpret_cast<_IV>(_M_data); }
+#endif
 
       // [simd.ctor] broadcast constructor ------------------------------------
       template <__simd_vec_bcast<value_type> _Up>

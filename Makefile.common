@@ -87,7 +87,7 @@ testarchs ::= x86-64 \
 	     x86-64-v4 \
 	     graniterapids
 
-disabled_tests ::= misc
+disabled_tests ::=
 
 tests ::= $(filter-out $(disabled_tests),$(patsubst tests/%.cpp,%,$(wildcard tests/*.cpp)))
 
