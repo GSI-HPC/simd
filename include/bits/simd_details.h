@@ -1114,7 +1114,7 @@ namespace std::simd
    */
   template <typename _To, typename _From>
   consteval bool
-    __is_mask_conversion_explicit(size_t __b0, size_t __b1)
+    __is_mask_conversion_explicit([[maybe_unused]] size_t __b0, [[maybe_unused]] size_t __b1)
     {
       constexpr int __n = _To::_S_size;
       static_assert(__n == _From::_S_size);
