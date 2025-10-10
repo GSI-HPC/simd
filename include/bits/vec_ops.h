@@ -275,6 +275,13 @@ namespace std::simd
           if constexpr (__needs_f16c)
             return __x86_cvt_f16c<_UV>(__v);
         }
+      if constexpr (is_floating_point_v<__vec_value_type<_TV>>
+                      and is_integral_v<__vec_value_type<_UV>> and sizeof(_UV) < sizeof(_TV))
+        {
+          using _IV = __vec_builtin_type<__integer_from<sizeof(__vec_value_type<_TV>)>,
+                                         __width_of<_TV>>;
+          return __vec_cast<_UV>(__vec_cast<_IV>(__v));
+        }
 #endif
       return __builtin_convertvector(__v, _UV);
     }
