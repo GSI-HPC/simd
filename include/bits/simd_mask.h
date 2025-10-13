@@ -179,9 +179,9 @@ namespace std::simd
 
       using abi_type = _Abi;
 
-#define _GLIBCXX_DELETE_SIMD                                                                    \
-      _GLIBCXX_DELETE_MSG("This specialization is disabled because of an invalid combination "  \
-          "of template arguments to basic_mask.")
+#define _GLIBCXX_DELETE_SIMD                                                       \
+      delete("This specialization is disabled because of an invalid combination "  \
+             "of template arguments to basic_mask.")
 
       basic_mask() = _GLIBCXX_DELETE_SIMD;
 
@@ -583,8 +583,7 @@ namespace std::simd
       template <__almost_simd_generator_invokable<bool, _S_size> _Fp>
         constexpr explicit
         basic_mask(_Fp&&)
-          = _GLIBCXX_DELETE_MSG("Invalid return type of the mask generator function: "
-                                "Needs to be 'bool'.");
+          = delete("Invalid return type of the mask generator function: Needs to be 'bool'.");
 
       // [simd.mask.ctor] bitset constructor ----------------------------------
       [[__gnu__::__always_inline__]]
@@ -1390,8 +1389,7 @@ namespace std::simd
       template <__almost_simd_generator_invokable<bool, _S_size> _Fp>
         constexpr explicit
         basic_mask(_Fp&&)
-          = _GLIBCXX_DELETE_MSG("Invalid return type of the mask generator function: "
-                                "Needs to be 'bool'.");
+          = delete("Invalid return type of the mask generator function: Needs to be 'bool'.");
 
       // [simd.mask.ctor] bitset constructor ----------------------------------
       [[__gnu__::__always_inline__]]

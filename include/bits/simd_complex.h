@@ -334,8 +334,7 @@ namespace std::simd
       template <__almost_simd_generator_invokable<bool, _S_size> _Fp>
         constexpr explicit
         basic_mask(_Fp&&)
-          = _GLIBCXX_DELETE_MSG("Invalid return type of the mask generator function: "
-                                "Needs to be 'bool'.");
+          = delete("Invalid return type of the mask generator function: Needs to be 'bool'.");
 
       // [simd.mask.ctor] bitset constructor ----------------------------------
       [[__gnu__::__always_inline__]]
@@ -736,10 +735,9 @@ namespace std::simd
 
       template <__almost_simd_generator_invokable<value_type, _S_size> _Fp>
         constexpr explicit
-        basic_vec(_Fp&& )
-          = _GLIBCXX_DELETE_MSG("Invalid return type of the generator function: "
-                                "Requires value-preserving conversion or implicitly "
-                                "convertible user-defined type.");
+        basic_vec(_Fp&& ) = delete("Invalid return type of the generator function: "
+                                   "Requires value-preserving conversion or implicitly "
+                                   "convertible user-defined type.");
 
       // [simd.ctor] load constructor -----------------------------------------
       template <__complex_like _Up>
@@ -1120,10 +1118,9 @@ namespace std::simd
 
       template <__almost_simd_generator_invokable<value_type, _S_size> _Fp>
         constexpr explicit
-        basic_vec(_Fp&& )
-          = _GLIBCXX_DELETE_MSG("Invalid return type of the generator function: "
-                                "Requires value-preserving conversion or implicitly "
-                                "convertible user-defined type.");
+        basic_vec(_Fp&& ) = delete("Invalid return type of the generator function: "
+                                   "Requires value-preserving conversion or implicitly "
+                                   "convertible user-defined type.");
 
       // [simd.ctor] load constructor -----------------------------------------
       template <__complex_like _Up>

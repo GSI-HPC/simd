@@ -57,12 +57,6 @@
 #define _GLIBCXX_SIMD_NOEXCEPT noexcept
 #endif
 
-#if __cpp_deleted_function >= 202403L
-#define _GLIBCXX_DELETE_MSG(msg) delete(msg)
-#else
-#define _GLIBCXX_DELETE_MSG(msg) delete
-#endif
-
 #define _GLIBCXX_SIMD_TOSTRING_IMPL(x) #x
 #define _GLIBCXX_SIMD_TOSTRING(x) _GLIBCXX_SIMD_TOSTRING_IMPL(x)
 #define _GLIBCXX_SIMD_LOC __FILE__ ":" _GLIBCXX_SIMD_TOSTRING(__LINE__) ": "

@@ -36,9 +36,9 @@ namespace std::simd
 
       using mask_type = basic_mask<0, void>; // disabled
 
-#define _GLIBCXX_DELETE_SIMD                                                                    \
-      _GLIBCXX_DELETE_MSG("This specialization is disabled because of an invalid combination "  \
-          "of template arguments to basic_vec.")
+#define _GLIBCXX_DELETE_SIMD                                                       \
+      delete("This specialization is disabled because of an invalid combination "  \
+             "of template arguments to basic_vec.")
 
       basic_vec() = _GLIBCXX_DELETE_SIMD;
 
@@ -971,10 +971,9 @@ namespace std::simd
 
       template <__almost_simd_generator_invokable<value_type, _S_size> _Fp>
         constexpr explicit
-        basic_vec(_Fp&&)
-          = _GLIBCXX_DELETE_MSG("Invalid return type of the generator function: "
-                                "Requires value-preserving conversion or implicitly "
-                                "convertible user-defined type.");
+        basic_vec(_Fp&&) = delete("Invalid return type of the generator function: "
+                                  "Requires value-preserving conversion or implicitly "
+                                  "convertible user-defined type.");
 
       // [simd.ctor] load constructor -----------------------------------------
       template <typename _Up>
@@ -1867,10 +1866,9 @@ namespace std::simd
 
       template <__almost_simd_generator_invokable<value_type, _S_size> _Fp>
         constexpr explicit
-        basic_vec(_Fp&&)
-          = _GLIBCXX_DELETE_MSG("Invalid return type of the generator function: "
-                                "Requires value-preserving conversion or implicitly "
-                                "convertible user-defined type.");
+        basic_vec(_Fp&&) = delete("Invalid return type of the generator function: "
+                                  "Requires value-preserving conversion or implicitly "
+                                  "convertible user-defined type.");
 
       // [simd.ctor] load constructor -----------------------------------------
       template <typename _Up>
