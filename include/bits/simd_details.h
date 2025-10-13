@@ -31,6 +31,7 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpsabi"
 
+// TODO: remove the following for libstdc++
 // Work around _GLIBCXX_CLANG not being defined with older libstdc++ when compiling with Clang
 #if __GLIBCXX__ < 20250922 and defined __clang__ and __GNUC_MINOR__ == 2 and not defined _GLIBCXX_CLANG
 #define _GLIBCXX_CLANG __clang__
