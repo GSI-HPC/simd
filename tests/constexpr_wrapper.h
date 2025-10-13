@@ -34,11 +34,11 @@ namespace vir
   // If U is given, T must be convertible to U (`constexpr_value<int> auto` is analogous to `int`).
   // If U is void (default), the type of the value is unconstrained.
   template <typename Tp, typename Up = void>
-    concept constexpr_value = (std::same_as<Up, void> or std::convertible_to<Tp, Up>)
-#if defined __GNUC__ and __GNUC__ < 13
-                                and not std::is_member_pointer_v<decltype(&Tp::value)>
+    concept constexpr_value = (std::same_as<Up, void> || std::convertible_to<Tp, Up>)
+#if defined __GNUC__ && __GNUC__ < 13
+                                && !std::is_member_pointer_v<decltype(&Tp::value)>
 #endif
-                                and requires { typename constexpr_wrapper<Tp::value>; };
+                                && requires { typename constexpr_wrapper<Tp::value>; };
 
   namespace detail
   {
@@ -57,7 +57,7 @@ namespace vir
     //    operator candidate).
     template <typename Tp, typename This>
       concept _lhs_constexpr_wrapper
-        = constexpr_value<Tp> and (std::derived_from<Tp, This> or not _any_constexpr_wrapper<Tp>);
+        = constexpr_value<Tp> && (std::derived_from<Tp, This> || !_any_constexpr_wrapper<Tp>);
   }
 
   // Prefer to use `constexpr_value<type> auto` instead of `template <typename T> void
@@ -326,14 +326,14 @@ namespace vir
         { return constexpr_wrapper<value(Args::value...)>{}; }
 
       template <typename... Args>
-        requires (not constexpr_value<std::remove_cvref_t<Args>> || ...)
+        requires (!constexpr_value<std::remove_cvref_t<Args>> || ...)
         _static constexpr decltype(value(std::declval<Args>()...))
         operator()(Args&&... _args) _const
         { return value(std::forward<Args>(_args)...); }
 
       _static constexpr Tp
       operator()() _const
-      requires (not requires { value(); })
+      requires (!requires { value(); })
         { return value; }
 
       // overload operator[] for constexpr_value and non-constexpr_value
@@ -345,7 +345,7 @@ namespace vir
         { return {}; }
 
       template <typename... Args>
-        requires (not constexpr_value<std::remove_cvref_t<Args>> || ...)
+        requires (!constexpr_value<std::remove_cvref_t<Args>> || ...)
           && std::is_compound_v<value_type>
         _static constexpr decltype(value[std::declval<Args>()...])
         operator[](Args&&... _args) _const
@@ -358,7 +358,7 @@ namespace vir
         { return {}; }
 
       template <typename Arg>
-        requires (not constexpr_value<std::remove_cvref_t<Arg>>)
+        requires (!constexpr_value<std::remove_cvref_t<Arg>>)
           && std::is_compound_v<value_type>
         _static constexpr decltype(value[std::declval<Arg>()])
         operator[](Arg&& _arg) _const
@@ -393,26 +393,26 @@ namespace vir
       cw_parse()
       {
         constexpr std::array arr = cw_prepare_array<Chars...>();
-        constexpr int base = arr[0] == '0' and 2 < arr.size()
-                               ? arr[1] == 'x' or arr[1] == 'X' ? 16
+        constexpr int base = arr[0] == '0' && 2 < arr.size()
+                               ? arr[1] == 'x' || arr[1] == 'X' ? 16
                                                                 : arr[1] == 'b' ? 2 : 8
                                : 10;
         constexpr int offset = base == 10 ? 0 : base == 8 ? 1 : 2;
         constexpr bool valid_chars = std::all_of(arr.begin() + offset, arr.end(), [=](char c) {
                                        if constexpr (base == 16)
-                                         return (c >= 'a' and c <= 'f') or (c >= 'A' and c <= 'F')
-                                                  or (c >= '0' and c <= '9');
+                                         return (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')
+                                                  || (c >= '0' && c <= '9');
                                        else
-                                         return c >= '0' and c < char('0' + base);
+                                         return c >= '0' && c < char('0' + base);
                                      });
         static_assert(valid_chars, "invalid characters in constexpr_wrapper literal");
 
         // common values, freeing values for error conditions
-        if constexpr (arr.size() == 1 and arr[0] =='0')
+        if constexpr (arr.size() == 1 && arr[0] =='0')
           return static_cast<signed char>(0);
-        else if constexpr (arr.size() == 1 and arr[0] =='1')
+        else if constexpr (arr.size() == 1 && arr[0] =='1')
           return static_cast<signed char>(1);
-        else if constexpr (arr.size() == 1 and arr[0] =='2')
+        else if constexpr (arr.size() == 1 && arr[0] =='2')
           return static_cast<signed char>(2);
         else
           {

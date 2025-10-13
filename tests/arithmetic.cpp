@@ -265,7 +265,7 @@ template <typename V>
     };
 
     // avoid testing subnormals and expect minor deltas for non-IEC559 float
-    ADD_TEST(divide0, std::is_floating_point_v<T> and not is_iec559) {
+    ADD_TEST(divide0, std::is_floating_point_v<T> && !is_iec559) {
       std::tuple{T(2), vec<V, 1, 2, 3, 4, 5, 6, 7>},
       [](auto& t, V x, V y) {
         t.verify_equal_to_ulp(x / x, V(T(1)), 1);
@@ -276,7 +276,7 @@ template <typename V>
     };
 
     // avoid testing subnormals and expect minor deltas for non-IEC559 float
-    ADD_TEST(divide1, std::is_floating_point_v<T> and not is_iec559) {
+    ADD_TEST(divide1, std::is_floating_point_v<T> && !is_iec559) {
       std::array{T{norm_min * 1024}, T{1}, T{}, T{-1}, T{max / 1024}, T{max / T(4.1)}, max, min},
       [](auto& t, V a) {
         V b = 2_cw;
@@ -296,7 +296,7 @@ template <typename V>
       }
     };
 
-    ADD_TEST(divide2, (is_iec559 or not std::is_floating_point_v<T>) and requires(T x) { x / x; }) {
+    ADD_TEST(divide2, (is_iec559 || !std::is_floating_point_v<T>) && requires(T x) { x / x; }) {
       std::tuple{T(2), vec<V, 1, 2, 3, 4, 5, 6, 7>, vec<V, T2(max), T2(norm_min)>,
                  vec<V, T2(norm_min), T2(max)>, vec<V, T2(max), T2(norm_min) + 1>},
       [](auto& t, V x, V y, V z, V a, V b) {

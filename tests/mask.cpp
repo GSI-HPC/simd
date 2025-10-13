@@ -30,19 +30,19 @@ template <typename V>
     ADD_TEST(Reductions) {
       std::tuple{M([](int i) { return 1 == (i & 1); }), M(true), M(false)},
       [](auto& t, const M k, const M tr, const M fa) {
-        t.verify(not all_of(k))(k);
+        t.verify(!all_of(k))(k);
         if constexpr (V::size() > 1)
           {
             t.verify(any_of(k))(k);
-            t.verify(not none_of(k))(k);
+            t.verify(!none_of(k))(k);
           }
 
         t.verify(all_of(tr));
         t.verify(any_of(tr));
-        t.verify(not none_of(tr));
+        t.verify(!none_of(tr));
 
-        t.verify(not all_of(fa));
-        t.verify(not any_of(fa));
+        t.verify(!all_of(fa));
+        t.verify(!any_of(fa));
         t.verify(none_of(fa));
 
         /* TODO:
@@ -55,7 +55,7 @@ template <typename V>
 
     ADD_TEST(CvtToInt, (sizeof(T) <= sizeof(0ull))) {
       std::tuple{M([](int i) { return 1 == (i & 1); }), M(true), M(false), M([](int i) {
-                   return i % 13 == 0 or i % 7 == 0;
+                   return i % 13 == 0 || i % 7 == 0;
       })},
       [](auto& t, const M k, const M tr, const M fa, const M k2) {
         t.verify_equal(V(+tr), V(1));
@@ -70,8 +70,8 @@ template <typename V>
           }
 
         t.verify(all_of(simd::rebind_t<char, M>(tr)));
-        t.verify(not all_of(simd::rebind_t<char, M>(fa)));
-        t.verify(not all_of(simd::rebind_t<char, M>(k)));
+        t.verify(!all_of(simd::rebind_t<char, M>(fa)));
+        t.verify(!all_of(simd::rebind_t<char, M>(k)));
 
         t.verify_equal(fa.to_ullong(), 0ull);
         t.verify_equal(fa.to_bitset(), std::bitset<V::size()>());
@@ -156,16 +156,16 @@ template <typename V>
         t.verify_equal(std::simd::reduce_min_index(k || k0), 0);
         t.verify_equal(std::simd::reduce_max_index(k || k0), maxkork0);
         t.verify_equal(k, k);
-        t.verify_not_equal(not k, k);
+        t.verify_not_equal(!k, k);
         t.verify_equal(k | k, k);
         t.verify_equal(k & k, k);
         t.verify(none_of(k ^ k));
         t.verify_equal(std::simd::reduce_count(k), nk);
         if constexpr (sizeof(T) <= sizeof(0ULL))
           t.verify_equal(-std::simd::reduce(-k), nk)(k, -k);
-        t.verify_equal(std::simd::reduce_count(not k), V::size - nk)(not k);
+        t.verify_equal(std::simd::reduce_count(!k), V::size - nk)(!k);
         if constexpr (V::size <= 128 and sizeof(T) <= sizeof(0ULL))
-          t.verify_equal(-std::simd::reduce(-not k), V::size - nk)(-not k);
+          t.verify_equal(-std::simd::reduce(-!k), V::size - nk)(-!k);
         t.verify(any_of(k));
         t.verify(bool(any_of(k & k0) ^ (i != 0)));
         k = M([&](int i) { return i == 0 ? true : k[i]; });

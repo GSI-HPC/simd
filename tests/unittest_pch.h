@@ -137,11 +137,11 @@ template <typename T, typename U>
 template <typename T>
   concept is_string_type
     = is_character_type_v<std::ranges::range_value_t<T>>
-        and (std::is_pointer_v<std::decay_t<T>>
-               or type_to_string<std::remove_cvref_t<T>>().contains("string"));
+        && (std::is_pointer_v<std::decay_t<T>>
+              || type_to_string<std::remove_cvref_t<T>>().contains("string"));
 
 template <std::ranges::range R>
-  requires (not is_string_type<R>)
+  requires (!is_string_type<R>)
   std::ostream& operator<<(std::ostream& s, R&& x)
   {
     s << '[';
@@ -225,7 +225,7 @@ template <typename T0, typename T1>
     else if constexpr (std::is_floating_point_v<value_type_t<T0>>)
       {
         int fp_exceptions = 0;
-        if not consteval
+        if !consteval
           {
             fp_exceptions = std::fetestexcept(FE_ALL_EXCEPT);
           }
@@ -244,7 +244,7 @@ template <typename T0, typename T1>
                                                   & std::bit_cast<I>(signexp_mask)));
         const T0 ulp = select(val0 == ref0 || (isnan(val0) && isnan(ref0)),
                               T0(), T0((ref1 - val1) / eps1));
-        if not consteval
+        if !consteval
           {
             std::feclearexcept(FE_ALL_EXCEPT ^ fp_exceptions);
           }
@@ -298,12 +298,12 @@ template <typename T>
               {
                 auto [a0, a1] = chunk<std::bit_ceil(unsigned(T::size())) / 2>(a);
                 auto [b0, b1] = chunk<std::bit_ceil(unsigned(T::size())) / 2>(b);
-                return bit_equal(a0, b0) and bit_equal(a1, b1);
+                return bit_equal(a0, b0) && bit_equal(a1, b1);
               }
           }
       }
     else if constexpr (complex_like<T>)
-      return bit_equal(a.real(), b.real()) and bit_equal(a.imag(), b.imag());
+      return bit_equal(a.real(), b.real()) && bit_equal(a.imag(), b.imag());
     else
       static_assert(false);
   }
@@ -314,7 +314,7 @@ template <complex_like T, typename Abi>
   my_isinf(const simd::basic_vec<T, Abi>& x)
   {
     using M = typename simd::basic_vec<T, Abi>::mask_type;
-    return M(isinf(x.real()) or isinf(x.imag()));
+    return M(isinf(x.real()) || isinf(x.imag()));
   }
 
 // treat as equal if either:
@@ -335,27 +335,27 @@ template <typename V>
         using T = typename V::value_type;
         if constexpr (complex_like<T>)
           { // fix up nan == nan and (inf,nan) == (inf,?)
-            eq |= M(isnan(a.real()) and isnan(a.imag()) and isnan(b.real()) and isnan(a.imag()))
+            eq |= M(isnan(a.real()) && isnan(a.imag()) && isnan(b.real()) && isnan(a.imag()))
 #if 0
-                      or (isinf(a.real()) and isunordered(a.imag(), b.imag())
-                            and a.real() == b.real())
-                      or (isinf(a.imag()) and isunordered(a.real(), b.real())
-                            and a.imag() == b.imag()));
+                    || (isinf(a.real()) && isunordered(a.imag(), b.imag())
+                            && a.real() == b.real())
+                    || (isinf(a.imag()) && isunordered(a.real(), b.real())
+                            && a.imag() == b.imag()));
 #else
                   // a and b are "an infinity" according to C23 Annex G.3
-                    or (my_isinf(a) and my_isinf(b));
+                    || (my_isinf(a) && my_isinf(b));
 #endif
           }
         else if constexpr (std::is_floating_point_v<T>)
           { // fix up nan == nan results
-            eq |= isnan(a) and isnan(b);
+            eq |= isnan(a) && isnan(b);
           }
         else
           return false;
         return std::simd::all_of(eq);
       }
     else if constexpr (std::is_floating_point_v<V>)
-      return std::isnan(a) and std::isnan(b);
+      return std::isnan(a) && std::isnan(b);
     else
       return false;
   }
@@ -381,7 +381,7 @@ struct constexpr_verifier
       }
     catch (const test::precondition_failure& failure)
       {
-        okay = okay and failure.msg == expected_msg;
+        okay = okay && failure.msg == expected_msg;
       }
     catch (...)
       {
@@ -393,7 +393,7 @@ struct constexpr_verifier
   constexpr ignore_the_rest
   verify(const auto& k) &
   {
-    okay = okay and std::simd::all_of(k);
+    okay = okay && std::simd::all_of(k);
     return {};
   }
 
@@ -401,7 +401,7 @@ struct constexpr_verifier
   verify_equal(const auto& v, const auto& ref) &
   {
     using V = decltype(std::simd::select(v == ref, v, ref));
-    okay = okay and equal_with_nan_and_inf_fixup<V>(v, ref);
+    okay = okay && equal_with_nan_and_inf_fixup<V>(v, ref);
     return {};
   }
 
@@ -409,7 +409,7 @@ struct constexpr_verifier
   verify_bit_equal(const auto& v, const auto& ref) &
   {
     using V = decltype(std::simd::select(v == ref, v, ref));
-    okay = okay and bit_equal<V>(v, ref);
+    okay = okay && bit_equal<V>(v, ref);
     return {};
   }
 
@@ -425,14 +425,14 @@ struct constexpr_verifier
   constexpr ignore_the_rest
   verify_not_equal(const auto& v, const auto& ref) &
   {
-    okay = okay and std::simd::all_of(v != ref);
+    okay = okay && std::simd::all_of(v != ref);
     return {};
   }
 
   constexpr ignore_the_rest
   verify_equal_to_ulp(const auto& x, const auto& y, float allowed_distance) &
   {
-    okay = okay and std::simd::all_of(ulp_distance(x, y) <= allowed_distance);
+    okay = okay && std::simd::all_of(ulp_distance(x, y) <= allowed_distance);
     return {};
   }
 
@@ -487,14 +487,14 @@ struct runtime_verifier
                 << std::hex << ip << std::dec << ") in "
                 << test_kind << " test of '" << test_name
                 << "' " << s << " failed";
-      if constexpr (not std::is_same_v<X, log_novalue>)
+      if constexpr (!std::is_same_v<X, log_novalue>)
         {
           std::cout << ":\n   result: " << std::boolalpha;
           if constexpr (is_character_type_v<X>)
             std::cout << int(x);
           else
             std::cout << x;
-          if constexpr (not std::is_same_v<decltype(y), const log_novalue&>)
+          if constexpr (!std::is_same_v<decltype(y), const log_novalue&>)
             {
               std::cout << "\n expected: ";
               if constexpr (is_character_type_v<Y>)
@@ -578,8 +578,8 @@ struct runtime_verifier
   {
     const auto ip = determine_ip();
     bool ok;
-    if constexpr (pair_specialization<decltype(x)> and pair_specialization<decltype(y)>)
-      ok = std::simd::all_of(x.first == y.first) and std::simd::all_of(x.second == y.second);
+    if constexpr (pair_specialization<decltype(x)> && pair_specialization<decltype(y)>)
+      ok = std::simd::all_of(x.first == y.first) && std::simd::all_of(x.second == y.second);
     else
       ok = equal_with_nan_and_inf_fixup<decltype(std::simd::select(x == y, x, y))>(x, y);
     if (ok)
@@ -653,7 +653,7 @@ runtime_test(auto&& fun, auto&&... args)
 template <typename T>
   [[gnu::always_inline]] inline bool
   is_constprop(const T& x)
-  { return vir::constexpr_value<T> or __builtin_constant_p(x); }
+  { return vir::constexpr_value<T> || __builtin_constant_p(x); }
 
 template <typename T, typename Abi>
   [[gnu::always_inline]] inline bool
@@ -668,7 +668,7 @@ template <std::size_t B, typename Abi>
 template <typename T>
   [[gnu::always_inline]] inline bool
   is_constprop(const std::complex<T>& x)
-  { return is_constprop(x.real()) and is_constprop(x.imag()); }
+  { return is_constprop(x.real()) && is_constprop(x.imag()); }
 
 template <std::ranges::sized_range R>
   [[gnu::always_inline]] inline bool
@@ -676,7 +676,7 @@ template <std::ranges::sized_range R>
   {
     constexpr std::size_t N = std::ranges::size(arr);
     constexpr auto [...is] = std::simd::__iota<int[N]>;
-    return (is_constprop(arr[is]) and ...);
+    return (is_constprop(arr[is]) && ...);
   }
 
 [[gnu::always_inline, gnu::flatten]]
@@ -685,7 +685,7 @@ constprop_test(auto&& fun, auto... args)
 {
   runtime_verifier t{"constprop"};
 #ifndef __clang__
-  t.verify((is_constprop(args) and ...))
+  t.verify((is_constprop(args) && ...))
     ("=> The following argument(s) failed to constant-propagate:",
      (is_constprop(args) ? "" : type_to_string<decltype(args)>())...);//, args...);
 #endif
@@ -695,98 +695,98 @@ constprop_test(auto&& fun, auto... args)
 bool
 check_cpu_support()
 {
-#if defined __x86_64__ or defined __i386__
+#if defined __x86_64__ || defined __i386__
     __builtin_cpu_init();
 #ifdef __SSE3__
-    if (not __builtin_cpu_supports("sse3")) return false;
+    if (!__builtin_cpu_supports("sse3")) return false;
 #endif
 #ifdef __SSSE3__
-    if (not __builtin_cpu_supports("ssse3")) return false;
+    if (!__builtin_cpu_supports("ssse3")) return false;
 #endif
 #ifdef __SSE4_1__
-    if (not __builtin_cpu_supports("sse4.1")) return false;
+    if (!__builtin_cpu_supports("sse4.1")) return false;
 #endif
 #ifdef __SSE4_2__
-    if (not __builtin_cpu_supports("sse4.2")) return false;
+    if (!__builtin_cpu_supports("sse4.2")) return false;
 #endif
 #ifdef __SSE4A__
-    if (not __builtin_cpu_supports("sse4a")) return false;
+    if (!__builtin_cpu_supports("sse4a")) return false;
 #endif
 #ifdef __XOP__
-    if (not __builtin_cpu_supports("xop")) return false;
+    if (!__builtin_cpu_supports("xop")) return false;
 #endif
 #ifdef __FMA__
-    if (not __builtin_cpu_supports("fma")) return false;
+    if (!__builtin_cpu_supports("fma")) return false;
 #endif
 #ifdef __FMA4__
-    if (not __builtin_cpu_supports("fma4")) return false;
+    if (!__builtin_cpu_supports("fma4")) return false;
 #endif
 #ifdef __AVX__
-    if (not __builtin_cpu_supports("avx")) return false;
+    if (!__builtin_cpu_supports("avx")) return false;
 #endif
 #ifdef __AVX2__
-    if (not __builtin_cpu_supports("avx2")) return false;
+    if (!__builtin_cpu_supports("avx2")) return false;
 #endif
 #ifdef __BMI__
-    if (not __builtin_cpu_supports("bmi")) return false;
+    if (!__builtin_cpu_supports("bmi")) return false;
 #endif
 #ifdef __BMI2__
-    if (not __builtin_cpu_supports("bmi2")) return false;
+    if (!__builtin_cpu_supports("bmi2")) return false;
 #endif
-#if defined __LZCNT__ and not defined __clang__
-    if (not __builtin_cpu_supports("lzcnt")) return false;
+#if defined __LZCNT__ && !defined __clang__
+    if (!__builtin_cpu_supports("lzcnt")) return false;
 #endif
 #ifdef __F16C__
-    if (not __builtin_cpu_supports("f16c")) return false;
+    if (!__builtin_cpu_supports("f16c")) return false;
 #endif
 #ifdef __POPCNT__
-    if (not __builtin_cpu_supports("popcnt")) return false;
+    if (!__builtin_cpu_supports("popcnt")) return false;
 #endif
 #ifdef __AVX512F__
-    if (not __builtin_cpu_supports("avx512f")) return false;
+    if (!__builtin_cpu_supports("avx512f")) return false;
 #endif
 #ifdef __AVX512DQ__
-    if (not __builtin_cpu_supports("avx512dq")) return false;
+    if (!__builtin_cpu_supports("avx512dq")) return false;
 #endif
 #ifdef __AVX512BW__
-    if (not __builtin_cpu_supports("avx512bw")) return false;
+    if (!__builtin_cpu_supports("avx512bw")) return false;
 #endif
 #ifdef __AVX512VL__
-    if (not __builtin_cpu_supports("avx512vl")) return false;
+    if (!__builtin_cpu_supports("avx512vl")) return false;
 #endif
 #ifdef __AVX512BITALG__
-    if (not __builtin_cpu_supports("avx512bitalg")) return false;
+    if (!__builtin_cpu_supports("avx512bitalg")) return false;
 #endif
 #ifdef __AVX512VBMI__
-    if (not __builtin_cpu_supports("avx512vbmi")) return false;
+    if (!__builtin_cpu_supports("avx512vbmi")) return false;
 #endif
 #ifdef __AVX512VBMI2__
-    if (not __builtin_cpu_supports("avx512vbmi2")) return false;
+    if (!__builtin_cpu_supports("avx512vbmi2")) return false;
 #endif
 #ifdef __AVX512IFMA__
-    if (not __builtin_cpu_supports("avx512ifma")) return false;
+    if (!__builtin_cpu_supports("avx512ifma")) return false;
 #endif
 #ifdef __AVX512CD__
-    if (not __builtin_cpu_supports("avx512cd")) return false;
+    if (!__builtin_cpu_supports("avx512cd")) return false;
 #endif
 #ifdef __AVX512VNNI__
-    if (not __builtin_cpu_supports("avx512vnni")) return false;
+    if (!__builtin_cpu_supports("avx512vnni")) return false;
 #endif
 #ifdef __AVX512VPOPCNTDQ__
-    if (not __builtin_cpu_supports("avx512vpopcntdq")) return false;
+    if (!__builtin_cpu_supports("avx512vpopcntdq")) return false;
 #endif
 #ifdef __AVX512VP2INTERSECT__
-    if (not __builtin_cpu_supports("avx512vp2intersect")) return false;
+    if (!__builtin_cpu_supports("avx512vp2intersect")) return false;
 #endif
 #ifdef __AVX512FP16__
-    if (not __builtin_cpu_supports("avx512fp16")) return false;
+    if (!__builtin_cpu_supports("avx512fp16")) return false;
 #endif
 #endif
     return true;
 }
 
 int run_check_cpu_support = [] {
-  if (not check_cpu_support())
+  if (!check_cpu_support())
     {
       std::cerr << "Incompatible CPU.\n";
       std::exit(EXIT_SUCCESS);
@@ -823,7 +823,7 @@ template <typename T, typename Abi, int Init, int Max>
 template <typename V, int Init = 0, int MaxArg = int(test_iota_max<V, Init>)>
   constexpr V test_iota = V([](int i) {
               constexpr int Max = MaxArg < 0 ? int(test_iota_max<V, Init, MaxArg>) : MaxArg;
-              static_assert(Max == 0 or Max > Init or V::size() == 1);
+              static_assert(Max == 0 || Max > Init || V::size() == 1);
               i += Init;
               if constexpr (Max > Init)
                 {
@@ -855,7 +855,7 @@ template <typename T>
     = requires {
       typename T::value_type;
       std::tuple_size<T>::value;
-    } and std::same_as<T, std::array<typename T::value_type, std::tuple_size_v<T>>>;
+    } && std::same_as<T, std::array<typename T::value_type, std::tuple_size_v<T>>>;
 
 template <typename Args = void, typename Fun = void>
   struct add_test
@@ -929,7 +929,7 @@ template <auto test_ref>
     }();                                                                                           \
                                                                                                    \
     template <int Tmp>                                                                             \
-      requires (Tmp == 0) __VA_OPT__(and (__VA_ARGS__))                                            \
+      requires (Tmp == 0) __VA_OPT__(&& (__VA_ARGS__))                                             \
       static constexpr auto name##_tmpl<Tmp> = add_test
 
 #define ADD_TEST_N(name, N, ...)                                                                   \
@@ -950,7 +950,7 @@ template <auto test_ref>
     }();                                                                                           \
                                                                                                    \
     template <int Tmp>                                                                             \
-      requires (Tmp == 0) __VA_OPT__(and (__VA_ARGS__))                                            \
+      requires (Tmp == 0) __VA_OPT__(&& (__VA_ARGS__))                                             \
       static constexpr auto name##_tmpl<Tmp> = add_test
 
 template <typename = void>

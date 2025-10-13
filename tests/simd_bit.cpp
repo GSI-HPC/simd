@@ -47,7 +47,7 @@ template <typename V>
                        V([](T i) {
                          if (i > msb)
                            i -= msb + 1;
-                         while (not std::has_single_bit(i))
+                         while (!std::has_single_bit(i))
                            i = (i | (i >> 1)) + 1;
                          return T(i);
                        }));
@@ -80,7 +80,7 @@ template <typename V>
         t.verify(none_of(has_single_bit(c)));
         t.verify_equal(std::has_single_bit(a), has_single_bit(a));
         t.verify_equal(std::simd::has_single_bit(a), has_single_bit(a));
-        t.verify_equal(has_single_bit(a), a != T() and a == bit_floor(a));
+        t.verify_equal(has_single_bit(a), a != T() && a == bit_floor(a));
       }
     };
 

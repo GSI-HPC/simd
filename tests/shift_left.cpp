@@ -38,7 +38,7 @@ template <typename V>
     ADD_TEST(unknown_shift, std::is_integral_v<T>) {
       std::tuple {test_iota<V, 0, 0>},
       [](auto& t, const V x) {
-        if not consteval
+        if !consteval
         {
           for (int shift = 0; shift < max; ++shift)
             {

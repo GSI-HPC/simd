@@ -201,17 +201,17 @@ void test_runner()
       else
         {
           std::cout << "Test type not supported.\n";
-          static_assert(not std::default_initializable<simd::vec<T, N>>);
-          static_assert(not std::copy_constructible<simd::vec<T, N>>);
-          static_assert(not std::is_copy_assignable_v<simd::vec<T, N>>);
+          static_assert(!std::default_initializable<simd::vec<T, N>>);
+          static_assert(!std::copy_constructible<simd::vec<T, N>>);
+          static_assert(!std::is_copy_assignable_v<simd::vec<T, N>>);
         }
     }
   else
     {
       std::cout << "Test type not supported.\n";
-      static_assert(not std::default_initializable<simd::vec<T>>);
-      static_assert(not std::copy_constructible<simd::vec<T>>);
-      static_assert(not std::is_copy_assignable_v<simd::vec<T>>);
+      static_assert(!std::default_initializable<simd::vec<T>>);
+      static_assert(!std::copy_constructible<simd::vec<T>>);
+      static_assert(!std::is_copy_assignable_v<simd::vec<T>>);
     }
 }
 
