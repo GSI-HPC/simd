@@ -48,17 +48,17 @@ namespace std::simd
   template <typename _Tp, typename _ValueType,
             __simd_size_type _Width = sizeof(_Tp) / sizeof(_ValueType)>
     concept __vec_builtin_of
-      = not is_arithmetic_v<_Tp> and __vectorizable<_ValueType>
-          and _Width >= 1 and sizeof(_Tp) / sizeof(_ValueType) == _Width
-          and same_as<__vec_builtin_type_bytes<_ValueType, sizeof(_Tp)>, _Tp>
-          and requires(_Tp& __v, _ValueType __x) { __v[0] = __x; };
+      = !is_arithmetic_v<_Tp> && __vectorizable<_ValueType>
+          && _Width >= 1 && sizeof(_Tp) / sizeof(_ValueType) == _Width
+          && same_as<__vec_builtin_type_bytes<_ValueType, sizeof(_Tp)>, _Tp>
+          && requires(_Tp& __v, _ValueType __x) { __v[0] = __x; };
 
   /**
    * Constrain to any vector builtin.
    */
   template <typename _Tp>
     concept __vec_builtin
-      = not is_class_v<_Tp> and requires(const _Tp& __x) {
+      = !is_class_v<_Tp> && requires(const _Tp& __x) {
         requires __vec_builtin_of<_Tp, remove_cvref_t<decltype(__x[0])>>;
       };
 
@@ -268,15 +268,15 @@ namespace std::simd
 #if _GLIBCXX_X86
       constexpr bool __to_f16 = is_same_v<__vec_value_type<_UV>, _Float16>;
       constexpr bool __from_f16 = is_same_v<__vec_value_type<_TV>, _Float16>;
-      constexpr bool __needs_f16c = _Traits._M_have_f16c() and not _Traits._M_have_avx512fp16()
-                                      and (__to_f16 or __from_f16);
-      if (__needs_f16c and not __builtin_is_constant_evaluated() and not __builtin_constant_p(__v))
+      constexpr bool __needs_f16c = _Traits._M_have_f16c() && !_Traits._M_have_avx512fp16()
+                                      && (__to_f16 || __from_f16);
+      if (__needs_f16c && !__builtin_is_constant_evaluated() && !__builtin_constant_p(__v))
         { // Work around PR121688
           if constexpr (__needs_f16c)
             return __x86_cvt_f16c<_UV>(__v);
         }
       if constexpr (is_floating_point_v<__vec_value_type<_TV>>
-                      and is_integral_v<__vec_value_type<_UV>> and sizeof(_UV) < sizeof(_TV))
+                      && is_integral_v<__vec_value_type<_UV>> && sizeof(_UV) < sizeof(_TV))
         {
           using _IV = __vec_builtin_type<__integer_from<sizeof(__vec_value_type<_TV>)>,
                                          __width_of<_TV>>;
@@ -398,20 +398,20 @@ namespace std::simd
   [[__gnu__::__always_inline__]]
   constexpr bool
   __is_constprop(const auto& __x)
-  { return __builtin_is_constant_evaluated() or __builtin_constant_p(__x); }
+  { return __builtin_is_constant_evaluated() || __builtin_constant_p(__x); }
 
   [[__gnu__::__always_inline__]]
   constexpr bool
   __is_constprop(const __complex_like auto& __x)
   {
     return __builtin_is_constant_evaluated()
-             or (__is_constprop(__x.real()) and __is_constprop(__x.imag()));
+             || (__is_constprop(__x.real()) && __is_constprop(__x.imag()));
   }
 
   [[__gnu__::__always_inline__]]
   constexpr bool
   __is_constprop_equal_to(const auto& __x, const auto& __expect)
-  { return (__builtin_is_constant_evaluated() or __builtin_constant_p(__x)) and __x == __expect; }
+  { return (__builtin_is_constant_evaluated() || __builtin_constant_p(__x)) && __x == __expect; }
 
   template <__vec_builtin _TV, int _Np = __width_of<_TV>,
             typename = make_integer_sequence<int, _Np>>
@@ -439,17 +439,17 @@ namespace std::simd
       [[__gnu__::__always_inline__]]
       static constexpr bool
       _S_all_of(_TV __k) noexcept
-      { return (... and (__k[_Is] != 0)); }
+      { return (... && (__k[_Is] != 0)); }
 
       [[__gnu__::__always_inline__]]
       static constexpr bool
       _S_any_of(_TV __k) noexcept
-      { return (... or (__k[_Is] != 0)); }
+      { return (... || (__k[_Is] != 0)); }
 
       [[__gnu__::__always_inline__]]
       static constexpr bool
       _S_none_of(_TV __k) noexcept
-      { return (... and (__k[_Is] == 0)); }
+      { return (... && (__k[_Is] == 0)); }
 
       template <typename _Offset = integral_constant<int, 0>>
       [[__gnu__::__always_inline__]]
@@ -556,7 +556,7 @@ namespace std::simd
       [[__gnu__::__always_inline__]]
       static constexpr bool
       _S_is_constprop_equal_to(_TV __x, _Tp __ref)
-      { return (__is_constprop_equal_to(__x[_Is], __ref) and ...); }
+      { return (__is_constprop_equal_to(__x[_Is], __ref) && ...); }
 
       // True iff all elements at even indexes are zero. This includes signed zeros only when
       // -fno-signed-zeros is in effect.
@@ -568,11 +568,11 @@ namespace std::simd
           if constexpr (_Traits._M_conforming_to_STDC_annex_G())
             {
               using _Up = _UInt<sizeof(_Tp)>;
-              return (((_Is & 1) == 1 or __is_constprop_equal_to(__builtin_bit_cast(_Up, __x[_Is]),
-                                                                 _Up())) and ...);
+              return (((_Is & 1) == 1 || __is_constprop_equal_to(__builtin_bit_cast(_Up, __x[_Is]),
+                                                                 _Up())) && ...);
             }
           else
-            return (((_Is & 1) == 1 or __is_constprop_equal_to(__x[_Is], _Tp())) and ...);
+            return (((_Is & 1) == 1 || __is_constprop_equal_to(__x[_Is], _Tp())) && ...);
       }
 
       // True iff all elements at odd indexes are zero. This includes signed zeros only when
@@ -585,11 +585,11 @@ namespace std::simd
           if constexpr (_Traits._M_conforming_to_STDC_annex_G())
             {
               using _Up = _UInt<sizeof(_Tp)>;
-              return (((_Is & 1) == 0 or __is_constprop_equal_to(__builtin_bit_cast(_Up, __x[_Is]),
-                                                                 _Up())) and ...);
+              return (((_Is & 1) == 0 || __is_constprop_equal_to(__builtin_bit_cast(_Up, __x[_Is]),
+                                                                 _Up())) && ...);
             }
           else
-            return (((_Is & 1) == 0 or __is_constprop_equal_to(__x[_Is], _Tp())) and ...);
+            return (((_Is & 1) == 0 || __is_constprop_equal_to(__x[_Is], _Tp())) && ...);
         }
     };
 }

@@ -185,7 +185,7 @@ namespace std::simd
       alignas(_TV) __vec_value_type<_TV> __arr[__width_of<_TV>] = {};
       for (int __i = 0; __i < __n; __i += 2)
         {
-          if (__nan[__i] and __nan[__i + 1])
+          if (__nan[__i] && __nan[__i + 1])
             {
               using _Tc = typename _Cx::value_type;
               const _Cx __cx(_Tc(__x[__i]), _Tc(__x[__i + 1]));
@@ -250,7 +250,7 @@ namespace std::simd
 
   template <__vectorizable _Tp, __abi_tag _Ap>
     requires (_Ap::_S_nreg == 1)
-      and (not __complex_like<_Tp>)
+      && (!__complex_like<_Tp>)
     class basic_vec<_Tp, _Ap>
     : _BinaryOps<_Tp, _Ap>
     {
@@ -266,7 +266,7 @@ namespace std::simd
 
       static constexpr bool _S_is_scalar = is_same_v<_Ap, _ScalarAbi<_Ap::_S_size>>;
 
-      static_assert(not _S_is_scalar or _S_size == 1);
+      static_assert(!_S_is_scalar || _S_size == 1);
 
       static constexpr bool _S_use_bitmask = [] {
         if constexpr (_S_is_scalar)
@@ -359,10 +359,10 @@ namespace std::simd
                 else
                   return __idxmap(_Offset, _Size);
               }();
-              if constexpr (__j == simd::zero_element or __j == simd::uninit_element)
+              if constexpr (__j == simd::zero_element || __j == simd::uninit_element)
                 return basic_vec();
               else
-                static_assert(__j >= 0 and __j < _Xp::_S_size);
+                static_assert(__j >= 0 && __j < _Xp::_S_size);
               __r._M_data = __x[__j];
             }
           else
@@ -383,7 +383,7 @@ namespace std::simd
                   return __simd_size_constant<-1>;
                 else
                   {
-                    static_assert(__j >= 0 and __j < _Xp::_S_size);
+                    static_assert(__j >= 0 && __j < _Xp::_S_size);
                     return __simd_size_constant<__j>;
                   }
               };
@@ -392,7 +392,7 @@ namespace std::simd
                 return ((__idxmap2(__simd_size_constant<__is>).value == simd::zero_element) || ...);
               }();
               constexpr auto [...__is] = __iota<int[_S_full_size]>;
-              if constexpr (_A0::_S_nreg == 2 and not __needs_zero_element)
+              if constexpr (_A0::_S_nreg == 2 && !__needs_zero_element)
                 {
                   __r._M_data = __builtin_shufflevector(
                                   __x._M_data0._M_data, __x._M_data1._M_data,
@@ -414,7 +414,7 @@ namespace std::simd
       constexpr void
       _M_complex_set_real(const _HalfVec& __x) requires ((_S_size & 1) == 0)
       {
-        if (_M_is_constprop() and __x._M_is_constprop())
+        if (_M_is_constprop() && __x._M_is_constprop())
           {
             constexpr auto [...__is] = __iota<int[_S_size]>;
             _M_data = _DataType { ((__is & 1) == 0 ? value_type(__x[__is / 2]) : _M_data[__is])...};
@@ -429,7 +429,7 @@ namespace std::simd
       constexpr void
       _M_complex_set_imag(const _HalfVec& __x) requires ((_S_size & 1) == 0)
       {
-        if (_M_is_constprop() and __x._M_is_constprop())
+        if (_M_is_constprop() && __x._M_is_constprop())
           {
             constexpr auto [...__is] = __iota<int[_S_size]>;
             _M_data = _DataType { ((__is & 1) == 1 ? value_type(__x[__is / 2]) : _M_data[__is])...};
@@ -513,8 +513,8 @@ namespace std::simd
           else
             {
 #if _GLIBCXX_X86
-              if (_Traits._M_have_fma() and not __builtin_is_constant_evaluated()
-                    and not (__builtin_constant_p(__x) and __builtin_constant_p(__y)))
+              if (_Traits._M_have_fma() && !__builtin_is_constant_evaluated()
+                    && !(__builtin_constant_p(__x) && __builtin_constant_p(__y)))
                 {
                   if constexpr (_Traits._M_have_fma())
                     _M_data = __x86_complex_multiplies(__x, __y);
@@ -524,7 +524,7 @@ namespace std::simd
                 _M_data = _VO::_S_addsub(_VO::_S_dup_even(__x) * __y,
                                          _VO::_S_dup_odd(__x) * _VO::_S_swap_neighbors(__y));
               mask_type __nan = _M_isnan();
-              if (_Traits._M_conforming_to_STDC_annex_G() and __nan._M_any_of()) [[unlikely]]
+              if (_Traits._M_conforming_to_STDC_annex_G() && __nan._M_any_of()) [[unlikely]]
                 _M_data = __cx_redo_mul<typename _CxVec::value_type>(_M_data, __x, __y, __nan,
                                                                      _S_size);
             }
@@ -556,7 +556,7 @@ namespace std::simd
             {
               basic_vec __re = __re0 * __re1 - __im0 * __im1;
               basic_vec __im = __re0 * __im1 + __im0 * __re1;
-              const auto __nan = __re._M_isnan() and __im._M_isnan();
+              const auto __nan = __re._M_isnan() && __im._M_isnan();
               if (any_of(__nan)) [[unlikely]]
                 __cxctgus_redo_mul<_Cx>(__re0._M_data, __im0._M_data, __re1._M_data, __im1._M_data,
                                         __re._M_data, __im._M_data, __nan._M_data, _S_size);
@@ -642,17 +642,17 @@ namespace std::simd
         {
           using _A0 = _As...[0];
           using _A1 = _As...[1];
-          if constexpr (not _S_is_partial
-                          and ((not basic_vec<value_type, _As>::_S_is_partial
-                                  and _As::_S_size * sizeof...(_As) == _S_size) and ...))
+          if constexpr (!_S_is_partial
+                          && ((!basic_vec<value_type, _As>::_S_is_partial
+                                  && _As::_S_size * sizeof...(_As) == _S_size) && ...))
             return basic_vec::_S_init(__vec_concat(__xs._M_concat_data()...));
 
           else
             {
               constexpr bool __simple_inserts
-                = sizeof...(_As) == 2 and _A1::_S_size <= 2
-                    and is_same_v<_DataType, typename basic_vec<value_type, _A0>::_DataType>;
-              if (not __builtin_is_constant_evaluated() and __simple_inserts)
+                = sizeof...(_As) == 2 && _A1::_S_size <= 2
+                    && is_same_v<_DataType, typename basic_vec<value_type, _A0>::_DataType>;
+              if (!__builtin_is_constant_evaluated() && __simple_inserts)
                 {
                   if constexpr (__simple_inserts)
                     {
@@ -707,9 +707,9 @@ namespace std::simd
         constexpr basic_vec
         _M_elements_shifted_down() const
         {
-          static_assert(_Shift < _S_size and _Shift > 0);
+          static_assert(_Shift < _S_size && _Shift > 0);
 #ifdef __SSE2__
-          if (not __builtin_is_constant_evaluated() and not _M_is_constprop())
+          if (!__builtin_is_constant_evaluated() && !_M_is_constprop())
             {
               if constexpr (sizeof(_M_data) == 16)
                 return reinterpret_cast<_DataType>(
@@ -738,12 +738,12 @@ namespace std::simd
         if constexpr (_S_size == 1)
           return operator[](0);
         else if constexpr (_Traits.template _M_eval_as_f32<value_type>()
-                             and (is_same_v<_BinaryOp, plus<>>
-                                    or is_same_v<_BinaryOp, multiplies<>>))
+                             && (is_same_v<_BinaryOp, plus<>>
+                                    || is_same_v<_BinaryOp, multiplies<>>))
           return value_type(rebind_t<float, basic_vec>(*this)._M_reduce(__binary_op));
 #ifdef __SSE2__
-        else if constexpr (is_integral_v<value_type> and sizeof(value_type) == 1
-                             and is_same_v<decltype(__binary_op), multiplies<>>)
+        else if constexpr (is_integral_v<value_type> && sizeof(value_type) == 1
+                             && is_same_v<decltype(__binary_op), multiplies<>>)
           {
             // convert to unsigned short because of missing 8-bit mul instruction
             // we don't need to preserve the order of elements
@@ -764,7 +764,7 @@ namespace std::simd
                 static_assert(_S_size <= 16);
                 auto __x = *this;
 #ifdef __SSE2__
-                if constexpr (sizeof(_M_data) <= 16 and is_integral_v<value_type>)
+                if constexpr (sizeof(_M_data) <= 16 && is_integral_v<value_type>)
                   {
                     if constexpr (_S_size > 8)
                       __x = __binary_op(__x, __x.template _M_elements_shifted_down<8>());
@@ -781,13 +781,13 @@ namespace std::simd
                   __x = __binary_op(__x, _S_static_permute(__x, _SwapNeighbors<4>()));
 #ifdef __SSE2__
                 // avoid pshufb by "promoting" to int
-                if constexpr (is_integral_v<value_type> and sizeof(value_type) <= 1)
+                if constexpr (is_integral_v<value_type> && sizeof(value_type) <= 1)
                   return resize_t<4, rebind_t<int, basic_vec>>(chunk<4>(__x)[0])
                            ._M_reduce(__binary_op);
 #endif
                 if constexpr (_S_size > 2)
                   __x = __binary_op(__x, _S_static_permute(__x, _SwapNeighbors<2>()));
-                if constexpr (is_integral_v<value_type> and sizeof(value_type) == 2)
+                if constexpr (is_integral_v<value_type> && sizeof(value_type) == 2)
                   return __binary_op(__x, _S_static_permute(__x, _SwapNeighbors<1>()))[0];
                 else
                   return __binary_op(vec<value_type, 1>(__x[0]), vec<value_type, 1>(__x[1]))[0];
@@ -830,9 +830,9 @@ namespace std::simd
             return mask_type(std::isnan(_M_data));
           else if constexpr (_S_use_bitmask)
             return _M_isunordered(*this);
-          else if constexpr (not _Traits._M_support_snan())
-            return not (*this == *this);
-          else if (__builtin_is_constant_evaluated() or __builtin_constant_p(_M_data))
+          else if constexpr (!_Traits._M_support_snan())
+            return !(*this == *this);
+          else if (__builtin_is_constant_evaluated() || __builtin_constant_p(_M_data))
             return mask_type([&](int __i) { return std::isnan(_M_data[__i]); });
           else
             {
@@ -852,7 +852,7 @@ namespace std::simd
             return mask_type(false);
           else if constexpr (_S_is_scalar)
             return mask_type(std::isinf(_M_data));
-          else if (__builtin_is_constant_evaluated() or __builtin_constant_p(_M_data))
+          else if (__builtin_is_constant_evaluated() || __builtin_constant_p(_M_data))
             return mask_type([&](int __i) { return std::isinf(_M_data[__i]); });
 #ifdef _GLIBCXX_X86
           else if constexpr (_S_use_bitmask)
@@ -923,7 +923,7 @@ namespace std::simd
             {
 #if _GLIBCXX_X86
               if constexpr (_Traits._M_have_avx512f()
-                              or (_Traits._M_have_avx() and sizeof(_Up) >= 4))
+                              || (_Traits._M_have_avx() && sizeof(_Up) >= 4))
                 {
                   const auto __k = __n < _S_size ? mask_type::_S_partial_mask_of_n(int(__n))
                                                  : mask_type(true);
@@ -973,7 +973,7 @@ namespace std::simd
 #if _GLIBCXX_X86
           if constexpr (_Traits._M_have_avx512f())
             return __x86_masked_load<_DataType>(__mem, __k._M_data);
-          else if constexpr (_Traits._M_have_avx() and (sizeof(_Up) == 4 or sizeof(_Up) == 8))
+          else if constexpr (_Traits._M_have_avx() && (sizeof(_Up) == 4 || sizeof(_Up) == 8))
             {
               if constexpr (__converts_trivially<_Up, value_type>)
                 return __x86_masked_load<_DataType>(__mem, __k._M_data);
@@ -1038,7 +1038,7 @@ namespace std::simd
         _S_partial_store(const basic_vec __v, _Up* __mem, size_t __n)
         {
 #if _GLIBCXX_X86
-          if constexpr (_Traits._M_have_avx512f() and not _S_is_scalar)
+          if constexpr (_Traits._M_have_avx512f() && !_S_is_scalar)
             {
               const auto __k = __n < _S_size ? mask_type::_S_partial_mask_of_n(int(__n))
                                              : mask_type(true);
@@ -1073,7 +1073,7 @@ namespace std::simd
               __x86_masked_store(__v._M_data, __mem, __k._M_data);
               return;
             }
-          else if constexpr (_Traits._M_have_avx() and (sizeof(_Up) == 4 or sizeof(_Up) == 8))
+          else if constexpr (_Traits._M_have_avx() && (sizeof(_Up) == 4 || sizeof(_Up) == 8))
             {
               if constexpr (__converts_trivially<value_type, _Up>)
                 __x86_masked_store(__v._M_data, __mem, __k._M_data);
@@ -1115,20 +1115,20 @@ namespace std::simd
 
       // [simd.overview] impl-def conversions ---------------------------------
       constexpr
-      basic_vec(_DataType __x) requires (not _S_is_scalar)
+      basic_vec(_DataType __x) requires (!_S_is_scalar)
         : _M_data(__x)
       {}
 
       constexpr
       operator _DataType() const
-      requires (not _S_is_scalar)
+      requires (!_S_is_scalar)
       { return _M_data; }
 
 #if _GLIBCXX_X86
       template <__vec_builtin _IV>
         requires same_as<__x86_intel_intrin_value_type<value_type>, __vec_value_type<_IV>>
-          and (sizeof(_IV) == sizeof(_DataType) and sizeof(_IV) >= 16
-                 and not is_same_v<_IV, _DataType>)
+          && (sizeof(_IV) == sizeof(_DataType) && sizeof(_IV) >= 16
+                 && !is_same_v<_IV, _DataType>)
         constexpr
         basic_vec(_IV __x)
         : _M_data(reinterpret_cast<_DataType>(__x))
@@ -1136,8 +1136,8 @@ namespace std::simd
 
       template <__vec_builtin _IV>
         requires same_as<__x86_intel_intrin_value_type<value_type>, __vec_value_type<_IV>>
-          and (sizeof(_IV) == sizeof(_DataType) and sizeof(_IV) >= 16
-                 and not is_same_v<_IV, _DataType>)
+          && (sizeof(_IV) == sizeof(_DataType) && sizeof(_IV) >= 16
+                 && !is_same_v<_IV, _DataType>)
         constexpr
         operator _IV() const
         { return reinterpret_cast<_IV>(_M_data); }
@@ -1146,7 +1146,7 @@ namespace std::simd
       // [simd.ctor] broadcast constructor ------------------------------------
       template <__simd_vec_bcast<value_type> _Up>
         [[__gnu__::__always_inline__]]
-        constexpr explicit(not __broadcast_constructible<_Up, value_type>)
+        constexpr explicit(!__broadcast_constructible<_Up, value_type>)
         basic_vec(_Up&& __x) noexcept
           : _M_data(_DataType() == _DataType() ? static_cast<value_type>(__x) : value_type())
         {}
@@ -1171,8 +1171,8 @@ namespace std::simd
         // FIXME(file LWG issue): missing constraint `constructible_from<value_type, _Up>`
         [[__gnu__::__always_inline__]]
         constexpr
-        explicit(not __value_preserving_convertible_to<_Up, value_type>
-                   or __higher_rank_than<_Up, value_type>)
+        explicit(!__value_preserving_convertible_to<_Up, value_type>
+                   || __higher_rank_than<_Up, value_type>)
         basic_vec(const basic_vec<_Up, _UAbi>& __x) noexcept
           : _M_data([&] [[__gnu__::__always_inline__]]() {
               if constexpr (_S_is_scalar)
@@ -1329,7 +1329,7 @@ namespace std::simd
       operator+=(basic_vec& __x, const basic_vec& __y) noexcept
       requires requires(value_type __a) { __a + __a; }
       {
-        if constexpr (_S_is_partial and is_integral_v<value_type> and is_signed_v<value_type>)
+        if constexpr (_S_is_partial && is_integral_v<value_type> && is_signed_v<value_type>)
           { // avoid spurious UB on signed integer overflow of the padding element(s). But don't
             // remove UB of the active elements (so that UBsan can still do its job).
             using _UV = typename _Ap::template _DataType<make_unsigned_t<value_type>>;
@@ -1354,7 +1354,7 @@ namespace std::simd
       operator-=(basic_vec& __x, const basic_vec& __y) noexcept
       requires requires(value_type __a) { __a - __a; }
       {
-        if constexpr (_S_is_partial and is_integral_v<value_type> and is_signed_v<value_type>)
+        if constexpr (_S_is_partial && is_integral_v<value_type> && is_signed_v<value_type>)
           { // avoid spurious UB on signed integer overflow of the padding element(s). But don't
             // remove UB of the active elements (so that UBsan can still do its job).
             using _UV = typename _Ap::template _DataType<make_unsigned_t<value_type>>;
@@ -1379,7 +1379,7 @@ namespace std::simd
       operator*=(basic_vec& __x, const basic_vec& __y) noexcept
       requires requires(value_type __a) { __a * __a; }
       {
-        if constexpr (_S_is_partial and is_integral_v<value_type> and is_signed_v<value_type>)
+        if constexpr (_S_is_partial && is_integral_v<value_type> && is_signed_v<value_type>)
           { // avoid spurious UB on signed integer overflow of the padding element(s). But don't
             // remove UB of the active elements (so that UBsan can still do its job).
             for (int __i = 0; __i < _S_size; ++__i)
@@ -1395,8 +1395,8 @@ namespace std::simd
         // 'uint16 * uint16' promotes to int and can therefore lead to UB. The standard does not
         // require to avoid the undefined behavior. It's unnecessary and easy to avoid. It's also
         // unexpected because there's no UB on the vector types (which don't promote).
-        else if constexpr (_S_is_scalar and is_unsigned_v<value_type>
-                             and is_signed_v<decltype(value_type() * value_type())>)
+        else if constexpr (_S_is_scalar && is_unsigned_v<value_type>
+                             && is_signed_v<decltype(value_type() * value_type())>)
           __x._M_data = unsigned(__x._M_data) * unsigned(__y._M_data);
 
         else if constexpr (_TargetTraits()._M_eval_as_f32<value_type>())
@@ -1416,13 +1416,13 @@ namespace std::simd
         // x86 doesn't have integral SIMD division instructions
         // While division is faster, the required conversions are still a problem:
         // see PR121274, PR121284, and PR121296 for missed optimizations wrt. conversions
-        if (not (__x._M_is_constprop() and __y._M_is_constprop()))
+        if (!(__x._M_is_constprop() && __y._M_is_constprop()))
           {
             if constexpr (is_integral_v<value_type>
-                            and __value_preserving_convertible_to<value_type, float>)
+                            && __value_preserving_convertible_to<value_type, float>)
               return __x = basic_vec(rebind_t<float, basic_vec>(__x) / __y);
             else if constexpr (is_integral_v<value_type>
-                                 and __value_preserving_convertible_to<value_type, double>)
+                                 && __value_preserving_convertible_to<value_type, double>)
               return __x = basic_vec(rebind_t<double, basic_vec>(__x) / __y);
           }
 #endif
@@ -1490,7 +1490,7 @@ namespace std::simd
       operator<<=(basic_vec& __x, const basic_vec& __y) _GLIBCXX_SIMD_NOEXCEPT
       requires requires(value_type __a) { __a << __a; }
       {
-        __glibcxx_simd_precondition(is_unsigned_v<value_type> or all_of(__y >= value_type()),
+        __glibcxx_simd_precondition(is_unsigned_v<value_type> || all_of(__y >= value_type()),
                                     "negative shift is undefined behavior");
         __glibcxx_simd_precondition(all_of(__y < __max_shift<value_type>),
                                     "too large shift invokes undefined behavior");
@@ -1503,7 +1503,7 @@ namespace std::simd
       operator>>=(basic_vec& __x, const basic_vec& __y) _GLIBCXX_SIMD_NOEXCEPT
       requires requires(value_type __a) { __a >> __a; }
       {
-        __glibcxx_simd_precondition(is_unsigned_v<value_type> or all_of(__y >= value_type()),
+        __glibcxx_simd_precondition(is_unsigned_v<value_type> || all_of(__y >= value_type()),
                                     "negative shift is undefined behavior");
         __glibcxx_simd_precondition(all_of(__y < __max_shift<value_type>),
                                     "too large shift invokes undefined behavior");
@@ -1544,7 +1544,7 @@ namespace std::simd
         {
           static_assert(_S_use_bitmask);
           if (__builtin_is_constant_evaluated()
-                or (__builtin_constant_p(_M_data) and __builtin_constant_p(__y)))
+                || (__builtin_constant_p(_M_data) && __builtin_constant_p(__y)))
             {
               constexpr auto [...__is] = __iota<int[_S_size]>;
               constexpr auto __cmp_op = [] [[__gnu__::__always_inline__]]
@@ -1560,9 +1560,9 @@ namespace std::simd
                 else if constexpr (_Cmp == _X86Cmp::_Neq)
                   return __a != __b;
                 else if constexpr (_Cmp == _X86Cmp::_Nlt)
-                  return not (__a < __b);
+                  return !(__a < __b);
                 else if constexpr (_Cmp == _X86Cmp::_Nle)
-                  return not (__a <= __b);
+                  return !(__a <= __b);
                 else
                   static_assert(false);
               };
@@ -1644,7 +1644,7 @@ namespace std::simd
             {
 #if _GLIBCXX_X86
               if (__builtin_is_constant_evaluated()
-                    or (__k._M_is_constprop() and __t._M_is_constprop() and __f._M_is_constprop()))
+                    || (__k._M_is_constprop() && __t._M_is_constprop() && __f._M_is_constprop()))
                 return basic_vec([&](int __i) { return __k[__i] ? __t[__i] : __f[__i]; });
               else
                 return __x86_bitmask_blend(__k._M_data, __t._M_data, __f._M_data);
@@ -1659,19 +1659,19 @@ namespace std::simd
               using _VO = _VecOps<_DataType>;
               if (_VO::_S_is_constprop_equal_to(__f._M_data, 0))
                 {
-                  if (is_integral_v<value_type> and sizeof(_M_data) >= 8
-                        and _VO::_S_is_constprop_equal_to(__t._M_data, 1))
+                  if (is_integral_v<value_type> && sizeof(_M_data) >= 8
+                        && _VO::_S_is_constprop_equal_to(__t._M_data, 1))
                     return basic_vec((-__k)._M_abs());
-                  /*                  else if (is_integral_v<value_type> and sizeof(_M_data) >= 8
-                             and _VO::_S_is_constprop_equal_to(__t._M_data, value_type(-1)))
+                  /*                  else if (is_integral_v<value_type> && sizeof(_M_data) >= 8
+                             && _VO::_S_is_constprop_equal_to(__t._M_data, value_type(-1)))
                     return basic_vec(-__k);*/
                   else
                     return __vec_and(reinterpret_cast<_DataType>(__k._M_data), __t._M_data);
                 }
               else if (_VecOps<_DataType>::_S_is_constprop_equal_to(__t._M_data, 0))
                 {
-                  if (is_integral_v<value_type> and sizeof(_M_data) >= 8
-                        and _VO::_S_is_constprop_equal_to(__f._M_data, 1))
+                  if (is_integral_v<value_type> && sizeof(_M_data) >= 8
+                        && _VO::_S_is_constprop_equal_to(__f._M_data, 1))
                     return value_type(1) + basic_vec(-__k);
                   else
                     return __vec_andnot(reinterpret_cast<_DataType>(__k._M_data), __f._M_data);
@@ -1693,7 +1693,7 @@ namespace std::simd
 
   template <__vectorizable _Tp, __abi_tag _Ap>
     requires (_Ap::_S_nreg > 1)
-      and (not __complex_like<_Tp>)
+      && (!__complex_like<_Tp>)
     class basic_vec<_Tp, _Ap>
     : _BinaryOps<_Tp, _Ap>
     {
@@ -1774,7 +1774,7 @@ namespace std::simd
       [[__gnu__::__always_inline__]]
       constexpr bool
       _M_is_constprop() const
-      { return _M_data0._M_is_constprop() and _M_data1._M_is_constprop(); }
+      { return _M_data0._M_is_constprop() && _M_data1._M_is_constprop(); }
 
       [[__gnu__::__always_inline__]]
       constexpr auto
@@ -1839,7 +1839,7 @@ namespace std::simd
               using _Rp = array<_Vp, __n>;
               if constexpr (sizeof(_Rp) == sizeof(*this))
                 {
-                  static_assert(not _Vp::_S_is_partial);
+                  static_assert(!_Vp::_S_is_partial);
                   return __builtin_bit_cast(_Rp, *this);
                 }
               else
@@ -1898,7 +1898,7 @@ namespace std::simd
                 return _S_init(__x0, _DataType1::_S_concat(__xs...));
             }
           else if (__builtin_is_constant_evaluated()
-                     or (__x0._M_is_constprop() and ... and __xs._M_is_constprop()))
+                     || (__x0._M_is_constprop() && ... && __xs._M_is_constprop()))
             {
               basic_vec __r;
               __r._M_data0.template _M_assign_from(integral_constant<int, 0>(), __x0, __xs...);
@@ -1951,12 +1951,12 @@ namespace std::simd
         _M_reduce(_BinaryOp __binary_op) const
         {
           if constexpr (_Traits.template _M_eval_as_f32<value_type>()
-                          and (is_same_v<_BinaryOp, plus<>>
-                                 or is_same_v<_BinaryOp, multiplies<>>))
+                          && (is_same_v<_BinaryOp, plus<>>
+                                 || is_same_v<_BinaryOp, multiplies<>>))
             return value_type(rebind_t<float, basic_vec>(*this)._M_reduce(__binary_op));
 #ifdef __SSE2__
-          else if constexpr (is_integral_v<value_type> and sizeof(value_type) == 1
-                               and is_same_v<decltype(__binary_op), multiplies<>>)
+          else if constexpr (is_integral_v<value_type> && sizeof(value_type) == 1
+                               && is_same_v<decltype(__binary_op), multiplies<>>)
             {
               // convert to unsigned short because of missing 8-bit mul instruction
               // we don't need to preserve the order of elements
@@ -1975,7 +1975,7 @@ namespace std::simd
             return _M_reduce_1(__binary_op)._M_reduce(__binary_op);
 #if 0 // needs benchmarking before we do this
           else if constexpr (sizeof(_M_data0) == sizeof(_M_data1)
-                               and requires {
+                               && requires {
                                  __default_identity_element<value_type, decltype(__binary_op)>();
                                })
             { // extend to power-of-2 with identity element for more parallelism
@@ -2087,7 +2087,7 @@ namespace std::simd
 
       [[__gnu__::__always_inline__]]
       constexpr
-      basic_vec(const _NativeVecType& __x) requires (not _S_is_scalar)
+      basic_vec(const _NativeVecType& __x) requires (!_S_is_scalar)
       : _M_data0(_VecOps<__vec_builtin_type<value_type, _N0>>::_S_extract(__x)),
         _M_data1(_VecOps<__vec_builtin_type<value_type, __bit_ceil(unsigned(_N1))>>
                    ::_S_extract(__x, integral_constant<int, _N0>()))
@@ -2095,13 +2095,13 @@ namespace std::simd
 
       [[__gnu__::__always_inline__]]
       constexpr
-      operator _NativeVecType() const requires (not _S_is_scalar)
+      operator _NativeVecType() const requires (!_S_is_scalar)
       { return _M_concat_data(); }
 
       // [simd.ctor] broadcast constructor ------------------------------------
       template <__simd_vec_bcast<value_type> _Up>
         [[__gnu__::__always_inline__]]
-        constexpr explicit(not __broadcast_constructible<_Up, value_type>)
+        constexpr explicit(!__broadcast_constructible<_Up, value_type>)
         basic_vec(_Up&& __x) noexcept
           : _M_data0(static_cast<value_type>(__x)), _M_data1(static_cast<value_type>(__x))
         {}
@@ -2124,8 +2124,8 @@ namespace std::simd
         // FIXME(file LWG issue): missing constraint `constructible_from<value_type, _Up>`
         [[__gnu__::__always_inline__]]
         constexpr
-        explicit(not __value_preserving_convertible_to<_Up, value_type>
-                   or __higher_rank_than<_Up, value_type>)
+        explicit(!__value_preserving_convertible_to<_Up, value_type>
+                   || __higher_rank_than<_Up, value_type>)
         basic_vec(const basic_vec<_Up, _UAbi>& __x) noexcept
           : _M_data0(get<0>(chunk<_N0>(__x))),
             _M_data1(get<1>(chunk<_N0>(__x)))

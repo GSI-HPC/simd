@@ -41,10 +41,10 @@ namespace std::simd
 
   template <typename _Tp, typename _BinaryOperation>
     requires same_as<_BinaryOperation, plus<>>
-      or same_as<_BinaryOperation, multiplies<>>
-      or same_as<_BinaryOperation, bit_and<>>
-      or same_as<_BinaryOperation, bit_or<>>
-      or same_as<_BinaryOperation, bit_xor<>>
+      || same_as<_BinaryOperation, multiplies<>>
+      || same_as<_BinaryOperation, bit_and<>>
+      || same_as<_BinaryOperation, bit_or<>>
+      || same_as<_BinaryOperation, bit_xor<>>
     consteval _Tp __default_identity_element()
     { return __identity_element_for<_Tp, _BinaryOperation>; }
 

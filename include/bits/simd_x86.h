@@ -14,7 +14,7 @@
 
 #include "vec_ops.h"
 
-#if not _GLIBCXX_X86
+#if !_GLIBCXX_X86
 #error "wrong include for this target"
 #endif
 
@@ -162,7 +162,7 @@ namespace std::simd
     inline int
     __x86_vec_testz(_TV __a, _TV __b)
     {
-      static_assert(sizeof(_TV) == 16 or sizeof(_TV) == 32);
+      static_assert(sizeof(_TV) == 16 || sizeof(_TV) == 32);
       static_assert(_Traits._M_have_sse4_1());
       if constexpr (sizeof(_TV) == 32)
         return __builtin_ia32_ptestz256(__vec_bit_cast<long long>(__a),
@@ -177,7 +177,7 @@ namespace std::simd
     inline int
     __x86_vec_testc(_TV __a, _TV __b)
     {
-      static_assert(sizeof(_TV) == 16 or sizeof(_TV) == 32);
+      static_assert(sizeof(_TV) == 16 || sizeof(_TV) == 32);
       static_assert(_Traits._M_have_sse4_1());
       if constexpr (sizeof(_TV) == 32)
         return __builtin_ia32_ptestc256(__vec_bit_cast<long long>(__a),
@@ -193,7 +193,7 @@ namespace std::simd
     __x86_vecmask_all(_TV __k)
     {
       using _Tp = __vec_value_type<_TV>;
-      static_assert(is_integral_v<_Tp> and is_signed_v<_Tp>);
+      static_assert(is_integral_v<_Tp> && is_signed_v<_Tp>);
       constexpr int __width = __width_of<_TV>;
       static_assert(sizeof(__k) <= 32);
       if constexpr (_Np == __width)
@@ -203,7 +203,7 @@ namespace std::simd
               using _Ip = __integer_from<sizeof(__k)>;
               return __builtin_bit_cast(_Ip, __k) == ~_Ip();
             }
-          else if constexpr (not _Traits._M_have_sse4_1())
+          else if constexpr (!_Traits._M_have_sse4_1())
             {
               constexpr unsigned __valid_bits = (1u << (sizeof(_Tp) == 2 ? _Np * 2 : _Np)) - 1;
               return __x86_movmsk(__k) == __valid_bits;
@@ -219,7 +219,7 @@ namespace std::simd
           constexpr _Ip __valid_bits = (_Ip(1) << (_Np * sizeof(_Tp) * __CHAR_BIT__)) - 1;
           return (__builtin_bit_cast(_Ip, __k) & __valid_bits) == __valid_bits;
         }
-      else if constexpr (not _Traits._M_have_sse4_1())
+      else if constexpr (!_Traits._M_have_sse4_1())
         {
           constexpr unsigned __valid_bits = (1u << (sizeof(_Tp) == 2 ? _Np * 2 : _Np)) - 1;
           return (__x86_movmsk(__k) & __valid_bits) == __valid_bits;
@@ -236,18 +236,18 @@ namespace std::simd
     __x86_vecmask_any(_TV __k)
     {
       using _Tp = __vec_value_type<_TV>;
-      static_assert(is_integral_v<_Tp> and is_signed_v<_Tp>);
+      static_assert(is_integral_v<_Tp> && is_signed_v<_Tp>);
       constexpr int __width = __width_of<_TV>;
       static_assert(sizeof(__k) <= 32);
       if constexpr (_Np == __width)
-        return not __x86_vec_is_zero(__k);
+        return !__x86_vec_is_zero(__k);
       else if constexpr (sizeof(__k) <= __x86_max_general_register_size)
         {
           using _Ip = __integer_from<sizeof(__k)>;
           constexpr _Ip __valid_bits = (_Ip(1) << (_Np * sizeof(_Tp) * __CHAR_BIT__)) - 1;
           return (__builtin_bit_cast(_Ip, __k) & __valid_bits) != _Ip();
         }
-      else if constexpr (not _Traits._M_have_sse4_1())
+      else if constexpr (!_Traits._M_have_sse4_1())
         {
           constexpr unsigned __valid_bits = (1u << (sizeof(_Tp) == 2 ? _Np * 2 : _Np)) - 1;
           return (__x86_movmsk(__k) & __valid_bits) != 0;
@@ -264,7 +264,7 @@ namespace std::simd
     __x86_vecmask_none(_TV __k)
     {
       using _Tp = __vec_value_type<_TV>;
-      static_assert(is_integral_v<_Tp> and is_signed_v<_Tp>);
+      static_assert(is_integral_v<_Tp> && is_signed_v<_Tp>);
       constexpr int __width = __width_of<_TV>;
       static_assert(sizeof(__k) <= 32);
       if constexpr (_Np == __width)
@@ -275,7 +275,7 @@ namespace std::simd
           constexpr _Ip __valid_bits = (_Ip(1) << (_Np * sizeof(_Tp) * __CHAR_BIT__)) - 1;
           return (__builtin_bit_cast(_Ip, __k) & __valid_bits) == _Ip();
         }
-      else if constexpr (not _Traits._M_have_sse4_1())
+      else if constexpr (!_Traits._M_have_sse4_1())
         {
           constexpr unsigned __valid_bits = (1u << (sizeof(_Tp) == 2 ? _Np * 2 : _Np)) - 1;
           return (__x86_movmsk(__k) & __valid_bits) == 0;
@@ -305,27 +305,27 @@ namespace std::simd
     {
       constexpr int __c = int(_Cmp);
       using _Tp = __vec_value_type<_TV>;
-      if constexpr (sizeof(_TV) == 64 and sizeof(_Tp) == 8)
+      if constexpr (sizeof(_TV) == 64 && sizeof(_Tp) == 8)
         return __builtin_ia32_cmppd512_mask(__x, __y, __c, -1, 4);
-      else if constexpr (sizeof(_TV) == 64 and sizeof(_Tp) == 4)
+      else if constexpr (sizeof(_TV) == 64 && sizeof(_Tp) == 4)
         return __builtin_ia32_cmpps512_mask(__x, __y, __c, -1, 4);
-      else if constexpr (sizeof(_TV) == 32 and sizeof(_Tp) == 8)
+      else if constexpr (sizeof(_TV) == 32 && sizeof(_Tp) == 8)
         return __builtin_ia32_cmppd256_mask(__x, __y, __c, -1);
-      else if constexpr (sizeof(_TV) == 32 and sizeof(_Tp) == 4)
+      else if constexpr (sizeof(_TV) == 32 && sizeof(_Tp) == 4)
         return __builtin_ia32_cmpps256_mask(__x, __y, __c, -1);
-      else if constexpr (sizeof(_TV) == 16 and sizeof(_Tp) == 8)
+      else if constexpr (sizeof(_TV) == 16 && sizeof(_Tp) == 8)
         return __builtin_ia32_cmppd128_mask(__x, __y, __c, -1);
-      else if constexpr (sizeof(_TV) == 16 and sizeof(_Tp) == 4)
+      else if constexpr (sizeof(_TV) == 16 && sizeof(_Tp) == 4)
         return __builtin_ia32_cmpps128_mask(__x, __y, __c, -1);
       else if constexpr (is_same_v<_Tp, _Float16>)
         {
-          if constexpr (sizeof(_TV) == 64 and _Traits._M_have_avx512fp16())
+          if constexpr (sizeof(_TV) == 64 && _Traits._M_have_avx512fp16())
             return __builtin_ia32_cmpph512_mask(__x, __y, __c, -1);
-          else if constexpr (sizeof(_TV) == 32 and _Traits._M_have_avx512fp16())
+          else if constexpr (sizeof(_TV) == 32 && _Traits._M_have_avx512fp16())
             return __builtin_ia32_cmpph256_mask(__x, __y, __c, -1);
-          else if constexpr (sizeof(_TV) == 16 and _Traits._M_have_avx512fp16())
+          else if constexpr (sizeof(_TV) == 16 && _Traits._M_have_avx512fp16())
             return __builtin_ia32_cmpph128_mask(__x, __y, __c, -1);
-          else if constexpr (sizeof(_TV) < 16 and _Traits._M_have_avx512fp16())
+          else if constexpr (sizeof(_TV) < 16 && _Traits._M_have_avx512fp16())
             return __x86_bitmask_cmp<_Cmp>(__vec_zero_pad_to_16(__x), __vec_zero_pad_to_16(__y));
           else
             {
@@ -353,7 +353,7 @@ namespace std::simd
   template <typename _Tp>
     using __x86_intrin_type
       = decltype([] {
-          if constexpr (is_integral_v<_Tp> or sizeof(_Tp) <= 2)
+          if constexpr (is_integral_v<_Tp> || sizeof(_Tp) <= 2)
             return __x86_intrin_int<_Tp>();
           else
             return __canonical_vec_type_t<_Tp>();
@@ -386,29 +386,29 @@ namespace std::simd
         {
           const auto __xi = __vec_bit_cast<__x86_intrin_int<_Tp>>(__x);
           const auto __yi = __vec_bit_cast<__x86_intrin_int<_Tp>>(__y);
-          if constexpr (sizeof(_TV) == 64 and sizeof(_Tp) == 8)
+          if constexpr (sizeof(_TV) == 64 && sizeof(_Tp) == 8)
             return __builtin_ia32_cmpq512_mask(__xi, __yi, __c, -1);
-          else if constexpr (sizeof(_TV) == 64 and sizeof(_Tp) == 4)
+          else if constexpr (sizeof(_TV) == 64 && sizeof(_Tp) == 4)
             return __builtin_ia32_cmpd512_mask(__xi, __yi, __c, -1);
-          else if constexpr (sizeof(_TV) == 64 and sizeof(_Tp) == 2)
+          else if constexpr (sizeof(_TV) == 64 && sizeof(_Tp) == 2)
             return __builtin_ia32_cmpw512_mask(__xi, __yi, __c, -1);
-          else if constexpr (sizeof(_TV) == 64 and sizeof(_Tp) == 1)
+          else if constexpr (sizeof(_TV) == 64 && sizeof(_Tp) == 1)
             return __builtin_ia32_cmpb512_mask(__xi, __yi, __c, -1);
-          else if constexpr (sizeof(_TV) == 32 and sizeof(_Tp) == 8)
+          else if constexpr (sizeof(_TV) == 32 && sizeof(_Tp) == 8)
             return __builtin_ia32_cmpq256_mask(__xi, __yi, __c, -1);
-          else if constexpr (sizeof(_TV) == 32 and sizeof(_Tp) == 4)
+          else if constexpr (sizeof(_TV) == 32 && sizeof(_Tp) == 4)
             return __builtin_ia32_cmpd256_mask(__xi, __yi, __c, -1);
-          else if constexpr (sizeof(_TV) == 32 and sizeof(_Tp) == 2)
+          else if constexpr (sizeof(_TV) == 32 && sizeof(_Tp) == 2)
             return __builtin_ia32_cmpw256_mask(__xi, __yi, __c, -1);
-          else if constexpr (sizeof(_TV) == 32 and sizeof(_Tp) == 1)
+          else if constexpr (sizeof(_TV) == 32 && sizeof(_Tp) == 1)
             return __builtin_ia32_cmpb256_mask(__xi, __yi, __c, -1);
-          else if constexpr (sizeof(_TV) == 16 and sizeof(_Tp) == 8)
+          else if constexpr (sizeof(_TV) == 16 && sizeof(_Tp) == 8)
             return __builtin_ia32_cmpq128_mask(__xi, __yi, __c, -1);
-          else if constexpr (sizeof(_TV) == 16 and sizeof(_Tp) == 4)
+          else if constexpr (sizeof(_TV) == 16 && sizeof(_Tp) == 4)
             return __builtin_ia32_cmpd128_mask(__xi, __yi, __c, -1);
-          else if constexpr (sizeof(_TV) == 16 and sizeof(_Tp) == 2)
+          else if constexpr (sizeof(_TV) == 16 && sizeof(_Tp) == 2)
             return __builtin_ia32_cmpw128_mask(__xi, __yi, __c, -1);
-          else if constexpr (sizeof(_TV) == 16 and sizeof(_Tp) == 1)
+          else if constexpr (sizeof(_TV) == 16 && sizeof(_Tp) == 1)
             return __builtin_ia32_cmpb128_mask(__xi, __yi, __c, -1);
           else
             static_assert(false);
@@ -417,29 +417,29 @@ namespace std::simd
         {
           const auto __xi = __vec_bit_cast<__x86_intrin_int<_Tp>>(__x);
           const auto __yi = __vec_bit_cast<__x86_intrin_int<_Tp>>(__y);
-          if constexpr (sizeof(_TV) == 64 and sizeof(_Tp) == 8)
+          if constexpr (sizeof(_TV) == 64 && sizeof(_Tp) == 8)
             return __builtin_ia32_ucmpq512_mask(__xi, __yi, __c, -1);
-          else if constexpr (sizeof(_TV) == 64 and sizeof(_Tp) == 4)
+          else if constexpr (sizeof(_TV) == 64 && sizeof(_Tp) == 4)
             return __builtin_ia32_ucmpd512_mask(__xi, __yi, __c, -1);
-          else if constexpr (sizeof(_TV) == 64 and sizeof(_Tp) == 2)
+          else if constexpr (sizeof(_TV) == 64 && sizeof(_Tp) == 2)
             return __builtin_ia32_ucmpw512_mask(__xi, __yi, __c, -1);
-          else if constexpr (sizeof(_TV) == 64 and sizeof(_Tp) == 1)
+          else if constexpr (sizeof(_TV) == 64 && sizeof(_Tp) == 1)
             return __builtin_ia32_ucmpb512_mask(__xi, __yi, __c, -1);
-          else if constexpr (sizeof(_TV) == 32 and sizeof(_Tp) == 8)
+          else if constexpr (sizeof(_TV) == 32 && sizeof(_Tp) == 8)
             return __builtin_ia32_ucmpq256_mask(__xi, __yi, __c, -1);
-          else if constexpr (sizeof(_TV) == 32 and sizeof(_Tp) == 4)
+          else if constexpr (sizeof(_TV) == 32 && sizeof(_Tp) == 4)
             return __builtin_ia32_ucmpd256_mask(__xi, __yi, __c, -1);
-          else if constexpr (sizeof(_TV) == 32 and sizeof(_Tp) == 2)
+          else if constexpr (sizeof(_TV) == 32 && sizeof(_Tp) == 2)
             return __builtin_ia32_ucmpw256_mask(__xi, __yi, __c, -1);
-          else if constexpr (sizeof(_TV) == 32 and sizeof(_Tp) == 1)
+          else if constexpr (sizeof(_TV) == 32 && sizeof(_Tp) == 1)
             return __builtin_ia32_ucmpb256_mask(__xi, __yi, __c, -1);
-          else if constexpr (sizeof(_TV) == 16 and sizeof(_Tp) == 8)
+          else if constexpr (sizeof(_TV) == 16 && sizeof(_Tp) == 8)
             return __builtin_ia32_ucmpq128_mask(__xi, __yi, __c, -1);
-          else if constexpr (sizeof(_TV) == 16 and sizeof(_Tp) == 4)
+          else if constexpr (sizeof(_TV) == 16 && sizeof(_Tp) == 4)
             return __builtin_ia32_ucmpd128_mask(__xi, __yi, __c, -1);
-          else if constexpr (sizeof(_TV) == 16 and sizeof(_Tp) == 2)
+          else if constexpr (sizeof(_TV) == 16 && sizeof(_Tp) == 2)
             return __builtin_ia32_ucmpw128_mask(__xi, __yi, __c, -1);
-          else if constexpr (sizeof(_TV) == 16 and sizeof(_Tp) == 1)
+          else if constexpr (sizeof(_TV) == 16 && sizeof(_Tp) == 1)
             return __builtin_ia32_ucmpb128_mask(__xi, __yi, __c, -1);
           else
             static_assert(false);
@@ -454,25 +454,25 @@ namespace std::simd
       static_assert(_Traits._M_have_avx512dq());
       using _Tp = __vec_value_type<_TV>;
       static_assert(is_floating_point_v<_Tp>);
-      if constexpr (sizeof(_TV) == 64 and sizeof(_Tp) == 8)
+      if constexpr (sizeof(_TV) == 64 && sizeof(_Tp) == 8)
         return __builtin_ia32_fpclasspd512_mask(__x, 0x18, -1);
-      else if constexpr (sizeof(_TV) == 32 and sizeof(_Tp) == 8)
+      else if constexpr (sizeof(_TV) == 32 && sizeof(_Tp) == 8)
         return __builtin_ia32_fpclasspd256_mask(__x, 0x18, -1);
-      else if constexpr (sizeof(_TV) == 16 and sizeof(_Tp) == 8)
+      else if constexpr (sizeof(_TV) == 16 && sizeof(_Tp) == 8)
         return __builtin_ia32_fpclasspd128_mask(__x, 0x18, -1);
-      else if constexpr (sizeof(_TV) == 64 and sizeof(_Tp) == 4)
+      else if constexpr (sizeof(_TV) == 64 && sizeof(_Tp) == 4)
         return __builtin_ia32_fpclassps512_mask(__x, 0x18, -1);
-      else if constexpr (sizeof(_TV) == 32 and sizeof(_Tp) == 4)
+      else if constexpr (sizeof(_TV) == 32 && sizeof(_Tp) == 4)
         return __builtin_ia32_fpclassps256_mask(__x, 0x18, -1);
-      else if constexpr (sizeof(_TV) == 16 and sizeof(_Tp) == 4)
+      else if constexpr (sizeof(_TV) == 16 && sizeof(_Tp) == 4)
         return __builtin_ia32_fpclassps128_mask(__x, 0x18, -1);
-      else if constexpr (sizeof(_TV) == 64 and sizeof(_Tp) == 2 and _Traits._M_have_avx512fp16())
+      else if constexpr (sizeof(_TV) == 64 && sizeof(_Tp) == 2 && _Traits._M_have_avx512fp16())
         return __builtin_ia32_fpclassph512_mask(__x, 0x18, -1);
-      else if constexpr (sizeof(_TV) == 32 and sizeof(_Tp) == 2 and _Traits._M_have_avx512fp16())
+      else if constexpr (sizeof(_TV) == 32 && sizeof(_Tp) == 2 && _Traits._M_have_avx512fp16())
         return __builtin_ia32_fpclassph256_mask(__x, 0x18, -1);
-      else if constexpr (sizeof(_TV) == 16 and sizeof(_Tp) == 2 and _Traits._M_have_avx512fp16())
+      else if constexpr (sizeof(_TV) == 16 && sizeof(_Tp) == 2 && _Traits._M_have_avx512fp16())
         return __builtin_ia32_fpclassph128_mask(__x, 0x18, -1);
-      else if constexpr (sizeof(_Tp) == 2 and not _Traits._M_have_avx512fp16())
+      else if constexpr (sizeof(_Tp) == 2 && !_Traits._M_have_avx512fp16())
         return __x86_bitmask_isinf(__vec_cast<float>(__x));
       else if constexpr (sizeof(_TV) < 16)
         return __x86_bitmask_isinf(__vec_zero_pad_to_16(__x));
@@ -487,38 +487,38 @@ namespace std::simd
     {
       using _Kp = __vec_value_type<_KV>;
       static_assert((sizeof(__bits) * __CHAR_BIT__ == __width_of<_KV>)
-                      or (sizeof(__bits) == 1 and __CHAR_BIT__ > __width_of<_KV>));
+                      || (sizeof(__bits) == 1 && __CHAR_BIT__ > __width_of<_KV>));
 
-      if constexpr (sizeof(_Kp) == 1 and sizeof(_KV) == 64)
+      if constexpr (sizeof(_Kp) == 1 && sizeof(_KV) == 64)
         return __builtin_ia32_cvtmask2b512(__bits);
-      else if constexpr (sizeof(_Kp) == 1 and sizeof(_KV) == 32)
+      else if constexpr (sizeof(_Kp) == 1 && sizeof(_KV) == 32)
         return __builtin_ia32_cvtmask2b256(__bits);
-      else if constexpr (sizeof(_Kp) == 1 and sizeof(_KV) == 16)
+      else if constexpr (sizeof(_Kp) == 1 && sizeof(_KV) == 16)
         return __builtin_ia32_cvtmask2b128(__bits);
-      else if constexpr (sizeof(_Kp) == 1 and sizeof(_KV) <= 8)
+      else if constexpr (sizeof(_Kp) == 1 && sizeof(_KV) <= 8)
         return _VecOps<_KV>::_S_extract(__builtin_ia32_cvtmask2b128(__bits));
 
-      else if constexpr (sizeof(_Kp) == 2 and sizeof(_KV) == 64)
+      else if constexpr (sizeof(_Kp) == 2 && sizeof(_KV) == 64)
         return __builtin_ia32_cvtmask2w512(__bits);
-      else if constexpr (sizeof(_Kp) == 2 and sizeof(_KV) == 32)
+      else if constexpr (sizeof(_Kp) == 2 && sizeof(_KV) == 32)
         return __builtin_ia32_cvtmask2w256(__bits);
-      else if constexpr (sizeof(_Kp) == 2 and sizeof(_KV) == 16)
+      else if constexpr (sizeof(_Kp) == 2 && sizeof(_KV) == 16)
         return __builtin_ia32_cvtmask2w128(__bits);
-      else if constexpr (sizeof(_Kp) == 2 and sizeof(_KV) <= 8)
+      else if constexpr (sizeof(_Kp) == 2 && sizeof(_KV) <= 8)
         return _VecOps<_KV>::_S_extract(__builtin_ia32_cvtmask2w128(__bits));
 
-      else if constexpr (sizeof(_Kp) == 4 and sizeof(_KV) == 64)
+      else if constexpr (sizeof(_Kp) == 4 && sizeof(_KV) == 64)
         return __builtin_ia32_cvtmask2d512(__bits);
-      else if constexpr (sizeof(_Kp) == 4 and sizeof(_KV) == 32)
+      else if constexpr (sizeof(_Kp) == 4 && sizeof(_KV) == 32)
         return __builtin_ia32_cvtmask2d256(__bits);
-      else if constexpr (sizeof(_Kp) == 4 and sizeof(_KV) <= 16)
+      else if constexpr (sizeof(_Kp) == 4 && sizeof(_KV) <= 16)
         return _VecOps<_KV>::_S_extract(__builtin_ia32_cvtmask2d128(__bits));
 
-      else if constexpr (sizeof(_Kp) == 8 and sizeof(_KV) == 64)
+      else if constexpr (sizeof(_Kp) == 8 && sizeof(_KV) == 64)
         return __builtin_ia32_cvtmask2q512(__bits);
-      else if constexpr (sizeof(_Kp) == 8 and sizeof(_KV) == 32)
+      else if constexpr (sizeof(_Kp) == 8 && sizeof(_KV) == 32)
         return __builtin_ia32_cvtmask2q256(__bits);
-      else if constexpr (sizeof(_Kp) == 8 and sizeof(_KV) == 16)
+      else if constexpr (sizeof(_Kp) == 8 && sizeof(_KV) == 16)
         return __builtin_ia32_cvtmask2q128(__bits);
 
       else
@@ -533,32 +533,32 @@ namespace std::simd
     {
       using _Tp = __vec_value_type<_TV>;
       using _Ip = __x86_intrin_int<_Tp>;
-      if constexpr (not is_same_v<_Ip, _Tp>)
+      if constexpr (!is_same_v<_Ip, _Tp>)
         return reinterpret_cast<_TV>(__x86_bitmask_blend(__k, __vec_bit_cast<_Ip>(__t),
                                                          __vec_bit_cast<_Ip>(__f)));
-      else if constexpr (sizeof(_TV) == 64 and sizeof(_Tp) == 8)
+      else if constexpr (sizeof(_TV) == 64 && sizeof(_Tp) == 8)
         return __builtin_ia32_blendmq_512_mask (__f, __t, __k);
-      else if constexpr (sizeof(_TV) == 64 and sizeof(_Tp) == 4)
+      else if constexpr (sizeof(_TV) == 64 && sizeof(_Tp) == 4)
         return __builtin_ia32_blendmd_512_mask (__f, __t, __k);
-      else if constexpr (sizeof(_TV) == 64 and sizeof(_Tp) == 2)
+      else if constexpr (sizeof(_TV) == 64 && sizeof(_Tp) == 2)
         return __builtin_ia32_blendmw_512_mask (__f, __t, __k);
-      else if constexpr (sizeof(_TV) == 64 and sizeof(_Tp) == 1)
+      else if constexpr (sizeof(_TV) == 64 && sizeof(_Tp) == 1)
         return __builtin_ia32_blendmb_512_mask (__f, __t, __k);
-      else if constexpr (sizeof(_TV) == 32 and sizeof(_Tp) == 8)
+      else if constexpr (sizeof(_TV) == 32 && sizeof(_Tp) == 8)
         return __builtin_ia32_blendmq_256_mask (__f, __t, __k);
-      else if constexpr (sizeof(_TV) == 32 and sizeof(_Tp) == 4)
+      else if constexpr (sizeof(_TV) == 32 && sizeof(_Tp) == 4)
         return __builtin_ia32_blendmd_256_mask (__f, __t, __k);
-      else if constexpr (sizeof(_TV) == 32 and sizeof(_Tp) == 2)
+      else if constexpr (sizeof(_TV) == 32 && sizeof(_Tp) == 2)
         return __builtin_ia32_blendmw_256_mask (__f, __t, __k);
-      else if constexpr (sizeof(_TV) == 32 and sizeof(_Tp) == 1)
+      else if constexpr (sizeof(_TV) == 32 && sizeof(_Tp) == 1)
         return __builtin_ia32_blendmb_256_mask (__f, __t, __k);
-      else if constexpr (sizeof(_TV) == 16 and sizeof(_Tp) == 8)
+      else if constexpr (sizeof(_TV) == 16 && sizeof(_Tp) == 8)
         return __builtin_ia32_blendmq_128_mask (__f, __t, __k);
-      else if constexpr (sizeof(_TV) == 16 and sizeof(_Tp) == 4)
+      else if constexpr (sizeof(_TV) == 16 && sizeof(_Tp) == 4)
         return __builtin_ia32_blendmd_128_mask (__f, __t, __k);
-      else if constexpr (sizeof(_TV) == 16 and sizeof(_Tp) == 2)
+      else if constexpr (sizeof(_TV) == 16 && sizeof(_Tp) == 2)
         return __builtin_ia32_blendmw_128_mask (__f, __t, __k);
-      else if constexpr (sizeof(_TV) == 16 and sizeof(_Tp) == 1)
+      else if constexpr (sizeof(_TV) == 16 && sizeof(_Tp) == 1)
         return __builtin_ia32_blendmb_128_mask (__f, __t, __k);
       else if constexpr (sizeof(_TV) < 16)
         return _VecOps<_TV>::_S_extract(__x86_bitmask_blend(__k, __vec_zero_pad_to_16(__t),
@@ -574,17 +574,17 @@ namespace std::simd
     __x86_bitmask_blend(_Kp __k, _TV __t, _TV __f)
     {
       using _Tp = __vec_value_type<_TV>;
-      if constexpr (sizeof(_TV) == 64 and sizeof(_Tp) == 8)
+      if constexpr (sizeof(_TV) == 64 && sizeof(_Tp) == 8)
         return __builtin_ia32_blendmpd_512_mask (__f, __t, __k);
-      else if constexpr (sizeof(_TV) == 64 and sizeof(_Tp) == 4)
+      else if constexpr (sizeof(_TV) == 64 && sizeof(_Tp) == 4)
         return __builtin_ia32_blendmps_512_mask (__f, __t, __k);
-      else if constexpr (sizeof(_TV) == 32 and sizeof(_Tp) == 8)
+      else if constexpr (sizeof(_TV) == 32 && sizeof(_Tp) == 8)
         return __builtin_ia32_blendmpd_256_mask (__f, __t, __k);
-      else if constexpr (sizeof(_TV) == 32 and sizeof(_Tp) == 4)
+      else if constexpr (sizeof(_TV) == 32 && sizeof(_Tp) == 4)
         return __builtin_ia32_blendmps_256_mask (__f, __t, __k);
-      else if constexpr (sizeof(_TV) == 16 and sizeof(_Tp) == 8)
+      else if constexpr (sizeof(_TV) == 16 && sizeof(_Tp) == 8)
         return __builtin_ia32_blendmpd_128_mask (__f, __t, __k);
-      else if constexpr (sizeof(_TV) == 16 and sizeof(_Tp) == 4)
+      else if constexpr (sizeof(_TV) == 16 && sizeof(_Tp) == 4)
         return __builtin_ia32_blendmps_128_mask (__f, __t, __k);
       else if constexpr (is_same_v<_Tp, _Float16>)
         {
@@ -788,7 +788,7 @@ namespace std::simd
     constexpr auto
     __duplicate_each_bit(const __trivial_pair<_U0, _U1>& __x)
     {
-      static_assert(_InputBits != -1 or is_unsigned_v<_U1>);
+      static_assert(_InputBits != -1 || is_unsigned_v<_U1>);
       constexpr int __input_bits = _InputBits == -1 ? (sizeof(_U0) + sizeof(_U1)) * __CHAR_BIT__
                                                     : _InputBits;
       constexpr int __in0 = min(int(sizeof(_U0)) * __CHAR_BIT__, __input_bits);
@@ -811,7 +811,7 @@ namespace std::simd
       static_assert(_Traits._M_have_fma());
       static_assert(is_floating_point_v<_Tp>);
 
-      if constexpr (not _Traits._M_have_avx512fp16() and sizeof(_Tp) == 2)
+      if constexpr (!_Traits._M_have_avx512fp16() && sizeof(_Tp) == 2)
         return __vec_cast<_Tp>(__x86_complex_multiplies(__vec_cast<float>(__x),
                                                         __vec_cast<float>(__y)));
       else if constexpr (sizeof(_TV) < 16)
@@ -824,27 +824,27 @@ namespace std::simd
           _TV __x_imag = _VO::_S_dup_odd(__x);
           _TV __y_swapped = _VO::_S_swap_neighbors(__y);
 
-          if constexpr (sizeof(__x) == 16 and sizeof(_Tp) == 2)
+          if constexpr (sizeof(__x) == 16 && sizeof(_Tp) == 2)
             return __builtin_ia32_vfmaddsubph128_mask(__x_real, __y, __x_imag * __y_swapped, -1);
-          else if constexpr (sizeof(__x) == 32 and sizeof(_Tp) == 2)
+          else if constexpr (sizeof(__x) == 32 && sizeof(_Tp) == 2)
             return __builtin_ia32_vfmaddsubph256_mask(__x_real, __y, __x_imag * __y_swapped, -1);
-          else if constexpr (sizeof(__x) == 64 and sizeof(_Tp) == 2)
+          else if constexpr (sizeof(__x) == 64 && sizeof(_Tp) == 2)
             return __builtin_ia32_vfmaddsubph512_mask(
                      __x_real, __y, __x_imag * __y_swapped, -1, 0x04);
 
-          else if constexpr (sizeof(__x) == 16 and sizeof(_Tp) == 4)
+          else if constexpr (sizeof(__x) == 16 && sizeof(_Tp) == 4)
             return __builtin_ia32_vfmaddsubps(__x_real, __y, __x_imag * __y_swapped);
-          else if constexpr (sizeof(__x) == 32 and sizeof(_Tp) == 4)
+          else if constexpr (sizeof(__x) == 32 && sizeof(_Tp) == 4)
             return __builtin_ia32_vfmaddsubps256(__x_real, __y, __x_imag * __y_swapped);
-          else if constexpr (sizeof(__x) == 64 and sizeof(_Tp) == 4)
+          else if constexpr (sizeof(__x) == 64 && sizeof(_Tp) == 4)
             return __builtin_ia32_vfmaddsubps512_mask(
                      __x_real, __y, __x_imag * __y_swapped, -1, 0x04);
 
-          else if constexpr (sizeof(__x) == 16 and sizeof(_Tp) == 8)
+          else if constexpr (sizeof(__x) == 16 && sizeof(_Tp) == 8)
             return __builtin_ia32_vfmaddsubpd(__x_real, __y, __x_imag * __y_swapped);
-          else if constexpr (sizeof(__x) == 32 and sizeof(_Tp) == 8)
+          else if constexpr (sizeof(__x) == 32 && sizeof(_Tp) == 8)
             return __builtin_ia32_vfmaddsubpd256(__x_real, __y, __x_imag * __y_swapped);
-          else if constexpr (sizeof(__x) == 64 and sizeof(_Tp) == 8)
+          else if constexpr (sizeof(__x) == 64 && sizeof(_Tp) == 8)
             return __builtin_ia32_vfmaddsubpd512_mask(
                      __x_real, __y, __x_imag * __y_swapped, -1, 0x04);
 
@@ -860,10 +860,10 @@ namespace std::simd
     __x86_cvt_f16c(_TV __v)
     {
       constexpr bool __from_f16 = is_same_v<__vec_value_type<_TV>, _Float16>;
-      constexpr bool __to_f16 = not __from_f16;
-      if constexpr (__to_f16 and not is_same_v<__vec_value_type<_TV>, float>)
+      constexpr bool __to_f16 = !__from_f16;
+      if constexpr (__to_f16 && !is_same_v<__vec_value_type<_TV>, float>)
         return __x86_cvt_f16c<_UV>(__vec_cast<float>(__v));
-      else if constexpr (__from_f16 and not is_same_v<__vec_value_type<_UV>, float>)
+      else if constexpr (__from_f16 && !is_same_v<__vec_value_type<_UV>, float>)
         return __vec_cast<_UV>(__x86_cvt_f16c<__vec_builtin_type<float, __width_of<_TV>>>(__v));
       else if constexpr (__from_f16)
         {
@@ -925,12 +925,12 @@ namespace std::simd
     {
       using _T0 = __vec_value_type<_From>;
       using _T1 = __vec_value_type<_To>;
-      if constexpr (sizeof(_From) > sizeof(_To) and sizeof(_From) < 16)
+      if constexpr (sizeof(_From) > sizeof(_To) && sizeof(_From) < 16)
         {
           using _ToPadded = __vec_builtin_type_bytes<_T1, sizeof(_To) * 16 / sizeof(_From)>;
           return _VecOps<_To>::_S_extract(__x86_cvt_vecmask<_ToPadded>(__vec_zero_pad_to_16(__k)));
         }
-      else if constexpr (sizeof(_T0) == 2 and sizeof(_T1) == 1) // -> packsswb
+      else if constexpr (sizeof(_T0) == 2 && sizeof(_T1) == 1) // -> packsswb
         {
           if constexpr (sizeof(__k) == 16)
             return reinterpret_cast<_To>(__vec_split_lo(__builtin_ia32_packsswb128(__k, __k)));
@@ -956,7 +956,7 @@ namespace std::simd
       using _T0 = __vec_value_type<_From>;
       using _T1 = __vec_value_type<_To>;
       static_assert(sizeof(_From) >= 16);
-      if constexpr (sizeof(_T0) == 2 and sizeof(_T1) == 1) // -> packsswb
+      if constexpr (sizeof(_T0) == 2 && sizeof(_T1) == 1) // -> packsswb
         {
           if constexpr (sizeof(__k0) == 16)
             return reinterpret_cast<_To>(__builtin_ia32_packsswb128(__k0, __k1));
@@ -980,10 +980,10 @@ namespace std::simd
     inline _TV
     __x86_masked_load(const _Up* __mem, unsigned_integral auto __k)
     {
-      static_assert(_Traits._M_have_avx512vl() and _Traits._M_have_avx512bw());
+      static_assert(_Traits._M_have_avx512vl() && _Traits._M_have_avx512bw());
       using _Tp = __vec_value_type<_TV>;
       constexpr int __n = __width_of<_TV>;
-      if constexpr (not __converts_trivially<_Up, _Tp>)
+      if constexpr (!__converts_trivially<_Up, _Tp>)
         {
           const auto __uvec
             = __x86_masked_load<__vec_builtin_type<__canonical_vec_type_t<_Up>, __n>>(__mem, __k);
@@ -1005,9 +1005,9 @@ namespace std::simd
         {
           const auto* __src = reinterpret_cast<const __x86_intrin_type<_Up>*>(__mem);
           const __vec_builtin_type_bytes<__x86_intrin_type<_Up>, 64> __z = {};
-          if constexpr (is_floating_point_v<_Tp> and sizeof(_Tp) == 4)
+          if constexpr (is_floating_point_v<_Tp> && sizeof(_Tp) == 4)
             return __builtin_ia32_loadups512_mask(__src, __z, __k);
-          else if constexpr (is_floating_point_v<_Tp> and sizeof(_Tp) == 8)
+          else if constexpr (is_floating_point_v<_Tp> && sizeof(_Tp) == 8)
             return __builtin_ia32_loadupd512_mask(__src, __z, __k);
           else if constexpr (sizeof(_Tp) == 1)
             return reinterpret_cast<_TV>(__builtin_ia32_loaddquqi512_mask(__src, __z, __k));
@@ -1024,9 +1024,9 @@ namespace std::simd
         {
           const auto* __src = reinterpret_cast<const __x86_intrin_type<_Up>*>(__mem);
           const __vec_builtin_type_bytes<__x86_intrin_type<_Up>, 32> __z = {};
-          if constexpr (is_floating_point_v<_Tp> and sizeof(_Tp) == 4)
+          if constexpr (is_floating_point_v<_Tp> && sizeof(_Tp) == 4)
             return __builtin_ia32_loadups256_mask(__src, __z, __k);
-          else if constexpr (is_floating_point_v<_Tp> and sizeof(_Tp) == 8)
+          else if constexpr (is_floating_point_v<_Tp> && sizeof(_Tp) == 8)
             return __builtin_ia32_loadupd256_mask(__src, __z, __k);
           else if constexpr (sizeof(_Tp) == 1)
             return reinterpret_cast<_TV>(__builtin_ia32_loaddquqi256_mask(__src, __z, __k));
@@ -1043,9 +1043,9 @@ namespace std::simd
         {
           const auto* __src = reinterpret_cast<const __x86_intrin_type<_Up>*>(__mem);
           const __vec_builtin_type_bytes<__x86_intrin_type<_Up>, 16> __z = {};
-          if constexpr (is_floating_point_v<_Tp> and sizeof(_Tp) == 4)
+          if constexpr (is_floating_point_v<_Tp> && sizeof(_Tp) == 4)
             return __builtin_ia32_loadups128_mask(__src, __z, __k);
-          else if constexpr (is_floating_point_v<_Tp> and sizeof(_Tp) == 8)
+          else if constexpr (is_floating_point_v<_Tp> && sizeof(_Tp) == 8)
             return __builtin_ia32_loadupd128_mask(__src, __z, __k);
           else if constexpr (sizeof(_Tp) == 1)
             return reinterpret_cast<_TV>(__builtin_ia32_loaddquqi128_mask(__src, __z, __k));
@@ -1071,24 +1071,24 @@ namespace std::simd
     __x86_masked_load(const _Up* __mem, const _KV __k)
     {
       using _Tp = __vec_value_type<_TV>;
-      static_assert(_Traits._M_have_avx() and __converts_trivially<_Up, _Tp> and sizeof(_Up) >= 4);
+      static_assert(_Traits._M_have_avx() && __converts_trivially<_Up, _Tp> && sizeof(_Up) >= 4);
       constexpr int __n = __width_of<_TV>;
       using _IV = __vec_builtin_type<__x86_intrin_int<_Tp>, __n>;
       const auto __vk = reinterpret_cast<_IV>(__k);
       if constexpr (sizeof(_TV) < 16)
         return _VecOps<_TV>::_S_extract(__x86_masked_load<__vec_builtin_type_bytes<_Tp, 16>>(
                                           __mem, __vec_zero_pad_to_16(__k)));
-      else if constexpr (_Traits._M_have_avx2() and is_integral_v<_Up>)
+      else if constexpr (_Traits._M_have_avx2() && is_integral_v<_Up>)
         {
           const auto* __src
             = reinterpret_cast<const __vec_builtin_type<__x86_intrin_int<_Up>, __n>*>(__mem);
-          if constexpr (sizeof(_Up) == 4 and sizeof(_TV) == 32)
+          if constexpr (sizeof(_Up) == 4 && sizeof(_TV) == 32)
             return reinterpret_cast<_TV>(__builtin_ia32_maskloadd256(__src, __vk));
-          else if constexpr (sizeof(_Up) == 4 and sizeof(_TV) == 16)
+          else if constexpr (sizeof(_Up) == 4 && sizeof(_TV) == 16)
             return reinterpret_cast<_TV>(__builtin_ia32_maskloadd(__src, __vk));
-          else if constexpr (sizeof(_Up) == 8 and sizeof(_TV) == 32)
+          else if constexpr (sizeof(_Up) == 8 && sizeof(_TV) == 32)
             return reinterpret_cast<_TV>(__builtin_ia32_maskloadq256(__src, __vk));
-          else if constexpr (sizeof(_Up) == 8 and sizeof(_TV) == 16)
+          else if constexpr (sizeof(_Up) == 8 && sizeof(_TV) == 16)
             return reinterpret_cast<_TV>(__builtin_ia32_maskloadq(__src, __vk));
           else
             static_assert(false);
@@ -1130,21 +1130,21 @@ namespace std::simd
       [[maybe_unused]] const auto __w = __vec_bit_cast<__x86_intrin_type<_Tp>>(__v);
       if constexpr (sizeof(_TV) == 64)
         {
-          if constexpr (sizeof(_Tp) > sizeof(_Up) and is_integral_v<_Tp> and is_integral_v<_Up>)
+          if constexpr (sizeof(_Tp) > sizeof(_Up) && is_integral_v<_Tp> && is_integral_v<_Up>)
             {
               auto* __dst = reinterpret_cast<
                               __vec_builtin_type<__x86_intrin_int<_Up>, __n>*>(__mem);
               if constexpr (sizeof(_Tp) == 2)
                 __builtin_ia32_pmovwb512mem_mask(__dst, __w, __k);
-              else if constexpr (sizeof(_Tp) == 4 and sizeof(_Up) == 1)
+              else if constexpr (sizeof(_Tp) == 4 && sizeof(_Up) == 1)
                 __builtin_ia32_pmovdb512mem_mask(__dst, __w, __k);
-              else if constexpr (sizeof(_Tp) == 4 and sizeof(_Up) == 2)
+              else if constexpr (sizeof(_Tp) == 4 && sizeof(_Up) == 2)
                 __builtin_ia32_pmovdw512mem_mask(__dst, __w, __k);
-              else if constexpr (sizeof(_Tp) == 8 and sizeof(_Up) == 1)
+              else if constexpr (sizeof(_Tp) == 8 && sizeof(_Up) == 1)
                 __builtin_ia32_pmovqb512mem_mask(__dst, __w, __k);
-              else if constexpr (sizeof(_Tp) == 8 and sizeof(_Up) == 2)
+              else if constexpr (sizeof(_Tp) == 8 && sizeof(_Up) == 2)
                 __builtin_ia32_pmovqw512mem_mask(__dst, __w, __k);
-              else if constexpr (sizeof(_Tp) == 8 and sizeof(_Up) == 4)
+              else if constexpr (sizeof(_Tp) == 8 && sizeof(_Up) == 4)
                 __builtin_ia32_pmovqd512mem_mask(__dst, __w, __k);
               else
                 static_assert(false);
@@ -1152,9 +1152,9 @@ namespace std::simd
           else if constexpr (__converts_trivially<_Tp, _Up>)
             {
               auto* __dst = reinterpret_cast<__x86_intrin_type<_Up>*>(__mem);
-              if constexpr (is_floating_point_v<_Tp> and sizeof(_Tp) == 4)
+              if constexpr (is_floating_point_v<_Tp> && sizeof(_Tp) == 4)
                 __builtin_ia32_storeups512_mask(__dst, __w, __k);
-              else if constexpr (is_floating_point_v<_Tp> and sizeof(_Tp) == 8)
+              else if constexpr (is_floating_point_v<_Tp> && sizeof(_Tp) == 8)
                 __builtin_ia32_storeupd512_mask(__dst, __w, __k);
               else if constexpr (sizeof(_Tp) == 1)
                 __builtin_ia32_storedquqi512_mask(__dst, __w, __k);
@@ -1169,8 +1169,8 @@ namespace std::simd
             }
           else if constexpr (sizeof(_Tp) >= sizeof(_Up))
             {
-              if constexpr (is_floating_point_v<_Tp> and is_integral_v<_Up>
-                              and sizeof(_Tp) > sizeof(_Up))
+              if constexpr (is_floating_point_v<_Tp> && is_integral_v<_Up>
+                              && sizeof(_Tp) > sizeof(_Up))
                 __x86_masked_store(__vec_cast<__integer_from<sizeof(_Tp)>>(__v), __mem, __k);
               else
                 __x86_masked_store(__vec_cast<_Up>(__v), __mem, __k);
@@ -1184,21 +1184,21 @@ namespace std::simd
         }
       else if constexpr (sizeof(_TV) == 32)
         {
-          if constexpr (sizeof(_Tp) > sizeof(_Up) and is_integral_v<_Tp> and is_integral_v<_Up>)
+          if constexpr (sizeof(_Tp) > sizeof(_Up) && is_integral_v<_Tp> && is_integral_v<_Up>)
             {
               auto* __dst = reinterpret_cast<
                               __vec_builtin_type<__x86_intrin_int<_Up>, __n>*>(__mem);
               if constexpr (sizeof(_Tp) == 2)
                 __builtin_ia32_pmovwb256mem_mask(__dst, __w, __k);
-              else if constexpr (sizeof(_Tp) == 4 and sizeof(_Up) == 1)
+              else if constexpr (sizeof(_Tp) == 4 && sizeof(_Up) == 1)
                 __builtin_ia32_pmovdb256mem_mask(__dst, __w, __k);
-              else if constexpr (sizeof(_Tp) == 4 and sizeof(_Up) == 2)
+              else if constexpr (sizeof(_Tp) == 4 && sizeof(_Up) == 2)
                 __builtin_ia32_pmovdw256mem_mask(__dst, __w, __k);
-              else if constexpr (sizeof(_Tp) == 8 and sizeof(_Up) == 1)
+              else if constexpr (sizeof(_Tp) == 8 && sizeof(_Up) == 1)
                 __builtin_ia32_pmovqb256mem_mask(__dst, __w, __k);
-              else if constexpr (sizeof(_Tp) == 8 and sizeof(_Up) == 2)
+              else if constexpr (sizeof(_Tp) == 8 && sizeof(_Up) == 2)
                 __builtin_ia32_pmovqw256mem_mask(__dst, __w, __k);
-              else if constexpr (sizeof(_Tp) == 8 and sizeof(_Up) == 4)
+              else if constexpr (sizeof(_Tp) == 8 && sizeof(_Up) == 4)
                 __builtin_ia32_pmovqd256mem_mask(__dst, __w, __k);
               else
                 static_assert(false);
@@ -1206,9 +1206,9 @@ namespace std::simd
           else if constexpr (__converts_trivially<_Tp, _Up>)
             {
               auto* __dst = reinterpret_cast<__x86_intrin_type<_Up>*>(__mem);
-              if constexpr (is_floating_point_v<_Tp> and sizeof(_Tp) == 4)
+              if constexpr (is_floating_point_v<_Tp> && sizeof(_Tp) == 4)
                 __builtin_ia32_storeups256_mask(__dst, __w, __k);
-              else if constexpr (is_floating_point_v<_Tp> and sizeof(_Tp) == 8)
+              else if constexpr (is_floating_point_v<_Tp> && sizeof(_Tp) == 8)
                 __builtin_ia32_storeupd256_mask(__dst, __w, __k);
               else if constexpr (sizeof(_Tp) == 1)
                 __builtin_ia32_storedquqi256_mask(__dst, __w, __k);
@@ -1234,21 +1234,21 @@ namespace std::simd
         }
       else if constexpr (sizeof(_TV) == 16)
         {
-          if constexpr (sizeof(_Tp) > sizeof(_Up) and is_integral_v<_Tp> and is_integral_v<_Up>)
+          if constexpr (sizeof(_Tp) > sizeof(_Up) && is_integral_v<_Tp> && is_integral_v<_Up>)
             {
               auto* __dst = reinterpret_cast<
                               __vec_builtin_type<__x86_intrin_int<_Up>, __n>*>(__mem);
               if constexpr (sizeof(_Tp) == 2)
                 __builtin_ia32_pmovwb128mem_mask(__dst, __w, __k);
-              else if constexpr (sizeof(_Tp) == 4 and sizeof(_Up) == 1)
+              else if constexpr (sizeof(_Tp) == 4 && sizeof(_Up) == 1)
                 __builtin_ia32_pmovdb128mem_mask(__dst, __w, __k);
-              else if constexpr (sizeof(_Tp) == 4 and sizeof(_Up) == 2)
+              else if constexpr (sizeof(_Tp) == 4 && sizeof(_Up) == 2)
                 __builtin_ia32_pmovdw128mem_mask(__dst, __w, __k);
-              else if constexpr (sizeof(_Tp) == 8 and sizeof(_Up) == 1)
+              else if constexpr (sizeof(_Tp) == 8 && sizeof(_Up) == 1)
                 __builtin_ia32_pmovqb128mem_mask(__dst, __w, __k);
-              else if constexpr (sizeof(_Tp) == 8 and sizeof(_Up) == 2)
+              else if constexpr (sizeof(_Tp) == 8 && sizeof(_Up) == 2)
                 __builtin_ia32_pmovqw128mem_mask(__dst, __w, __k);
-              else if constexpr (sizeof(_Tp) == 8 and sizeof(_Up) == 4)
+              else if constexpr (sizeof(_Tp) == 8 && sizeof(_Up) == 4)
                 __builtin_ia32_pmovqd128mem_mask(reinterpret_cast<unsigned long long*>(__mem),
                                                  __w, __k);
               else
@@ -1257,9 +1257,9 @@ namespace std::simd
           else if constexpr (__converts_trivially<_Tp, _Up>)
             {
               auto* __dst = reinterpret_cast<__x86_intrin_type<_Up>*>(__mem);
-              if constexpr (is_floating_point_v<_Tp> and sizeof(_Tp) == 4)
+              if constexpr (is_floating_point_v<_Tp> && sizeof(_Tp) == 4)
                 __builtin_ia32_storeups128_mask(__dst, __w, __k);
-              else if constexpr (is_floating_point_v<_Tp> and sizeof(_Tp) == 8)
+              else if constexpr (is_floating_point_v<_Tp> && sizeof(_Tp) == 8)
                 __builtin_ia32_storeupd128_mask(__dst, __w, __k);
               else if constexpr (sizeof(_Tp) == 1)
                 __builtin_ia32_storedquqi128_mask(__dst, __w, __k);
@@ -1298,34 +1298,34 @@ namespace std::simd
     {
       using _Tp = __vec_value_type<_TV>;
       constexpr int __n = __width_of<_TV>;
-      static_assert(sizeof(_Tp) == 4 or sizeof(_Tp) == 8);
+      static_assert(sizeof(_Tp) == 4 || sizeof(_Tp) == 8);
       auto* __dst = reinterpret_cast<
                       __vec_builtin_type<__x86_intrin_type<_Up>, __n>*>(__mem);
       [[maybe_unused]] const auto __w = __vec_bit_cast<__x86_intrin_type<_Tp>>(__v);
       if constexpr (sizeof(_TV) < 16)
         __x86_masked_store(__vec_zero_pad_to_16(__v), __mem, __vec_zero_pad_to_16(__k));
-      else if constexpr (_Traits._M_have_avx2() and is_integral_v<_Tp>)
+      else if constexpr (_Traits._M_have_avx2() && is_integral_v<_Tp>)
         {
-          if constexpr (sizeof(_TV) == 32 and sizeof(_Tp) == 4)
+          if constexpr (sizeof(_TV) == 32 && sizeof(_Tp) == 4)
             __builtin_ia32_maskstored256(__dst, __k, __w);
-          else if constexpr (sizeof(_TV) == 16 and sizeof(_Tp) == 4)
+          else if constexpr (sizeof(_TV) == 16 && sizeof(_Tp) == 4)
             __builtin_ia32_maskstored(__dst, __k, __w);
-          else if constexpr (sizeof(_TV) == 32 and sizeof(_Tp) == 8)
+          else if constexpr (sizeof(_TV) == 32 && sizeof(_Tp) == 8)
             __builtin_ia32_maskstoreq256(__dst, __k, __w);
-          else if constexpr (sizeof(_TV) == 16 and sizeof(_Tp) == 8)
+          else if constexpr (sizeof(_TV) == 16 && sizeof(_Tp) == 8)
             __builtin_ia32_maskstoreq(__dst, __k, __w);
           else
             static_assert(false);
         }
       else
         {
-          if constexpr (sizeof(_TV) == 32 and sizeof(_Tp) == 4)
+          if constexpr (sizeof(_TV) == 32 && sizeof(_Tp) == 4)
             __builtin_ia32_maskstoreps256(__dst, __k, __w);
-          else if constexpr (sizeof(_TV) == 16 and sizeof(_Tp) == 4)
+          else if constexpr (sizeof(_TV) == 16 && sizeof(_Tp) == 4)
             __builtin_ia32_maskstoreps(__dst, __k, __w);
-          else if constexpr (sizeof(_TV) == 32 and sizeof(_Tp) == 8)
+          else if constexpr (sizeof(_TV) == 32 && sizeof(_Tp) == 8)
             __builtin_ia32_maskstorepd256(__dst, __k, __w);
-          else if constexpr (sizeof(_TV) == 16 and sizeof(_Tp) == 8)
+          else if constexpr (sizeof(_TV) == 16 && sizeof(_Tp) == 8)
             __builtin_ia32_maskstorepd(__dst, __k, __w);
           else
             static_assert(false);

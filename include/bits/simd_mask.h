@@ -110,8 +110,8 @@ namespace std::simd
       using _A1 = decltype(__abi_rebind<__mask_element_size<_Mp>, _Np, typename _Mp::abi_type,
                                         true>());
 
-      static_assert(_Mp::abi_type::_S_variant == _A1::_S_variant or is_same_v<_A1, _ScalarAbi<_Np>>
-                      or is_same_v<typename _Mp::abi_type, _ScalarAbi<_Mp::size()>>);
+      static_assert(_Mp::abi_type::_S_variant == _A1::_S_variant || is_same_v<_A1, _ScalarAbi<_Np>>
+                      || is_same_v<typename _Mp::abi_type, _ScalarAbi<_Mp::size()>>);
 
       using type = basic_mask<__mask_element_size<_Mp>, _A1>;
     };
@@ -195,7 +195,7 @@ namespace std::simd
     };
 
   template <size_t _Bytes, __abi_tag _Ap>
-    requires (_Ap::_S_nreg == 1) and (not _Ap::_S_is_cx_ileav)
+    requires (_Ap::_S_nreg == 1) && (!_Ap::_S_is_cx_ileav)
     class basic_mask<_Bytes, _Ap>
     {
       template <size_t, typename>
@@ -218,7 +218,7 @@ namespace std::simd
       static constexpr int _S_full_size = [] {
         if constexpr (_S_is_scalar)
           return _S_size;
-        else if constexpr (_S_use_bitmask and _S_size < __CHAR_BIT__)
+        else if constexpr (_S_use_bitmask && _S_size < __CHAR_BIT__)
           return __CHAR_BIT__;
         else
           return __bit_ceil(unsigned(_S_size));
@@ -231,7 +231,7 @@ namespace std::simd
       static constexpr _DataType _S_implicit_mask = [] {
         if constexpr (_S_is_scalar)
           return true;
-        else if (not _S_is_partial)
+        else if (!_S_is_partial)
           return _DataType(~_DataType());
         else if constexpr (_S_use_bitmask)
           return _DataType((_DataType(1) << _S_size) - 1);
@@ -327,18 +327,18 @@ namespace std::simd
       /** @internal
        * Returns a mask where the first @p __n elements are true. All remaining elements are false.
        *
-       * @pre @p __n > 0 and @p __n < _S_size
+       * @pre @p __n > 0 && @p __n < _S_size
        */
       template <_ArchTraits _Traits = {}>
         [[__gnu__::__always_inline__]]
         static constexpr basic_mask
         _S_partial_mask_of_n(int __n)
         {
-          static_assert(not _S_is_scalar);
-          if constexpr (not _S_use_bitmask)
+          static_assert(!_S_is_scalar);
+          if constexpr (!_S_use_bitmask)
             {
               using _Ip = __integer_from<_Bytes>;
-              __glibcxx_simd_precondition(__n >= 0 and __n <= numeric_limits<_Ip>::max(),
+              __glibcxx_simd_precondition(__n >= 0 && __n <= numeric_limits<_Ip>::max(),
                                           "_S_partial_mask_of_n without _S_use_bitmask requires "
                                           "positive __n that does not overflow.");
               constexpr _VecType __0123([&](_Ip __i) { return __i; });
@@ -346,16 +346,16 @@ namespace std::simd
             }
           else
             {
-              __glibcxx_simd_precondition(__n >= 0 and __n <= 255,
+              __glibcxx_simd_precondition(__n >= 0 && __n <= 255,
                                           "The x86 BZHI instruction requires __n to "
                                           "only use bits 0:7");
 #if __has_builtin(__builtin_ia32_bzhi_si)
-              if constexpr (_S_size <= 32 and _Traits._M_have_bmi2())
+              if constexpr (_S_size <= 32 && _Traits._M_have_bmi2())
                 return _S_init(_Bitmask<_S_size>(
                                  __builtin_ia32_bzhi_si(~0u >> (32 - _S_size), unsigned(__n))));
 #endif
 #if __has_builtin(__builtin_ia32_bzhi_di)
-              else if constexpr (_S_size <= 64 and _Traits._M_have_bmi2())
+              else if constexpr (_S_size <= 64 && _Traits._M_have_bmi2())
                 return _S_init(__builtin_ia32_bzhi_di(~0ull >> (64 - _S_size), unsigned(__n)));
 #endif
               if constexpr (_S_size <= 32)
@@ -415,7 +415,7 @@ namespace std::simd
           else if constexpr (_S_use_bitmask != _Mp::_S_use_bitmask)
             // convert to whatever _Mp uses first and then recurse into _M_chunk
             return resize_t<_S_size, _Mp>(*this).template _M_chunk<_Mp>();
-          else if constexpr (_S_use_bitmask and _Mp::_S_use_bitmask)
+          else if constexpr (_S_use_bitmask && _Mp::_S_use_bitmask)
             {
               static_assert(is_unsigned_v<_DataType>);
               if constexpr (__rem == 0)
@@ -470,13 +470,13 @@ namespace std::simd
       // [simd.mask.overview] conversion extensions ---------------------------
       [[__gnu__::__always_inline__]]
       constexpr
-      basic_mask(_DataType __x) requires(not _S_is_scalar and not _S_use_bitmask)
+      basic_mask(_DataType __x) requires(!_S_is_scalar && !_S_use_bitmask)
         : _M_data(__x)
       {}
 
       [[__gnu__::__always_inline__]]
       constexpr
-      operator _DataType() requires(not _S_is_scalar and not _S_use_bitmask)
+      operator _DataType() requires(!_S_is_scalar && !_S_use_bitmask)
       { return _M_data; }
 
       // [simd.mask.ctor] broadcast constructor -------------------------------
@@ -506,21 +506,21 @@ namespace std::simd
                 }
 
               // vec-/bit-mask to bit-mask | bit-mask to vec-mask
-              else if constexpr (_S_use_bitmask or _UV::_S_use_bitmask)
+              else if constexpr (_S_use_bitmask || _UV::_S_use_bitmask)
                 return basic_mask(__x.to_bitset())._M_data;
 
               // vec-mask to vec-mask
               // 2-mask-elements wrapper to plain mask
               else if constexpr (_UAbi::_S_is_cx_ileav)
                 {
-                  if constexpr (sizeof(__x) == sizeof(_M_data) and _Bytes == _UBytes
-                                    and _UV::_S_padding_bytes == 0)
+                  if constexpr (sizeof(__x) == sizeof(_M_data) && _Bytes == _UBytes
+                                    && _UV::_S_padding_bytes == 0)
                     {
-                      static_assert(not _S_has_bool_member and not _UV::_S_has_bool_member);
+                      static_assert(!_S_has_bool_member && !_UV::_S_has_bool_member);
                       return __builtin_bit_cast(_DataType, __x);
                     }
-                  else if (not __builtin_is_constant_evaluated()
-                             and sizeof(__x) == sizeof(_M_data) and _Bytes == _UBytes)
+                  else if (!__builtin_is_constant_evaluated()
+                             && sizeof(__x) == sizeof(_M_data) && _Bytes == _UBytes)
                     {
                       _DataType __tmp = {};
                       __builtin_memcpy(&__tmp, &__x, sizeof(__x) - _UV::_S_padding_bytes);
@@ -546,14 +546,14 @@ namespace std::simd
                                                   __integer_from<_UBytes>, sizeof(__xv)>>(__xv));
                     }
                 }
-              else if constexpr (sizeof(__x) == sizeof(_M_data) and _Bytes == _UBytes
-                                   and not _S_has_bool_member and not _UV::_S_has_bool_member
-                                   and not _UV::_S_use_bitmask and _UV::_S_padding_bytes == 0)
+              else if constexpr (sizeof(__x) == sizeof(_M_data) && _Bytes == _UBytes
+                                   && !_S_has_bool_member && !_UV::_S_has_bool_member
+                                   && !_UV::_S_use_bitmask && _UV::_S_padding_bytes == 0)
                 return __builtin_bit_cast(_DataType, __x);
-              else if (not __builtin_is_constant_evaluated()
-                         and sizeof(__x) == sizeof(_M_data) and _Bytes == _UBytes
-                         and not _S_has_bool_member and not _UV::_S_has_bool_member
-                         and not _UV::_S_use_bitmask and _UV::_S_padding_bytes != 0)
+              else if (!__builtin_is_constant_evaluated()
+                         && sizeof(__x) == sizeof(_M_data) && _Bytes == _UBytes
+                         && !_S_has_bool_member && !_UV::_S_has_bool_member
+                         && !_UV::_S_use_bitmask && _UV::_S_padding_bytes != 0)
                 {
                   _DataType __tmp = {};
                   __builtin_memcpy(&__tmp, &__x, sizeof(__x) - _UV::_S_padding_bytes);
@@ -563,8 +563,8 @@ namespace std::simd
                 {
 #if _GLIBCXX_X86
                   // TODO: turn this into a __vec_mask_cast overload in simd_x86.h
-                  if constexpr (_Bytes == 1 and _UBytes == 2)
-                    if (not __builtin_is_constant_evaluated() and not __x._M_is_constprop())
+                  if constexpr (_Bytes == 1 && _UBytes == 2)
+                    if (!__builtin_is_constant_evaluated() && !__x._M_is_constprop())
                       {
                         if constexpr (_UAbi::_S_nreg == 1)
                           return __x86_cvt_vecmask<_DataType>(__x._M_data);
@@ -616,7 +616,7 @@ namespace std::simd
 
       // [simd.mask.ctor] uint constructor ------------------------------------
       template <unsigned_integral _Tp>
-        requires (not same_as<_Tp, bool>)
+        requires (!same_as<_Tp, bool>)
         [[__gnu__::__always_inline__]]
         constexpr explicit
         basic_mask(_Tp __val) noexcept
@@ -625,7 +625,7 @@ namespace std::simd
               return __val;
             else if constexpr (_S_is_scalar)
               return bool(__val & 1);
-            else if (__builtin_is_constant_evaluated() or __builtin_constant_p(__val))
+            else if (__builtin_is_constant_evaluated() || __builtin_constant_p(__val))
               {
                 constexpr auto [...__is] = __iota<int[_S_size]>;
                 return _DataType {__vec_value_type<_DataType>((__val & (1ull << __is)) == 0
@@ -785,12 +785,12 @@ namespace std::simd
         {
           constexpr int __nbits = _S_size / (_Use_2_for_1 + 1);
           static_assert(__nbits + _Offset <= 64);
-          static_assert(not (_S_is_scalar and _Use_2_for_1));
+          static_assert(!(_S_is_scalar && _Use_2_for_1));
           // before shifting
           using _U0 = _Bitmask<__nbits>;
           // potentially wider type needed for shift by _Offset
           using _Ur = _Bitmask<__nbits + _Offset>;
-          if constexpr (_S_is_scalar or _S_use_bitmask)
+          if constexpr (_S_is_scalar || _S_use_bitmask)
             {
               auto __bits = _M_data;
               if constexpr (_S_is_partial)
@@ -799,7 +799,7 @@ namespace std::simd
                 __bits = __bit_extract_even<__nbits>(__bits);
               return _Ur(__bits) << _Offset;
             }
-          else if constexpr (_Bytes == 8 and _Use_2_for_1)
+          else if constexpr (_Bytes == 8 && _Use_2_for_1)
             {
               const auto __u32 = __vec_bit_cast<unsigned>(_M_data);
               if constexpr (sizeof(_M_data) == 16)
@@ -819,12 +819,12 @@ namespace std::simd
               else
                 static_assert(false);
             }
-          else if constexpr (_Use_2_for_1 and __nbits == 1)
+          else if constexpr (_Use_2_for_1 && __nbits == 1)
             return _Ur(operator[](0)) << _Offset;
           else
             {
 #if _GLIBCXX_X86
-              if (not __builtin_is_constant_evaluated() and not _M_is_constprop())
+              if (!__builtin_is_constant_evaluated() && !_M_is_constprop())
                 {
                   _U0 __uint;
                   if constexpr (_Use_2_for_1)
@@ -834,7 +834,7 @@ namespace std::simd
                     }
                   else if constexpr (_Bytes != 2) // movmskb would duplicate each bit
                     __uint = _U0(__x86_movmsk(_M_data));
-                  else if constexpr (_Bytes == 2 and _Traits._M_have_bmi2())
+                  else if constexpr (_Bytes == 2 && _Traits._M_have_bmi2())
                     __uint = __bit_extract_even<__nbits>(__x86_movmsk(_M_data));
                   else if constexpr (_Bytes == 2)
                     return __similar_mask<char, __nbits, _Ap>(*this).template _M_to_uint<_Offset>();
@@ -885,7 +885,7 @@ namespace std::simd
                         });
                   _U0 __bits = __builtin_bit_cast(
                                  __similar_vec<_U0, __n * _Bytes / sizeof(_U0), _Ap>, __x)[0];
-                  if constexpr (not __has_single_bit(unsigned(__nbits)))
+                  if constexpr (!__has_single_bit(unsigned(__nbits)))
                     __bits &= (_U0(1) << __nbits) - 1;
                   return _Ur(__bits) << _Offset;
                 }
@@ -984,7 +984,7 @@ namespace std::simd
       friend constexpr basic_mask
       __select_impl(const basic_mask& __k, const basic_mask& __t, const basic_mask& __f) noexcept
       {
-        if constexpr (not _S_use_bitmask)
+        if constexpr (!_S_use_bitmask)
           {
 #if _GLIBCXX_X86
             // this works around bad code-gen when the compiler can't see that __k is a vector-mask.
@@ -1041,7 +1041,7 @@ namespace std::simd
               return _M_data == _S_implicit_mask;
           }
 #if _GLIBCXX_X86
-        else if (not (__builtin_is_constant_evaluated() or __builtin_constant_p(_M_data)))
+        else if (!(__builtin_is_constant_evaluated() || __builtin_constant_p(_M_data)))
           return __x86_vecmask_all<_S_size>(_M_data);
 #endif
         else
@@ -1063,7 +1063,7 @@ namespace std::simd
               return _M_data != 0;
           }
 #if _GLIBCXX_X86
-        else if (not (__builtin_is_constant_evaluated() or __builtin_constant_p(_M_data)))
+        else if (!(__builtin_is_constant_evaluated() || __builtin_constant_p(_M_data)))
           return __x86_vecmask_any<_S_size>(_M_data);
 #endif
         else
@@ -1075,7 +1075,7 @@ namespace std::simd
       _M_none_of() const noexcept
       {
         if constexpr (_S_is_scalar)
-          return not _M_data;
+          return !_M_data;
         else if constexpr (_S_use_bitmask)
           {
             if constexpr (_S_is_partial)
@@ -1085,7 +1085,7 @@ namespace std::simd
               return _M_data == 0;
           }
 #if _GLIBCXX_X86
-        else if (not (__builtin_is_constant_evaluated() or __builtin_constant_p(_M_data)))
+        else if (!(__builtin_is_constant_evaluated() || __builtin_constant_p(_M_data)))
           return __x86_vecmask_none<_S_size>(_M_data);
 #endif
         else
@@ -1131,7 +1131,7 @@ namespace std::simd
     };
 
   template <size_t _Bytes, __abi_tag _Ap>
-    requires (_Ap::_S_nreg > 1) and (not _Ap::_S_is_cx_ileav)
+    requires (_Ap::_S_nreg > 1) && (!_Ap::_S_is_cx_ileav)
     class basic_mask<_Bytes, _Ap>
     {
       template <size_t, typename>
@@ -1150,10 +1150,10 @@ namespace std::simd
 
       static constexpr int _Nreg1 = _Ap::_S_nreg - _Nreg0;
 
-      using _Abi0 = conditional_t<_N0 == _Nreg0 or is_same_v<_Ap, _ScalarAbi<_S_size>>,
+      using _Abi0 = conditional_t<_N0 == _Nreg0 || is_same_v<_Ap, _ScalarAbi<_S_size>>,
                                   _ScalarAbi<_N0>, _Abi<_N0, _Nreg0, _Ap::_S_variant>>;
 
-      using _Abi1 = conditional_t<_N1 == _Nreg1 or is_same_v<_Ap, _ScalarAbi<_S_size>>,
+      using _Abi1 = conditional_t<_N1 == _Nreg1 || is_same_v<_Ap, _ScalarAbi<_S_size>>,
                                   _ScalarAbi<_N1>, _Abi<_N1, _Nreg1, _Ap::_S_variant>>;
 
       using _Mask0 = basic_mask<_Bytes, _Abi0>;
@@ -1247,7 +1247,7 @@ namespace std::simd
         _S_recursive_bit_cast(const basic_mask<_UBytes, _UAbi>& __x)
         {
           using _Mp = basic_mask<_UBytes, _UAbi>;
-          if constexpr (_Mp::_S_has_bool_member or sizeof(basic_mask) > sizeof(__x))
+          if constexpr (_Mp::_S_has_bool_member || sizeof(basic_mask) > sizeof(__x))
             return _S_init(__builtin_bit_cast(_Mask0, __x._M_data0),
                            _Mask1::_S_recursive_bit_cast(__x._M_data1));
           else if constexpr (sizeof(basic_mask) == sizeof(__x))
@@ -1283,7 +1283,7 @@ namespace std::simd
         _S_partial_mask_of_n(int __n)
         {
 #if __has_builtin(__builtin_ia32_bzhi_di)
-          if constexpr (_S_use_bitmask and _S_size <= 64 and _Traits._M_have_bmi2())
+          if constexpr (_S_use_bitmask && _S_size <= 64 && _Traits._M_have_bmi2())
             return __builtin_ia32_bzhi_di(~0ull >> (64 - _S_size), unsigned(__n));
 #endif
           if (__n < _N0)
@@ -1322,7 +1322,7 @@ namespace std::simd
           [[maybe_unused]] constexpr auto [...__is] = __iota<int[__n]>;
           if constexpr (_N0 == _Mp::_S_size)
             {
-              if constexpr (__rem == 0 and is_same_v<_Mp, _Mask0>)
+              if constexpr (__rem == 0 && is_same_v<_Mp, _Mask0>)
                 return array<_Mp, __n> {_M_data0, _M_data1};
               else if constexpr (__rem == 0)
                 return array<_Mp, __n> {_Mp(_M_data0), _Mp(_M_data1)};
@@ -1334,7 +1334,7 @@ namespace std::simd
               using _Rp = array<_Mp, __n>;
               if constexpr (sizeof(_Rp) == sizeof(*this))
                 {
-                  static_assert(not _Mp::_S_is_partial);
+                  static_assert(!_Mp::_S_is_partial);
                   return __builtin_bit_cast(_Rp, *this);
                 }
               else
@@ -1420,7 +1420,7 @@ namespace std::simd
 
       // [simd.mask.ctor] uint constructor ------------------------------------------
       template <unsigned_integral _Tp>
-        requires (not same_as<_Tp, bool>)
+        requires (!same_as<_Tp, bool>)
         [[__gnu__::__always_inline__]]
         constexpr explicit
         basic_mask(_Tp __val) noexcept
@@ -1561,8 +1561,8 @@ namespace std::simd
           else
             {
 #if _GLIBCXX_X86
-              if constexpr (_Bytes == 2 and not _Traits._M_have_bmi2() and _Ap::_S_nreg == 2
-                              and not _S_use_bitmask and not _Use_2_for_1)
+              if constexpr (_Bytes == 2 && !_Traits._M_have_bmi2() && _Ap::_S_nreg == 2
+                              && !_S_use_bitmask && !_Use_2_for_1)
                 return __similar_mask<char, _S_size, _Ap>(*this).template _M_to_uint<_Offset>();
 #endif
               auto __uint = _M_data1.template _M_to_uint<_N0x + _Offset, _Use_2_for_1>();
@@ -1711,9 +1711,9 @@ namespace std::simd
         _M_all_of() const
         {
           if constexpr (_N0 == _N1)
-            return (_M_data0 and _M_data1)._M_all_of();
+            return (_M_data0 && _M_data1)._M_all_of();
           else
-            return _M_data0._M_all_of() and _M_data1._M_all_of();
+            return _M_data0._M_all_of() && _M_data1._M_all_of();
         }
 
       template <_ArchTraits _Traits = {}>
@@ -1722,9 +1722,9 @@ namespace std::simd
         _M_any_of() const
         {
           if constexpr (_N0 == _N1)
-            return (_M_data0 or _M_data1)._M_any_of();
+            return (_M_data0 || _M_data1)._M_any_of();
           else
-            return _M_data0._M_any_of() or _M_data1._M_any_of();
+            return _M_data0._M_any_of() || _M_data1._M_any_of();
         }
 
       template <_ArchTraits _Traits = {}>
@@ -1733,15 +1733,15 @@ namespace std::simd
         _M_none_of() const
         {
           if constexpr (_N0 == _N1)
-            return (_M_data0 or _M_data1)._M_none_of();
+            return (_M_data0 || _M_data1)._M_none_of();
           else
-            return _M_data0._M_none_of() and _M_data1._M_none_of();
+            return _M_data0._M_none_of() && _M_data1._M_none_of();
         }
 
       [[__gnu__::__always_inline__]]
       bool
       _M_is_constprop() const
-      { return _M_data0._M_is_constprop() and _M_data1._M_is_constprop(); }
+      { return _M_data0._M_is_constprop() && _M_data1._M_is_constprop(); }
     };
 }
 

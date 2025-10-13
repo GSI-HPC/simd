@@ -25,7 +25,7 @@ namespace std::simd
    */
   template <__simd_mask_type _Mp>
     requires (_Mp::size() % 2 == 0)
-      and ((_Mp::abi_type::_S_variant & _AbiVariant::_CxVariants) == 0)
+      && ((_Mp::abi_type::_S_variant & _AbiVariant::_CxVariants) == 0)
     using __cx_ileav_mask
       = basic_mask<__mask_element_size<_Mp> * 2,
                    _Abi<_Mp::size() / 2, _Mp::abi_type::_S_nreg,
@@ -140,7 +140,7 @@ namespace std::simd
 
       // Interleaved storage requires at least two vector elements and therefore cannot ever be
       // scalar.
-      static_assert(not _S_is_scalar);
+      static_assert(!_S_is_scalar);
 
       static constexpr bool _S_use_bitmask = _DataType::_S_use_bitmask;
 
@@ -151,7 +151,7 @@ namespace std::simd
       static constexpr bool _S_has_bool_member = _DataType::_S_has_bool_member;
 
       // same as for _S_is_scalar
-      static_assert(not _S_has_bool_member);
+      static_assert(!_S_has_bool_member);
 
       static constexpr size_t _S_padding_bytes = _DataType::_S_padding_bytes;
 
@@ -274,12 +274,12 @@ namespace std::simd
                 return _DataType([&](int __i) { return __x[__i / 2]; });
               else if constexpr (__flags_test(_UAbi::_S_variant, _AbiVariant::_CxIleav))
                 return __x._M_data; // calls conversion ctor on _DataType
-              else if constexpr (_S_use_bitmask or _UV::_S_use_bitmask)
+              else if constexpr (_S_use_bitmask || _UV::_S_use_bitmask)
                 return _DataType::_S_init(__duplicate_each_bit<_S_size>(__x._M_to_uint()));
-              else if constexpr (sizeof(__x) == sizeof(_M_data) and _Bytes == _UBytes
-                                   and _UV::_S_padding_bytes == 0)
+              else if constexpr (sizeof(__x) == sizeof(_M_data) && _Bytes == _UBytes
+                                   && _UV::_S_padding_bytes == 0)
                 {
-                  static_assert(not _S_has_bool_member and not _UV::_S_has_bool_member);
+                  static_assert(!_S_has_bool_member && !_UV::_S_has_bool_member);
                   return __builtin_bit_cast(_DataType, __x);
                 }
               else if constexpr (_Bytes <= 8)
@@ -345,7 +345,7 @@ namespace std::simd
 
       // [simd.mask.ctor] uint constructor ------------------------------------
       template <unsigned_integral _Tp>
-        requires (not same_as<_Tp, bool>)
+        requires (!same_as<_Tp, bool>)
         [[__gnu__::__always_inline__]]
         constexpr explicit
         basic_mask(_Tp __val) noexcept
@@ -567,7 +567,7 @@ namespace std::simd
 
   template <__vectorizable _Tp, __abi_tag _Ap>
     requires __complex_like<_Tp>
-      and (__flags_test(_Ap::_S_variant, _AbiVariant::_CxIleav))
+      && (__flags_test(_Ap::_S_variant, _AbiVariant::_CxIleav))
     class basic_vec<_Tp, _Ap>
     : _BinaryOps<_Tp, _Ap>
     {
@@ -729,7 +729,7 @@ namespace std::simd
       // [simd.ctor] broadcast constructor ------------------------------------
       template <__simd_vec_bcast<value_type> _Up>
         [[__gnu__::__always_inline__]]
-        constexpr explicit(not __broadcast_constructible<_Up, value_type>)
+        constexpr explicit(!__broadcast_constructible<_Up, value_type>)
         basic_vec(_Up&& __x) noexcept
           : _M_data([&](int __i) {
               if constexpr (__complex_like<_Up>)
@@ -754,21 +754,21 @@ namespace std::simd
       // FIXME: Handle __flags_test(_Ap::_S_variant, _AbiVariant::_CxCtgus)
       template <__complex_like _Up, typename _UAbi>
         requires(__simd_size_v<_Up, _UAbi> == size.value
-                   and std::constructible_from<value_type, _Up>)
+                   && std::constructible_from<value_type, _Up>)
         [[__gnu__::__always_inline__]]
         constexpr
-        explicit(not convertible_to<_Up, value_type>)
+        explicit(!convertible_to<_Up, value_type>)
         basic_vec(const basic_vec<_Up, _UAbi>& __x) noexcept
         : _M_data(__x._M_data)
         {}
 
       template <typename _Up, typename _UAbi> // _Up is not complex!
         requires (__simd_size_v<_Up, _UAbi> == _S_size)
-          and std::constructible_from<value_type, _Up>
-          and (not is_same_v<_T0, _Up>)
+          && std::constructible_from<value_type, _Up>
+          && (!is_same_v<_T0, _Up>)
         [[__gnu__::__always_inline__]]
         constexpr
-        explicit(not convertible_to<_Up, value_type>)
+        explicit(!convertible_to<_Up, value_type>)
         basic_vec(const basic_vec<_Up, _UAbi>& __x) noexcept
         : basic_vec(__similar_vec<_T0, _S_size, _UAbi>(__x))
         {}
@@ -999,9 +999,8 @@ namespace std::simd
 
   template <__vectorizable _Tp, __abi_tag _Ap>
     requires __complex_like<_Tp>
-      //and (_Ap::_S_nreg == 1)
-      and (__flags_test(_Ap::_S_variant, _AbiVariant::_CxCtgus)
-             or is_same_v<_Ap, _ScalarAbi<_Ap::_S_size>>)
+      && (__flags_test(_Ap::_S_variant, _AbiVariant::_CxCtgus)
+             || is_same_v<_Ap, _ScalarAbi<_Ap::_S_size>>)
     class basic_vec<_Tp, _Ap>
     : _BinaryOps<_Tp, _Ap>
     {
@@ -1066,7 +1065,7 @@ namespace std::simd
       [[__gnu__::__always_inline__]]
       constexpr bool
       _M_is_constprop() const
-      { return _M_real._M_is_constprop() and _M_imag._M_is_constprop(); }
+      { return _M_real._M_is_constprop() && _M_imag._M_is_constprop(); }
 
       template <typename _Vp>
         [[__gnu__::__always_inline__]]
@@ -1181,14 +1180,14 @@ namespace std::simd
       template <__simd_vec_bcast<value_type> _Up>
         requires __complex_like<_Up>
         [[__gnu__::__always_inline__]]
-        constexpr explicit(not __broadcast_constructible<_Up, value_type>)
+        constexpr explicit(!__broadcast_constructible<_Up, value_type>)
         basic_vec(_Up&& __x) noexcept
           : _M_real(__x.real()), _M_imag(__x.imag())
         {}
 
       template <__simd_vec_bcast<value_type> _Up>
         [[__gnu__::__always_inline__]]
-        constexpr explicit(not __broadcast_constructible<_Up, value_type>)
+        constexpr explicit(!__broadcast_constructible<_Up, value_type>)
         basic_vec(_Up&& __x) noexcept
           : _M_real(__x), _M_imag()
         {}
@@ -1207,21 +1206,21 @@ namespace std::simd
       // [simd.ctor] conversion constructor -----------------------------------
       template <__complex_like _Up, typename _UAbi>
         requires(__simd_size_v<_Up, _UAbi> == size.value
-                   and std::constructible_from<value_type, _Up>)
+                   && std::constructible_from<value_type, _Up>)
         [[__gnu__::__always_inline__]]
         constexpr
-        explicit(not convertible_to<_Up, value_type>)
+        explicit(!convertible_to<_Up, value_type>)
         basic_vec(const basic_vec<_Up, _UAbi>& __x) noexcept
         : _M_real(__x._M_real), _M_imag(__x._M_imag)
         {}
 
       template <typename _Up, typename _UAbi> // _Up is not complex!
         requires (__simd_size_v<_Up, _UAbi> == _S_size)
-          and std::constructible_from<value_type, _Up>
-          and (not is_same_v<_T0, _Up>)
+          && std::constructible_from<value_type, _Up>
+          && (!is_same_v<_T0, _Up>)
         [[__gnu__::__always_inline__]]
         constexpr
-        explicit(not convertible_to<_Up, value_type>)
+        explicit(!convertible_to<_Up, value_type>)
         basic_vec(const basic_vec<_Up, _UAbi>& __x) noexcept
         : _M_real(__x), _M_imag()
         {}
@@ -1332,7 +1331,7 @@ namespace std::simd
       [[__gnu__::__always_inline__]]
       constexpr mask_type
       operator!() const noexcept requires requires(value_type __a) { !__a; }
-      { return !_M_real and !_M_imag; }
+      { return !_M_real && !_M_imag; }
 
       [[__gnu__::__always_inline__]]
       constexpr basic_vec
@@ -1393,12 +1392,12 @@ namespace std::simd
       [[__gnu__::__always_inline__]]
       friend constexpr mask_type
       operator==(const basic_vec& __x, const basic_vec& __y) noexcept
-      { return mask_type(__x._M_real == __y._M_real and __x._M_imag == __y._M_imag); }
+      { return mask_type(__x._M_real == __y._M_real && __x._M_imag == __y._M_imag); }
 
       [[__gnu__::__always_inline__]]
       friend constexpr mask_type
       operator!=(const basic_vec& __x, const basic_vec& __y) noexcept
-      { return mask_type(__x._M_real != __y._M_real or __x._M_imag != __y._M_imag); }
+      { return mask_type(__x._M_real != __y._M_real || __x._M_imag != __y._M_imag); }
 
       // [simd.complex.access] complex-value accessors ------------------------
       // LWG4230: returns _RealSimd instead of auto

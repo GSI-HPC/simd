@@ -150,7 +150,7 @@ namespace std::simd
     struct flags;
 
   template <typename... _Traits>
-    requires (__loadstore_tag<_Traits> and ...)
+    requires (__loadstore_tag<_Traits> && ...)
     struct flags<_Traits...>
     {
       consteval bool
@@ -175,7 +175,7 @@ namespace std::simd
         friend consteval auto
         operator|(flags, flags<_T0, _More...>)
         {
-          if constexpr ((same_as<_Traits, _T0> or ...))
+          if constexpr ((same_as<_Traits, _T0> || ...))
             return flags<_Traits...>{} | flags<_More...>{};
           else
             return flags<_Traits..., _T0>{} | flags<_More...>{};
@@ -189,7 +189,7 @@ namespace std::simd
         consteval auto
         _M_and(flags<_T0, _More...>) const
         {
-          if constexpr ((same_as<_Traits, _T0> or ...))
+          if constexpr ((same_as<_Traits, _T0> || ...))
             return flags<_T0>{} | (flags{}._M_and(flags<_More...>{}));
           else
             return flags{}._M_and(flags<_More...>{});
@@ -203,7 +203,7 @@ namespace std::simd
         consteval auto
         _M_xor(flags<_T0, _More...>) const
         {
-          if constexpr ((same_as<_Traits, _T0> or ...))
+          if constexpr ((same_as<_Traits, _T0> || ...))
             {
               constexpr auto __removed
                 = (conditional_t<same_as<_Traits, _T0>, flags<>,

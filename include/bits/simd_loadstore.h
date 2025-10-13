@@ -37,7 +37,7 @@ namespace std::simd
 
   template <typename _Tp>
     concept __sized_contiguous_range
-      = ranges::contiguous_range<_Tp> and ranges::sized_range<_Tp>;
+      = ranges::contiguous_range<_Tp> && ranges::sized_range<_Tp>;
 
   template <typename _Vp = void, __sized_contiguous_range _Rg, typename... _Flags>
     [[__gnu__::__always_inline__]]
@@ -52,22 +52,22 @@ namespace std::simd
                     "Pass 'flag_convert' if lossy conversion matches the intent.");
 
       constexpr bool __allow_out_of_bounds
-        = (... or is_same_v<_Flags, __partial_loadstore_flag>);
+        = (... || is_same_v<_Flags, __partial_loadstore_flag>);
       constexpr size_t __static_size = __static_range_size(__r);
 
-      static_assert(__static_size >= _RV::size.value or __allow_out_of_bounds
-                      or __static_size == dynamic_extent, "Out-of-bounds simd load");
+      static_assert(__static_size >= _RV::size.value || __allow_out_of_bounds
+                      || __static_size == dynamic_extent, "Out-of-bounds simd load");
 
       const auto* __ptr = __f.template _S_adjust_pointer<_RV>(ranges::data(__r));
       const auto __rg_size = std::ranges::size(__r);
-      if constexpr (not __allow_out_of_bounds)
+      if constexpr (!__allow_out_of_bounds)
         __glibcxx_simd_precondition(
           std::ranges::size(__r) >= _RV::size(),
           "Input range is too small. Did you mean to use 'partial_load'?");
 
       if consteval
         {
-          if constexpr (__complex_like<_Rp> and not __complex_like<_Tp>)
+          if constexpr (__complex_like<_Rp> && !__complex_like<_Tp>)
             return _RV([&](size_t __i) {
                      return __i < __rg_size ? static_cast<typename _Rp::value_type>(__r[__i])
                                             : _Rp();
@@ -79,8 +79,8 @@ namespace std::simd
         }
       else
         {
-          if constexpr ((__static_size != dynamic_extent and __static_size >= size_t(_RV::size()))
-                          or not __allow_out_of_bounds)
+          if constexpr ((__static_size != dynamic_extent && __static_size >= size_t(_RV::size()))
+                          || !__allow_out_of_bounds)
             return _RV(_LoadCtorTag(), __ptr);
           else
             return _RV::_S_partial_load(__ptr, __rg_size);
@@ -99,15 +99,15 @@ namespace std::simd
                     "The converting load is not value-preserving. "
                     "Pass 'flag_convert' if lossy conversion matches the intent.");
 
-      constexpr bool __allow_out_of_bounds = (... or is_same_v<_Flags, __partial_loadstore_flag>);
+      constexpr bool __allow_out_of_bounds = (... || is_same_v<_Flags, __partial_loadstore_flag>);
       constexpr auto __static_size = __static_range_size(__r);
 
-      static_assert(__static_size >= _RV::size.value or __allow_out_of_bounds
-                      or __static_size == dynamic_extent, "Out-of-bounds simd load");
+      static_assert(__static_size >= _RV::size.value || __allow_out_of_bounds
+                      || __static_size == dynamic_extent, "Out-of-bounds simd load");
 
       const auto* __ptr = __f.template _S_adjust_pointer<_RV>(ranges::data(__r));
 
-      if constexpr (not __allow_out_of_bounds)
+      if constexpr (!__allow_out_of_bounds)
         __glibcxx_simd_precondition(
           ranges::size(__r) >= size_t(_RV::size()),
           "Input range is too small. Did you mean to use 'partial_load'?");
@@ -116,20 +116,20 @@ namespace std::simd
       if (__builtin_is_constant_evaluated())
         {
           if constexpr (__allow_out_of_bounds)
-            return _RV([&](size_t __i) { return __i < __rg_size and __mask[int(__i)] ? __r[__i]
-                                                                                     : _Rp(); });
+            return _RV([&](size_t __i) { return __i < __rg_size && __mask[int(__i)] ? __r[__i]
+                                                                                    : _Rp(); });
           else
             return _RV([&](size_t __i) { return __mask[int(__i)] ? __r[__i] : _Rp(); });
         }
-      else if constexpr (not __allow_out_of_bounds
-                           or (__static_size != dynamic_extent
-                                 and __static_size >= size_t(_RV::size.value)))
+      else if constexpr (!__allow_out_of_bounds
+                           || (__static_size != dynamic_extent
+                                 && __static_size >= size_t(_RV::size.value)))
         return _RV::_S_masked_load(__ptr, __mask);
       else if (__rg_size >= size_t(_RV::size()))
         return _RV::_S_masked_load(__ptr, __mask);
       else if (__rg_size > 0)
         return _RV::_S_masked_load(
-                 __ptr, __mask and _RV::mask_type::_S_partial_mask_of_n(int(__rg_size)));
+                 __ptr, __mask && _RV::mask_type::_S_partial_mask_of_n(int(__rg_size)));
       else
         return _RV();
     }
@@ -218,15 +218,15 @@ namespace std::simd
                     "The converting store is not value-preserving. "
                     "Pass 'flag_convert' if lossy conversion matches the intent.");
 
-      constexpr bool __allow_out_of_bounds = (... or is_same_v<_Flags, __partial_loadstore_flag>);
+      constexpr bool __allow_out_of_bounds = (... || is_same_v<_Flags, __partial_loadstore_flag>);
       constexpr auto __static_size = __static_range_size(__r);
 
-      static_assert(__static_size >= _TV::size.value or __allow_out_of_bounds
-                      or __static_size == dynamic_extent, "Out-of-bounds simd store");
+      static_assert(__static_size >= _TV::size.value || __allow_out_of_bounds
+                      || __static_size == dynamic_extent, "Out-of-bounds simd store");
 
       auto* __ptr = __f.template _S_adjust_pointer<_TV>(ranges::data(__r));
       const auto __rg_size = ranges::size(__r);
-      if constexpr (not __allow_out_of_bounds)
+      if constexpr (!__allow_out_of_bounds)
         __glibcxx_simd_precondition(
           ranges::size(__r) >= _TV::size(),
           "output range is too small. Did you mean to use 'partial_store'?");
@@ -236,8 +236,8 @@ namespace std::simd
           for (unsigned __i = 0; __i < (__allow_out_of_bounds ? __rg_size : _TV::size()); ++__i)
             __ptr[__i] = static_cast<ranges::range_value_t<_Rg>>(__v[__i]);
         }
-      else if constexpr ((__static_size != dynamic_extent and __static_size >= _TV::size())
-                        or not __allow_out_of_bounds)
+      else if constexpr ((__static_size != dynamic_extent && __static_size >= _TV::size())
+                        || !__allow_out_of_bounds)
         __v._M_store(__ptr);
       else if (__builtin_constant_p(__rg_size))
         {
@@ -266,15 +266,15 @@ namespace std::simd
                     "The converting store is not value-preserving. "
                     "Pass 'flag_convert' if lossy conversion matches the intent.");
 
-      constexpr bool __allow_out_of_bounds = (... or is_same_v<_Flags, __partial_loadstore_flag>);
+      constexpr bool __allow_out_of_bounds = (... || is_same_v<_Flags, __partial_loadstore_flag>);
       constexpr auto __static_size = __static_range_size(__r);
 
-      static_assert(__static_size >= _TV::size.value or __allow_out_of_bounds
-                      or __static_size == dynamic_extent, "Out-of-bounds simd store");
+      static_assert(__static_size >= _TV::size.value || __allow_out_of_bounds
+                      || __static_size == dynamic_extent, "Out-of-bounds simd store");
 
       auto* __ptr = __f.template _S_adjust_pointer<_TV>(ranges::data(__r));
 
-      if constexpr (not __allow_out_of_bounds)
+      if constexpr (!__allow_out_of_bounds)
         __glibcxx_simd_precondition(
           ranges::size(__r) >= size_t(_TV::size()),
           "output range is too small. Did you mean to use 'partial_store'?");
@@ -284,7 +284,7 @@ namespace std::simd
         {
           for (int __i = 0; __i < _TV::size(); ++__i)
             {
-              if (__mask[__i] and (not __allow_out_of_bounds or size_t(__i) < __rg_size))
+              if (__mask[__i] && (!__allow_out_of_bounds || size_t(__i) < __rg_size))
                 __ptr[__i] = static_cast<ranges::range_value_t<_Rg>>(__v[__i]);
             }
         }

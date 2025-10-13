@@ -28,8 +28,8 @@ namespace std::simd
   consteval bool
     __is_attribute_simd(const char* __s)
   {
-    if (not __s) return false;
-    while (*__s != '(' and *__s != '\0') ++__s;
+    if (!__s) return false;
+    while (*__s != '(' && *__s != '\0') ++__s;
     if (*__s == '\0') return false;
     if (*++__s != '(') return false;
     while (__s[1] == ' ') ++__s;
@@ -109,12 +109,12 @@ namespace std::simd
     }                                                                                              \
                                                                                                    \
   template <typename _Vp, _TargetTraits = {}>                                                      \
-    requires (not _GLIBCXX_SIMD_HAS_SIMD_CLONE(fn))                                                \
+    requires (!_GLIBCXX_SIMD_HAS_SIMD_CLONE(fn))                                                   \
     extern _Vp                                                                                     \
     __fast_##fn(_Vp);                                                                              \
                                                                                                    \
   template <typename _V0, typename _V1, _TargetTraits = {}>                                        \
-    requires (not _GLIBCXX_SIMD_HAS_SIMD_CLONE(fn))                                                \
+    requires (!_GLIBCXX_SIMD_HAS_SIMD_CLONE(fn))                                                   \
     extern _GLIBCXX_SIMD_MATH_RET_TYPE                                                             \
     __fast_2x_##fn(_V0, _V1);                                                                      \
                                                                                                    \
@@ -131,9 +131,9 @@ namespace std::simd
     constexpr __deduced_vec_t<_Vp>                                                                 \
     fn(const _Vp& __x)                                                                             \
     {                                                                                              \
-      if constexpr (not is_same_v<_Vp, __deduced_vec_t<_Vp>>)                                      \
+      if constexpr (!is_same_v<_Vp, __deduced_vec_t<_Vp>>)                                         \
         return fn(static_cast<const __deduced_vec_t<_Vp>&>(__x));                                  \
-      else if (__builtin_is_constant_evaluated() or __x._M_is_constprop())                         \
+      else if (__builtin_is_constant_evaluated() || __x._M_is_constprop())                         \
         return _Vp([&] [[__gnu__::__always_inline__]] (int __i) {                                  \
                  return std::fn(__x[__i]);                                                         \
                });                                                                                 \
@@ -141,17 +141,17 @@ namespace std::simd
         return std::fn(__x[0]);                                                                    \
       else if constexpr (_Traits.template _M_eval_as_f32<typename _Vp::value_type>())              \
         return _Vp(fn(rebind_t<float, _Vp>(__x)));                                                 \
-      else if constexpr (_Vp::abi_type::_S_nreg == 1 and _Traits._M_fast_math())                   \
+      else if constexpr (_Vp::abi_type::_S_nreg == 1 && _Traits._M_fast_math())                    \
         return __fast_##fn(__x._M_get());                                                          \
       else if constexpr (_Vp::abi_type::_S_nreg == 1)                                              \
         return __##fn(__x._M_get());                                                               \
-      else if constexpr (_Vp::abi_type::_S_nreg == 2 and _Traits._M_fast_math()                    \
-                           and not _GLIBCXX_SIMD_HAS_SIMD_CLONE(fn))                               \
+      else if constexpr (_Vp::abi_type::_S_nreg == 2 && _Traits._M_fast_math()                     \
+                           && !_GLIBCXX_SIMD_HAS_SIMD_CLONE(fn))                                   \
         {                                                                                          \
           _GLIBCXX_SIMD_MATH_2X_CALL(__fast_2x_##fn, __x);                                         \
           return _Vp::_S_init(__lo, __hi);                                                         \
         }                                                                                          \
-      else if constexpr (_Vp::abi_type::_S_nreg == 2 and not _Traits._M_fast_math())               \
+      else if constexpr (_Vp::abi_type::_S_nreg == 2 && !_Traits._M_fast_math())                   \
         {                                                                                          \
           _GLIBCXX_SIMD_MATH_2X_CALL(__2x_##fn, __x);                                              \
           return _Vp::_S_init(__lo, __hi);                                                         \
@@ -172,12 +172,12 @@ namespace std::simd
     }                                                                                              \
                                                                                                    \
   template <typename _TV, _TargetTraits = {}>                                                      \
-    requires (not _GLIBCXX_SIMD_HAS_SIMD_CLONE(fn))                                                \
+    requires (!_GLIBCXX_SIMD_HAS_SIMD_CLONE(fn))                                                   \
     extern _TV                                                                                     \
     __fast_##fn(_TV, _TV);                                                                         \
                                                                                                    \
   template <typename _V0, typename _V1, _TargetTraits = {}>                                        \
-    requires (not _GLIBCXX_SIMD_HAS_SIMD_CLONE(fn))                                                \
+    requires (!_GLIBCXX_SIMD_HAS_SIMD_CLONE(fn))                                                   \
     extern _GLIBCXX_SIMD_MATH_RET_TYPE                                                             \
     __fast_2x_##fn(_V0, _V0, _V1, _V1);                                                            \
                                                                                                    \
@@ -194,12 +194,12 @@ namespace std::simd
     constexpr __math_common_simd_t<_V0, _V1>                                                       \
     fn(const _V0& __x, const _V1& __y)                                                             \
     {                                                                                              \
-      if constexpr (not is_same_v<_V0, __math_common_simd_t<_V0, _V1>>                             \
-                      or not is_same_v<_V1, __math_common_simd_t<_V0, _V1>>)                       \
+      if constexpr (!is_same_v<_V0, __math_common_simd_t<_V0, _V1>>                                \
+                      || !is_same_v<_V1, __math_common_simd_t<_V0, _V1>>)                          \
         return fn(static_cast<const __math_common_simd_t<_V0, _V1>&>(__x),                         \
                   static_cast<const __math_common_simd_t<_V0, _V1>&>(__y));                        \
       else if (__builtin_is_constant_evaluated()                                                   \
-                 or (__x._M_is_constprop() and __y._M_is_constprop()))                             \
+                 || (__x._M_is_constprop() && __y._M_is_constprop()))                              \
         return _V0([&] [[__gnu__::__always_inline__]] (int __i) {                                  \
                  return std::fn(__x[__i], __y[__i]);                                               \
                });                                                                                 \
@@ -207,17 +207,17 @@ namespace std::simd
         return std::fn(__x[0], __y[0]);                                                            \
       else if constexpr (_Traits.template _M_eval_as_f32<typename _V0::value_type>())              \
         return _V0(fn(rebind_t<float, _V0>(__x), rebind_t<float, _V0>(__y)));                      \
-      else if constexpr (_V0::abi_type::_S_nreg == 1 and _Traits._M_fast_math())                   \
+      else if constexpr (_V0::abi_type::_S_nreg == 1 && _Traits._M_fast_math())                    \
         return __fast_##fn(__x._M_get(), __y._M_get());                                            \
       else if constexpr (_V0::abi_type::_S_nreg == 1)                                              \
         return __##fn(__x._M_get(), __y._M_get());                                                 \
-      else if constexpr (_V0::abi_type::_S_nreg == 2 and _Traits._M_fast_math()                    \
-                           and not _GLIBCXX_SIMD_HAS_SIMD_CLONE(fn))                               \
+      else if constexpr (_V0::abi_type::_S_nreg == 2 && _Traits._M_fast_math()                     \
+                           && !_GLIBCXX_SIMD_HAS_SIMD_CLONE(fn))                                   \
         {                                                                                          \
           _GLIBCXX_SIMD_MATH_2X_CALL2(__fast_2x_##fn, __x, __y);                                   \
           return _V0::_S_init(__lo, __hi);                                                         \
         }                                                                                          \
-      else if constexpr (_V0::abi_type::_S_nreg == 2 and not _Traits._M_fast_math())               \
+      else if constexpr (_V0::abi_type::_S_nreg == 2 && !_Traits._M_fast_math())                   \
         {                                                                                          \
           _GLIBCXX_SIMD_MATH_2X_CALL2(__2x_##fn, __x, __y);                                        \
           return _V0::_S_init(__lo, __hi);                                                         \
@@ -445,9 +445,9 @@ namespace std::simd
     isunordered(const _V0& __x, const _V1& __y)
     {
       using _Vp = __math_common_simd_t<_V0, _V1>;
-      if constexpr (__simd_integral<_V0> or is_integral_v<_V0>)
+      if constexpr (__simd_integral<_V0> || is_integral_v<_V0>)
         return __y._M_isnan();
-      else if constexpr (__simd_integral<_V1> or is_integral_v<_V1>)
+      else if constexpr (__simd_integral<_V1> || is_integral_v<_V1>)
         return __x._M_isnan();
       else
         return static_cast<const _Vp&>(__x)._M_isunordered(static_cast<const _Vp&>(__y));
@@ -486,14 +486,14 @@ namespace std::simd
     constexpr __math_common_simd_t<_V0, _V1, _V2>
     hypot(const _V0& __x, const _V1& __y, const _V2& __z)
     {
-      if constexpr (not is_same_v<_V0, __math_common_simd_t<_V0, _V1, _V2>>
-                      or not is_same_v<_V1, __math_common_simd_t<_V0, _V1, _V2>>
-                      or not is_same_v<_V2, __math_common_simd_t<_V0, _V1, _V2>>)
+      if constexpr (!is_same_v<_V0, __math_common_simd_t<_V0, _V1, _V2>>
+                      || !is_same_v<_V1, __math_common_simd_t<_V0, _V1, _V2>>
+                      || !is_same_v<_V2, __math_common_simd_t<_V0, _V1, _V2>>)
         return hypot(static_cast<const __math_common_simd_t<_V0, _V1, _V2>&>(__x),
                      static_cast<const __math_common_simd_t<_V0, _V1, _V2>&>(__y),
                      static_cast<const __math_common_simd_t<_V0, _V1, _V2>&>(__z));
       else if (__builtin_is_constant_evaluated()
-                 or (__x._M_is_constprop() and __y._M_is_constprop() and __z._M_is_constprop()))
+                 || (__x._M_is_constprop() && __y._M_is_constprop() && __z._M_is_constprop()))
         return _V0([&] [[__gnu__::__always_inline__]] (int __i) {
                  return std::hypot(__x[__i], __y[__i], __z[__i]);
                });
@@ -531,11 +531,11 @@ namespace std::simd
       const _Mp __different_sign = (__a * __b <= __zero);
 #elif 0
       const _Mp __different_sign
-        = (__a <= __zero and __b >= __zero) or (__a >= __zero and __b <= __zero);
+        = (__a <= __zero && __b >= __zero) || (__a >= __zero && __b <= __zero);
 #else
       using _IV = rebind_t<__integer_from<sizeof(typename _Vp::value_type)>, _Vp>;
       const _Mp __different_sign
-        = ((bit_cast<_IV>(__a) ^ bit_cast<_IV>(__b)) < _IV()) or __a == __zero or __b == __zero;
+        = ((bit_cast<_IV>(__a) ^ bit_cast<_IV>(__b)) < _IV()) || __a == __zero || __b == __zero;
 #endif
 
       const _Vp __r = __t * __b + (__one - __t) * __a; // __r is also exact at __t=1
@@ -546,7 +546,7 @@ namespace std::simd
           // Exact at __t=0, monotonic except near __t=1,
           // bounded, determinate, and consistent:
           const _Vp __x = __a + __t * (__b - __a);
-          return select(__different_sign or __t == __one, __r,
+          return select(__different_sign || __t == __one, __r,
                         select((__t > __one) == (__b > __a),
                                select(__b < __x, __x, __b),
                                select(__b > __x, __x, __b)));  // monotonic near __t=1
@@ -558,14 +558,14 @@ namespace std::simd
     constexpr __math_common_simd_t<_V0, _V1, _V2>
     lerp(const _V0& __a, const _V1& __b, const _V2& __t) noexcept
     {
-      if constexpr (not is_same_v<_V0, __math_common_simd_t<_V0, _V1, _V2>>
-                      or not is_same_v<_V1, __math_common_simd_t<_V0, _V1, _V2>>
-                      or not is_same_v<_V2, __math_common_simd_t<_V0, _V1, _V2>>)
+      if constexpr (!is_same_v<_V0, __math_common_simd_t<_V0, _V1, _V2>>
+                      || !is_same_v<_V1, __math_common_simd_t<_V0, _V1, _V2>>
+                      || !is_same_v<_V2, __math_common_simd_t<_V0, _V1, _V2>>)
         return lerp(static_cast<const __math_common_simd_t<_V0, _V1, _V2>&>(__a),
                     static_cast<const __math_common_simd_t<_V0, _V1, _V2>&>(__b),
                     static_cast<const __math_common_simd_t<_V0, _V1, _V2>&>(__t));
       else if (__builtin_is_constant_evaluated()
-                 or (__a._M_is_constprop() and __b._M_is_constprop() and __t._M_is_constprop()))
+                 || (__a._M_is_constprop() && __b._M_is_constprop() && __t._M_is_constprop()))
         return _V0([&] [[__gnu__::__always_inline__]] (int __i) {
                  return std::lerp(__a[__i], __b[__i], __t[__i]);
                });
