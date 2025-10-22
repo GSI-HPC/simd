@@ -278,25 +278,23 @@ namespace std::simd
   template <typename _Tp>
     using __canonical_vec_type_t = typename __canonical_vec_type<_Tp>::type;
 
+#if __SIZEOF_INT__ == __SIZEOF_LONG__
   template <std::same_as<long> _Tp>
-    requires (sizeof(_Tp) == sizeof(int))
     struct __canonical_vec_type<_Tp>
     { using type = int; };
 
+  template <std::same_as<unsigned long> _Tp>
+    struct __canonical_vec_type<_Tp>
+    { using type = unsigned int; };
+#else
   template <std::same_as<long> _Tp>
-    requires (sizeof(_Tp) == sizeof(long long))
     struct __canonical_vec_type<_Tp>
     { using type = long long; };
 
   template <std::same_as<unsigned long> _Tp>
-    requires (sizeof(_Tp) == sizeof(unsigned int))
-    struct __canonical_vec_type<_Tp>
-    { using type = unsigned int; };
-
-  template <std::same_as<unsigned long> _Tp>
-    requires (sizeof(_Tp) == sizeof(unsigned long long))
     struct __canonical_vec_type<_Tp>
     { using type = unsigned long long; };
+#endif
 
   template <typename _Tp>
     requires std::is_enum_v<_Tp>
@@ -305,7 +303,11 @@ namespace std::simd
 
   template <>
     struct __canonical_vec_type<char>
-    { using type = std::conditional_t<std::is_signed_v<char>, signed char, unsigned char>; };
+#if __CHAR_UNSIGNED__
+    { using type = unsigned char; };
+#else
+    { using type = signed char; };
+#endif
 
   template <>
     struct __canonical_vec_type<char8_t>
