@@ -13,6 +13,7 @@
 #if __cplusplus >= 202400L
 
 #include "simd_details.h"
+#include <bits/align.h> // assume_aligned
 
 namespace std::simd
 {
@@ -55,17 +56,7 @@ namespace std::simd
       [[__gnu__::__always_inline__]]
       static constexpr _Up*
       _S_adjust_pointer(_Up* __ptr)
-      {
-        if consteval
-          {
-            return __ptr;
-          }
-        else
-          {
-            return static_cast<_Up*>(__builtin_assume_aligned(
-                                       __ptr, simd::alignment_v<_Tp, remove_cv_t<_Up>>));
-          }
-      }
+      { return assume_aligned<simd::alignment_v<_Tp, remove_cv_t<_Up>>>(__ptr); }
   };
 
   /** @internal
@@ -85,16 +76,7 @@ namespace std::simd
         [[__gnu__::__always_inline__]]
         static constexpr _Up*
         _S_adjust_pointer(_Up* __ptr)
-        {
-          if consteval
-            {
-              return __ptr;
-            }
-          else
-            {
-              return static_cast<_Up*>(__builtin_assume_aligned(__ptr, _Np));
-            }
-        }
+        { return assume_aligned<_Np>(__ptr); }
     };
 
   struct __partial_loadstore_flag
