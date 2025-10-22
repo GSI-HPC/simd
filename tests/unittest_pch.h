@@ -7,6 +7,7 @@
 #define TESTS_UNITTEST_PCH_H_
 
 #include "../include/bits/simd_details.h"
+#include <string_view>
 
 namespace test
 {

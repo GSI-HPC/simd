@@ -13,13 +13,16 @@
 #if __cplusplus >= 202400L
 
 #include <bit>
-#include <concepts>
-#include <limits>
-#include <complex>
-
-#include <bits/c++config.h>
-#include <bits/ranges_base.h>
+//#include <bits/c++config.h>
 #include <bits/utility.h> // integer_sequence, etc.
+#include <cmath> // for math_errhandling :(
+#include <concepts>
+#include <cstdint>
+#include <limits>
+#include <span> // for dynamic_extent
+#ifdef _GLIBCXX_ASSERTIONS
+#include <cstdio> // stderr
+#endif
 
 #if __CHAR_BIT__ != 8
 // There are simply too many constants and bit operators that currently depend on CHAR_BIT == 8.
@@ -90,6 +93,16 @@
         __PRETTY_FUNCTION__ __VA_OPT__(,) __VA_ARGS__);                                            \
   } while(false)
 
+namespace std _GLIBCXX_VISIBILITY(default)
+{
+_GLIBCXX_BEGIN_NAMESPACE_VERSION
+
+  // Forward declarations.
+  template<typename> class complex;
+
+_GLIBCXX_END_NAMESPACE_VERSION
+}
+
 namespace std::simd
 {
   template <typename... _Args>
@@ -133,15 +146,20 @@ namespace std::simd
 #endif
 
   // [simd.general] vectorizable types
+#if _GLIBCXX_SIMD_VECTORIZE_USER_DEFINED_COMPLEX
   template <typename _Cp, auto __re, auto __im, typename _Tp = typename _Cp::value_type>
     constexpr _Cp __complex_object = _Cp {_Tp(__re), _Tp(__im)};
 
   template <typename _Tp>
     struct _Arr2
     { _Tp _M_data[2]; };
+#endif
 
   template <typename _Tp>
     concept __complex_like_impl
+#if !_GLIBCXX_SIMD_VECTORIZE_USER_DEFINED_COMPLEX
+      = same_as<_Tp, complex<typename _Tp::value_type>>;
+#else
       = requires(_Tp __x) {
         typename _Tp::value_type;
         { __x.real() } -> same_as<typename _Tp::value_type>;
@@ -176,6 +194,7 @@ namespace std::simd
           && (2 * sizeof(typename _Tp::value_type) == sizeof(_Tp))
           && (__builtin_bit_cast(_Arr2<typename _Tp::value_type>, __complex_object<_Tp, 1, 2>)
                  ._M_data[0] == 1);
+#endif
 
   /** @internal
    * Satisfied if @p _Tp implements the std::complex interface.
