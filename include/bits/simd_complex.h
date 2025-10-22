@@ -331,11 +331,6 @@ namespace std::simd
           }())
         {}
 
-      template <__almost_simd_generator_invokable<bool, _S_size> _Fp>
-        constexpr explicit
-        basic_mask(_Fp&&)
-          = delete("Invalid return type of the mask generator function: Needs to be 'bool'.");
-
       // [simd.mask.ctor] bitset constructor ----------------------------------
       [[__gnu__::__always_inline__]]
       constexpr
@@ -785,12 +780,6 @@ namespace std::simd
             return __builtin_bit_cast(_TSimd, __tmp);
           }())
         {}
-
-      template <__almost_simd_generator_invokable<value_type, _S_size> _Fp>
-        constexpr explicit
-        basic_vec(_Fp&& ) = delete("Invalid return type of the generator function: "
-                                   "Requires value-preserving conversion or implicitly "
-                                   "convertible user-defined type.");
 
       // [simd.ctor] load constructor -----------------------------------------
       template <__complex_like _Up>
@@ -1244,12 +1233,6 @@ namespace std::simd
             return __builtin_bit_cast(_RealSimd, __im);
           }())
         {}
-
-      template <__almost_simd_generator_invokable<value_type, _S_size> _Fp>
-        constexpr explicit
-        basic_vec(_Fp&& ) = delete("Invalid return type of the generator function: "
-                                   "Requires value-preserving conversion or implicitly "
-                                   "convertible user-defined type.");
 
       // [simd.ctor] load constructor -----------------------------------------
       template <__complex_like _Up>

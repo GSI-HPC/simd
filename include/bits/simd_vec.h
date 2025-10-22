@@ -1193,12 +1193,6 @@ namespace std::simd
           }())
         {}
 
-      template <__almost_simd_generator_invokable<value_type, _S_size> _Fp>
-        constexpr explicit
-        basic_vec(_Fp&&) = delete("Invalid return type of the generator function: "
-                                  "Requires value-preserving conversion or implicitly "
-                                  "convertible user-defined type.");
-
       // [simd.ctor] load constructor -----------------------------------------
       template <typename _Up>
         [[__gnu__::__always_inline__]]
@@ -2140,12 +2134,6 @@ namespace std::simd
                                return __gen(__simd_size_constant<__i + _N0>);
                              })
         {}
-
-      template <__almost_simd_generator_invokable<value_type, _S_size> _Fp>
-        constexpr explicit
-        basic_vec(_Fp&&) = delete("Invalid return type of the generator function: "
-                                  "Requires value-preserving conversion or implicitly "
-                                  "convertible user-defined type.");
 
       // [simd.ctor] load constructor -----------------------------------------
       template <typename _Up>

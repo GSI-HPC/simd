@@ -1314,20 +1314,6 @@ namespace std::simd
       __simd_generator_invokable_impl<_Fp, _Tp>(make_integer_sequence<__simd_size_type, _Np>());
     };
 
-  template <typename _Fp, typename _Tp, __simd_size_type... _Is>
-    requires (!__simd_generator_convertible_to<
-                    decltype(declval<_Fp>()(__simd_size_constant<_Is>)), _Tp>
-                || ...)
-    constexpr void
-    __almost_simd_generator_invokable_impl(integer_sequence<__simd_size_type, _Is...>);
-
-  template <typename _Fp, typename _Tp, __simd_size_type _Np>
-    concept __almost_simd_generator_invokable = requires(_Fp&& __gen) {
-      __gen(__simd_size_constant<0>);
-      __almost_simd_generator_invokable_impl<_Fp, _Tp>(
-        make_integer_sequence<__simd_size_type, _Np>());
-    };
-
   template <typename _Fp>
     concept __index_permutation_function_nosize = requires(_Fp const& __f)
       {

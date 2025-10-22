@@ -600,11 +600,6 @@ namespace std::simd
             }())
         {}
 
-      template <__almost_simd_generator_invokable<bool, _S_size> _Fp>
-        constexpr explicit
-        basic_mask(_Fp&&)
-          = delete("Invalid return type of the mask generator function: Needs to be 'bool'.");
-
       // [simd.mask.ctor] bitset constructor ----------------------------------
       [[__gnu__::__always_inline__]]
       constexpr
@@ -1407,11 +1402,6 @@ namespace std::simd
                                return __gen(__simd_size_constant<__i + _N0>);
                              })
         {}
-
-      template <__almost_simd_generator_invokable<bool, _S_size> _Fp>
-        constexpr explicit
-        basic_mask(_Fp&&)
-          = delete("Invalid return type of the mask generator function: Needs to be 'bool'.");
 
       // [simd.mask.ctor] bitset constructor ----------------------------------
       [[__gnu__::__always_inline__]]
