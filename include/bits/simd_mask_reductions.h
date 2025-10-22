@@ -56,13 +56,19 @@ namespace std::simd
     [[__gnu__::__always_inline__]]
     constexpr __simd_size_type
     reduce_min_index(const basic_mask<_Bytes, _Ap>& __k)
-    { return __k._M_reduce_min_index(); }
+    {
+      __glibcxx_simd_precondition(__k._M_any_of(), "An empty mask does not have a min_index.");
+      return __k._M_reduce_min_index();
+    }
 
   template <size_t _Bytes, typename _Ap>
     [[__gnu__::__always_inline__]]
     constexpr __simd_size_type
     reduce_max_index(const basic_mask<_Bytes, _Ap>& __k)
-    { return __k._M_reduce_max_index(); }
+    {
+      __glibcxx_simd_precondition(__k._M_any_of(), "An empty mask does not have a max_index.");
+      return __k._M_reduce_max_index();
+    }
 
   constexpr bool
   all_of(same_as<bool> auto __x) noexcept

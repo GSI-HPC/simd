@@ -840,6 +840,8 @@ namespace std::simd
                     return __similar_mask<char, __nbits, _Ap>(*this).template _M_to_uint<_Offset>();
                   else
                     static_assert(false);
+                  if constexpr (_S_is_partial)
+                    __uint &= (_U0(1) << _S_size) - 1;
                   return _Ur(__uint) << _Offset;
                   // TODO: with AVX512 use __builtin_ia32_cvt[bwdq]2mask(128|256|512)
                   // TODO: Ask for compiler builtin to do the best of the above. This should also
@@ -1737,6 +1739,34 @@ namespace std::simd
           else
             return _M_data0._M_none_of() && _M_data1._M_none_of();
         }
+
+      [[__gnu__::__always_inline__]]
+      constexpr __simd_size_type
+      _M_reduce_min_index() const
+      {
+        if constexpr (_S_size == 1)
+          return 0;
+        else if constexpr (_S_size <= 64)
+          return __lowest_bit(_M_to_uint());
+        else if (_M_data0._M_none_of())
+          return _M_data1._M_reduce_min_index() + _N0;
+        else
+          return _M_data0._M_reduce_min_index();
+      }
+
+      [[__gnu__::__always_inline__]]
+      constexpr __simd_size_type
+      _M_reduce_max_index() const
+      {
+        if constexpr (_S_size == 1)
+          return 0;
+        else if constexpr (_S_size <= 64)
+          return __highest_bit(_M_to_uint());
+        else if (_M_data1._M_none_of())
+          return _M_data0._M_reduce_max_index();
+        else
+          return _M_data1._M_reduce_max_index() + _N0;
+      }
 
       [[__gnu__::__always_inline__]]
       bool

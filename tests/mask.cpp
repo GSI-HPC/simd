@@ -115,15 +115,21 @@ template <typename V>
 
     // TODO: test mask conversions
 
-#if 0 // TODO
     ADD_TEST(mask_reductions0) {
-      std::tuple {test_iota<V>},
-      [](auto& t, V x) {
-        t.verify_equal(std::simd::reduce_min_index(x == x), 0);
-        t.verify_equal(std::simd::reduce_max_index(x == x), V::size - 1);
+      std::tuple {M(true)},
+      [](auto& t, M x) {
+        t.verify_equal(std::simd::reduce_min_index(x), 0);
+        t.verify_equal(std::simd::reduce_max_index(x), V::size - 1);
+        t.verify_precondition_failure("An empty mask does not have a min_index.", [&] {
+          std::simd::reduce_min_index(!x);
+        });
+        t.verify_precondition_failure("An empty mask does not have a max_index.", [&] {
+          std::simd::reduce_max_index(!x);
+        });
       }
     };
 
+#if 0 // TODO
     ADD_TEST_N(mask_reductions, int(test_iota_max<V>) + 1, requires(T x) { x + x; }) {
       std::tuple{test_iota<V>, test_iota<V> == T(0)},
       [](auto& t, auto ii, V v, M k0) {
