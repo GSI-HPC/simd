@@ -20,9 +20,6 @@
 #include <cstdint>
 #include <limits>
 #include <span> // for dynamic_extent
-#ifdef _GLIBCXX_ASSERTIONS
-#include <cstdio> // stderr
-#endif
 
 #if __CHAR_BIT__ != 8
 // There are simply too many constants and bit operators that currently depend on CHAR_BIT == 8.
@@ -63,35 +60,10 @@
 
 #define _GLIBCXX_SIMD_TOSTRING_IMPL(x) #x
 #define _GLIBCXX_SIMD_TOSTRING(x) _GLIBCXX_SIMD_TOSTRING_IMPL(x)
-#define _GLIBCXX_SIMD_LOC __FILE__ ":" _GLIBCXX_SIMD_TOSTRING(__LINE__) ": "
 
-#define __glibcxx_simd_erroneous_unless(expr)                                                      \
-  do {                                                                                             \
-    const bool __cond = !bool(expr);                                                               \
-    if (__builtin_is_constant_evaluated() && __cond)                                               \
-      __builtin_trap(); /* erroneous behavior in a constant expression */                          \
-    else if (__builtin_constant_p(__cond) && __cond)                                               \
-      []() __attribute__((__noinline__, __noipa__, __error__("erroneous behavior detected."        \
-        "\n" _GLIBCXX_SIMD_LOC "note: '" #expr "' does not hold")))                                \
-      { __builtin_unreachable(); }();                                                              \
-  } while(false)
-
-#ifndef _GLIBCXX_SIMD_TRAP_ON_UB
-#define _GLIBCXX_SIMD_TRAP_ON_UB 1
-#endif
-
+// This is used for unit-testing precondition checking
 #define __glibcxx_simd_precondition(expr, msg, ...)                                                \
-  do {                                                                                             \
-    const bool __precondition_result = !bool(expr);                                                \
-    if (__builtin_constant_p(__precondition_result) && __precondition_result)                      \
-      []() __attribute__((__noipa__, __warning__(                                                  \
-        "precondition failure. \n" _GLIBCXX_SIMD_LOC "note: " msg " (precondition '" #expr         \
-        "' does not hold)"))) {}();                                                                \
-    if (__builtin_expect(__precondition_result, false))                                            \
-      std::simd::__invoke_ub(                                                                      \
-        _GLIBCXX_SIMD_LOC "precondition failure in '%s':\n" msg " ('" #expr "' does not hold)",    \
-        __PRETTY_FUNCTION__ __VA_OPT__(,) __VA_ARGS__);                                            \
-  } while(false)
+  __glibcxx_assert(expr)
 
 namespace std _GLIBCXX_VISIBILITY(default)
 {
@@ -105,25 +77,6 @@ _GLIBCXX_END_NAMESPACE_VERSION
 
 namespace std::simd
 {
-  template <typename... _Args>
-    [[noreturn, __gnu__::__cold__]]
-#if !defined _GLIBCXX_ASSERTIONS
-    [[__gnu__::__always_inline__]]
-#endif
-    inline void
-    __invoke_ub([[maybe_unused]] const char* __msg, [[maybe_unused]] const _Args&... __args)
-    {
-#ifdef _GLIBCXX_ASSERTIONS
-      __builtin_fprintf(stderr, __msg, __args...);
-      __builtin_fprintf(stderr, "\n");
-      __builtin_abort();
-#elif _GLIBCXX_SIMD_TRAP_ON_UB
-      __builtin_trap();
-#else
-      __builtin_unreachable();
-#endif
-    }
-
   template <typename _Tp>
     inline constexpr _Tp
     __iota = [] { static_assert(false, "invalid __iota specialization"); }();
