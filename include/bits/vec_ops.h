@@ -308,10 +308,11 @@ namespace std::simd
             return __x86_cvt_f16c<_UV>(__v);
         }
       if constexpr (is_floating_point_v<__vec_value_type<_TV>>
-                      && is_integral_v<__vec_value_type<_UV>> && sizeof(_UV) < sizeof(_TV))
+                      && is_integral_v<__vec_value_type<_UV>> && sizeof(_UV) < sizeof(_TV)
+                      && sizeof(__vec_value_type<_UV>) < sizeof(int))
         {
-          using _IV = __vec_builtin_type<__integer_from<sizeof(__vec_value_type<_TV>)>,
-                                         __width_of<_TV>>;
+          using _Ip = __integer_from<std::min(sizeof(int), sizeof(__vec_value_type<_TV>))>;
+          using _IV = __vec_builtin_type<_Ip, __width_of<_TV>>;
           return __vec_cast<_UV>(__vec_cast<_IV>(__v));
         }
 #endif
