@@ -330,9 +330,9 @@ namespace std::simd
       { return _M_data; }
 
       [[__gnu__::__always_inline__]]
-      constexpr bool
-      _M_is_constprop() const
-      { return __builtin_constant_p(_M_data); }
+      friend constexpr bool
+      __is_constprop(const basic_vec& __x)
+      { return __builtin_constant_p(__x._M_data); }
 
       [[__gnu__::__always_inline__]]
       constexpr auto
@@ -414,7 +414,7 @@ namespace std::simd
       constexpr void
       _M_complex_set_real(const _HalfVec& __x) requires ((_S_size & 1) == 0)
       {
-        if (_M_is_constprop() && __x._M_is_constprop())
+        if (__is_constprop(*this, __x))
           {
             constexpr auto [...__is] = __iota<int[_S_size]>;
             _M_data = _DataType { ((__is & 1) == 0 ? value_type(__x[__is / 2]) : _M_data[__is])...};
@@ -429,7 +429,7 @@ namespace std::simd
       constexpr void
       _M_complex_set_imag(const _HalfVec& __x) requires ((_S_size & 1) == 0)
       {
-        if (_M_is_constprop() && __x._M_is_constprop())
+        if (__is_constprop(*this, __x))
           {
             constexpr auto [...__is] = __iota<int[_S_size]>;
             _M_data = _DataType { ((__is & 1) == 1 ? value_type(__x[__is / 2]) : _M_data[__is])...};
@@ -513,8 +513,7 @@ namespace std::simd
           else
             {
 #if _GLIBCXX_X86
-              if (_Traits._M_have_fma() && !__builtin_is_constant_evaluated()
-                    && !(__builtin_constant_p(__x) && __builtin_constant_p(__y)))
+              if (_Traits._M_have_fma() && !__is_constprop(__x, __y))
                 {
                   if constexpr (_Traits._M_have_fma())
                     _M_data = __x86_complex_multiplies(__x, __y);
@@ -709,7 +708,7 @@ namespace std::simd
         {
           static_assert(_Shift < _S_size && _Shift > 0);
 #ifdef __SSE2__
-          if (!__builtin_is_constant_evaluated() && !_M_is_constprop())
+          if (!__is_constprop(*this))
             {
               if constexpr (sizeof(_M_data) == 16)
                 return reinterpret_cast<_DataType>(
@@ -832,7 +831,7 @@ namespace std::simd
             return _M_isunordered(*this);
           else if constexpr (!_Traits._M_support_snan())
             return !(*this == *this);
-          else if (__builtin_is_constant_evaluated() || __builtin_constant_p(_M_data))
+          else if (__is_constprop(_M_data))
             return mask_type([&](int __i) { return std::isnan(_M_data[__i]); });
           else
             {
@@ -852,7 +851,7 @@ namespace std::simd
             return mask_type(false);
           else if constexpr (_S_is_scalar)
             return mask_type(std::isinf(_M_data));
-          else if (__builtin_is_constant_evaluated() || __builtin_constant_p(_M_data))
+          else if (__is_constprop(_M_data))
             return mask_type([&](int __i) { return std::isinf(_M_data[__i]); });
 #ifdef _GLIBCXX_X86
           else if constexpr (_S_use_bitmask)
@@ -1401,53 +1400,62 @@ namespace std::simd
         return __x;
       }
 
-      [[__gnu__::__always_inline__]]
-      friend constexpr basic_vec&
-      operator/=(basic_vec& __x, const basic_vec& __y) noexcept
-      requires requires(value_type __a) { __a / __a; }
-      {
-#ifdef __SSE2__
-        // x86 doesn't have integral SIMD division instructions
-        // While division is faster, the required conversions are still a problem:
-        // see PR121274, PR121284, and PR121296 for missed optimizations wrt. conversions
-        if (!(__x._M_is_constprop() && __y._M_is_constprop()))
-          {
-            if constexpr (is_integral_v<value_type>
-                            && __value_preserving_convertible_to<value_type, float>)
-              return __x = basic_vec(rebind_t<float, basic_vec>(__x) / __y);
-            else if constexpr (is_integral_v<value_type>
-                                 && __value_preserving_convertible_to<value_type, double>)
-              return __x = basic_vec(rebind_t<double, basic_vec>(__x) / __y);
-          }
-#endif
-        if constexpr (_TargetTraits()._M_eval_as_f32<value_type>())
-          return __x = basic_vec(rebind_t<float, basic_vec>(__x) / __y);
+      template <_TargetTraits _Traits = {}>
+        [[__gnu__::__always_inline__]]
+        friend constexpr basic_vec&
+        operator/=(basic_vec& __x, const basic_vec& __y) noexcept
+        requires requires(value_type __a) { __a / __a; }
+        {
+          const basic_vec __result([&](int __i) -> value_type { return __x[__i] / __y[__i]; });
+          if (__is_constprop(__result))
+            // the optimizer already knows the values of the result
+            return __x = __result;
 
-        basic_vec __y1 = __y;
-        if constexpr (_S_is_partial)
-          {
-            if constexpr (is_integral_v<value_type>)
-              {
-                // Assume integral division doesn't have SIMD instructions and must be done per
-                // element anyway. Partial vectors should skip their padding elements.
-                if (__builtin_is_constant_evaluated())
-                  __x = basic_vec([&](int __i) -> value_type {
-                          return __x._M_data[__i] / __y._M_data[__i];
-                        });
-                else
-                  {
-                    for (int __i = 0; __i < _S_size; ++__i)
-                      __x._M_data[__i] /= __y._M_data[__i];
-                  }
-                return __x;
-              }
-            else
-              __y1 = __select_impl(mask_type::_S_init(mask_type::_S_implicit_mask),
-                                   __y, basic_vec(value_type(1)));
-          }
-        __x._M_data /= __y1._M_data;
-        return __x;
-      }
+#ifdef __SSE2__
+          // x86 doesn't have integral SIMD division instructions
+          // While division is faster, the required conversions are still a problem:
+          // see PR121274, PR121284, and PR121296 for missed optimizations wrt. conversions
+          //
+          // With only 1 or 2 divisions, the conversion to and from fp is too expensive.
+          if constexpr (is_integral_v<value_type> && _S_size > 2
+                          && __value_preserving_convertible_to<value_type, double>)
+            {
+              // If the denominator (y) is known to the optimizer, don't convert to fp because the
+              // integral division can be translated into shifts/multiplications.
+              if (!__is_constprop(__y))
+                {
+                  // With AVX512FP16 use vdivph for 8-bit integers
+                  if constexpr (_Traits._M_have_avx512fp16()
+                                  && __value_preserving_convertible_to<value_type, _Float16>)
+                    return __x = basic_vec(rebind_t<_Float16, basic_vec>(__x) / __y);
+                  else if constexpr (__value_preserving_convertible_to<value_type, float>)
+                    return __x = basic_vec(rebind_t<float, basic_vec>(__x) / __y);
+                  else
+                    return __x = basic_vec(rebind_t<double, basic_vec>(__x) / __y);
+                }
+            }
+#endif
+          if constexpr (_Traits._M_eval_as_f32<value_type>())
+            return __x = basic_vec(rebind_t<float, basic_vec>(__x) / __y);
+
+          basic_vec __y1 = __y;
+          if constexpr (_S_is_partial)
+            {
+              if constexpr (is_integral_v<value_type>)
+                {
+                  // Assume integral division doesn't have SIMD instructions and must be done per
+                  // element anyway. Partial vectors should skip their padding elements.
+                  for (int __i = 0; __i < _S_size; ++__i)
+                    __x._M_data[__i] /= __y._M_data[__i];
+                  return __x;
+                }
+              else
+                __y1 = __select_impl(mask_type::_S_init(mask_type::_S_implicit_mask),
+                                     __y, basic_vec(value_type(1)));
+            }
+          __x._M_data /= __y1._M_data;
+          return __x;
+        }
 
       [[__gnu__::__always_inline__]]
       friend constexpr basic_vec&
@@ -1457,15 +1465,10 @@ namespace std::simd
         static_assert(is_integral_v<value_type>);
         if constexpr (_S_is_partial)
           {
-            if (__builtin_is_constant_evaluated())
-              __x = basic_vec([&](int __i) -> value_type {
-                      return __x._M_data[__i] % __y._M_data[__i];
-                    });
-            else if (__builtin_constant_p(__x._M_data % __y._M_data))
-              __x._M_data %= __y._M_data;
-            else if (__y._M_is_constprop())
-              __x._M_data %= __select_impl(mask_type::_S_init(mask_type::_S_implicit_mask),
-                                           __y, basic_vec(value_type(1)))._M_data;
+            const basic_vec __y1 = __select_impl(mask_type::_S_init(mask_type::_S_implicit_mask),
+                                                 __y, basic_vec(value_type(1)));
+            if (__is_constprop(__y1))
+              __x._M_data %= __y1._M_data;
             else
               {
                 // Assume integral division doesn't have SIMD instructions and must be done per
@@ -1537,8 +1540,7 @@ namespace std::simd
         _M_bitmask_cmp(_DataType __y) const
         {
           static_assert(_S_use_bitmask);
-          if (__builtin_is_constant_evaluated()
-                || (__builtin_constant_p(_M_data) && __builtin_constant_p(__y)))
+          if (__is_constprop(_M_data, __y))
             {
               constexpr auto [...__is] = __iota<int[_S_size]>;
               constexpr auto __cmp_op = [] [[__gnu__::__always_inline__]]
@@ -1562,9 +1564,9 @@ namespace std::simd
               };
               return mask_type::_S_init(((__cmp_op(__vec_get(_M_data, __is), __vec_get(__y, __is))
                                             ? (1ULL << __is) : 0) | ...));
-              }
-            else
-              return mask_type::_S_init(__x86_bitmask_cmp<_Cmp>(_M_data, __y));
+            }
+          else
+            return mask_type::_S_init(__x86_bitmask_cmp<_Cmp>(_M_data, __y));
         }
 #endif
 
@@ -1637,8 +1639,7 @@ namespace std::simd
           else if constexpr (_S_use_bitmask)
             {
 #if _GLIBCXX_X86
-              if (__builtin_is_constant_evaluated()
-                    || (__k._M_is_constprop() && __t._M_is_constprop() && __f._M_is_constprop()))
+              if (__is_constprop(__k, __t, __f))
                 return basic_vec([&](int __i) { return __k[__i] ? __t[__i] : __f[__i]; });
               else
                 return __x86_bitmask_blend(__k._M_data, __t._M_data, __f._M_data);
@@ -1766,9 +1767,9 @@ namespace std::simd
       { return _M_data1; }
 
       [[__gnu__::__always_inline__]]
-      constexpr bool
-      _M_is_constprop() const
-      { return _M_data0._M_is_constprop() && _M_data1._M_is_constprop(); }
+      friend constexpr bool
+      __is_constprop(const basic_vec& __x)
+      { return __is_constprop(__x._M_data0) && __is_constprop(__x._M_data1); }
 
       [[__gnu__::__always_inline__]]
       constexpr auto
@@ -1891,8 +1892,7 @@ namespace std::simd
               else
                 return _S_init(__x0, _DataType1::_S_concat(__xs...));
             }
-          else if (__builtin_is_constant_evaluated()
-                     || (__x0._M_is_constprop() && ... && __xs._M_is_constprop()))
+          else if (__is_constprop(__x0, __xs...))
             {
               basic_vec __r;
               __r._M_data0.template _M_assign_from(integral_constant<int, 0>(), __x0, __xs...);

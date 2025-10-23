@@ -21,7 +21,7 @@ template <typename V>
         constexpr int shift = _shift;
         constexpr V vshift = T(shift);
         const V vshiftx = vshift ^ (x & 1_cw);
-        t.verify(vshift._M_is_constprop());
+        t.verify(__is_constprop(vshift));
 
         V ref([&](int i) -> T { return x[i] >> shift; });
         V refx([&](int i) -> T { return x[i] >> (shift ^ (i & 1)); });

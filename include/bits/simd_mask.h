@@ -564,7 +564,7 @@ namespace std::simd
 #if _GLIBCXX_X86
                   // TODO: turn this into a __vec_mask_cast overload in simd_x86.h
                   if constexpr (_Bytes == 1 && _UBytes == 2)
-                    if (!__builtin_is_constant_evaluated() && !__x._M_is_constprop())
+                    if (!__is_constprop(__x))
                       {
                         if constexpr (_UAbi::_S_nreg == 1)
                           return __x86_cvt_vecmask<_DataType>(__x._M_data);
@@ -620,7 +620,7 @@ namespace std::simd
               return __val;
             else if constexpr (_S_is_scalar)
               return bool(__val & 1);
-            else if (__builtin_is_constant_evaluated() || __builtin_constant_p(__val))
+            else if (__is_constprop(__val))
               {
                 constexpr auto [...__is] = __iota<int[_S_size]>;
                 return _DataType {__vec_value_type<_DataType>((__val & (1ull << __is)) == 0
@@ -819,7 +819,7 @@ namespace std::simd
           else
             {
 #if _GLIBCXX_X86
-              if (!__builtin_is_constant_evaluated() && !_M_is_constprop())
+              if (!__is_constprop(*this))
                 {
                   _U0 __uint;
                   if constexpr (_Use_2_for_1)
@@ -1038,7 +1038,7 @@ namespace std::simd
               return _M_data == _S_implicit_mask;
           }
 #if _GLIBCXX_X86
-        else if (!(__builtin_is_constant_evaluated() || __builtin_constant_p(_M_data)))
+        else if (!__is_constprop(_M_data))
           return __x86_vecmask_all<_S_size>(_M_data);
 #endif
         else
@@ -1060,7 +1060,7 @@ namespace std::simd
               return _M_data != 0;
           }
 #if _GLIBCXX_X86
-        else if (!(__builtin_is_constant_evaluated() || __builtin_constant_p(_M_data)))
+        else if (!__is_constprop(_M_data))
           return __x86_vecmask_any<_S_size>(_M_data);
 #endif
         else
@@ -1082,7 +1082,7 @@ namespace std::simd
               return _M_data == 0;
           }
 #if _GLIBCXX_X86
-        else if (!(__builtin_is_constant_evaluated() || __builtin_constant_p(_M_data)))
+        else if (!__is_constprop(_M_data))
           return __x86_vecmask_none<_S_size>(_M_data);
 #endif
         else
@@ -1122,9 +1122,9 @@ namespace std::simd
       }
 
       [[__gnu__::__always_inline__]]
-      bool
-      _M_is_constprop() const
-      { return __builtin_constant_p(_M_data); }
+      friend constexpr bool
+      __is_constprop(const basic_mask& __x)
+      { return __builtin_constant_p(__x._M_data); }
     };
 
   template <size_t _Bytes, __abi_tag _Ap>
@@ -1759,9 +1759,9 @@ namespace std::simd
       }
 
       [[__gnu__::__always_inline__]]
-      bool
-      _M_is_constprop() const
-      { return _M_data0._M_is_constprop() && _M_data1._M_is_constprop(); }
+      friend constexpr bool
+      __is_constprop(const basic_mask& __x)
+      { return __is_constprop(__x._M_data0) && __is_constprop(__x._M_data1); }
     };
 }
 

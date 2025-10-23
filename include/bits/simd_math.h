@@ -133,7 +133,7 @@ namespace std::simd
     {                                                                                              \
       if constexpr (!is_same_v<_Vp, __deduced_vec_t<_Vp>>)                                         \
         return fn(static_cast<const __deduced_vec_t<_Vp>&>(__x));                                  \
-      else if (__builtin_is_constant_evaluated() || __x._M_is_constprop())                         \
+      else if (__is_constprop(__x))                                                                \
         return _Vp([&] [[__gnu__::__always_inline__]] (int __i) {                                  \
                  return std::fn(__x[__i]);                                                         \
                });                                                                                 \
@@ -198,8 +198,7 @@ namespace std::simd
                       || !is_same_v<_V1, __math_common_simd_t<_V0, _V1>>)                          \
         return fn(static_cast<const __math_common_simd_t<_V0, _V1>&>(__x),                         \
                   static_cast<const __math_common_simd_t<_V0, _V1>&>(__y));                        \
-      else if (__builtin_is_constant_evaluated()                                                   \
-                 || (__x._M_is_constprop() && __y._M_is_constprop()))                              \
+      else if (__is_constprop(__x, __y))                                                           \
         return _V0([&] [[__gnu__::__always_inline__]] (int __i) {                                  \
                  return std::fn(__x[__i], __y[__i]);                                               \
                });                                                                                 \
@@ -492,8 +491,7 @@ namespace std::simd
         return hypot(static_cast<const __math_common_simd_t<_V0, _V1, _V2>&>(__x),
                      static_cast<const __math_common_simd_t<_V0, _V1, _V2>&>(__y),
                      static_cast<const __math_common_simd_t<_V0, _V1, _V2>&>(__z));
-      else if (__builtin_is_constant_evaluated()
-                 || (__x._M_is_constprop() && __y._M_is_constprop() && __z._M_is_constprop()))
+      else if (__is_constprop(__x, __y, __z))
         return _V0([&] [[__gnu__::__always_inline__]] (int __i) {
                  return std::hypot(__x[__i], __y[__i], __z[__i]);
                });
@@ -564,8 +562,7 @@ namespace std::simd
         return lerp(static_cast<const __math_common_simd_t<_V0, _V1, _V2>&>(__a),
                     static_cast<const __math_common_simd_t<_V0, _V1, _V2>&>(__b),
                     static_cast<const __math_common_simd_t<_V0, _V1, _V2>&>(__t));
-      else if (__builtin_is_constant_evaluated()
-                 || (__a._M_is_constprop() && __b._M_is_constprop() && __t._M_is_constprop()))
+      else if (__is_constprop(__a, __b, __t))
         return _V0([&] [[__gnu__::__always_inline__]] (int __i) {
                  return std::lerp(__a[__i], __b[__i], __t[__i]);
                });

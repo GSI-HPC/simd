@@ -659,12 +659,12 @@ template <typename T>
 template <typename T, typename Abi>
   [[gnu::always_inline]] inline bool
   is_constprop(const std::simd::basic_vec<T, Abi>& x)
-  { return x._M_is_constprop(); }
+  { return __is_constprop(x); }
 
 template <std::size_t B, typename Abi>
   [[gnu::always_inline]] inline bool
   is_constprop(const std::simd::basic_mask<B, Abi>& x)
-  { return x._M_is_constprop(); }
+  { return __is_constprop(x); }
 
 template <typename T>
   [[gnu::always_inline]] inline bool

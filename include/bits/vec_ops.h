@@ -248,6 +248,38 @@ namespace std::simd
         return __vec_zero_pad_to<_Bytes>(__vec_concat(__x, _TV()));
     }
 
+  // work around __builtin_constant_p returning false unless passed a variable
+  // (__builtin_constant_p(x[0]) is false while __is_constprop(x[0]) is true)
+  template <typename _Tp>
+    [[__gnu__::__always_inline__]]
+    constexpr bool
+    __is_constprop(const _Tp& __x)
+    {
+      if constexpr (__complex_like<_Tp>)
+        return __is_constprop(__x.real()) && __is_constprop(__x.imag());
+      else
+        return __builtin_constant_p(__x);
+    }
+
+  [[__gnu__::__always_inline__]]
+  constexpr bool
+  __is_constprop(const auto&... __xs) requires(sizeof...(__xs) >= 2)
+  {
+    if consteval
+      {
+        return true;
+      }
+    else
+      {
+        return (__is_constprop(__xs) && ...);
+      }
+  }
+
+  [[__gnu__::__always_inline__]]
+  constexpr bool
+  __is_constprop_equal_to(const auto& __x, const auto& __expect)
+  { return __is_constprop(__x) && __x == __expect; }
+
 #if _GLIBCXX_X86
   template <__vec_builtin _UV, __vec_builtin _TV>
     inline _UV
@@ -270,7 +302,7 @@ namespace std::simd
       constexpr bool __from_f16 = is_same_v<__vec_value_type<_TV>, _Float16>;
       constexpr bool __needs_f16c = _Traits._M_have_f16c() && !_Traits._M_have_avx512fp16()
                                       && (__to_f16 || __from_f16);
-      if (__needs_f16c && !__builtin_is_constant_evaluated() && !__builtin_constant_p(__v))
+      if (__needs_f16c && !__is_constprop(__v))
         { // Work around PR121688
           if constexpr (__needs_f16c)
             return __x86_cvt_f16c<_UV>(__v);
@@ -392,26 +424,6 @@ namespace std::simd
   template <__vec_builtin _V>
     requires std::floating_point<__vec_value_type<_V>>
     constexpr _V _S_signmask = __vec_xor(_V() + 1, _V() - 1);
-
-  // work around __builtin_constant_p returning false unless passed a variable
-  // (__builtin_constant_p(x[0]) is false while __is_constprop(x[0]) is true)
-  [[__gnu__::__always_inline__]]
-  constexpr bool
-  __is_constprop(const auto& __x)
-  { return __builtin_is_constant_evaluated() || __builtin_constant_p(__x); }
-
-  [[__gnu__::__always_inline__]]
-  constexpr bool
-  __is_constprop(const __complex_like auto& __x)
-  {
-    return __builtin_is_constant_evaluated()
-             || (__is_constprop(__x.real()) && __is_constprop(__x.imag()));
-  }
-
-  [[__gnu__::__always_inline__]]
-  constexpr bool
-  __is_constprop_equal_to(const auto& __x, const auto& __expect)
-  { return (__builtin_is_constant_evaluated() || __builtin_constant_p(__x)) && __x == __expect; }
 
   template <__vec_builtin _TV, int _Np = __width_of<_TV>,
             typename = make_integer_sequence<int, _Np>>

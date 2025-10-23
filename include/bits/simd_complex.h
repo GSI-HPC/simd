@@ -555,9 +555,9 @@ namespace std::simd
       { return _M_data._M_reduce_max_index() / 2; }
 
       [[__gnu__::__always_inline__]]
-      bool
-      _M_is_constprop() const
-      { return _M_data._M_is_constprop(); }
+      friend constexpr bool
+      __is_constprop(const basic_mask& __x)
+      { return __is_constprop(__x._M_data); }
     };
 
   template <__vectorizable _Tp, __abi_tag _Ap>
@@ -628,9 +628,9 @@ namespace std::simd
       static constexpr auto size = __simd_size_constant<_S_size>;
 
       [[__gnu__::__always_inline__]]
-      constexpr bool
-      _M_is_constprop() const
-      { return _M_data._M_is_constprop(); }
+      friend constexpr bool
+      __is_constprop(const basic_vec& __x)
+      { return __is_constprop(__x._M_data); }
 
       template <typename _Vp>
         [[__gnu__::__always_inline__]]
@@ -1052,9 +1052,9 @@ namespace std::simd
       static constexpr auto size = __simd_size_constant<_S_size>;
 
       [[__gnu__::__always_inline__]]
-      constexpr bool
-      _M_is_constprop() const
-      { return _M_real._M_is_constprop() && _M_imag._M_is_constprop(); }
+      friend constexpr bool
+      __is_constprop(const basic_vec& __x)
+      { return __is_constprop(__x._M_real) && __is_constprop(__x._M_imag); }
 
       template <typename _Vp>
         [[__gnu__::__always_inline__]]
