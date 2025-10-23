@@ -1426,37 +1426,15 @@ namespace std::simd
       };
 
   /** @internal
-   * Returns the lowest index @c i where <tt>(__bits >> i) & 1</tt> equals @c 1.
-   */
-  [[__gnu__::__always_inline__]]
-  constexpr __simd_size_type
-  __lowest_bit(std::integral auto __bits)
-  {
-    if constexpr (sizeof(__bits) <= sizeof(int))
-      return __builtin_ctz(__bits);
-    else if constexpr (sizeof(__bits) <= sizeof(long))
-      return __builtin_ctzl(__bits);
-    else if constexpr (sizeof(__bits) <= sizeof(long long))
-      return __builtin_ctzll(__bits);
-    else
-      static_assert(false);
-  }
-
-  /** @internal
    * Returns the highest index @c i where <tt>(__bits >> i) & 1</tt> equals @c 1.
    */
   [[__gnu__::__always_inline__]]
   constexpr __simd_size_type
-  __highest_bit(std::integral auto __bits)
+  __highest_bit(std::unsigned_integral auto __bits)
   {
-    if constexpr (sizeof(__bits) <= sizeof(int))
-      return sizeof(int) * __CHAR_BIT__ - 1 - __builtin_clz(__bits);
-    else if constexpr (sizeof(__bits) <= sizeof(long))
-      return sizeof(long) * __CHAR_BIT__ - 1 - __builtin_clzl(__bits);
-    else if constexpr (sizeof(__bits) <= sizeof(long long))
-      return sizeof(long long) * __CHAR_BIT__ - 1 - __builtin_clzll(__bits);
-    else
-      static_assert(false);
+    using __gnu_cxx::__int_traits;
+    constexpr auto _Nd = __int_traits<decltype(__bits)>::__digits;
+    return _Nd - 1 - __countl_zero(__bits);
   }
 
   template <__vectorizable _Tp, __simd_size_type _Np, __abi_tag _Ap>

@@ -1105,20 +1105,24 @@ namespace std::simd
       constexpr __simd_size_type
       _M_reduce_min_index() const
       {
+        const auto __bits = _M_to_uint();
+        __glibcxx_simd_precondition(__bits, "An empty mask does not have a min_index.");
         if constexpr (_S_size == 1)
           return 0;
         else
-          return __lowest_bit(_M_to_uint());
+          return __countr_zero(__bits);
       }
 
       [[__gnu__::__always_inline__]]
       constexpr __simd_size_type
       _M_reduce_max_index() const
       {
+        const auto __bits = _M_to_uint();
+        __glibcxx_simd_precondition(__bits, "An empty mask does not have a max_index.");
         if constexpr (_S_size == 1)
           return 0;
         else
-          return __highest_bit(_M_to_uint());
+          return __highest_bit(__bits);
       }
 
       [[__gnu__::__always_inline__]]
@@ -1734,10 +1738,15 @@ namespace std::simd
       constexpr __simd_size_type
       _M_reduce_min_index() const
       {
-        if constexpr (_S_size == 1)
-          return 0;
-        else if constexpr (_S_size <= 64)
-          return __lowest_bit(_M_to_uint());
+        if constexpr (_S_size <= 64)
+          {
+            const auto __bits = _M_to_uint();
+            __glibcxx_simd_precondition(__bits, "An empty mask does not have a min_index.");
+            if constexpr (_S_size == 1)
+              return 0;
+            else
+              return __countr_zero(_M_to_uint());
+          }
         else if (_M_data0._M_none_of())
           return _M_data1._M_reduce_min_index() + _N0;
         else
@@ -1748,10 +1757,15 @@ namespace std::simd
       constexpr __simd_size_type
       _M_reduce_max_index() const
       {
-        if constexpr (_S_size == 1)
-          return 0;
-        else if constexpr (_S_size <= 64)
-          return __highest_bit(_M_to_uint());
+        if constexpr (_S_size <= 64)
+          {
+            const auto __bits = _M_to_uint();
+            __glibcxx_simd_precondition(__bits, "An empty mask does not have a max_index.");
+            if constexpr (_S_size == 1)
+              return 0;
+            else
+              return __highest_bit(_M_to_uint());
+          }
         else if (_M_data1._M_none_of())
           return _M_data0._M_reduce_max_index();
         else
