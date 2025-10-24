@@ -336,7 +336,8 @@ namespace std::simd
               __glibcxx_simd_precondition(__n >= 0 && __n <= numeric_limits<_Ip>::max(),
                                           "_S_partial_mask_of_n without _S_use_bitmask requires "
                                           "positive __n that does not overflow.");
-              constexpr _VecType __0123([&](_Ip __i) { return __i; });
+              constexpr _DataType __0123
+                = __builtin_bit_cast(_DataType, __iota<_Ip[_S_full_size]>);
               return __0123 < _Ip(__n);
             }
           else
