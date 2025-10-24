@@ -25,11 +25,12 @@ namespace std::simd
    */
   template <__simd_mask_type _Mp>
     requires (_Mp::size() % 2 == 0)
-      && ((_Mp::abi_type::_S_variant & _AbiVariant::_CxVariants) == 0)
+      && (__filter_abi_variant(_Mp::abi_type::_S_variant, _AbiVariant::_CxVariants)
+            == _AbiVariant())
     using __cx_ileav_mask
       = basic_mask<__mask_element_size<_Mp> * 2,
-                   _Abi<_Mp::size() / 2, _Mp::abi_type::_S_nreg,
-                        _Mp::abi_type::_S_variant | _AbiVariant::_CxIleav>>;
+                   _Abi_t<_Mp::size() / 2, _Mp::abi_type::_S_nreg,
+                          _Mp::abi_type::_S_variant, _AbiVariant::_CxIleav>>;
 
   template <__simd_mask_type _Mp>
     [[__gnu__::__always_inline__]]
@@ -127,8 +128,10 @@ namespace std::simd
 
       static constexpr int _S_size = _Ap::_S_size;
 
-      using _DataType = basic_mask<_Bytes / 2, _Abi<_S_size * 2, _Ap::_S_nreg,
-                                                    _Ap::_S_variant & ~_AbiVariant::_CxVariants>>;
+      using _DataType
+        = basic_mask<_Bytes / 2, _Abi_t<_S_size * 2, _Ap::_S_nreg,
+                                        __filter_abi_variant(_Ap::_S_variant,
+                                                             _AbiVariant::_MaskVariants)>>;
 
       static_assert(_DataType::abi_type::_S_nreg == _Ap::_S_nreg);
 
@@ -272,7 +275,7 @@ namespace std::simd
               using _UV = basic_mask<_UBytes, _UAbi>;
               if constexpr (_UV::_S_is_scalar)
                 return _DataType([&](int __i) { return __x[__i / 2]; });
-              else if constexpr (__flags_test(_UAbi::_S_variant, _AbiVariant::_CxIleav))
+              else if constexpr (_UAbi::_S_is_cx_ileav)
                 return __x._M_data; // calls conversion ctor on _DataType
               else if constexpr (_S_use_bitmask || _UV::_S_use_bitmask)
                 return _DataType::_S_init(__duplicate_each_bit<_S_size>(__x._M_to_uint()));
@@ -562,7 +565,7 @@ namespace std::simd
 
   template <__vectorizable _Tp, __abi_tag _Ap>
     requires __complex_like<_Tp>
-      && (__flags_test(_Ap::_S_variant, _AbiVariant::_CxIleav))
+      && _Ap::_S_is_cx_ileav
     class basic_vec<_Tp, _Ap>
     : _BinaryOps<_Tp, _Ap>
     {
@@ -581,7 +584,7 @@ namespace std::simd
 
       _TSimd _M_data = {};
 
-      static constexpr bool _S_use_bitmask = __flags_test(_Ap::_S_variant, _AbiVariant::_BitMask);
+      static constexpr bool _S_use_bitmask = _Ap::_S_is_bitmask;
 
       static constexpr bool _S_is_partial = sizeof(_M_data) > sizeof(_Tp) * _S_size;
 
@@ -746,7 +749,7 @@ namespace std::simd
 #endif
 
       // [simd.ctor] conversion constructor -----------------------------------
-      // FIXME: Handle __flags_test(_Ap::_S_variant, _AbiVariant::_CxCtgus)
+      // FIXME: Handle _Ap::_S_is_cx_ctgus
       template <__complex_like _Up, typename _UAbi>
         requires(__simd_size_v<_Up, _UAbi> == size.value
                    && std::constructible_from<value_type, _Up>)
@@ -988,8 +991,7 @@ namespace std::simd
 
   template <__vectorizable _Tp, __abi_tag _Ap>
     requires __complex_like<_Tp>
-      && (__flags_test(_Ap::_S_variant, _AbiVariant::_CxCtgus)
-             || is_same_v<_Ap, _ScalarAbi<_Ap::_S_size>>)
+      && _Ap::_S_is_cx_ctgus
     class basic_vec<_Tp, _Ap>
     : _BinaryOps<_Tp, _Ap>
     {
@@ -1008,7 +1010,7 @@ namespace std::simd
 
       _RealSimd _M_imag = {};
 
-      static constexpr bool _S_is_scalar = is_same_v<_Ap, _ScalarAbi<_S_size>>;
+      static constexpr bool _S_is_scalar = __scalar_abi_tag<_Ap>;
 
       static_assert(_S_is_scalar == _RealSimd::_S_is_scalar);
 
@@ -1436,11 +1438,11 @@ namespace std::simd
     };
 
   // [P3319R5] (extension) ----------------------------------------------------
-  template <__complex_like _Tp, typename _Abi>
-    inline constexpr basic_vec<_Tp, _Abi>
-    __iota<basic_vec<_Tp, _Abi>> = basic_vec<_Tp, _Abi>([](typename _Tp::value_type __i)
+  template <__complex_like _Tp, typename _Ap>
+    inline constexpr basic_vec<_Tp, _Ap>
+    __iota<basic_vec<_Tp, _Ap>> = basic_vec<_Tp, _Ap>([](typename _Tp::value_type __i)
                                                           -> typename _Tp::value_type {
-      static_assert(__simd_size_v<_Tp, _Abi> - 1 <= numeric_limits<typename _Tp::value_type>::max(),
+      static_assert(__simd_size_v<_Tp, _Ap> - 1 <= numeric_limits<typename _Tp::value_type>::max(),
                     "iota object would overflow");
       return __i;
     });

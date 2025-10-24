@@ -19,9 +19,9 @@ namespace test01
   static_assert(same_as<simd::vec<float, 1>::abi_type, simd::_ScalarAbi<1>>);
 
 #if defined __SSE__ && !defined __AVX__
-  static_assert(same_as<simd::vec<float>::abi_type, simd::_Abi<4, 1>>);
-  static_assert(same_as<simd::vec<float, 3>::abi_type, simd::_Abi<3, 1>>);
-  static_assert(same_as<simd::vec<float, 7>::abi_type, simd::_Abi<7, 2>>);
+  static_assert(same_as<simd::vec<float>::abi_type, simd::_Abi_t<4, 1>>);
+  static_assert(same_as<simd::vec<float, 3>::abi_type, simd::_Abi_t<3, 1>>);
+  static_assert(same_as<simd::vec<float, 7>::abi_type, simd::_Abi_t<7, 2>>);
 
   static_assert(simd::vec<float>::size > 1);
   static_assert(alignof(simd::vec<float>) > alignof(float));
@@ -42,9 +42,9 @@ namespace test02
   template <int N>
     using expected_abi
 #ifdef __AVX512F__
-      = _Abi<N, 1, _AbiVariant::_BitMask | _AbiVariant::_CxIleav>;
+      = _Abi_t<N, 1, _AbiVariant::_BitMask, _AbiVariant::_CxIleav>;
 #else
-      = _Abi<N, 1, _AbiVariant::_VecMask | _AbiVariant::_CxIleav>;
+      = _Abi_t<N, 1, _AbiVariant::_CxIleav>;
 #endif
 
   static_assert(same_as<simd::vec<complex<float>, 1>::abi_type, expected_abi<1>>);

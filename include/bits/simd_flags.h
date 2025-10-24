@@ -23,9 +23,9 @@ namespace std::simd
     struct alignment
     {};
 
-  template <typename _Tp, typename _Abi, __vectorizable _Up>
-    struct alignment<basic_vec<_Tp, _Abi>, _Up>
-    : integral_constant<size_t, alignof(basic_vec<_Tp, _Abi>)>
+  template <typename _Tp, typename _Ap, __vectorizable _Up>
+    struct alignment<basic_vec<_Tp, _Ap>, _Up>
+    : integral_constant<size_t, alignof(basic_vec<_Tp, _Ap>)>
     {};
 
   template <typename _Tp, typename _Up = typename _Tp::value_type>

@@ -26,13 +26,13 @@
 namespace std::simd
 {
   // disabled basic_vec
-  template <typename _Tp, typename _Abi>
+  template <typename _Tp, typename _Ap>
     class basic_vec
     {
     public:
       using value_type = _Tp;
 
-      using abi_type = _Abi;
+      using abi_type = _Ap;
 
       using mask_type = basic_mask<0, void>; // disabled
 
@@ -51,10 +51,10 @@ namespace std::simd
 #undef _GLIBCXX_DELETE_SIMD
     };
 
-  template <typename _Tp, typename _Abi>
+  template <typename _Tp, typename _Ap>
     class _BinaryOps
     {
-      using _Vp = basic_vec<_Tp, _Abi>;
+      using _Vp = basic_vec<_Tp, _Ap>;
 
       [[__gnu__::__always_inline__]]
       friend constexpr _Vp
@@ -264,16 +264,11 @@ namespace std::simd
 
       static constexpr int _S_full_size = __bit_ceil(unsigned(_S_size));
 
-      static constexpr bool _S_is_scalar = is_same_v<_Ap, _ScalarAbi<_Ap::_S_size>>;
+      static constexpr bool _S_is_scalar = __scalar_abi_tag<_Ap>;
 
       static_assert(!_S_is_scalar || _S_size == 1);
 
-      static constexpr bool _S_use_bitmask = [] {
-        if constexpr (_S_is_scalar)
-          return false;
-        else
-          return __flags_test(_Ap::_S_variant, _AbiVariant::_BitMask);
-      }();
+      static constexpr bool _S_use_bitmask = _Ap::_S_is_bitmask;
 
       using _DataType = typename _Ap::template _DataType<_Tp>;
 
@@ -2335,10 +2330,10 @@ namespace std::simd
     inline constexpr _Tp
     __iota<_Tp> = _Tp();
 
-  template <typename _Tp, typename _Abi>
-    inline constexpr basic_vec<_Tp, _Abi>
-    __iota<basic_vec<_Tp, _Abi>> = basic_vec<_Tp, _Abi>([](_Tp __i) -> _Tp {
-      static_assert(__simd_size_v<_Tp, _Abi> - 1 <= numeric_limits<_Tp>::max(),
+  template <typename _Tp, typename _Ap>
+    inline constexpr basic_vec<_Tp, _Ap>
+    __iota<basic_vec<_Tp, _Ap>> = basic_vec<_Tp, _Ap>([](_Tp __i) -> _Tp {
+      static_assert(__simd_size_v<_Tp, _Ap> - 1 <= numeric_limits<_Tp>::max(),
                     "iota object would overflow");
       return __i;
     });

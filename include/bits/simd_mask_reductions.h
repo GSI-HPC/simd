@@ -46,7 +46,7 @@ namespace std::simd
     {
       if constexpr (_Ap::_S_size == 1)
         return +__k[0];
-      else if constexpr (__flags_test(_Ap::_S_variant, _AbiVariant::_VecMask))
+      else if constexpr (_Ap::_S_is_vecmask)
         return -reduce(-__k);
       else
         return __k._M_reduce_count();

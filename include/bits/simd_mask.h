@@ -110,8 +110,8 @@ namespace std::simd
       using _A1 = decltype(__abi_rebind<__mask_element_size<_Mp>, _Np, typename _Mp::abi_type,
                                         true>());
 
-      static_assert(_Mp::abi_type::_S_variant == _A1::_S_variant || is_same_v<_A1, _ScalarAbi<_Np>>
-                      || is_same_v<typename _Mp::abi_type, _ScalarAbi<_Mp::size()>>);
+      static_assert(_Mp::abi_type::_S_variant == _A1::_S_variant || __scalar_abi_tag<_A1>
+                      || __scalar_abi_tag<typename _Mp::abi_type>);
 
       using type = basic_mask<__mask_element_size<_Mp>, _A1>;
     };
@@ -171,13 +171,13 @@ namespace std::simd
     { static_assert(false, "TODO: cat"); }
 
   // [simd.mask] --------------------------------------------------------------
-  template <size_t _Bytes, typename _Abi>
+  template <size_t _Bytes, typename _Ap>
     class basic_mask
     {
     public:
       using value_type = bool;
 
-      using abi_type = _Abi;
+      using abi_type = _Ap;
 
 #define _GLIBCXX_DELETE_SIMD                                                       \
       delete("This specialization is disabled because of an invalid combination "  \
@@ -206,14 +206,9 @@ namespace std::simd
 
       static constexpr int _S_size = _Ap::_S_size;
 
-      static constexpr bool _S_is_scalar = is_same_v<_Ap, _ScalarAbi<_Ap::_S_size>>;
+      static constexpr bool _S_is_scalar = __scalar_abi_tag<_Ap>;
 
-      static constexpr bool _S_use_bitmask = [] {
-        if constexpr (_S_is_scalar)
-          return false;
-        else
-          return __flags_test(_Ap::_S_variant, _AbiVariant::_BitMask);
-      }();
+      static constexpr bool _S_use_bitmask = _Ap::_S_is_bitmask;
 
       static constexpr int _S_full_size = [] {
         if constexpr (_S_is_scalar)
@@ -1151,11 +1146,11 @@ namespace std::simd
 
       static constexpr int _Nreg1 = _Ap::_S_nreg - _Nreg0;
 
-      using _Abi0 = conditional_t<_N0 == _Nreg0 || is_same_v<_Ap, _ScalarAbi<_S_size>>,
-                                  _ScalarAbi<_N0>, _Abi<_N0, _Nreg0, _Ap::_S_variant>>;
+      using _Abi0 = conditional_t<_N0 == _Nreg0 || __scalar_abi_tag<_Ap>,
+                                  _ScalarAbi<_N0>, _Abi_t<_N0, _Nreg0, _Ap::_S_variant>>;
 
-      using _Abi1 = conditional_t<_N1 == _Nreg1 || is_same_v<_Ap, _ScalarAbi<_S_size>>,
-                                  _ScalarAbi<_N1>, _Abi<_N1, _Nreg1, _Ap::_S_variant>>;
+      using _Abi1 = conditional_t<_N1 == _Nreg1 || __scalar_abi_tag<_Ap>,
+                                  _ScalarAbi<_N1>, _Abi_t<_N1, _Nreg1, _Ap::_S_variant>>;
 
       using _Mask0 = basic_mask<_Bytes, _Abi0>;
 
@@ -1440,10 +1435,10 @@ namespace std::simd
             else
               return _M_data1[__i - _N0];
           }
-        else if constexpr (__flags_test(abi_type::_S_variant, _AbiVariant::_CxIleav))
+        else if constexpr (abi_type::_S_is_cx_ileav)
           {
             // values are duplicated
-            if constexpr (__flags_test(abi_type::_S_variant, _AbiVariant::_BitMask))
+            if constexpr (abi_type::_S_is_bitmask)
               {
                 struct _Tmp
                 {
@@ -1461,7 +1456,7 @@ namespace std::simd
                 return __builtin_bit_cast(_Tmp, *this)._M_values[2 * __i] != 0;
               }
           }
-        else if constexpr (__flags_test(abi_type::_S_variant, _AbiVariant::_BitMask))
+        else if constexpr (abi_type::_S_is_bitmask)
           {
             struct _Tmp
             {
