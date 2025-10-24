@@ -7,6 +7,11 @@
 
 #include "unittest.h"
 
+template <typename T, std::size_t N, std::size_t Alignment>
+  class alignas(Alignment) aligned_array
+    : public std::array<T, N>
+  {};
+
 template <typename V>
   struct Tests
   {
@@ -16,9 +21,8 @@ template <typename V>
     static_assert(simd::alignment_v<V> <= 256);
 
     ADD_TEST(loads) {
-      std::tuple {std::array<T, V::size * 2> {}, std::array<int, V::size * 2> {}},
+      std::tuple {aligned_array<T, V::size * 2, 256> {}, aligned_array<int, V::size * 2, 256> {}},
       [](auto& t, auto mem, auto ints) {
-        //alignas(256) std::array<T, V::size * 2> mem = {};
         t.verify_equal(simd::unchecked_load<V>(mem), V());
         t.verify_equal(simd::partial_load<V>(mem), V());
 
@@ -40,12 +44,12 @@ template <typename V>
 
     ADD_TEST(loads_iota, requires {T() + T(1);}) {
       std::tuple {[] {
-        std::array<T, V::size * 2> arr = {};
+        aligned_array<T, V::size * 2, simd::alignment_v<V>> arr = {};
         T init = 0;
         for (auto& x : arr) x = (init += T(1));
         return arr;
       }(), [] {
-        std::array<int, V::size * 2> arr = {};
+        aligned_array<int, V::size * 2, simd::alignment_v<V, int>> arr = {};
         std::iota(arr.begin(), arr.end(), 1);
         return arr;
       }()},
