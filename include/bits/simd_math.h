@@ -104,7 +104,7 @@ namespace std::simd
     inline _TV                                                                                     \
     __fast_##fn(_TV __x)                                                                           \
     {                                                                                              \
-      constexpr auto [...__is] = __iota<int[__width_of<_TV>]>;                                     \
+      constexpr auto [...__is] = _IotaArray<__width_of<_TV>>;                                      \
       return _TV{std::fn(__x[__is])...};                                                           \
     }                                                                                              \
                                                                                                    \
@@ -167,7 +167,7 @@ namespace std::simd
     inline _TV                                                                                     \
     __fast_##fn(_TV __x0, _TV __x1)                                                                \
     {                                                                                              \
-      constexpr auto [...__is] = __iota<int[__width_of<_TV>]>;                                     \
+      constexpr auto [...__is] = _IotaArray<__width_of<_TV>>;                                      \
       return _TV{std::fn(__x0[__is], __x1[__is])...};                                              \
     }                                                                                              \
                                                                                                    \

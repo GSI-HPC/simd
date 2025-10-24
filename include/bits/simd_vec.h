@@ -383,10 +383,10 @@ namespace std::simd
                   }
               };
               constexpr bool __needs_zero_element = [&] {
-                constexpr auto [...__is] = __iota<int[_S_size]>;
+                constexpr auto [...__is] = _IotaArray<_S_size>;
                 return ((__idxmap2(__simd_size_constant<__is>).value == simd::zero_element) || ...);
               }();
-              constexpr auto [...__is] = __iota<int[_S_full_size]>;
+              constexpr auto [...__is] = _IotaArray<_S_full_size>;
               if constexpr (_A0::_S_nreg == 2 && !__needs_zero_element)
                 {
                   __r._M_data = __builtin_shufflevector(
@@ -411,7 +411,7 @@ namespace std::simd
       {
         if (__is_constprop(*this, __x))
           {
-            constexpr auto [...__is] = __iota<int[_S_size]>;
+            constexpr auto [...__is] = _IotaArray<_S_size>;
             _M_data = _DataType { ((__is & 1) == 0 ? value_type(__x[__is / 2]) : _M_data[__is])...};
           }
         else if constexpr (_S_size == 2)
@@ -426,7 +426,7 @@ namespace std::simd
       {
         if (__is_constprop(*this, __x))
           {
-            constexpr auto [...__is] = __iota<int[_S_size]>;
+            constexpr auto [...__is] = _IotaArray<_S_size>;
             _M_data = _DataType { ((__is & 1) == 1 ? value_type(__x[__is / 2]) : _M_data[__is])...};
           }
         else if constexpr (_S_size == 2)
@@ -569,7 +569,7 @@ namespace std::simd
         {
           constexpr int __n = _S_size / _Vp::_S_size;
           constexpr int __rem = _S_size % _Vp::_S_size;
-          constexpr auto [...__is] = __iota<int[__n]>;
+          constexpr auto [...__is] = _IotaArray<__n>;
           if constexpr (__rem == 0)
             {
               if constexpr (_Vp::_S_is_scalar)
@@ -946,7 +946,7 @@ namespace std::simd
                 return _DataType {static_cast<value_type>(__mem[0]), 0};
               else
                 {
-                  constexpr auto [...__is] = __iota<int[_S_size - 2]>;
+                  constexpr auto [...__is] = _IotaArray<_S_size - 2>;
                   return _DataType{
                     static_cast<value_type>(__mem[0]),
                     static_cast<value_type>(__is + 1 < __n ? __mem[__is + 1] : 0)...
@@ -1182,7 +1182,7 @@ namespace std::simd
         constexpr explicit
         basic_vec(_Fp&& __gen)
         : _M_data([&] [[__gnu__::__always_inline__]] {
-            constexpr auto [...__is] = __iota<int[_S_size]>;
+            constexpr auto [...__is] = _IotaArray<_S_size>;
             return _DataType{static_cast<value_type>(__gen(__simd_size_constant<__is>))...};
           }())
         {}
@@ -1198,7 +1198,7 @@ namespace std::simd
             _M_data = static_cast<value_type>(__ptr[0]);
           else if (__builtin_is_constant_evaluated())
             {
-              constexpr auto [...__is] = __iota<int[_S_size]>;
+              constexpr auto [...__is] = _IotaArray<_S_size>;
               _M_data = _DataType{static_cast<value_type>(__ptr[__is])...};
             }
           else if constexpr (__converts_trivially<_Up, value_type>)
@@ -1537,7 +1537,7 @@ namespace std::simd
           static_assert(_S_use_bitmask);
           if (__is_constprop(_M_data, __y))
             {
-              constexpr auto [...__is] = __iota<int[_S_size]>;
+              constexpr auto [...__is] = _IotaArray<_S_size>;
               constexpr auto __cmp_op = [] [[__gnu__::__always_inline__]]
                                           (value_type __a, value_type __b) {
                 if constexpr (_Cmp == _X86Cmp::_Eq)
@@ -1834,13 +1834,13 @@ namespace std::simd
                 }
               else
                 {
-                  constexpr auto [...__is] = __iota<int[__n]>;
+                  constexpr auto [...__is] = _IotaArray<__n>;
                   return _Rp {_Vp([&](int __i) { return (*this)[__i + __is * _Vp::_S_size]; })...};
                 }
             }
           else
             {
-              constexpr auto [...__is] = __iota<int[__n]>;
+              constexpr auto [...__is] = _IotaArray<__n>;
               using _Rest = resize_t<__rem, _Vp>;
               // can't bit-cast because the member order of tuple is reversed
               return tuple {

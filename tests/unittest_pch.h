@@ -676,7 +676,7 @@ template <std::ranges::sized_range R>
   is_constprop(const R& arr)
   {
     constexpr std::size_t N = std::ranges::size(arr);
-    constexpr auto [...is] = std::simd::__iota<int[N]>;
+    constexpr auto [...is] = std::_IotaArray<N>;
     return (is_constprop(arr[is]) && ...);
   }
 
@@ -898,7 +898,7 @@ template <auto test_ref>
     using A = std::remove_const_t<decltype(args)>;
     if constexpr (array_specialization<A>)
       { // call for each element
-        constexpr auto [...Is] = std::simd::__iota<std::size_t[std::tuple_size_v<A>]>;
+        constexpr auto [...Is] = std::_IotaArray<std::tuple_size_v<A>>;
         ([&] {
           std::string tmp_name = std::string(name) + '|' + std::to_string(Is);
           test_name = tmp_name;
@@ -938,7 +938,7 @@ template <auto test_ref>
     static void                                                                                    \
     name()                                                                                         \
     {                                                                                              \
-      constexpr auto [...is] = std::simd::__iota<int[N]>;                                          \
+      constexpr auto [...is] = std::_IotaArray<N, int>;                                          \
       (invoke_test<&name##_tmpl<0>>(#name, vir::cw<is>), ...);                                     \
     }                                                                                              \
                                                                                                    \

@@ -326,7 +326,7 @@ namespace std::simd
         : _M_data([&] [[__gnu__::__always_inline__]] {
             // for _CxIleav, the results of each __gen call need to initialize two
             // neighboring elements
-            constexpr auto [...__is] = __iota<int[_S_size]>;
+            constexpr auto [...__is] = _IotaArray<_S_size>;
             bool __tmp[_S_size] = {__gen(__simd_size_constant<__is>)...};
             return _DataType([&] [[__gnu__::__always_inline__]] (size_t __i) {
                      return __tmp[__i / 2];
@@ -643,7 +643,7 @@ namespace std::simd
           constexpr int __n = _S_size / _Vp::_S_size;
           constexpr int __rem = _S_size % _Vp::_S_size;
           const auto __chunked = _M_data.template _M_chunk<typename _Vp::_TSimd>();
-          constexpr auto [...__is] = __iota<int[__n]>;
+          constexpr auto [...__is] = _IotaArray<__n>;
           if constexpr (__rem == 0)
             return array<_Vp, __n> {_Vp::_S_init(__chunked[__is])...};
           else
@@ -778,7 +778,7 @@ namespace std::simd
         basic_vec(_Fp&& __gen)
         : _M_data([&] {
             using _Arr = std::array<value_type, sizeof(_TSimd) / sizeof(value_type)>;
-            constexpr auto [...__is] = __iota<int[_S_size]>;
+            constexpr auto [...__is] = _IotaArray<_S_size>;
             const _Arr __tmp = { static_cast<value_type>(__gen(__simd_size_constant<__is>))... };
             return __builtin_bit_cast(_TSimd, __tmp);
           }())
@@ -1225,7 +1225,7 @@ namespace std::simd
           _M_imag([&] {
             _T0 __re[sizeof(_RealSimd) / sizeof(_T0)] = {};
             _T0 __im[sizeof(_RealSimd) / sizeof(_T0)] = {};
-            template for (constexpr int __i : __iota<int[_S_size]>)
+            template for (constexpr int __i : _IotaArray<_S_size>)
               {
                 const value_type __c = static_cast<value_type>(__gen(__simd_size_constant<__i>));
                 __re[__i] = __c.real();

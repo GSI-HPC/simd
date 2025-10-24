@@ -232,7 +232,7 @@ namespace std::simd
           return _DataType((_DataType(1) << _S_size) - 1);
         else
           {
-            constexpr auto [...__is] = __iota<int[_S_full_size]>;
+            constexpr auto [...__is] = _IotaArray<_S_full_size>;
             return _DataType{ (__is < _S_size ? -1 : 0)... };
           }
       }();
@@ -337,7 +337,7 @@ namespace std::simd
                                           "_S_partial_mask_of_n without _S_use_bitmask requires "
                                           "positive __n that does not overflow.");
               constexpr _DataType __0123
-                = __builtin_bit_cast(_DataType, __iota<_Ip[_S_full_size]>);
+                = __builtin_bit_cast(_DataType, _IotaArray<_Ip(_S_full_size)>);
               return __0123 < _Ip(__n);
             }
           else
@@ -400,7 +400,7 @@ namespace std::simd
           constexpr int __n = _S_size / _Mp::_S_size;
           constexpr int __rem = _S_size % _Mp::_S_size;
           constexpr int __stride = _Mp::_S_size;
-          constexpr auto [...__is] = __iota<int[__n]>;
+          constexpr auto [...__is] = _IotaArray<__n>;
           if constexpr (_S_is_scalar)
             {
               if constexpr (__n == 0)
@@ -497,7 +497,7 @@ namespace std::simd
               // converting from an "array of bool"
               else if constexpr (_UV::_S_is_scalar)
                 {
-                  constexpr auto [...__is] = __iota<int[_S_size]>;
+                  constexpr auto [...__is] = _IotaArray<_S_size>;
                   return _DataType{__vec_value_type<_DataType>(-__x[__is])...};
                 }
 
@@ -524,7 +524,7 @@ namespace std::simd
                     }
                   else if constexpr (_UBytes / _Bytes == 16) // ughh
                     {
-                      constexpr auto [...__is] = __iota<int[_S_size]>;
+                      constexpr auto [...__is] = _IotaArray<_S_size>;
                       return _DataType{__vec_value_type<_DataType>(-__x[__is])...};
                     }
                   else if constexpr (_Bytes > 1)
@@ -584,7 +584,7 @@ namespace std::simd
         constexpr explicit
         basic_mask(_Fp&& __gen)
           : _M_data([&] [[__gnu__::__always_inline__]] {
-              constexpr auto [...__is] = __iota<int[_S_size]>;
+              constexpr auto [...__is] = _IotaArray<_S_size>;
               if constexpr (_S_is_scalar)
                 return __gen(__simd_size_constant<0>);
               else if constexpr (_S_use_bitmask)
@@ -618,7 +618,7 @@ namespace std::simd
               return bool(__val & 1);
             else if (__is_constprop(__val))
               {
-                constexpr auto [...__is] = __iota<int[_S_size]>;
+                constexpr auto [...__is] = _IotaArray<_S_size>;
                 return _DataType {__vec_value_type<_DataType>((__val & (1ull << __is)) == 0
                                                                 ? 0 : -1)...};
               }
@@ -1316,7 +1316,7 @@ namespace std::simd
         {
           constexpr int __n = _S_size / _Mp::_S_size;
           constexpr int __rem = _S_size % _Mp::_S_size;
-          [[maybe_unused]] constexpr auto [...__is] = __iota<int[__n]>;
+          [[maybe_unused]] constexpr auto [...__is] = _IotaArray<__n>;
           if constexpr (_N0 == _Mp::_S_size)
             {
               if constexpr (__rem == 0 && is_same_v<_Mp, _Mask0>)

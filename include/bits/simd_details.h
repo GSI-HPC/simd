@@ -81,23 +81,6 @@ namespace std::simd
     inline constexpr _Tp
     __iota = [] { static_assert(false, "invalid __iota specialization"); }();
 
-#if __has_builtin(__integer_pack)
-  template <typename _Tp, std::size_t _Np>
-    inline constexpr type_identity_t<_Tp[_Np]>
-    __iota<_Tp[_Np]> = {__integer_pack(_Tp(_Np))...};
-#else
-  template<typename _Tp, typename>
-    struct __iota_array;
-
-  template<typename _Tp, _Tp... _Is>
-    struct __iota_array<_Tp, integer_sequence<_Tp, _Is...>>
-    { static constexpr _Tp _S_data[sizeof...(_Is)] = {_Is...}; };
-
-  template <typename _Tp, std::size_t _Np>
-    inline constexpr auto&
-    __iota<_Tp[_Np]> = __iota_array<_Tp, make_integer_sequence<_Tp, _Np>>::_S_data;
-#endif
-
   // [simd.general] vectorizable types
 #if _GLIBCXX_SIMD_VECTORIZE_USER_DEFINED_COMPLEX
   template <typename _Cp, auto __re, auto __im, typename _Tp = typename _Cp::value_type>
