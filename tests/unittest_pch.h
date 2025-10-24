@@ -896,23 +896,21 @@ template <auto test_ref>
     test_name = name;
     constexpr auto args = test_ref->args;
     using A = std::remove_const_t<decltype(args)>;
-    constexpr std::make_index_sequence<std::tuple_size_v<A>> args_idx_seq = {};
     if constexpr (array_specialization<A>)
       { // call for each element
-        [&]<std::size_t... Is>(std::index_sequence<Is...>) {
-          ([&] {
-            std::string tmp_name = std::string(name) + '|' + std::to_string(Is);
-            test_name = tmp_name;
-            ((std::cout << "Testing '" << test_name) << ... << (' ' + std::to_string(is)))
-              << ' ' << args[Is] << "'\n";
-            invoke_test_impl<test_ref>(std::index_sequence<Is>(), is...);
-          }(), ...);
-        }(args_idx_seq);
+        constexpr auto [...Is] = std::simd::__iota<std::size_t[std::tuple_size_v<A>]>;
+        ([&] {
+          std::string tmp_name = std::string(name) + '|' + std::to_string(Is);
+          test_name = tmp_name;
+          ((std::cout << "Testing '" << test_name) << ... << (' ' + std::to_string(is)))
+            << ' ' << args[Is] << "'\n";
+          invoke_test_impl<test_ref>(std::index_sequence<Is>(), is...);
+        }(), ...);
       }
     else
       {
         ((std::cout << "Testing '" << test_name) << ... << (' ' + std::to_string(is))) << "'\n";
-        invoke_test_impl<test_ref>(args_idx_seq, is...);
+        invoke_test_impl<test_ref>(std::make_index_sequence<std::tuple_size_v<A>>(), is...);
       }
   }
 
@@ -940,9 +938,8 @@ template <auto test_ref>
     static void                                                                                    \
     name()                                                                                         \
     {                                                                                              \
-      []<int... Is>(std::integer_sequence<int, Is...>) {                                           \
-        (invoke_test<&name##_tmpl<0>>(#name, vir::cw<Is>), ...);                                   \
-      }(std::make_integer_sequence<int, N>());                                                     \
+      constexpr auto [...is] = std::simd::__iota<int[N]>;                                          \
+      (invoke_test<&name##_tmpl<0>>(#name, vir::cw<is>), ...);                                     \
     }                                                                                              \
                                                                                                    \
     const int init_##name = [] {                                                                   \
