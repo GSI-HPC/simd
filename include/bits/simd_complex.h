@@ -768,7 +768,7 @@ namespace std::simd
         constexpr
         explicit(!convertible_to<_Up, value_type>)
         basic_vec(const basic_vec<_Up, _UAbi>& __x) noexcept
-        : basic_vec(__similar_vec<_T0, _S_size, _UAbi>(__x))
+        : basic_vec(_RealSimd(__x))
         {}
 
       // [simd.ctor] generator constructor ------------------------------------
