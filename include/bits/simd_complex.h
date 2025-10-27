@@ -559,8 +559,8 @@ namespace std::simd
 
       [[__gnu__::__always_inline__]]
       friend constexpr bool
-      __is_constprop(const basic_mask& __x)
-      { return __is_constprop(__x._M_data); }
+      __is_const_known(const basic_mask& __x)
+      { return __is_const_known(__x._M_data); }
     };
 
   template <__vectorizable _Tp, __abi_tag _Ap>
@@ -632,8 +632,8 @@ namespace std::simd
 
       [[__gnu__::__always_inline__]]
       friend constexpr bool
-      __is_constprop(const basic_vec& __x)
-      { return __is_constprop(__x._M_data); }
+      __is_const_known(const basic_vec& __x)
+      { return __is_const_known(__x._M_data); }
 
       template <typename _Vp>
         [[__gnu__::__always_inline__]]
@@ -1055,8 +1055,8 @@ namespace std::simd
 
       [[__gnu__::__always_inline__]]
       friend constexpr bool
-      __is_constprop(const basic_vec& __x)
-      { return __is_constprop(__x._M_real) && __is_constprop(__x._M_imag); }
+      __is_const_known(const basic_vec& __x)
+      { return __is_const_known(__x._M_real) && __is_const_known(__x._M_imag); }
 
       template <typename _Vp>
         [[__gnu__::__always_inline__]]

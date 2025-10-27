@@ -653,31 +653,31 @@ runtime_test(auto&& fun, auto&&... args)
 
 template <typename T>
   [[gnu::always_inline]] inline bool
-  is_constprop(const T& x)
+  is_const_known(const T& x)
   { return vir::constexpr_value<T> || __builtin_constant_p(x); }
 
 template <typename T, typename Abi>
   [[gnu::always_inline]] inline bool
-  is_constprop(const std::simd::basic_vec<T, Abi>& x)
-  { return __is_constprop(x); }
+  is_const_known(const std::simd::basic_vec<T, Abi>& x)
+  { return __is_const_known(x); }
 
 template <std::size_t B, typename Abi>
   [[gnu::always_inline]] inline bool
-  is_constprop(const std::simd::basic_mask<B, Abi>& x)
-  { return __is_constprop(x); }
+  is_const_known(const std::simd::basic_mask<B, Abi>& x)
+  { return __is_const_known(x); }
 
 template <typename T>
   [[gnu::always_inline]] inline bool
-  is_constprop(const std::complex<T>& x)
-  { return is_constprop(x.real()) && is_constprop(x.imag()); }
+  is_const_known(const std::complex<T>& x)
+  { return is_const_known(x.real()) && is_const_known(x.imag()); }
 
 template <std::ranges::sized_range R>
   [[gnu::always_inline]] inline bool
-  is_constprop(const R& arr)
+  is_const_known(const R& arr)
   {
     constexpr std::size_t N = std::ranges::size(arr);
     constexpr auto [...is] = std::_IotaArray<N>;
-    return (is_constprop(arr[is]) && ...);
+    return (is_const_known(arr[is]) && ...);
   }
 
 [[gnu::always_inline, gnu::flatten]]
@@ -686,9 +686,9 @@ constprop_test(auto&& fun, auto... args)
 {
   runtime_verifier t{"constprop"};
 #ifndef __clang__
-  t.verify((is_constprop(args) && ...))
+  t.verify((is_const_known(args) && ...))
     ("=> The following argument(s) failed to constant-propagate:",
-     (is_constprop(args) ? "" : type_to_string<decltype(args)>())...);//, args...);
+     (is_const_known(args) ? "" : type_to_string<decltype(args)>())...);//, args...);
 #endif
   fun(t, args...);
 }

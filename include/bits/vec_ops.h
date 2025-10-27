@@ -249,21 +249,21 @@ namespace std::simd
     }
 
   // work around __builtin_constant_p returning false unless passed a variable
-  // (__builtin_constant_p(x[0]) is false while __is_constprop(x[0]) is true)
+  // (__builtin_constant_p(x[0]) is false while __is_const_known(x[0]) is true)
   template <typename _Tp>
     [[__gnu__::__always_inline__]]
     constexpr bool
-    __is_constprop(const _Tp& __x)
+    __is_const_known(const _Tp& __x)
     {
       if constexpr (__complex_like<_Tp>)
-        return __is_constprop(__x.real()) && __is_constprop(__x.imag());
+        return __is_const_known(__x.real()) && __is_const_known(__x.imag());
       else
         return __builtin_constant_p(__x);
     }
 
   [[__gnu__::__always_inline__]]
   constexpr bool
-  __is_constprop(const auto&... __xs) requires(sizeof...(__xs) >= 2)
+  __is_const_known(const auto&... __xs) requires(sizeof...(__xs) >= 2)
   {
     if consteval
       {
@@ -271,14 +271,14 @@ namespace std::simd
       }
     else
       {
-        return (__is_constprop(__xs) && ...);
+        return (__is_const_known(__xs) && ...);
       }
   }
 
   [[__gnu__::__always_inline__]]
   constexpr bool
-  __is_constprop_equal_to(const auto& __x, const auto& __expect)
-  { return __is_constprop(__x) && __x == __expect; }
+  __is_const_known_equal_to(const auto& __x, const auto& __expect)
+  { return __is_const_known(__x) && __x == __expect; }
 
 #if _GLIBCXX_X86
   template <__vec_builtin _UV, __vec_builtin _TV>
@@ -302,7 +302,7 @@ namespace std::simd
       constexpr bool __from_f16 = is_same_v<__vec_value_type<_TV>, _Float16>;
       constexpr bool __needs_f16c = _Traits._M_have_f16c() && !_Traits._M_have_avx512fp16()
                                       && (__to_f16 || __from_f16);
-      if (__needs_f16c && !__is_constprop(__v))
+      if (__needs_f16c && !__is_const_known(__v))
         { // Work around PR121688
           if constexpr (__needs_f16c)
             return __x86_cvt_f16c<_UV>(__v);
@@ -568,24 +568,24 @@ namespace std::simd
       // true if all elements are know to be equal to __ref at compile time
       [[__gnu__::__always_inline__]]
       static constexpr bool
-      _S_is_constprop_equal_to(_TV __x, _Tp __ref)
-      { return (__is_constprop_equal_to(__x[_Is], __ref) && ...); }
+      _S_is_const_known_equal_to(_TV __x, _Tp __ref)
+      { return (__is_const_known_equal_to(__x[_Is], __ref) && ...); }
 
       // True iff all elements at even indexes are zero. This includes signed zeros only when
       // -fno-signed-zeros is in effect.
       template <_OptTraits _Traits = {}>
         [[__gnu__::__always_inline__]]
       static constexpr bool
-        _S_complex_real_is_constprop_zero(_TV __x)
+        _S_complex_real_is_const_known_zero(_TV __x)
         {
           if constexpr (_Traits._M_conforming_to_STDC_annex_G())
             {
               using _Up = _UInt<sizeof(_Tp)>;
-              return (((_Is & 1) == 1 || __is_constprop_equal_to(__builtin_bit_cast(_Up, __x[_Is]),
+              return (((_Is & 1) == 1 || __is_const_known_equal_to(__builtin_bit_cast(_Up, __x[_Is]),
                                                                  _Up())) && ...);
             }
           else
-            return (((_Is & 1) == 1 || __is_constprop_equal_to(__x[_Is], _Tp())) && ...);
+            return (((_Is & 1) == 1 || __is_const_known_equal_to(__x[_Is], _Tp())) && ...);
       }
 
       // True iff all elements at odd indexes are zero. This includes signed zeros only when
@@ -593,16 +593,16 @@ namespace std::simd
       template <_OptTraits _Traits = {}>
         [[__gnu__::__always_inline__]]
         static constexpr bool
-        _S_complex_imag_is_constprop_zero(_TV __x)
+        _S_complex_imag_is_const_known_zero(_TV __x)
         {
           if constexpr (_Traits._M_conforming_to_STDC_annex_G())
             {
               using _Up = _UInt<sizeof(_Tp)>;
-              return (((_Is & 1) == 0 || __is_constprop_equal_to(__builtin_bit_cast(_Up, __x[_Is]),
+              return (((_Is & 1) == 0 || __is_const_known_equal_to(__builtin_bit_cast(_Up, __x[_Is]),
                                                                  _Up())) && ...);
             }
           else
-            return (((_Is & 1) == 0 || __is_constprop_equal_to(__x[_Is], _Tp())) && ...);
+            return (((_Is & 1) == 0 || __is_const_known_equal_to(__x[_Is], _Tp())) && ...);
         }
     };
 }

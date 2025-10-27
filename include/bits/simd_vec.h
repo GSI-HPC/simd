@@ -326,7 +326,7 @@ namespace std::simd
 
       [[__gnu__::__always_inline__]]
       friend constexpr bool
-      __is_constprop(const basic_vec& __x)
+      __is_const_known(const basic_vec& __x)
       { return __builtin_constant_p(__x._M_data); }
 
       [[__gnu__::__always_inline__]]
@@ -409,7 +409,7 @@ namespace std::simd
       constexpr void
       _M_complex_set_real(const _HalfVec& __x) requires ((_S_size & 1) == 0)
       {
-        if (__is_constprop(*this, __x))
+        if (__is_const_known(*this, __x))
           {
             constexpr auto [...__is] = _IotaArray<_S_size>;
             _M_data = _DataType { ((__is & 1) == 0 ? value_type(__x[__is / 2]) : _M_data[__is])...};
@@ -424,7 +424,7 @@ namespace std::simd
       constexpr void
       _M_complex_set_imag(const _HalfVec& __x) requires ((_S_size & 1) == 0)
       {
-        if (__is_constprop(*this, __x))
+        if (__is_const_known(*this, __x))
           {
             constexpr auto [...__is] = _IotaArray<_S_size>;
             _M_data = _DataType { ((__is & 1) == 1 ? value_type(__x[__is / 2]) : _M_data[__is])...};
@@ -460,9 +460,9 @@ namespace std::simd
               *this = basic_vec(__xf);
               return;
             }
-          else if (_VecOps<_DataType, _S_size>::_S_complex_imag_is_constprop_zero(__x))
+          else if (_VecOps<_DataType, _S_size>::_S_complex_imag_is_const_known_zero(__x))
             {
-              if (_VecOps<_DataType, _S_size>::_S_complex_imag_is_constprop_zero(__y))
+              if (_VecOps<_DataType, _S_size>::_S_complex_imag_is_const_known_zero(__y))
                 _M_data = __x * __y;
               else
                 {
@@ -479,7 +479,7 @@ namespace std::simd
                     _M_data = _VO::_S_dup_even(__x) * __y;
                 }
             }
-          else if (_VecOps<_DataType, _S_size>::_S_complex_imag_is_constprop_zero(__y))
+          else if (_VecOps<_DataType, _S_size>::_S_complex_imag_is_const_known_zero(__y))
             {
               if (_Traits._M_conforming_to_STDC_annex_G())
                 _M_data = _VO::_S_addsub(_VO::_S_dup_even(__y) * __x,
@@ -487,7 +487,7 @@ namespace std::simd
               else
                 _M_data = _VO::_S_dup_even(__y) * __x;
             }
-          else if (_VecOps<_DataType, _S_size>::_S_complex_real_is_constprop_zero(__y))
+          else if (_VecOps<_DataType, _S_size>::_S_complex_real_is_const_known_zero(__y))
             {
               if (_Traits._M_conforming_to_STDC_annex_G())
                 _M_data = _VO::_S_addsub(_DataType(), _VO::_S_dup_odd(__y)
@@ -496,7 +496,7 @@ namespace std::simd
                 _M_data = _VO::_S_dup_odd(__y)
                             * _VO::_S_complex_negate_real(_VO::_S_swap_neighbors(__x));
             }
-          else if (_VecOps<_DataType, _S_size>::_S_complex_real_is_constprop_zero(__x))
+          else if (_VecOps<_DataType, _S_size>::_S_complex_real_is_const_known_zero(__x))
             {
               if (_Traits._M_conforming_to_STDC_annex_G())
                 _M_data = _VO::_S_addsub(_DataType(), _VO::_S_dup_odd(__x)
@@ -508,7 +508,7 @@ namespace std::simd
           else
             {
 #if _GLIBCXX_X86
-              if (_Traits._M_have_fma() && !__is_constprop(__x, __y))
+              if (_Traits._M_have_fma() && !__is_const_known(__x, __y))
                 {
                   if constexpr (_Traits._M_have_fma())
                     _M_data = __x86_complex_multiplies(__x, __y);
@@ -703,7 +703,7 @@ namespace std::simd
         {
           static_assert(_Shift < _S_size && _Shift > 0);
 #ifdef __SSE2__
-          if (!__is_constprop(*this))
+          if (!__is_const_known(*this))
             {
               if constexpr (sizeof(_M_data) == 16)
                 return reinterpret_cast<_DataType>(
@@ -826,7 +826,7 @@ namespace std::simd
             return _M_isunordered(*this);
           else if constexpr (!_Traits._M_support_snan())
             return !(*this == *this);
-          else if (__is_constprop(_M_data))
+          else if (__is_const_known(_M_data))
             return mask_type([&](int __i) { return std::isnan(_M_data[__i]); });
           else
             {
@@ -846,7 +846,7 @@ namespace std::simd
             return mask_type(false);
           else if constexpr (_S_is_scalar)
             return mask_type(std::isinf(_M_data));
-          else if (__is_constprop(_M_data))
+          else if (__is_const_known(_M_data))
             return mask_type([&](int __i) { return std::isinf(_M_data[__i]); });
 #ifdef _GLIBCXX_X86
           else if constexpr (_S_use_bitmask)
@@ -928,7 +928,7 @@ namespace std::simd
                 return basic_vec(_LoadCtorTag(), __mem);
 #if _GLIBCXX_X86 // TODO: where else is this "safe"?
               // allow out-of-bounds read when it cannot lead to a #GP
-              else if (__is_constprop_equal_to(
+              else if (__is_const_known_equal_to(
                          __ptr_is_aligned_to(__mem, sizeof(_Up) * _S_full_size), true))
                 return __select_impl(mask_type::_S_partial_mask_of_n(int(__n)),
                                      basic_vec(_LoadCtorTag(), __mem), basic_vec());
@@ -1402,7 +1402,7 @@ namespace std::simd
         requires requires(value_type __a) { __a / __a; }
         {
           const basic_vec __result([&](int __i) -> value_type { return __x[__i] / __y[__i]; });
-          if (__is_constprop(__result))
+          if (__is_const_known(__result))
             // the optimizer already knows the values of the result
             return __x = __result;
 
@@ -1417,7 +1417,7 @@ namespace std::simd
             {
               // If the denominator (y) is known to the optimizer, don't convert to fp because the
               // integral division can be translated into shifts/multiplications.
-              if (!__is_constprop(__y))
+              if (!__is_const_known(__y))
                 {
                   // With AVX512FP16 use vdivph for 8-bit integers
                   if constexpr (_Traits._M_have_avx512fp16()
@@ -1462,7 +1462,7 @@ namespace std::simd
           {
             const basic_vec __y1 = __select_impl(mask_type::_S_init(mask_type::_S_implicit_mask),
                                                  __y, basic_vec(value_type(1)));
-            if (__is_constprop(__y1))
+            if (__is_const_known(__y1))
               __x._M_data %= __y1._M_data;
             else
               {
@@ -1535,7 +1535,7 @@ namespace std::simd
         _M_bitmask_cmp(_DataType __y) const
         {
           static_assert(_S_use_bitmask);
-          if (__is_constprop(_M_data, __y))
+          if (__is_const_known(_M_data, __y))
             {
               constexpr auto [...__is] = _IotaArray<_S_size>;
               constexpr auto __cmp_op = [] [[__gnu__::__always_inline__]]
@@ -1634,7 +1634,7 @@ namespace std::simd
           else if constexpr (_S_use_bitmask)
             {
 #if _GLIBCXX_X86
-              if (__is_constprop(__k, __t, __f))
+              if (__is_const_known(__k, __t, __f))
                 return basic_vec([&](int __i) { return __k[__i] ? __t[__i] : __f[__i]; });
               else
                 return __x86_bitmask_blend(__k._M_data, __t._M_data, __f._M_data);
@@ -1647,21 +1647,21 @@ namespace std::simd
           else
             {
               using _VO = _VecOps<_DataType>;
-              if (_VO::_S_is_constprop_equal_to(__f._M_data, 0))
+              if (_VO::_S_is_const_known_equal_to(__f._M_data, 0))
                 {
                   if (is_integral_v<value_type> && sizeof(_M_data) >= 8
-                        && _VO::_S_is_constprop_equal_to(__t._M_data, 1))
+                        && _VO::_S_is_const_known_equal_to(__t._M_data, 1))
                     return basic_vec((-__k)._M_abs());
                   /*                  else if (is_integral_v<value_type> && sizeof(_M_data) >= 8
-                             && _VO::_S_is_constprop_equal_to(__t._M_data, value_type(-1)))
+                             && _VO::_S_is_const_known_equal_to(__t._M_data, value_type(-1)))
                     return basic_vec(-__k);*/
                   else
                     return __vec_and(reinterpret_cast<_DataType>(__k._M_data), __t._M_data);
                 }
-              else if (_VecOps<_DataType>::_S_is_constprop_equal_to(__t._M_data, 0))
+              else if (_VecOps<_DataType>::_S_is_const_known_equal_to(__t._M_data, 0))
                 {
                   if (is_integral_v<value_type> && sizeof(_M_data) >= 8
-                        && _VO::_S_is_constprop_equal_to(__f._M_data, 1))
+                        && _VO::_S_is_const_known_equal_to(__f._M_data, 1))
                     return value_type(1) + basic_vec(-__k);
                   else
                     return __vec_andnot(reinterpret_cast<_DataType>(__k._M_data), __f._M_data);
@@ -1763,8 +1763,8 @@ namespace std::simd
 
       [[__gnu__::__always_inline__]]
       friend constexpr bool
-      __is_constprop(const basic_vec& __x)
-      { return __is_constprop(__x._M_data0) && __is_constprop(__x._M_data1); }
+      __is_const_known(const basic_vec& __x)
+      { return __is_const_known(__x._M_data0) && __is_const_known(__x._M_data1); }
 
       [[__gnu__::__always_inline__]]
       constexpr auto
@@ -1887,7 +1887,7 @@ namespace std::simd
               else
                 return _S_init(__x0, _DataType1::_S_concat(__xs...));
             }
-          else if (__is_constprop(__x0, __xs...))
+          else if (__is_const_known(__x0, __xs...))
             {
               basic_vec __r;
               __r._M_data0.template _M_assign_from(integral_constant<int, 0>(), __x0, __xs...);
