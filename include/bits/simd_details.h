@@ -138,6 +138,7 @@ namespace std::simd
   template <typename _Tp>
     concept __complex_like = __complex_like_impl<remove_cvref_t<_Tp>>;
 
+  // FIXME: needs to exclude bfloat16_t
   template <typename _Tp>
     concept __vectorizable_scalar
       = same_as<remove_cv_t<_Tp>, _Tp>
