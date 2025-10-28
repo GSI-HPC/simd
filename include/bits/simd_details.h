@@ -246,7 +246,7 @@ namespace std::simd
   template <>
     struct __canonical_vec_type<unsigned long>
     { using type = unsigned int; };
-#else
+#elif __SIZEOF_LONG_LONG__ == __SIZEOF_LONG__
   template <>
     struct __canonical_vec_type<long>
     { using type = long long; };
