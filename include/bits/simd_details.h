@@ -239,20 +239,20 @@ namespace std::simd
     using __canonical_vec_type_t = typename __canonical_vec_type<_Tp>::type;
 
 #if __SIZEOF_INT__ == __SIZEOF_LONG__
-  template <std::same_as<long> _Tp>
-    struct __canonical_vec_type<_Tp>
+  template <>
+    struct __canonical_vec_type<long>
     { using type = int; };
 
-  template <std::same_as<unsigned long> _Tp>
-    struct __canonical_vec_type<_Tp>
+  template <>
+    struct __canonical_vec_type<unsigned long>
     { using type = unsigned int; };
 #else
-  template <std::same_as<long> _Tp>
-    struct __canonical_vec_type<_Tp>
+  template <>
+    struct __canonical_vec_type<long>
     { using type = long long; };
 
-  template <std::same_as<unsigned long> _Tp>
-    struct __canonical_vec_type<_Tp>
+  template <>
+    struct __canonical_vec_type<unsigned long>
     { using type = unsigned long long; };
 #endif
 
