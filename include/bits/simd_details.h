@@ -1101,8 +1101,9 @@ namespace std::simd
    *
    * On IvyBridge, (vec<float> == 0.f) == (rebind_t<int, vec<float>> == 0) does not compile. It does
    * compile on basically every other target, though. This is due to the difference in ABI tag:
-   * _Abi<8, 1, 1> vs. _Abi<8, 2, 1>. I know how to define this funtion for libstdc++ to avoid
-   * interconvertible masks. The question is whether we can specify this in general for C++29.
+   * _Abi<8, 1, …> vs. _Abi<8, 2, …> (8 elements, 1 vs. 2 registers).
+   * I know how to define this funtion for libstdc++ to avoid interconvertible masks. The question
+   * is whether we can specify this in general for C++29.
    */
   template <typename _To, typename _From>
   consteval bool
