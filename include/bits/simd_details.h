@@ -214,7 +214,7 @@ namespace std::simd
    * Preconditions: __x >= 0 && __y > 0.
    */
   template <typename _Tp>
-    constexpr _Tp
+    consteval _Tp
     __div_ceil(_Tp __x, _Tp __y)
     { return (__x + __y - 1) / __y; }
 
