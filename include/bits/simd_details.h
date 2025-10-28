@@ -13,7 +13,7 @@
 #if __cplusplus >= 202400L
 
 #include <bit>
-//#include <bits/c++config.h>
+#include <bits/c++config.h> // _GLIBCXX_FLOAT_IS_IEEE_BINARY32
 #include <bits/utility.h> // integer_sequence, etc.
 #include <cmath> // for math_errhandling :(
 #include <concepts>
@@ -289,13 +289,17 @@ namespace std::simd
                                       simd::_UInt<sizeof(wchar_t)>>;
     };
 
+#if defined(__FLT64_DIG__) && defined(_GLIBCXX_DOUBLE_IS_IEEE_BINARY64)
   template <>
     struct __canonical_vec_type<_Float64>
     { using type = double; };
+#endif
 
+#if defined(__FLT32_DIG__) && defined(_GLIBCXX_FLOAT_IS_IEEE_BINARY32)
   template <>
     struct __canonical_vec_type<_Float32>
     { using type = float; };
+#endif
 
   /** @internal
    * This ABI tag describes basic_vec objects that store one element per data member and basic_mask
