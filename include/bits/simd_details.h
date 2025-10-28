@@ -1171,7 +1171,7 @@ namespace std::simd
 
   // integral_constant shortcut
   template <__simd_size_type _Xp>
-    inline constexpr integral_constant<__simd_size_type, _Xp> __simd_size_constant = {};
+    inline constexpr integral_constant<__simd_size_type, _Xp> __simd_size_c = {};
 
   // [simd.syn]
   template <typename _Tp, typename _Ap = __native_abi_t<_Tp>>
@@ -1316,7 +1316,7 @@ namespace std::simd
 
   template <typename _Fp, typename _Tp, __simd_size_type... _Is>
     requires (__simd_generator_convertible_to<
-                decltype(declval<_Fp>()(__simd_size_constant<_Is>)), _Tp> && ...)
+                decltype(declval<_Fp>()(__simd_size_c<_Is>)), _Tp> && ...)
     constexpr void
     __simd_generator_invokable_impl(integer_sequence<__simd_size_type, _Is...>);
 

@@ -189,7 +189,7 @@ namespace std::simd
       cend() const noexcept
       { return {}; }
 
-      static constexpr auto size = __simd_size_constant<_S_size>;
+      static constexpr auto size = __simd_size_c<_S_size>;
 
       // internal but public API ----------------------------------------------
       [[__gnu__::__always_inline__]]
@@ -327,7 +327,7 @@ namespace std::simd
             // for _CxIleav, the results of each __gen call need to initialize two
             // neighboring elements
             constexpr auto [...__is] = _IotaArray<_S_size>;
-            bool __tmp[_S_size] = {__gen(__simd_size_constant<__is>)...};
+            bool __tmp[_S_size] = {__gen(__simd_size_c<__is>)...};
             return _DataType([&] [[__gnu__::__always_inline__]] (size_t __i) {
                      return __tmp[__i / 2];
                    });
@@ -628,7 +628,7 @@ namespace std::simd
       cend() const noexcept
       { return {}; }
 
-      static constexpr auto size = __simd_size_constant<_S_size>;
+      static constexpr auto size = __simd_size_c<_S_size>;
 
       [[__gnu__::__always_inline__]]
       friend constexpr bool
@@ -779,7 +779,7 @@ namespace std::simd
         : _M_data([&] {
             using _Arr = std::array<value_type, sizeof(_TSimd) / sizeof(value_type)>;
             constexpr auto [...__is] = _IotaArray<_S_size>;
-            const _Arr __tmp = { static_cast<value_type>(__gen(__simd_size_constant<__is>))... };
+            const _Arr __tmp = { static_cast<value_type>(__gen(__simd_size_c<__is>))... };
             return __builtin_bit_cast(_TSimd, __tmp);
           }())
         {}
@@ -1051,7 +1051,7 @@ namespace std::simd
       cend() const noexcept
       { return {}; }
 
-      static constexpr auto size = __simd_size_constant<_S_size>;
+      static constexpr auto size = __simd_size_c<_S_size>;
 
       [[__gnu__::__always_inline__]]
       friend constexpr bool
@@ -1227,7 +1227,7 @@ namespace std::simd
             _T0 __im[sizeof(_RealSimd) / sizeof(_T0)] = {};
             template for (constexpr int __i : _IotaArray<_S_size>)
               {
-                const value_type __c = static_cast<value_type>(__gen(__simd_size_constant<__i>));
+                const value_type __c = static_cast<value_type>(__gen(__simd_size_c<__i>));
                 __re[__i] = __c.real();
                 __im[__i] = __c.imag();
               }

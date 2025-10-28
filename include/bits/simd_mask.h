@@ -278,7 +278,7 @@ namespace std::simd
       cend() const noexcept
       { return {}; }
 
-      static constexpr auto size = __simd_size_constant<_S_size>;
+      static constexpr auto size = __simd_size_c<_S_size>;
 
       // internal but public API ----------------------------------------------
       [[__gnu__::__always_inline__]]
@@ -586,13 +586,13 @@ namespace std::simd
           : _M_data([&] [[__gnu__::__always_inline__]] {
               constexpr auto [...__is] = _IotaArray<_S_size>;
               if constexpr (_S_is_scalar)
-                return __gen(__simd_size_constant<0>);
+                return __gen(__simd_size_c<0>);
               else if constexpr (_S_use_bitmask)
-                return _DataType(((_DataType(__gen(__simd_size_constant<__is>)) << __is)
+                return _DataType(((_DataType(__gen(__simd_size_c<__is>)) << __is)
                                     | ...));
               else
                 return _DataType{__vec_value_type<_DataType>(
-                                   __gen(__simd_size_constant<__is>) ? -1 : 0)...};
+                                   __gen(__simd_size_c<__is>) ? -1 : 0)...};
             }())
         {}
 
@@ -1205,7 +1205,7 @@ namespace std::simd
       cend() const noexcept
       { return {}; }
 
-      static constexpr auto size = __simd_size_constant<_S_size>;
+      static constexpr auto size = __simd_size_c<_S_size>;
 
       [[__gnu__::__always_inline__]]
       static constexpr basic_mask
@@ -1399,7 +1399,7 @@ namespace std::simd
         constexpr explicit
         basic_mask(_Fp&& __gen)
           : _M_data0(__gen), _M_data1([&] [[__gnu__::__always_inline__]] (auto __i) {
-                               return __gen(__simd_size_constant<__i + _N0>);
+                               return __gen(__simd_size_c<__i + _N0>);
                              })
         {}
 

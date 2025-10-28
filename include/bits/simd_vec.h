@@ -307,7 +307,7 @@ namespace std::simd
       cend() const noexcept
       { return {}; }
 
-      static constexpr auto size = __simd_size_constant<_S_size>;
+      static constexpr auto size = __simd_size_c<_S_size>;
 
       // internal but public API ----------------------------------------------
       [[__gnu__::__always_inline__]]
@@ -364,40 +364,40 @@ namespace std::simd
             {
               auto __idxmap2 = [=](auto __i) consteval {
                 if constexpr (int(__i + _Offset) >= _Size) // _S_full_size > _Size
-                  return __simd_size_constant<simd::uninit_element>;
+                  return __simd_size_c<simd::uninit_element>;
                 else if constexpr (__index_permutation_function_nosize<_Fp>)
-                  return __simd_size_constant<__idxmap(__i + _Offset)>;
+                  return __simd_size_c<__idxmap(__i + _Offset)>;
                 else
-                  return __simd_size_constant<__idxmap(__i + _Offset, _Size)>;
+                  return __simd_size_c<__idxmap(__i + _Offset, _Size)>;
               };
               constexpr auto __adj_idx = [](auto __i) {
                 constexpr int __j = __i;
                 if constexpr (__j == simd::zero_element)
-                  return __simd_size_constant<__bit_ceil(unsigned(_Xp::_S_size))>;
+                  return __simd_size_c<__bit_ceil(unsigned(_Xp::_S_size))>;
                 else if constexpr (__j == simd::uninit_element)
-                  return __simd_size_constant<-1>;
+                  return __simd_size_c<-1>;
                 else
                   {
                     static_assert(__j >= 0 && __j < _Xp::_S_size);
-                    return __simd_size_constant<__j>;
+                    return __simd_size_c<__j>;
                   }
               };
               constexpr bool __needs_zero_element = [&] {
                 constexpr auto [...__is] = _IotaArray<_S_size>;
-                return ((__idxmap2(__simd_size_constant<__is>).value == simd::zero_element) || ...);
+                return ((__idxmap2(__simd_size_c<__is>).value == simd::zero_element) || ...);
               }();
               constexpr auto [...__is] = _IotaArray<_S_full_size>;
               if constexpr (_A0::_S_nreg == 2 && !__needs_zero_element)
                 {
                   __r._M_data = __builtin_shufflevector(
                                   __x._M_data0._M_data, __x._M_data1._M_data,
-                                  __adj_idx(__idxmap2(__simd_size_constant<__is>)).value...);
+                                  __adj_idx(__idxmap2(__simd_size_c<__is>)).value...);
                 }
               else
                 {
                   __r._M_data = __builtin_shufflevector(
                                   __x._M_concat_data(), decltype(__x._M_concat_data())(),
-                                  __adj_idx(__idxmap2(__simd_size_constant<__is>)).value...);
+                                  __adj_idx(__idxmap2(__simd_size_c<__is>)).value...);
                 }
             }
           return __r;
@@ -1183,7 +1183,7 @@ namespace std::simd
         basic_vec(_Fp&& __gen)
         : _M_data([&] [[__gnu__::__always_inline__]] {
             constexpr auto [...__is] = _IotaArray<_S_size>;
-            return _DataType{static_cast<value_type>(__gen(__simd_size_constant<__is>))...};
+            return _DataType{static_cast<value_type>(__gen(__simd_size_c<__is>))...};
           }())
         {}
 
@@ -1739,7 +1739,7 @@ namespace std::simd
       cend() const noexcept
       { return {}; }
 
-      static constexpr auto size = __simd_size_constant<_S_size>;
+      static constexpr auto size = __simd_size_c<_S_size>;
 
       [[__gnu__::__always_inline__]]
       static constexpr basic_vec
@@ -2126,7 +2126,7 @@ namespace std::simd
         constexpr explicit
         basic_vec(_Fp&& __gen)
           : _M_data0(__gen), _M_data1([&] [[__gnu__::__always_inline__]] (auto __i) {
-                               return __gen(__simd_size_constant<__i + _N0>);
+                               return __gen(__simd_size_c<__i + _N0>);
                              })
         {}
 
