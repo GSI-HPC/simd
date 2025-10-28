@@ -11,6 +11,43 @@ namespace simd = std::simd;
 
 using std::complex;
 
+// LWG4420 ///////////////////////////////////////
+
+namespace LWG4420
+{
+  using std::convertible_to;
+  using std::constructible_from;
+  using std::float16_t;
+  using std::array;
+
+  static_assert( convertible_to<simd::vec<float16_t, 4>, simd::vec<float, 4>>);
+  static_assert(!convertible_to<simd::vec<float, 4>, simd::vec<float16_t, 4>>);
+
+  static_assert( convertible_to<float16_t, simd::vec<float, 4>>);
+  static_assert(!convertible_to<float, simd::vec<float16_t, 4>>);
+
+  static_assert(constructible_from<simd::vec<float16_t, 4>, simd::vec<float, 4>>);
+
+  static_assert(convertible_to<array<float16_t, 4>, simd::vec<float, 4>>);
+  static_assert(convertible_to<array<float, 4>, simd::vec<float16_t, 4>>); // Mandates flag_convert
+
+  static_assert([] {
+    array<float, 4> f4 = {};
+    array<float16_t, 4> h4 = {};
+
+    simd::vec<float, 4> vh2f = h4;
+    simd::vec<float, 4> vh2f_b = float16_t();
+
+    simd::vec<float16_t, 4> vf2h = {f4, simd::flag_convert};
+    simd::vec<float16_t, 4> vf2h_b{float()};
+
+    vh2f = vf2h;
+    vf2h = static_cast<decltype(vf2h)>(vh2f);
+
+    return all_of(vh2f == vh2f_b) && all_of(vf2h == vf2h_b);
+  }());
+}
+
 namespace test01
 {
   using std::same_as;

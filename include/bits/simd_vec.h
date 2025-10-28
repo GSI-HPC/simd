@@ -1162,6 +1162,7 @@ namespace std::simd
       // [simd.ctor] conversion constructor -----------------------------------
       template <typename _Up, typename _UAbi>
         requires (__simd_size_v<_Up, _UAbi> == _S_size)
+          && __explicitly_convertible_to<_Up, value_type>
         // FIXME(file LWG issue): missing constraint `constructible_from<value_type, _Up>`
         [[__gnu__::__always_inline__]]
         constexpr
@@ -1215,21 +1216,15 @@ namespace std::simd
         }
 
       template <__static_sized_range<size.value> _Rg, typename... _Flags>
-        // FIXME(file LWG issue):
-        // 1. missing constraint on `constructible_from<value_type, range_value_t<_Rg>>`
-        // 2. Mandates should be Constraints to fix answers of convertible_to and constructible_from
-        //
-        // Consider `convertible_to<array<complex<float>, 4>, vec<float, 4>>`. It should say false
-        // but currently would be true.
-        // Also, with `flag_convert` the current Mandates doesn't catch the complex<float> -> float
-        // issue and fails with horrible diagnostics somewhere in the instantiation.
+        requires __vectorizable<ranges::range_value_t<_Rg>>
+          && __explicitly_convertible_to<ranges::range_value_t<_Rg>, value_type>
         [[__gnu__::__always_inline__]]
         constexpr
         basic_vec(_Rg&& __range, flags<_Flags...> __flags = {})
           : basic_vec(_LoadCtorTag(), __flags.template _S_adjust_pointer<basic_vec>(
-                                        std::ranges::data(__range)))
+                                        ranges::data(__range)))
         {
-          static_assert(__loadstore_convertible_to<std::ranges::range_value_t<_Rg>, value_type,
+          static_assert(__loadstore_convertible_to<ranges::range_value_t<_Rg>, value_type,
                                                    _Flags...>);
         }
 
@@ -2110,7 +2105,7 @@ namespace std::simd
       // [simd.ctor] conversion constructor -----------------------------------
       template <typename _Up, typename _UAbi>
         requires (__simd_size_v<_Up, _UAbi> == _S_size)
-        // FIXME(file LWG issue): missing constraint `constructible_from<value_type, _Up>`
+          && __explicitly_convertible_to<_Up, value_type>
         [[__gnu__::__always_inline__]]
         constexpr
         explicit(!__value_preserving_convertible_to<_Up, value_type>
@@ -2140,13 +2135,14 @@ namespace std::simd
         {}
 
       template <__static_sized_range<size.value> _Rg, typename... _Flags>
-        // FIXME: see load ctor(s) above
+        requires __vectorizable<ranges::range_value_t<_Rg>>
+          && __explicitly_convertible_to<ranges::range_value_t<_Rg>, value_type>
         constexpr
         basic_vec(_Rg&& __range, flags<_Flags...> __flags = {})
         : basic_vec(_LoadCtorTag(),
-                    __flags.template _S_adjust_pointer<basic_vec>(std::ranges::data(__range)))
+                    __flags.template _S_adjust_pointer<basic_vec>(ranges::data(__range)))
         {
-          static_assert(__loadstore_convertible_to<std::ranges::range_value_t<_Rg>, value_type,
+          static_assert(__loadstore_convertible_to<ranges::range_value_t<_Rg>, value_type,
                                                    _Flags...>);
         }
 

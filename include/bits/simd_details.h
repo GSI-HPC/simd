@@ -1225,6 +1225,12 @@ namespace std::simd
           || (__complex_like<_To> && __arithmetic_only_value_preserving_convertible_to<
                                         _From, typename _To::value_type>);
 
+  // LWG4420
+  template <typename _From, typename _To>
+    concept __explicitly_convertible_to = requires {
+      static_cast<_To>(declval<_From>());
+    };
+
   /** @internal
    * C++26 [simd.expos]
    */
@@ -1278,7 +1284,7 @@ namespace std::simd
       = same_as<_From, _To>
           || (__vectorizable<_From> && __vectorizable<_To>
                 && (__value_preserving_convertible_to<_From, _To>
-                       || (std::convertible_to<_From, _To>
+                       || (__explicitly_convertible_to<_From, _To>
                              && (std::same_as<_Traits, __convert_flag> || ...))));
 
   template <typename _From, typename _To>
@@ -1474,7 +1480,7 @@ namespace std::simd
 
 #if PREFER_CONSTEVAL
   template <typename _From, typename _To>
-    concept __simd_vec_bcast = constructible_from<_To, _From>;
+    concept __simd_vec_bcast = __explicitly_convertible_to<_From, _To>;
 
   template <typename _From, typename _To>
     concept __simd_vec_bcast_consteval
@@ -1483,14 +1489,14 @@ namespace std::simd
           && !__value_preserving_convertible_to<remove_cvref_t<_From>, _To>;
 #else
   template <typename _From, typename _To>
-    concept __simd_vec_bcast_consteval = constructible_from<_To, _From>;
+    concept __simd_vec_bcast_consteval = __explicitly_convertible_to<_From, _To>;
 
   template <typename _From, typename _To>
     concept __simd_vec_bcast = __simd_vec_bcast_consteval<_From, _To> && true;
 #endif
 #else
   template <typename _From, typename _To>
-    concept __simd_vec_bcast = constructible_from<_To, _From>;
+    concept __simd_vec_bcast = __explicitly_convertible_to<_From, _To>;
 #endif
 
   /** @internal

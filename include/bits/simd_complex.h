@@ -751,8 +751,8 @@ namespace std::simd
       // [simd.ctor] conversion constructor -----------------------------------
       // FIXME: Handle _Ap::_S_is_cx_ctgus
       template <__complex_like _Up, typename _UAbi>
-        requires(__simd_size_v<_Up, _UAbi> == size.value
-                   && std::constructible_from<value_type, _Up>)
+        requires (__simd_size_v<_Up, _UAbi> == size.value)
+          && __explicitly_convertible_to<_Up, value_type>
         [[__gnu__::__always_inline__]]
         constexpr
         explicit(!convertible_to<_Up, value_type>)
@@ -762,8 +762,7 @@ namespace std::simd
 
       template <typename _Up, typename _UAbi> // _Up is not complex!
         requires (__simd_size_v<_Up, _UAbi> == _S_size)
-          && std::constructible_from<value_type, _Up>
-          && (!is_same_v<_T0, _Up>)
+          && __explicitly_convertible_to<_Up, value_type>
         [[__gnu__::__always_inline__]]
         constexpr
         explicit(!convertible_to<_Up, value_type>)
@@ -800,14 +799,15 @@ namespace std::simd
         {}
 
       template <__static_sized_range<size.value> _Rg, typename... _Flags>
-        // FIXME: see load ctor above
+        requires __vectorizable<ranges::range_value_t<_Rg>>
+          && __explicitly_convertible_to<ranges::range_value_t<_Rg>, value_type>
         [[__gnu__::__always_inline__]]
         constexpr
         basic_vec(_Rg&& __range, flags<_Flags...> __flags = {})
-          : basic_vec(_LoadCtorTag(), __flags.template _S_adjust_pointer<basic_vec>(
-                                        std::ranges::data(__range)))
+        : basic_vec(_LoadCtorTag(), __flags.template _S_adjust_pointer<basic_vec>(
+                                      ranges::data(__range)))
         {
-          static_assert(__loadstore_convertible_to<std::ranges::range_value_t<_Rg>, value_type,
+          static_assert(__loadstore_convertible_to<ranges::range_value_t<_Rg>, value_type,
                                                    _Flags...>);
         }
 
@@ -1196,8 +1196,8 @@ namespace std::simd
 
       // [simd.ctor] conversion constructor -----------------------------------
       template <__complex_like _Up, typename _UAbi>
-        requires(__simd_size_v<_Up, _UAbi> == size.value
-                   && std::constructible_from<value_type, _Up>)
+        requires (__simd_size_v<_Up, _UAbi> == size.value)
+          && __explicitly_convertible_to<_Up, value_type>
         [[__gnu__::__always_inline__]]
         constexpr
         explicit(!convertible_to<_Up, value_type>)
@@ -1207,8 +1207,7 @@ namespace std::simd
 
       template <typename _Up, typename _UAbi> // _Up is not complex!
         requires (__simd_size_v<_Up, _UAbi> == _S_size)
-          && std::constructible_from<value_type, _Up>
-          && (!is_same_v<_T0, _Up>)
+          && __explicitly_convertible_to<_Up, value_type>
         [[__gnu__::__always_inline__]]
         constexpr
         explicit(!convertible_to<_Up, value_type>)
@@ -1253,14 +1252,15 @@ namespace std::simd
         {}
 
       template <__static_sized_range<size.value> _Rg, typename... _Flags>
-        // FIXME: see load ctor above
+        requires __vectorizable<ranges::range_value_t<_Rg>>
+          && __explicitly_convertible_to<ranges::range_value_t<_Rg>, value_type>
         [[__gnu__::__always_inline__]]
         constexpr
         basic_vec(_Rg&& __range, flags<_Flags...> __flags = {})
         : basic_vec(_LoadCtorTag(), __flags.template _S_adjust_pointer<basic_vec>(
-                                      std::ranges::data(__range)))
+                                      ranges::data(__range)))
         {
-          static_assert(__loadstore_convertible_to<std::ranges::range_value_t<_Rg>, value_type,
+          static_assert(__loadstore_convertible_to<ranges::range_value_t<_Rg>, value_type,
                                                    _Flags...>);
         }
 

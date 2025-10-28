@@ -95,6 +95,8 @@ namespace std::simd
     {
       using _RV = __vec_load_return_t<_Vp, ranges::range_value_t<_Rg>>;
       using _Rp = typename _RV::value_type;
+      static_assert(__vectorizable<ranges::range_value_t<_Rg>>);
+      static_assert(__explicitly_convertible_to<ranges::range_value_t<_Rg>, _Rp>);
       static_assert(__loadstore_convertible_to<ranges::range_value_t<_Rg>, _Rp, _Flags...>,
                     "The converting load is not value-preserving. "
                     "Pass 'flag_convert' if lossy conversion matches the intent.");
