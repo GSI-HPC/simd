@@ -1186,17 +1186,6 @@ namespace std::simd
   template <typename _Tp, __simd_size_type _Np = __simd_size_v<_Tp, __native_abi_t<_Tp>>>
     using mask = basic_mask<sizeof(_Tp), __deduce_abi_t<_Tp, _Np>>;
 
-  /** @internal
-   * Satisfied if @p _Tp is a data-parallel type.
-   *
-   * C++26 [simd.general]
-   */
-  template <typename _Tp>
-    concept __data_parallel_type
-      = __vectorizable<typename _Tp::value_type>
-          && __abi_tag<typename _Tp::abi_type>
-          && _Tp::size() >= 1;
-
   // [simd.ctor] load constructor constraints
 #ifdef __clang__
   template <typename _Tp>
@@ -1244,14 +1233,6 @@ namespace std::simd
       = __arithmetic_only_value_preserving_convertible_to<_From, _To>
           || (__complex_like<_To> && __arithmetic_only_value_preserving_convertible_to<
                                         _From, typename _To::value_type>);
-
-  /** @internal
-   * The value of the @c _Bytes template argument to a @c basic_mask specialization.
-   *
-   * C++26 [simd.expos.defn]
-   */
-  template <typename _Tp>
-    constexpr size_t __mask_element_size = 0;
 
   /** @internal
    * C++26 [simd.expos]
@@ -1341,10 +1322,18 @@ namespace std::simd
     concept __index_permutation_function
       = __index_permutation_function_size<_Fp, _Simd> || __index_permutation_function_nosize<_Fp>;
 
-  // [simd.expos]
+  /** @internal
+   * The value of the @c _Bytes template argument to a @c basic_mask specialization.
+   *
+   * C++26 [simd.expos.defn]
+   */
+  template <typename _Tp>
+    constexpr size_t __mask_element_size = 0;
+
   template <size_t _Bytes, __abi_tag _Ap>
     constexpr size_t __mask_element_size<basic_mask<_Bytes, _Ap>> = _Bytes;
 
+  // [simd.expos]
   template <typename _Vp>
     concept __simd_vec_type
       = same_as<_Vp, basic_vec<typename _Vp::value_type, typename _Vp::abi_type>>
@@ -1355,6 +1344,9 @@ namespace std::simd
       = same_as<_Vp, basic_mask<__mask_element_size<_Vp>, typename _Vp::abi_type>>
         && is_default_constructible_v<_Vp>;
 
+  /** @internal
+   * Satisfied if @p _Tp is a data-parallel type.
+   */
   template <typename _Vp>
     concept __simd_vec_or_mask_type = __simd_vec_type<_Vp> || __simd_mask_type<_Vp>;
 
@@ -1377,7 +1369,7 @@ namespace std::simd
     using __deduced_vec_t
       = decltype([] {
           using _Up = decltype(declval<const _Tp&>() + declval<const _Tp&>());
-          if constexpr (__data_parallel_type<_Up>)
+          if constexpr (__simd_vec_or_mask_type<_Up>)
             return _Up();
       }());
 

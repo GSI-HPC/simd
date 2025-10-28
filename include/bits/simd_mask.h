@@ -97,7 +97,7 @@ namespace std::simd
     struct resize
     {};
 
-  template <__simd_size_type _Np, __data_parallel_type _Vp, _ArchTraits _Traits>
+  template <__simd_size_type _Np, __simd_vec_or_mask_type _Vp, _ArchTraits _Traits>
     requires requires { typename _Vp::mask_type; }
     //requires requires { typename __deduce_abi_t<typename _Vp::value_type, _Np>; }
     struct resize<_Np, _Vp, _Traits>

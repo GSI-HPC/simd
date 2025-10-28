@@ -161,6 +161,7 @@ template <typename V, typename T = typename V::value_type>
         && simd::equality_comparable<V>
 #endif
         && has_static_size<V>
+        && simd::__simd_vec_or_mask_type<V>
       ;
 
 template <typename V, typename T = typename V::value_type>
