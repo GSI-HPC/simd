@@ -1187,21 +1187,12 @@ namespace std::simd
     using mask = basic_mask<sizeof(_Tp), __deduce_abi_t<_Tp, _Np>>;
 
   // [simd.ctor] load constructor constraints
-#ifdef _GLIBCXX_CLANG
-  template <typename _Tp>
-    static constexpr remove_cvref_t<_Tp> __static_sized_range_obj = {};
-#endif
-
   template <typename _Tp, size_t _Np = -1uz>
     concept __static_sized_range
       = ranges::contiguous_range<_Tp> && ranges::sized_range<_Tp>
           && requires(_Tp&& __r) {
             typename integral_constant<size_t, ranges::size(__r)>;
-#ifdef _GLIBCXX_CLANG
-            requires (_Np == -1uz || ranges::size(__static_sized_range_obj<_Tp>) == _Np);
-#else
             requires (_Np == -1uz || ranges::size(__r) == _Np);
-#endif
           };
 
   template <typename _Rg>
