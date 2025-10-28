@@ -404,19 +404,16 @@ namespace std::simd
         using _MaskDataType
           = decltype([] {
               static_assert(!_S_is_cx_ileav);
-              if constexpr (_S_is_bitmask)
-                {
-                  if constexpr (_Nreg > 1)
-                    return _InvalidInteger();
-                  else
-                    return _Bitmask<_S_size>();
-                }
-              else
+              if constexpr (_S_is_vecmask)
                 {
                   constexpr unsigned __vbytes = _Bytes * __bit_ceil(unsigned(_S_size));
                   using _Vp [[__gnu__::__vector_size__(__vbytes)]] = __integer_from<_Bytes>;
                   return _Vp();
                 }
+              else if constexpr (_Nreg > 1)
+                return _InvalidInteger();
+              else
+                return _Bitmask<_S_size>();
             }());
 
       template <int _N2, int _Nreg2 = __div_ceil(_N2, _S_size)>
