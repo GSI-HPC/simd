@@ -32,7 +32,6 @@ namespace test
 #define _GLIBCXX_SIMD_NOEXCEPT noexcept(false)
 
 #include "../include/simd"
-#include "constexpr_wrapper.h"
 
 #include <source_location>
 #include <iostream>
@@ -444,21 +443,22 @@ struct constexpr_verifier
   constexpr_verifier(constexpr_verifier&&) = delete;
 };
 
-[[nodiscard]]
-consteval bool
-constexpr_test(auto&& fun, auto&&... args)
-{
-  constexpr_verifier t;
-  try
-    {
-      fun(t, args...);
-    }
-  catch(const test::precondition_failure& fail)
-    {
-      return false;
-    }
-  return t.okay;
-}
+template <int... is>
+  [[nodiscard]]
+  consteval bool
+  constexpr_test(auto&& fun, auto&&... args)
+  {
+    constexpr_verifier t;
+    try
+      {
+        fun.template operator()<is...>(t, args...);
+      }
+    catch(const test::precondition_failure& fail)
+      {
+        return false;
+      }
+    return t.okay;
+  }
 
 template <typename T>
   T
@@ -643,18 +643,24 @@ struct runtime_verifier
   }
 };
 
-[[gnu::noinline, gnu::noipa]]
-void
-runtime_test(auto&& fun, auto&&... args)
-{
-  runtime_verifier t {"runtime"};
-  fun(t, make_value_unknown(args)...);
-}
+template <int... is>
+  [[gnu::noinline, gnu::noipa]]
+  void
+  runtime_test(auto&& fun, auto&&... args)
+  {
+    runtime_verifier t {"runtime"};
+    fun.template operator()<is...>(t, make_value_unknown(args)...);
+  }
+
+template <typename T>
+  concept constant_value = requires {
+    typename std::integral_constant<std::remove_cvref_t<decltype(T::value)>, T::value>;
+  };
 
 template <typename T>
   [[gnu::always_inline]] inline bool
   is_const_known(const T& x)
-  { return vir::constexpr_value<T> || __builtin_constant_p(x); }
+  { return constant_value<T> || __builtin_constant_p(x); }
 
 template <typename T, typename Abi>
   [[gnu::always_inline]] inline bool
@@ -680,18 +686,19 @@ template <std::ranges::sized_range R>
     return (is_const_known(arr[is]) && ...);
   }
 
-[[gnu::always_inline, gnu::flatten]]
-void
-constprop_test(auto&& fun, auto... args)
-{
-  runtime_verifier t{"constprop"};
+template <int... is>
+  [[gnu::always_inline, gnu::flatten]]
+  inline void
+  constprop_test(auto&& fun, auto... args)
+  {
+    runtime_verifier t{"constprop"};
 #ifndef __clang__
-  t.verify((is_const_known(args) && ...))
-    ("=> The following argument(s) failed to constant-propagate:",
-     (is_const_known(args) ? "" : type_to_string<decltype(args)>())...);//, args...);
+    t.verify((is_const_known(args) && ...))
+      ("=> The following argument(s) failed to constant-propagate:",
+       (is_const_known(args) ? "" : type_to_string<decltype(args)>())...);//, args...);
 #endif
-  fun(t, args...);
-}
+    fun.template operator()<is...>(t, args...);
+  }
 
 bool
 check_cpu_support()
@@ -871,15 +878,15 @@ struct dummy_test
   static constexpr auto fun = [](auto&, auto...) {};
 };
 
-template <auto test_ref, std::size_t... arg_idx>
+template <auto test_ref, int... is, std::size_t... arg_idx>
   void
-  invoke_test_impl(std::index_sequence<arg_idx...>, auto... is)
+  invoke_test_impl(std::index_sequence<arg_idx...>)
   {
     constexpr auto fun = test_ref->fun;
     [[maybe_unused]] constexpr auto args = test_ref->args;
-    constprop_test(fun, is..., std::get<arg_idx>(args)...);
-    runtime_test(fun, is..., std::get<arg_idx>(args)...);
-    constexpr bool passed = constexpr_test(fun, is..., std::get<arg_idx>(args)...);
+    constprop_test<is...>(fun, std::get<arg_idx>(args)...);
+    runtime_test<is...>(fun, std::get<arg_idx>(args)...);
+    constexpr bool passed = constexpr_test<is...>(fun, std::get<arg_idx>(args)...);
     if (passed)
       ++passed_tests;
     else
@@ -889,28 +896,28 @@ template <auto test_ref, std::size_t... arg_idx>
       }
   }
 
-template <auto test_ref>
+template <auto test_ref, int... is>
   void
-  invoke_test(std::string_view name, auto... is)
+  invoke_test(std::string_view name)
   {
     test_name = name;
     constexpr auto args = test_ref->args;
     using A = std::remove_const_t<decltype(args)>;
     if constexpr (array_specialization<A>)
       { // call for each element
-        constexpr auto [...Is] = std::_IotaArray<std::tuple_size_v<A>>;
-        ([&] {
-          std::string tmp_name = std::string(name) + '|' + std::to_string(Is);
-          test_name = tmp_name;
-          ((std::cout << "Testing '" << test_name) << ... << (' ' + std::to_string(is)))
-            << ' ' << args[Is] << "'\n";
-          invoke_test_impl<test_ref>(std::index_sequence<Is>(), is...);
-        }(), ...);
+        template for (constexpr std::size_t I : std::_IotaArray<args.size()>)
+          {
+            std::string tmp_name = std::string(name) + '|' + std::to_string(I);
+            test_name = tmp_name;
+            ((std::cout << "Testing '" << test_name) << ... << (' ' + std::to_string(is)))
+              << ' ' << args[I] << "'\n";
+            invoke_test_impl<test_ref, is...>(std::index_sequence<I>());
+          }
       }
     else
       {
         ((std::cout << "Testing '" << test_name) << ... << (' ' + std::to_string(is))) << "'\n";
-        invoke_test_impl<test_ref>(std::make_index_sequence<std::tuple_size_v<A>>(), is...);
+        invoke_test_impl<test_ref, is...>(std::make_index_sequence<std::tuple_size_v<A>>());
       }
   }
 
@@ -938,8 +945,8 @@ template <auto test_ref>
     static void                                                                                    \
     name()                                                                                         \
     {                                                                                              \
-      constexpr auto [...is] = std::_IotaArray<N, int>;                                          \
-      (invoke_test<&name##_tmpl<0>>(#name, vir::cw<is>), ...);                                     \
+      template for (constexpr int i : std::_IotaArray<N, int>)                                     \
+        invoke_test<&name##_tmpl<0>, i>(#name);                                                    \
     }                                                                                              \
                                                                                                    \
     const int init_##name = [] {                                                                   \

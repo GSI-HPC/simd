@@ -4,8 +4,6 @@
 
 #include "unittest_pch.h"
 
-using namespace vir::literals;
-
 template <typename V>
   struct Tests
   {
@@ -16,11 +14,10 @@ template <typename V>
 
     ADD_TEST_N(known_shift, max, std::is_integral_v<T>) {
       std::tuple {test_iota<V>},
-      [](auto& t, auto _shift, const V x) {
+      []<int shift>(auto& t, const V x) {
         constexpr T tmax = std::numeric_limits<T>::max();
-        constexpr int shift = _shift;
         constexpr V vshift = T(shift);
-        const V vshiftx = vshift ^ (x & 1_cw);
+        const V vshiftx = vshift ^ (x & std::cw<1>);
         t.verify(__is_const_known(vshift));
 
         V ref([&](int i) -> T { return x[i] >> shift; });
@@ -52,7 +49,7 @@ template <typename V>
           {
             constexpr T tmax = std::numeric_limits<T>::max();
             const V vshift = T(shift);
-            const V vshiftx = vshift ^ (x & 1_cw);
+            const V vshiftx = vshift ^ (x & std::cw<1>);
             t.verify(std::is_constant_evaluated()
                        || (!is_const_known(vshift) && !is_const_known(shift)));
 

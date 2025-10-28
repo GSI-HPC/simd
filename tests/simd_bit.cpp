@@ -98,8 +98,7 @@ template <typename V>
 
     ADD_TEST_N(RotateN, 128, std::__unsigned_integer<T>) {
       std::tuple {test_iota<V, 0, 0>},
-      [](auto& t, auto _shift, const V x) {
-        constexpr int shift = _shift - 64;
+      []<int shift>(auto& t, const V x) {
         constexpr int rshift = I(sizeof(T) * CHAR_BIT) - shift;
         const IV vshift = I(shift);
         const IV vshiftx = vshift ^ IV(x & T(1));

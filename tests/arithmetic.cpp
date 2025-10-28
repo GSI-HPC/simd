@@ -6,8 +6,6 @@
 #include "unittest.h"
 #include "complex_init.h"
 
-using namespace vir::literals;
-
 static constexpr bool is_iec559 =
 #ifdef __GCC_IEC_559
       __GCC_IEC_559 >= 2;
@@ -173,8 +171,8 @@ template <typename V>
     ADD_TEST(plus1, requires(T x) { x + x; }) {
       std::tuple{test_iota<V>},
       [](auto& t, V x) {
-        t.verify_equal(x + 0_cw, x);
-        t.verify_equal(0_cw + x, x);
+        t.verify_equal(x + std::cw<0>, x);
+        t.verify_equal(std::cw<0> + x, x);
         t.verify_equal(x + T(), x);
         t.verify_equal(T() + x, x);
         t.verify_equal(x + -x, V());
@@ -202,8 +200,8 @@ template <typename V>
       std::tuple{test_iota<V>},
       [](auto& t, V x) {
         t.verify_equal(x - x, V());
-        t.verify_equal(x - 0_cw, x);
-        t.verify_equal(0_cw - x, -x);
+        t.verify_equal(x - std::cw<0>, x);
+        t.verify_equal(std::cw<0> - x, -x);
         t.verify_equal(x - T(), x);
         t.verify_equal(T() - x, -x);
       }
@@ -255,8 +253,8 @@ template <typename V>
       std::tuple{test_iota<V, 0, 11>},
       [](auto& t, V x) {
         t.verify_equal(x * x, V([](int i) { return T(T(i % 12) * T(i % 12)); }));
-        t.verify_equal(x * 1_cw, x);
-        t.verify_equal(1_cw * x, x);
+        t.verify_equal(x * std::cw<1>, x);
+        t.verify_equal(std::cw<1> * x, x);
         t.verify_equal(x * T(1), x);
         t.verify_equal(T(1) * x, x);
         t.verify_equal(x * T(-1), -x);
@@ -279,10 +277,10 @@ template <typename V>
     ADD_TEST(divide1, std::is_floating_point_v<T> && !is_iec559) {
       std::array{T{norm_min * 1024}, T{1}, T{}, T{-1}, T{max / 1024}, T{max / T(4.1)}, max, min},
       [](auto& t, V a) {
-        V b = 2_cw;
+        V b = std::cw<2>;
         V ref([&](int i) { return a[i] / 2; });
         t.verify_equal_to_ulp(a / b, ref, 1);
-        a = select(a == 0_cw, T(1), a);
+        a = select(a == std::cw<0>, T(1), a);
         // -freciprocal-math together with flush-to-zero makes
         // the following range restriction necessary (i.e.
         // 1/|a| must be >= min). Intel vrcpps and vrcp14ps

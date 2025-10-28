@@ -12,8 +12,6 @@
 #include <x86intrin.h>
 #endif
 
-using namespace vir::literals;
-
 template <typename V>
   struct Tests
   {
