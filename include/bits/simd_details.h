@@ -900,7 +900,7 @@ namespace std::simd
         return _InvalidAbi();
       else if constexpr (__complex_like<_Tp>)
         {
-          constexpr auto __underlying = __native_abi<typename _Tp::value_type>();
+          constexpr auto __underlying = std::simd::__native_abi<typename _Tp::value_type>();
           if constexpr (__underlying._S_size == 1)
             return _ScalarAbi<1>();
           else
@@ -968,13 +968,13 @@ namespace std::simd
    * C++26 [simd.expos.abi]
    */
   template <typename _Tp>
-    using __native_abi_t = decltype(__native_abi<_Tp>());
+    using __native_abi_t = decltype(std::simd::__native_abi<_Tp>());
 
   template <typename _Tp, int _Np, _TargetTraits _Target = {}>
     consteval auto
     __deduce_abi()
     {
-      constexpr auto __native = __native_abi<_Tp>();
+      constexpr auto __native = std::simd::__native_abi<_Tp>();
       if constexpr (0 == __native._S_size || _Np <= 0)
         return _InvalidAbi();
       else if constexpr (_Np == __native._S_size)
@@ -989,7 +989,7 @@ namespace std::simd
    * C++26 [simd.expos.abi]
    */
   template <typename _Tp, int _Np>
-    using __deduce_abi_t = decltype(__deduce_abi<_Tp, _Np>());
+    using __deduce_abi_t = decltype(std::simd::__deduce_abi<_Tp, _Np>());
 
   /** @internal
    * \c rebind implementation detail for basic_vec, and basic_mask where we know the destination
@@ -1003,12 +1003,12 @@ namespace std::simd
         return _InvalidAbi();
       else
         {
-          constexpr auto __native = __native_abi<_Tp>();
+          constexpr auto __native = std::simd::__native_abi<_Tp>();
           static_assert(0 != __native._S_size);
           constexpr int __nreg = __div_ceil(_Np, __native._S_size);
 
           if constexpr (__scalar_abi_tag<_A0>)
-            return __deduce_abi<_Tp, _Np>();
+            return std::simd::__deduce_abi<_Tp, _Np>();
 
           else if constexpr (__complex_like<_Tp> && _A0::_S_is_cx_ctgus && __native._S_is_cx_ileav)
             // we need half the number of registers since the number applies twice, to reals and
@@ -1060,7 +1060,7 @@ namespace std::simd
             return _ScalarAbi<_Np>();
           else
             // otherwise, fresh start via __deduce_abi_t using __integer_from
-            return __deduce_abi<__integer_from<_Bytes>, _Np>();
+            return std::simd::__deduce_abi<__integer_from<_Bytes>, _Np>();
         }
 
       // If the source ABI is complex, _Bytes == sizeof(complex<float>) or
