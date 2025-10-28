@@ -462,7 +462,7 @@ namespace std::simd
 
   template <typename _Tp>
     concept __scalar_abi_tag
-      = __abi_tag<_Tp> && same_as<_Tp, _ScalarAbi<_Tp::_S_size>>;
+      = same_as<_Tp, _ScalarAbi<_Tp::_S_size>> && __abi_tag<_Tp>;
 
   // Determine if math functions must *raise* floating-point exceptions.
   // math_errhandling may expand to an extern symbol, in which case we must assume fp exceptions
