@@ -76,6 +76,10 @@ namespace test02
   static_assert(!__broadcast_constructible<const int&, float>);
   static_assert(!__broadcast_constructible<const int, float>);
 
+  static_assert(__constexpr_wrapper_like<decltype(std::cw<0>)>);
+  static_assert(__broadcast_constructible<decltype(std::cw<2>), float>);
+  static_assert(__broadcast_constructible<decltype(std::cw<0.f>), std::float16_t>);
+
   static_assert( __broadcast_constructible<complex<float>, complex<float>>);
   static_assert( __broadcast_constructible<complex<float>, complex<double>>);
   static_assert(!__broadcast_constructible<complex<double>, complex<float>>);

@@ -1262,23 +1262,24 @@ namespace std::simd
           && bool_constant<static_cast<decltype(_Tp::value)>(_Tp()) == _Tp::value>::value;
 
   // [simd.ctor] explicit(...) of broadcast ctor
-  template <typename _From, typename _To>
+  template <auto _From, typename _To>
     concept __non_narrowing_constexpr_conversion
-      = __constexpr_wrapper_like<_From> && convertible_to<_From, _To>
-          && requires { { _From::value } -> std::convertible_to<_To>; }
-          && static_cast<decltype(_From::value)>(_To(_From::value)) == _From::value
-          && !(std::unsigned_integral<_To> && _From::value < decltype(_From::value)())
-          && _From::value <= std::numeric_limits<_To>::max()
-          && _From::value >= std::numeric_limits<_To>::lowest();
+      = is_arithmetic_v<decltype(_From)>
+          && static_cast<decltype(_From)>(static_cast<_To>(_From)) == _From
+          && !(unsigned_integral<_To> && _From < decltype(_From)())
+          && _From <= std::numeric_limits<_To>::max()
+          && _From >= std::numeric_limits<_To>::lowest();
 
   // [simd.ctor] p4
+  // This implements LWG???? (submitted on 2025-10-28)
   template <typename _From, typename _To>
     concept __broadcast_constructible
-      = convertible_to<_From, _To> // 4
-          && ((!is_arithmetic_v<remove_cvref_t<_From>>
-                  && !__constexpr_wrapper_like<remove_cvref_t<_From>>) // 4.1
-                 || __value_preserving_convertible_to<remove_cvref_t<_From>, _To> // 4.2
-                 || __non_narrowing_constexpr_conversion<remove_cvref_t<_From>, _To>); // 4.3
+      = ((convertible_to<_From, _To> && !is_arithmetic_v<remove_cvref_t<_From>>
+            && !__constexpr_wrapper_like<remove_cvref_t<_From>>) // 4.1
+           || __value_preserving_convertible_to<remove_cvref_t<_From>, _To> // 4.2
+           || (__constexpr_wrapper_like<remove_cvref_t<_From>> // 4.3
+                 && __non_narrowing_constexpr_conversion<auto(remove_cvref_t<_From>::value),
+                                                         _To>));
 
   // __higher_floating_point_rank_than<_Tp, U> (_Tp has higher or equal floating point rank than U)
   template <typename _From, typename _To>
