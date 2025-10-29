@@ -1362,11 +1362,9 @@ namespace std::simd
     using __deduced_vec_t
       = decltype([] {
           using _Up = decltype(declval<const _Tp&>() + declval<const _Tp&>());
-          if constexpr (__simd_vec_or_mask_type<_Up>)
+          if constexpr (__simd_vec_type<_Up>)
             return _Up();
       }());
-
-  static_assert(is_same_v<__deduced_vec_t<int>, void>);
 
   template <typename _Vp, typename _Tp>
     using __make_compatible_simd_t
@@ -1392,28 +1390,32 @@ namespace std::simd
     struct __math_common_simd_impl<_T0>
     { using type = __deduced_vec_t<_T0>; };
 
-  template <typename _T0, typename _T1>
-    struct __math_common_simd_impl<_T0, _T1>
-    {
-      using type = decltype([] {
-                     if constexpr (__math_floating_point<_T0> && __math_floating_point<_T1>)
-                       return common_type_t<__deduced_vec_t<_T0>, __deduced_vec_t<_T1>>();
-                     else if constexpr (__math_floating_point<_T0>)
-                       return common_type_t<__deduced_vec_t<_T0>, _T1>();
-                     else if constexpr (__math_floating_point<_T1>)
-                       return common_type_t<_T0, __deduced_vec_t<_T1>>();
-                     // else void
-                   }());
-    };
+  template <typename _Tp>
+    concept __has_type_member = requires { typename _Tp::type; };
 
   template <typename _T0, typename _T1, typename... _TRest>
     struct __math_common_simd_impl<_T0, _T1, _TRest...>
-    { using type = common_type_t<__math_common_simd_t<_T0, _T1>, _TRest...>; };
-
-  template <typename _T0, typename _T1, typename... _TRest>
-    requires (sizeof...(_TRest) > 0) && is_void_v<__math_common_simd_t<_T0, _T1>>
-    struct __math_common_simd_impl<_T0, _T1, _TRest...>
-    { using type = common_type_t<__math_common_simd_t<_TRest...>, _T0, _T1>; };
+    : decltype([] {
+        if constexpr (sizeof...(_TRest) == 0)
+          {
+            if constexpr (__math_floating_point<_T0> && __math_floating_point<_T1>)
+              return common_type<__deduced_vec_t<_T0>, __deduced_vec_t<_T1>>();
+            else if constexpr (__math_floating_point<_T0>)
+              return common_type<__deduced_vec_t<_T0>, _T1>();
+            else // __math_floating_point<_T1> is true by construction
+              return common_type<_T0, __deduced_vec_t<_T1>>();
+          }
+        // __math_common_simd_impl<_T0, _T1> might not have a type member (if common_type doesn't
+        // have one), but __math_common_simd_t is defined as an alias and thus the whole resulting
+        // expression is the immediate context.
+        else if constexpr (__has_type_member<__math_common_simd_impl<_T0, _T1>>)
+          return common_type<__math_common_simd_t<_T0, _T1>, _TRest...>();
+        else if constexpr (__has_type_member<__math_common_simd_impl<_TRest...>>)
+          return common_type<__math_common_simd_t<_TRest...>, _T0, _T1>();
+        else
+          return common_type<>();
+      }())
+    {};
 
   template <typename _BinaryOperation, typename _Tp>
     concept __reduction_binary_operation

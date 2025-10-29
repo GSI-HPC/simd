@@ -133,8 +133,10 @@ $(foreach type,$(testtypes),\
 
 $(foreach arch,$(testarchs),\
 	$(eval $(call simple_check_template,constexpr-$(arch),$(objdir)/constexpr.$(arch).s))\
+	$(eval $(call simple_check_template,math-traits-$(arch),$(objdir)/math-traits.$(arch).s))\
 	$(eval $(call check_template,$(arch),$(fortesttypes) $(fortests) \
 	  echo "check-$$$$t.$(arch).$$$$type";done;done;\
+	  echo "check-math-traits-$(arch)";\
 	  echo "check-constexpr-$(arch)")) \
 	)
 
