@@ -1359,12 +1359,11 @@ namespace std::simd
       = __simd_vec_type<_Vp> && __complex_like_impl<typename _Vp::value_type>;
 
   template <typename _Tp>
-    using __deduced_vec_t
-      = decltype([] {
-          using _Up = decltype(declval<const _Tp&>() + declval<const _Tp&>());
-          if constexpr (__simd_vec_type<_Up>)
-            return _Up();
-      }());
+    concept __converts_to_vec
+      = __simd_vec_type<decltype(declval<const _Tp&>() + declval<const _Tp&>())>;
+
+  template <__converts_to_vec _Tp>
+    using __deduced_vec_t = decltype(declval<const _Tp&>() + declval<const _Tp&>());
 
   template <typename _Vp, typename _Tp>
     using __make_compatible_simd_t
@@ -1376,46 +1375,8 @@ namespace std::simd
             return vec<_Up, _Vp::size()>();
       }());
 
-  template <typename... _Ts>
-    concept __math_floating_point = (__simd_floating_point<__deduced_vec_t<_Ts>> || ...);
-
-  template <typename...>
-    struct __math_common_simd_impl;
-
-  template <typename... _Ts>
-    requires __math_floating_point<_Ts...>
-    using __math_common_simd_t = typename __math_common_simd_impl<_Ts...>::type;
-
-  template <typename _T0>
-    struct __math_common_simd_impl<_T0>
-    { using type = __deduced_vec_t<_T0>; };
-
   template <typename _Tp>
-    concept __has_type_member = requires { typename _Tp::type; };
-
-  template <typename _T0, typename _T1, typename... _TRest>
-    struct __math_common_simd_impl<_T0, _T1, _TRest...>
-    : decltype([] {
-        if constexpr (sizeof...(_TRest) == 0)
-          {
-            if constexpr (__math_floating_point<_T0> && __math_floating_point<_T1>)
-              return common_type<__deduced_vec_t<_T0>, __deduced_vec_t<_T1>>();
-            else if constexpr (__math_floating_point<_T0>)
-              return common_type<__deduced_vec_t<_T0>, _T1>();
-            else // __math_floating_point<_T1> is true by construction
-              return common_type<_T0, __deduced_vec_t<_T1>>();
-          }
-        // __math_common_simd_impl<_T0, _T1> might not have a type member (if common_type doesn't
-        // have one), but __math_common_simd_t is defined as an alias and thus the whole resulting
-        // expression is the immediate context.
-        else if constexpr (__has_type_member<__math_common_simd_impl<_T0, _T1>>)
-          return common_type<__math_common_simd_t<_T0, _T1>, _TRest...>();
-        else if constexpr (__has_type_member<__math_common_simd_impl<_TRest...>>)
-          return common_type<__math_common_simd_t<_TRest...>, _T0, _T1>();
-        else
-          return common_type<>();
-      }())
-    {};
+    concept __math_floating_point = __simd_floating_point<__deduced_vec_t<_Tp>>;
 
   template <typename _BinaryOperation, typename _Tp>
     concept __reduction_binary_operation
@@ -1446,60 +1407,50 @@ namespace std::simd
   template <size_t _Bytes, typename _Ap>
     using __simd_vec_from_mask_t = __similar_vec<__integer_from<_Bytes>, _Ap::_S_size, _Ap>;
 
-#ifdef _GLIBCXX_SIMD_CONSTEVAL_BROADCAST
-  class bad_value_preserving_cast
+#if _GLIBCXX_SIMD_THROW_ON_BAD_VALUE // see P3844
+  class __bad_value_preserving_cast
   {};
 
-  template <typename _To, signed_integral _From>
-    constexpr void
-    __throw_unless_value_preserving_conversion(const _From& __x)
-    {
-      using _Up = make_unsigned_t<_From>;
-      if (static_cast<_Up>(static_cast<_To>(__x)) != static_cast<_Up>(__x))
-        __builtin_unreachable(); //throw bad_value_preserving_cast();
-    }
+#define __glibcxx_on_bad_value_preserving_cast throw __bad_value_preserving_cast
+#else
+#define __glibcxx_on_bad_value_preserving_cast __builtin_trap
+#endif
 
   template <typename _To, typename _From>
-    requires (is_arithmetic_v<_From> && !signed_integral<_From>)
-    constexpr void
-    __throw_unless_value_preserving_conversion(const _From& __x)
-    {
-      if (static_cast<_From>(static_cast<_To>(__x)) != __x)
-        __builtin_unreachable(); //throw bad_value_preserving_cast();
-    }
-
-  template <typename _To, typename _From>
+#if _GLIBCXX_SIMD_THROW_ON_BAD_VALUE // see P3844
+    [[__gnu__::__optimize__("exceptions")]] // work around potential -fno-exceptions
+#endif
     constexpr _To
     __value_preserving_cast(const _From& __x)
     {
-      __throw_unless_value_preserving_conversion<_To>(__x);
+      static_assert(is_arithmetic_v<_From>);
+      if constexpr (!__value_preserving_convertible_to<_From, _To>)
+        {
+          using _Up = typename __make_unsigned<_From>::__type;
+          if (static_cast<_Up>(static_cast<_To>(__x)) != static_cast<_Up>(__x))
+            __glibcxx_on_bad_value_preserving_cast();
+          else if constexpr (is_signed_v<_From> && is_unsigned_v<_To>)
+            {
+              if (__x < _From())
+                __glibcxx_on_bad_value_preserving_cast();
+            }
+          else if constexpr (unsigned_integral<_From> && signed_integral<_To>)
+            {
+              if (__x > numeric_limits<_To>::max())
+                __glibcxx_on_bad_value_preserving_cast();
+            }
+        }
       return static_cast<_To>(__x);
     }
 
-#ifndef PREFER_CONSTEVAL
-#define PREFER_CONSTEVAL 1
-#endif
-
-#if PREFER_CONSTEVAL
-  template <typename _From, typename _To>
-    concept __simd_vec_bcast = __explicitly_convertible_to<_From, _To>;
-
   template <typename _From, typename _To>
     concept __simd_vec_bcast_consteval
-      = __simd_vec_bcast<_From, _To> && convertible_to<_From, _To>
-          && is_arithmetic_v<remove_cvref_t<_From>>
-          && !__value_preserving_convertible_to<remove_cvref_t<_From>, _To>;
-#else
-  template <typename _From, typename _To>
-    concept __simd_vec_bcast_consteval = __explicitly_convertible_to<_From, _To>;
-
-  template <typename _From, typename _To>
-    concept __simd_vec_bcast = __simd_vec_bcast_consteval<_From, _To> && true;
-#endif
-#else
-  template <typename _From, typename _To>
-    concept __simd_vec_bcast = __explicitly_convertible_to<_From, _To>;
-#endif
+      = __explicitly_convertible_to<_From, _To>
+          && is_arithmetic_v<remove_cvref_t<_From>> && convertible_to<_From, _To>
+          && !__value_preserving_convertible_to<remove_cvref_t<_From>, _To>
+          && (is_same_v<common_type_t<_From, _To>, _To>
+                || (is_same_v<remove_cvref_t<_From>, int> && is_integral_v<_To>)
+                || (is_same_v<remove_cvref_t<_From>, unsigned> && unsigned_integral<_To>));
 
   /** @internal
    * std::pair is not trivially copyable, this one is

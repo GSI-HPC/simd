@@ -15,7 +15,6 @@ namespace math_tests
 {
   using simd::__deduced_vec_t;
   using simd::__math_floating_point;
-  using simd::__math_common_simd_t;
   using std::is_same_v;
 
   using vf2 = simd::vec<float, 2>;
@@ -24,15 +23,11 @@ namespace math_tests
   template <typename T0, typename T1>
     concept has_common_type = requires { typename std::common_type<T0, T1>::type; };
 
-  template <typename... Ts>
-    concept has_math_common_simd = requires { typename __math_common_simd_t<Ts...>; };
+  template <typename T>
+    concept has_deduced_vec = requires { typename simd::__deduced_vec_t<T>; };
 
   static_assert(!has_common_type<vf2, vf4>);
-#ifdef _GLIBCXX_SIMD_CONSTEVAL_BROADCAST
   static_assert( has_common_type<int, vf2>);
-#else
-  static_assert(!has_common_type<int, vf2>);
-#endif
 
   template <typename T, bool Strict = false>
     struct holder
@@ -62,48 +57,43 @@ namespace math_tests
   // are what the UDT defined.
   static_assert(!has_common_type<holder<short, true>, vf2>);
 
-  static_assert(is_same_v<__deduced_vec_t<int>, void>);
+  static_assert(!has_deduced_vec<int>);
   static_assert(!__math_floating_point<float>);
-  static_assert(is_same_v<__math_common_simd_t<vf2, float>, vf2>);
-  static_assert(!has_math_common_simd<int>);
-#ifdef _GLIBCXX_SIMD_CONSTEVAL_BROADCAST
-  static_assert( has_math_common_simd<int, vf2>);
-  static_assert( has_math_common_simd<vf2, float, int>);
-#else
-  static_assert(!has_math_common_simd<int, vf2>);
-  static_assert(!has_math_common_simd<vf2, float, int>);
-#endif
-  static_assert( has_math_common_simd<holder<int>, vf2>);
-
-  static_assert(!has_math_common_simd<float, float, vf2, vf4>);
-
-  static_assert(is_same_v<__math_common_simd_t<short, vf2, float, vf2>, vf2>);
-
-  static_assert(is_same_v<vf2, __math_common_simd_t<short, holder<float>, holder<vf2>>>);
-
-  static_assert(is_same_v<vf2, __math_common_simd_t<holder<vf2>, float, holder<short>>>);
-
-  static_assert(is_same_v<vf2, __math_common_simd_t<holder<vf2>, float, holder<short>,
-                                                    simd::vec<char, 2>>>);
-
-  static_assert(is_same_v<vf2, __math_common_simd_t<simd::vec<char, 2>, holder<vf2>, float,
-                                                    holder<short>>>);
 
   template <typename... Ts>
     concept lerp_invocable = requires(Ts... xs) { simd::lerp(xs...); };
 
   static_assert(lerp_invocable<vf2, float, short>);
 
-#ifdef _GLIBCXX_SIMD_CONSTEVAL_BROADCAST
   static_assert( lerp_invocable<vf2, float, int>);
   static_assert([] {
     vf2 x = 0.f;
     int y = 0x2'00'00'04;
     return simd::lerp(x, y, 0.5f)[0];
   }() == 0x1'00'00'02);
-#else
-  static_assert(!lerp_invocable<vf2, float, int>);
-#endif
+
+  template <typename T0, typename T1>
+    concept not_hypot_invocable
+      = !requires(T1 y) { simd::hypot(T0(), y); } && !requires(T1 y) { simd::hypot(y, T0()); };
+
+  template <typename R, typename T0, typename T1>
+    concept hypot_invocable_r = requires(T1 y) {
+      { simd::hypot(T0(), y) } -> std::same_as<R>;
+      { simd::hypot(y, T0()) } -> std::same_as<R>;
+    };
+
+  static_assert(hypot_invocable_r<vf2, vf2, vf2>);
+  static_assert(hypot_invocable_r<vf2, vf2, holder<vf2>>);
+  static_assert(hypot_invocable_r<vf2, holder<vf2>, vf2>);
+
+  static_assert(not_hypot_invocable<vf2, vf4>);
+  static_assert(hypot_invocable_r<vf2, int, vf2>);
+
+  static_assert(hypot_invocable_r<vf2, holder<int>, vf2>);
+  static_assert(not_hypot_invocable<holder<int, true>, vf2>);
+  static_assert(hypot_invocable_r<vf2, holder<float, true>, vf2>);
+  static_assert(not_hypot_invocable<holder<short, true>, vf2>);
+  static_assert(hypot_invocable_r<vf2, float, vf2>);
 
 #if 0
 
@@ -114,16 +104,6 @@ namespace math_tests
   constexpr simd::vec<float, 4>
     operator""_f4(long double x)
   { return float(x); }
-
-  template <typename... Ts>
-    concept not_hypot_invocable = !requires(Ts... xs) {
-      simd::hypot(xs...);
-    };
-
-  template <typename R, typename... Ts>
-    concept hypot_invocable_r = requires(Ts... xs) {
-      { simd::hypot(xs...) } -> std::same_as<R>;
-    };
 
 #ifndef AVOID_BROKEN_CLANG_FAILURES
   static_assert(simd::floor(1.1_f1)[0] == std::floor(1.1f));

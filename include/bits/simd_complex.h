@@ -725,7 +725,7 @@ namespace std::simd
       // TODO: conversion extensions
 
       // [simd.ctor] broadcast constructor ------------------------------------
-      template <__simd_vec_bcast<value_type> _Up>
+      template <__explicitly_convertible_to<value_type> _Up>
         [[__gnu__::__always_inline__]]
         constexpr explicit(!__broadcast_constructible<_Up, value_type>)
         basic_vec(_Up&& __x) noexcept
@@ -737,16 +737,11 @@ namespace std::simd
             })
         {}
 
-#ifdef _GLIBCXX_SIMD_CONSTEVAL_BROADCAST
       template <__simd_vec_bcast_consteval<value_type> _Up>
         consteval
         basic_vec(const _Up& __x)
         : basic_vec(__value_preserving_cast<value_type>(__x))
-        {
-          static_assert(convertible_to<_Up, value_type>);
-          static_assert(is_arithmetic_v<remove_cvref_t<_Up>>);
-        }
-#endif
+        {}
 
       // [simd.ctor] conversion constructor -----------------------------------
       // FIXME: Handle _Ap::_S_is_cx_ctgus
@@ -1168,7 +1163,7 @@ namespace std::simd
       // TODO: conversion extensions
 
       // [simd.ctor] broadcast constructor ------------------------------------
-      template <__simd_vec_bcast<value_type> _Up>
+      template <__explicitly_convertible_to<value_type> _Up>
         requires __complex_like<_Up>
         [[__gnu__::__always_inline__]]
         constexpr explicit(!__broadcast_constructible<_Up, value_type>)
@@ -1176,23 +1171,18 @@ namespace std::simd
           : _M_real(__x.real()), _M_imag(__x.imag())
         {}
 
-      template <__simd_vec_bcast<value_type> _Up>
+      template <__explicitly_convertible_to<value_type> _Up>
         [[__gnu__::__always_inline__]]
         constexpr explicit(!__broadcast_constructible<_Up, value_type>)
         basic_vec(_Up&& __x) noexcept
           : _M_real(__x), _M_imag()
         {}
 
-#ifdef _GLIBCXX_SIMD_CONSTEVAL_BROADCAST
       template <__simd_vec_bcast_consteval<value_type> _Up>
         consteval
         basic_vec(const _Up& __x)
         : _M_real(__x), _M_imag()
-        {
-          static_assert(convertible_to<_Up, value_type>);
-          static_assert(is_arithmetic_v<remove_cvref_t<_Up>>);
-        }
-#endif
+        {}
 
       // [simd.ctor] conversion constructor -----------------------------------
       template <__complex_like _Up, typename _UAbi>

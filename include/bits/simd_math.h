@@ -82,6 +82,13 @@ namespace std::simd
                  arg0._M_get_high()._M_get(), arg1._M_get_high()._M_get());                        \
   asm("" : "={xmm1}"(__hi), "+{xmm0}"(__lo))
 
+#define _GLIBCXX_SIMD_MATH_2X_CALL3(fn, arg0, arg1, arg2)                                          \
+  remove_cvref_t<decltype(arg0._M_get_high()._M_get())> __hi;                                      \
+  auto __lo = fn<_Traits>(arg0._M_get_low()._M_get(), arg1._M_get_low()._M_get(),                  \
+                          arg2._M_get_low()._M_get(), arg0._M_get_high()._M_get(),                 \
+                          arg1._M_get_high()._M_get(), arg2._M_get_high()._M_get());               \
+  asm("" : "={xmm1}"(__hi), "+{xmm0}"(__lo))
+
 #define _GLIBCXX_SIMD_MATH_RET_TYPE _V0
 
 #else
@@ -93,9 +100,56 @@ namespace std::simd
   const auto [__lo, __hi] = fn(arg0._M_get_low()._M_get(), arg1._M_get_low()._M_get(),             \
                                arg0._M_get_high()._M_get(), arg1._M_get_high()._M_get())
 
+#define _GLIBCXX_SIMD_MATH_2X_CALL3(fn, arg0, arg1, arg2)                                          \
+  const auto [__lo, __hi] = fn<_Traits>(arg0._M_get_low()._M_get(), arg1._M_get_low()._M_get(),    \
+                                        arg2._M_get_low()._M_get(), arg0._M_get_high()._M_get(),   \
+                                        arg1._M_get_high()._M_get(), arg2._M_get_high()._M_get())
+
 #define _GLIBCXX_SIMD_MATH_RET_TYPE pair<_V0, _V1>
 
 #endif
+
+#define _GLIBCXX_SIMD_MATH_2ARG_OVERLOADS(decl, fn)                                                \
+  template<_TargetTraits _Traits = {}, __math_floating_point _Vp>                                  \
+    [[__gnu__::__always_inline__]] decl                                                            \
+    fn(const __deduced_vec_t<_Vp>& __x, const _Vp& __y)                                            \
+    { return fn<_Traits, __deduced_vec_t<_Vp>>(__x, __y); }                                        \
+                                                                                                   \
+  template<_TargetTraits _Traits = {}, __math_floating_point _Vp>                                  \
+    [[__gnu__::__always_inline__]] decl                                                            \
+    fn(const _Vp& __x, const __deduced_vec_t<_Vp>& __y)                                            \
+    { return fn<_Traits, __deduced_vec_t<_Vp>>(__x, __y); }
+
+#define _GLIBCXX_SIMD_MATH_3ARG_OVERLOADS(decl, fn)                                                \
+  template<_TargetTraits _Traits = {}, __math_floating_point _Vp>                                  \
+    [[__gnu__::__always_inline__]] decl                                                            \
+    fn(const __deduced_vec_t<_Vp>& __x, const _Vp& __y, const _Vp& __z)                            \
+    { return fn<_Traits, __deduced_vec_t<_Vp>>(__x, __y, __z); }                                   \
+                                                                                                   \
+  template<_TargetTraits _Traits = {}, __math_floating_point _Vp>                                  \
+    [[__gnu__::__always_inline__]] decl                                                            \
+    fn(const _Vp& __x, const __deduced_vec_t<_Vp>& __y, const _Vp& __z)                            \
+    { return fn<_Traits, __deduced_vec_t<_Vp>>(__x, __y, __z); }                                   \
+                                                                                                   \
+  template<_TargetTraits _Traits = {}, __math_floating_point _Vp>                                  \
+    [[__gnu__::__always_inline__]] decl                                                            \
+    fn(const _Vp& __x, const _Vp& __y, const __deduced_vec_t<_Vp>& __z)                            \
+    { return fn<_Traits, __deduced_vec_t<_Vp>>(__x, __y, __z); }                                   \
+                                                                                                   \
+  template<_TargetTraits _Traits = {}, __math_floating_point _Vp>                                  \
+    [[__gnu__::__always_inline__]] decl                                                            \
+    fn(const __deduced_vec_t<_Vp>& __x, const __deduced_vec_t<_Vp>& __y, const _Vp& __z)           \
+    { return fn<_Traits, __deduced_vec_t<_Vp>>(__x, __y, __z); }                                   \
+                                                                                                   \
+  template<_TargetTraits _Traits = {}, __math_floating_point _Vp>                                  \
+    [[__gnu__::__always_inline__]] decl                                                            \
+    fn(const __deduced_vec_t<_Vp>& __x, const _Vp& __y, const __deduced_vec_t<_Vp>& __z)           \
+    { return fn<_Traits, __deduced_vec_t<_Vp>>(__x, __y, __z); }                                   \
+                                                                                                   \
+  template<_TargetTraits _Traits = {}, __math_floating_point _Vp>                                  \
+    [[__gnu__::__always_inline__]] decl                                                            \
+    fn(const _Vp& __x, const __deduced_vec_t<_Vp>& __y, const __deduced_vec_t<_Vp>& __z)           \
+    { return fn<_Traits, __deduced_vec_t<_Vp>>(__x, __y, __z); }
 
 #define _GLIBCXX_SIMD_MATH_CALL(fn)                                                                \
   template <typename _TV>                                                                          \
@@ -126,13 +180,13 @@ namespace std::simd
     _GLIBCXX_SIMD_MATH_RET_TYPE                                                                    \
     __2x_##fn(_V0, _V1);                                                                           \
                                                                                                    \
-  template<__math_floating_point _Vp, _TargetTraits _Traits = {}>                                  \
+  template<_TargetTraits _Traits = {}, __math_floating_point _Vp>                                  \
     [[__gnu__::__always_inline__]]                                                                 \
     constexpr __deduced_vec_t<_Vp>                                                                 \
     fn(const _Vp& __x)                                                                             \
     {                                                                                              \
       if constexpr (!is_same_v<_Vp, __deduced_vec_t<_Vp>>)                                         \
-        return fn(static_cast<const __deduced_vec_t<_Vp>&>(__x));                                  \
+        return fn<_Traits, __deduced_vec_t<_Vp>>(__x);                                             \
       else if (__is_const_known(__x))                                                              \
         return _Vp([&] [[__gnu__::__always_inline__]] (int __i) {                                  \
                  return std::fn(__x[__i]);                                                         \
@@ -140,7 +194,7 @@ namespace std::simd
       else if constexpr (_Vp::size() == 1)                                                         \
         return std::fn(__x[0]);                                                                    \
       else if constexpr (_Traits.template _M_eval_as_f32<typename _Vp::value_type>())              \
-        return _Vp(fn(rebind_t<float, _Vp>(__x)));                                                 \
+        return _Vp(fn<_Traits, rebind_t<float, _Vp>>(__x));                                        \
       else if constexpr (_Vp::abi_type::_S_nreg == 1 && _Traits._M_fast_math())                    \
         return __fast_##fn(__x._M_get());                                                          \
       else if constexpr (_Vp::abi_type::_S_nreg == 1)                                              \
@@ -157,7 +211,7 @@ namespace std::simd
           return _Vp::_S_init(__lo, __hi);                                                         \
         }                                                                                          \
       else                                                                                         \
-        return _Vp::_S_init(fn(__x._M_get_low()), fn(__x._M_get_high()));                          \
+        return _Vp::_S_init(fn<_Traits>(__x._M_get_low()), fn(__x._M_get_high()));                 \
     }
 
 #define _GLIBCXX_SIMD_MATH_CALL2(fn)                                                               \
@@ -189,62 +243,62 @@ namespace std::simd
     _GLIBCXX_SIMD_MATH_RET_TYPE                                                                    \
     __2x_##fn(_V0, _V0, _V1, _V1);                                                                 \
                                                                                                    \
-  template <typename _V0, typename _V1, _TargetTraits _Traits = {}>                                \
+  template <_TargetTraits _Traits = {}, __math_floating_point _Vp>                                 \
     [[__gnu__::__always_inline__]]                                                                 \
-    constexpr __math_common_simd_t<_V0, _V1>                                                       \
-    fn(const _V0& __x, const _V1& __y)                                                             \
+    constexpr __deduced_vec_t<_Vp>                                                                 \
+    fn(const _Vp& __x, const _Vp& __y)                                                             \
     {                                                                                              \
-      if constexpr (!is_same_v<_V0, __math_common_simd_t<_V0, _V1>>                                \
-                      || !is_same_v<_V1, __math_common_simd_t<_V0, _V1>>)                          \
-        return fn(static_cast<const __math_common_simd_t<_V0, _V1>&>(__x),                         \
-                  static_cast<const __math_common_simd_t<_V0, _V1>&>(__y));                        \
+      if constexpr (!is_same_v<_Vp, __deduced_vec_t<_Vp>>)                                         \
+        return fn<_Traits, __deduced_vec_t<_Vp>>(__x, __y);                                        \
       else if (__is_const_known(__x, __y))                                                         \
-        return _V0([&] [[__gnu__::__always_inline__]] (int __i) {                                  \
+        return _Vp([&] [[__gnu__::__always_inline__]] (int __i) {                                  \
                  return std::fn(__x[__i], __y[__i]);                                               \
                });                                                                                 \
-      else if constexpr (_V0::size() == 1)                                                         \
+      else if constexpr (_Vp::size() == 1)                                                         \
         return std::fn(__x[0], __y[0]);                                                            \
-      else if constexpr (_Traits.template _M_eval_as_f32<typename _V0::value_type>())              \
-        return _V0(fn(rebind_t<float, _V0>(__x), rebind_t<float, _V0>(__y)));                      \
-      else if constexpr (_V0::abi_type::_S_nreg == 1 && _Traits._M_fast_math())                    \
+      else if constexpr (_Traits.template _M_eval_as_f32<typename _Vp::value_type>())              \
+        return _Vp(fn<_Traits, rebind_t<float, _Vp>>(__x, __y));                                   \
+      else if constexpr (_Vp::abi_type::_S_nreg == 1 && _Traits._M_fast_math())                    \
         return __fast_##fn(__x._M_get(), __y._M_get());                                            \
-      else if constexpr (_V0::abi_type::_S_nreg == 1)                                              \
+      else if constexpr (_Vp::abi_type::_S_nreg == 1)                                              \
         return __##fn(__x._M_get(), __y._M_get());                                                 \
-      else if constexpr (_V0::abi_type::_S_nreg == 2 && _Traits._M_fast_math()                     \
+      else if constexpr (_Vp::abi_type::_S_nreg == 2 && _Traits._M_fast_math()                     \
                            && !_GLIBCXX_SIMD_HAS_SIMD_CLONE(fn))                                   \
         {                                                                                          \
           _GLIBCXX_SIMD_MATH_2X_CALL2(__fast_2x_##fn, __x, __y);                                   \
-          return _V0::_S_init(__lo, __hi);                                                         \
+          return _Vp::_S_init(__lo, __hi);                                                         \
         }                                                                                          \
-      else if constexpr (_V0::abi_type::_S_nreg == 2 && !_Traits._M_fast_math())                   \
+      else if constexpr (_Vp::abi_type::_S_nreg == 2 && !_Traits._M_fast_math())                   \
         {                                                                                          \
           _GLIBCXX_SIMD_MATH_2X_CALL2(__2x_##fn, __x, __y);                                        \
-          return _V0::_S_init(__lo, __hi);                                                         \
+          return _Vp::_S_init(__lo, __hi);                                                         \
         }                                                                                          \
       else                                                                                         \
-        return _V0::_S_init(fn(__x._M_get_low(), __y._M_get_low()),                                \
-                            fn(__x._M_get_high(), __y._M_get_high()));                             \
-    }
+        return _Vp::_S_init(fn<_Traits>(__x._M_get_low(), __y._M_get_low()),                       \
+                            fn<_Traits>(__x._M_get_high(), __y._M_get_high()));                    \
+    }                                                                                              \
+                                                                                                   \
+  _GLIBCXX_SIMD_MATH_2ARG_OVERLOADS(constexpr __deduced_vec_t<_Vp>, fn)
 
-  template <__math_floating_point _Vp>
+  template <_TargetTraits _Traits = {}, __math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
     constexpr rebind_t<int, __deduced_vec_t<_Vp>>
     ilogb(const _Vp& __x)
     { static_assert(false, "TODO"); }
 
-  template <__math_floating_point _Vp>
+  template <_TargetTraits _Traits = {}, __math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
     constexpr __deduced_vec_t<_Vp>
     ldexp(const _Vp& __x, const rebind_t<int, __deduced_vec_t<_Vp>>& exp)
     { static_assert(false, "TODO"); }
 
-  template <__math_floating_point _Vp>
+  template <_TargetTraits _Traits = {}, __math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
     constexpr __deduced_vec_t<_Vp>
     scalbn(const _Vp& __x, const rebind_t<int, __deduced_vec_t<_Vp>>& n)
     { static_assert(false, "TODO"); }
 
-  template <__math_floating_point _Vp>
+  template <_TargetTraits _Traits = {}, __math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
     constexpr __deduced_vec_t<_Vp>
     scalbln(const _Vp& __x, const rebind_t<long int, __deduced_vec_t<_Vp>>& n)
@@ -256,201 +310,232 @@ namespace std::simd
     abs(const basic_vec<T, Abi>& __x)
     { return __x._M_abs(); }
 
-  template <__math_floating_point _Vp>
+  template <_TargetTraits _Traits = {}, __math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
     constexpr __deduced_vec_t<_Vp>
     abs(const _Vp& __x)
     { return static_cast<const __deduced_vec_t<_Vp>&>(__x)._M_abs(); }
 
-  template <__math_floating_point _Vp>
+  template <_TargetTraits _Traits = {}, __math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
     constexpr __deduced_vec_t<_Vp>
     fabs(const _Vp& __x)
     { return static_cast<const __deduced_vec_t<_Vp>&>(__x)._M_fabs(); }
 
-  template <__math_floating_point _Vp>
+  template <_TargetTraits _Traits = {}, __math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
     constexpr __deduced_vec_t<_Vp>
     ceil(const _Vp& __x)
     { static_assert(false, "TODO"); }
 
-  template <__math_floating_point _Vp>
+  template <_TargetTraits _Traits = {}, __math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
     constexpr __deduced_vec_t<_Vp>
     floor(const _Vp& __x)
     { static_assert(false, "TODO"); }
 
-  template <__math_floating_point _Vp>
+  template <_TargetTraits _Traits = {}, __math_floating_point _Vp>
     __deduced_vec_t<_Vp>
     nearbyint(const _Vp& __x)
     { static_assert(false, "TODO"); }
 
-  template <__math_floating_point _Vp>
+  template <_TargetTraits _Traits = {}, __math_floating_point _Vp>
     __deduced_vec_t<_Vp>
     rint(const _Vp& __x)
     { static_assert(false, "TODO"); }
 
-  template <__math_floating_point _Vp>
+  template <_TargetTraits _Traits = {}, __math_floating_point _Vp>
     rebind_t<long int, __deduced_vec_t<_Vp>>
     lrint(const _Vp& __x)
     { static_assert(false, "TODO"); }
 
-  template <__math_floating_point _Vp>
+  template <_TargetTraits _Traits = {}, __math_floating_point _Vp>
     rebind_t<long long int, __deduced_vec_t<_Vp>>
     llrint(const _Vp& __x)
     { static_assert(false, "TODO"); }
 
-  template <__math_floating_point _Vp>
+  template <_TargetTraits _Traits = {}, __math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
     constexpr __deduced_vec_t<_Vp>
     round(const _Vp& __x)
     { static_assert(false, "TODO"); }
 
-  template <__math_floating_point _Vp>
+  template <_TargetTraits _Traits = {}, __math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
     constexpr rebind_t<long int, __deduced_vec_t<_Vp>>
     lround(const _Vp& __x)
     { static_assert(false, "TODO"); }
 
-  template <__math_floating_point _Vp>
+  template <_TargetTraits _Traits = {}, __math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
     constexpr rebind_t<long long int, __deduced_vec_t<_Vp>>
     llround(const _Vp& __x)
     { static_assert(false, "TODO"); }
 
-  template <typename _V0, typename _V1>
+  template <_TargetTraits _Traits = {}, __math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
-    constexpr __math_common_simd_t<_V0, _V1>
-    fmod(const _V0& __x, const _V1& __y)
+    constexpr __deduced_vec_t<_Vp>
+    fmod(const _Vp& __x, const _Vp& __y)
     { static_assert(false, "TODO"); }
 
-  template <__math_floating_point _Vp>
+  _GLIBCXX_SIMD_MATH_2ARG_OVERLOADS(constexpr __deduced_vec_t<_Vp>, fmod)
+
+  template <_TargetTraits _Traits = {}, __math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
     constexpr __deduced_vec_t<_Vp>
     trunc(const _Vp& __x)
     { static_assert(false, "TODO"); }
 
-  template <typename _V0, typename _V1>
+  template <_TargetTraits _Traits = {}, __math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
-    constexpr __math_common_simd_t<_V0, _V1>
-    remainder(const _V0& __x, const _V1& __y)
+    constexpr __deduced_vec_t<_Vp>
+    remainder(const _Vp& __x, const _Vp& __y)
     { static_assert(false, "TODO"); }
 
-  template <typename _V0, typename _V1>
+  _GLIBCXX_SIMD_MATH_2ARG_OVERLOADS(constexpr __deduced_vec_t<_Vp>, remainder)
+
+  template <_TargetTraits _Traits = {}, __math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
-    constexpr __math_common_simd_t<_V0, _V1>
-    copysign(const _V0& __x, const _V1& __y)
+    constexpr __deduced_vec_t<_Vp>
+    copysign(const _Vp& __x, const _Vp& __y)
     { static_assert(false, "TODO"); }
 
-  template <typename _V0, typename _V1>
+  _GLIBCXX_SIMD_MATH_2ARG_OVERLOADS(constexpr __deduced_vec_t<_Vp>, copysign)
+
+  template <_TargetTraits _Traits = {}, __math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
-    constexpr __math_common_simd_t<_V0, _V1>
-    nextafter(const _V0& __x, const _V1& __y)
+    constexpr __deduced_vec_t<_Vp>
+    nextafter(const _Vp& __x, const _Vp& __y)
     { static_assert(false, "TODO"); }
 
-  template <typename _V0, typename _V1>
+  _GLIBCXX_SIMD_MATH_2ARG_OVERLOADS(constexpr __deduced_vec_t<_Vp>, nextafter)
+
+  template <_TargetTraits _Traits = {}, __math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
-    constexpr __math_common_simd_t<_V0, _V1>
-    fdim(const _V0& __x, const _V1& __y)
+    constexpr __deduced_vec_t<_Vp>
+    fdim(const _Vp& __x, const _Vp& __y)
     { static_assert(false, "TODO"); }
 
-  template <typename _V0, typename _V1>
+  _GLIBCXX_SIMD_MATH_2ARG_OVERLOADS(constexpr __deduced_vec_t<_Vp>, fdim)
+
+  template <_TargetTraits _Traits = {}, __math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
-    constexpr __math_common_simd_t<_V0, _V1>
-    fmax(const _V0& __x, const _V1& __y)
+    constexpr __deduced_vec_t<_Vp>
+    fmax(const _Vp& __x, const _Vp& __y)
     { static_assert(false, "TODO"); }
 
-  template <typename _V0, typename _V1>
+  _GLIBCXX_SIMD_MATH_2ARG_OVERLOADS(constexpr __deduced_vec_t<_Vp>, fmax)
+
+  template <_TargetTraits _Traits = {}, __math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
-    constexpr __math_common_simd_t<_V0, _V1>
-    fmin(const _V0& __x, const _V1& __y)
+    constexpr __deduced_vec_t<_Vp>
+    fmin(const _Vp& __x, const _Vp& __y)
     { static_assert(false, "TODO"); }
 
-  template <typename _V0, typename _V1, typename _V2>
+  _GLIBCXX_SIMD_MATH_2ARG_OVERLOADS(constexpr __deduced_vec_t<_Vp>, fmin)
+
+  template <_TargetTraits _Traits = {}, __math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
-    constexpr __math_common_simd_t<_V0, _V1, _V2>
-    fma(const _V0& __x, const _V1& __y, const _V2& __z)
+    constexpr __deduced_vec_t<_Vp>
+    fma(const _Vp& __x, const _Vp& __y, const _Vp& __z)
     { static_assert(false, "TODO"); }
 
-  template <__math_floating_point _Vp>
+  _GLIBCXX_SIMD_MATH_3ARG_OVERLOADS(constexpr __deduced_vec_t<_Vp>, fma)
+
+  template <_TargetTraits _Traits = {}, __math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
     constexpr rebind_t<int, __deduced_vec_t<_Vp>>
     fpclassify(const _Vp& __x)
     { static_assert(false, "TODO"); }
 
-  template <__math_floating_point _Vp>
+  template <_TargetTraits _Traits = {}, __math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
     constexpr typename __deduced_vec_t<_Vp>::mask_type
     isfinite(const _Vp& __x)
     { static_assert(false, "TODO"); }
 
-  template <__math_floating_point _Vp>
+  template <_TargetTraits _Traits = {}, __math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
     constexpr typename __deduced_vec_t<_Vp>::mask_type
     isinf(const _Vp& __x)
     { return static_cast<const __deduced_vec_t<_Vp>&>(__x)._M_isinf(); }
 
-  template <__math_floating_point _Vp>
+  template <_TargetTraits _Traits = {}, __math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
     constexpr typename __deduced_vec_t<_Vp>::mask_type
     isnan(const _Vp& __x)
     { return static_cast<const __deduced_vec_t<_Vp>&>(__x)._M_isnan(); }
 
-  template <__math_floating_point _Vp>
+  template <_TargetTraits _Traits = {}, __math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
     constexpr typename __deduced_vec_t<_Vp>::mask_type
     isnormal(const _Vp& __x)
     { static_assert(false, "TODO"); }
 
-  template <__math_floating_point _Vp>
+  template <_TargetTraits _Traits = {}, __math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
     constexpr typename __deduced_vec_t<_Vp>::mask_type
     signbit(const _Vp& __x)
     { static_assert(false, "TODO"); }
 
-  template <typename _V0, typename _V1>
+  template <_TargetTraits _Traits = {}, __math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
-    constexpr typename __math_common_simd_t<_V0, _V1>::mask_type
-    isgreater(const _V0& __x, const _V1& __y)
+    constexpr typename __deduced_vec_t<_Vp>::mask_type
+    isgreater(const _Vp& __x, const _Vp& __y)
     { static_assert(false, "TODO"); }
 
-  template <typename _V0, typename _V1>
+  _GLIBCXX_SIMD_MATH_2ARG_OVERLOADS(constexpr typename __deduced_vec_t<_Vp>::mask_type,
+                                    isgreater)
+
+  template <_TargetTraits _Traits = {}, __math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
-    constexpr typename __math_common_simd_t<_V0, _V1>::mask_type
-    isgreaterequal(const _V0& __x, const _V1& __y)
+    constexpr typename __deduced_vec_t<_Vp>::mask_type
+    isgreaterequal(const _Vp& __x, const _Vp& __y)
     { static_assert(false, "TODO"); }
 
-  template <typename _V0, typename _V1>
+  _GLIBCXX_SIMD_MATH_2ARG_OVERLOADS(constexpr typename __deduced_vec_t<_Vp>::mask_type,
+                                    isgreaterequal)
+
+  template <_TargetTraits _Traits = {}, __math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
-    constexpr typename __math_common_simd_t<_V0, _V1>::mask_type
-    isless(const _V0& __x, const _V1& __y)
+    constexpr typename __deduced_vec_t<_Vp>::mask_type
+    isless(const _Vp& __x, const _Vp& __y)
     { static_assert(false, "TODO"); }
 
-  template <typename _V0, typename _V1>
+  _GLIBCXX_SIMD_MATH_2ARG_OVERLOADS(constexpr typename __deduced_vec_t<_Vp>::mask_type,
+                                    isless)
+
+  template <_TargetTraits _Traits = {}, __math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
-    constexpr typename __math_common_simd_t<_V0, _V1>::mask_type
-    islessequal(const _V0& __x, const _V1& __y)
+    constexpr typename __deduced_vec_t<_Vp>::mask_type
+    islessequal(const _Vp& __x, const _Vp& __y)
     { static_assert(false, "TODO"); }
 
-  template <typename _V0, typename _V1>
+  _GLIBCXX_SIMD_MATH_2ARG_OVERLOADS(constexpr typename __deduced_vec_t<_Vp>::mask_type,
+                                    islessequal)
+
+  template <_TargetTraits _Traits = {}, __math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
-    constexpr typename __math_common_simd_t<_V0, _V1>::mask_type
-    islessgreater(const _V0& __x, const _V1& __y)
+    constexpr typename __deduced_vec_t<_Vp>::mask_type
+    islessgreater(const _Vp& __x, const _Vp& __y)
     { static_assert(false, "TODO"); }
 
-  template <typename _V0, typename _V1>
+  _GLIBCXX_SIMD_MATH_2ARG_OVERLOADS(constexpr typename __deduced_vec_t<_Vp>::mask_type,
+                                    islessgreater)
+
+  template <_TargetTraits _Traits = {}, __math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
-    constexpr typename __math_common_simd_t<_V0, _V1>::mask_type
-    isunordered(const _V0& __x, const _V1& __y)
+    constexpr typename __deduced_vec_t<_Vp>::mask_type
+    isunordered(const _Vp& __x, const _Vp& __y)
     {
-      using _Vp = __math_common_simd_t<_V0, _V1>;
-      if constexpr (__simd_integral<_V0> || is_integral_v<_V0>)
-        return __y._M_isnan();
-      else if constexpr (__simd_integral<_V1> || is_integral_v<_V1>)
-        return __x._M_isnan();
+      if constexpr (!is_same_v<_Vp, __deduced_vec_t<_Vp>>)
+        return isunordered<_Traits, __deduced_vec_t<_Vp>>(__x, __y);
       else
-        return static_cast<const _Vp&>(__x)._M_isunordered(static_cast<const _Vp&>(__y));
+        return __x._M_isunordered(__y);
     }
+
+  _GLIBCXX_SIMD_MATH_2ARG_OVERLOADS(constexpr typename __deduced_vec_t<_Vp>::mask_type,
+                                    isunordered)
 
   _GLIBCXX_SIMD_MATH_CALL(acos)
   _GLIBCXX_SIMD_MATH_CALL(asin)
@@ -480,34 +565,60 @@ namespace std::simd
 
   _GLIBCXX_SIMD_MATH_CALL2(hypot)
 
-  template<typename _V0, typename _V1, typename _V2, _TargetTraits _Traits = {}>
+  template <_TargetTraits, typename _TV>
+    extern _TV
+    __fast_hypot(_TV, _TV, _TV);
+
+  template <_TargetTraits, typename _V0, typename _V1>
+    requires (!_GLIBCXX_SIMD_HAS_SIMD_CLONE(fn))
+    extern _GLIBCXX_SIMD_MATH_RET_TYPE
+    __fast_2x_hypot(_V0, _V0, _V0, _V1, _V1, _V1);
+
+  template <_TargetTraits, typename _TV>
+    _TV
+    __hypot(_TV, _TV, _TV);
+
+  template <_TargetTraits, typename _V0, typename _V1>
+    _GLIBCXX_SIMD_MATH_RET_TYPE
+    __2x_hypot(_V0, _V0, _V0, _V1, _V1, _V1);
+
+  template<_TargetTraits _Traits = {}, typename _Vp>
     [[__gnu__::__always_inline__]]
-    constexpr __math_common_simd_t<_V0, _V1, _V2>
-    hypot(const _V0& __x, const _V1& __y, const _V2& __z)
+    constexpr __deduced_vec_t<_Vp>
+    hypot(const _Vp& __x, const _Vp& __y, const _Vp& __z)
     {
-      if constexpr (!is_same_v<_V0, __math_common_simd_t<_V0, _V1, _V2>>
-                      || !is_same_v<_V1, __math_common_simd_t<_V0, _V1, _V2>>
-                      || !is_same_v<_V2, __math_common_simd_t<_V0, _V1, _V2>>)
-        return hypot(static_cast<const __math_common_simd_t<_V0, _V1, _V2>&>(__x),
-                     static_cast<const __math_common_simd_t<_V0, _V1, _V2>&>(__y),
-                     static_cast<const __math_common_simd_t<_V0, _V1, _V2>&>(__z));
+      if constexpr (!is_same_v<_Vp, __deduced_vec_t<_Vp>>)
+        return hypot<_Traits, __deduced_vec_t<_Vp>>(__x, __y, __z);
       else if (__is_const_known(__x, __y, __z))
-        return _V0([&] [[__gnu__::__always_inline__]] (int __i) {
+        return _Vp([&] [[__gnu__::__always_inline__]] (int __i) {
                  return std::hypot(__x[__i], __y[__i], __z[__i]);
                });
-      else if constexpr (_V0::size() == 1)
+      else if constexpr (_Vp::size() == 1)
         return std::hypot(__x[0], __y[0], __z[0]);
-      else if constexpr (_Traits.template _M_eval_as_f32<typename _V0::value_type>())
+      else if constexpr (_Traits.template _M_eval_as_f32<typename _Vp::value_type>())
+        return _Vp(hypot<_Traits, rebind_t<float, _Vp>>(__x, __y, __z));
+      else if constexpr (_Vp::abi_type::_S_nreg > 2)
+        return _Vp::_S_init(hypot<_Traits>(__x._M_get_low(), __y._M_get_low()),
+                            hypot<_Traits>(__x._M_get_high(), __y._M_get_high()));
+      else if constexpr (_Vp::abi_type::_S_nreg == 2 && _Traits._M_fast_math())
         {
-          using _Vf = rebind_t<float, _V0>;
-          return _V0(hypot(_Vf(__x), _Vf(__y), _Vf(__z)));
+          _GLIBCXX_SIMD_MATH_2X_CALL3(__fast_2x_hypot, __x, __y, __z);
+          return _Vp::_S_init(__lo, __hi);
         }
-      else if constexpr (_V0::abi_type::_S_nreg > 2)
-        return _V0::_S_init(hypot(__x._M_get_low(), __y._M_get_low()),
-                            hypot(__x._M_get_high(), __y._M_get_high()));
+      else if constexpr (_Vp::abi_type::_S_nreg == 2 && !_Traits._M_fast_math())
+        {
+          _GLIBCXX_SIMD_MATH_2X_CALL3(__2x_hypot, __x, __y, __z);
+          return _Vp::_S_init(__lo, __hi);
+        }
+      else if constexpr (_Vp::abi_type::_S_nreg == 1 && _Traits._M_fast_math())
+        return __fast_hypot<_Traits>(__x._M_get(), __y._M_get(), __z._M_get());
+      else if constexpr (_Vp::abi_type::_S_nreg == 1)
+        return __hypot<_Traits>(__x._M_get(), __y._M_get(), __z._M_get());
       else
-        static_assert(false, "TODO");
+        static_assert(false);
     }
+
+  _GLIBCXX_SIMD_MATH_3ARG_OVERLOADS(constexpr __deduced_vec_t<_Vp>, hypot)
 
   _GLIBCXX_SIMD_MATH_CALL2(pow)
   _GLIBCXX_SIMD_MATH_CALL(sqrt)
@@ -551,24 +662,20 @@ namespace std::simd
         }
     }
 
-  template<typename _V0, typename _V1, typename _V2, _TargetTraits _Traits = {}>
+  template<_TargetTraits _Traits = {}, __math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
-    constexpr __math_common_simd_t<_V0, _V1, _V2>
-    lerp(const _V0& __a, const _V1& __b, const _V2& __t) noexcept
+    constexpr __deduced_vec_t<_Vp>
+    lerp(const _Vp& __a, const _Vp& __b, const _Vp& __t) noexcept
     {
-      if constexpr (!is_same_v<_V0, __math_common_simd_t<_V0, _V1, _V2>>
-                      || !is_same_v<_V1, __math_common_simd_t<_V0, _V1, _V2>>
-                      || !is_same_v<_V2, __math_common_simd_t<_V0, _V1, _V2>>)
-        return lerp(static_cast<const __math_common_simd_t<_V0, _V1, _V2>&>(__a),
-                    static_cast<const __math_common_simd_t<_V0, _V1, _V2>&>(__b),
-                    static_cast<const __math_common_simd_t<_V0, _V1, _V2>&>(__t));
+      if constexpr (!is_same_v<_Vp, __deduced_vec_t<_Vp>>)
+        return lerp<_Traits, __deduced_vec_t<_Vp>>(__a, __b, __t);
       else if (__is_const_known(__a, __b, __t))
-        return _V0([&] [[__gnu__::__always_inline__]] (int __i) {
+        return _Vp([&] [[__gnu__::__always_inline__]] (int __i) {
                  return std::lerp(__a[__i], __b[__i], __t[__i]);
                });
-      else if constexpr (_V0::size() == 1)
+      else if constexpr (_Vp::size() == 1)
         return std::lerp(__a[0], __b[0], __t[0]);
-      else if constexpr (_Traits.template _M_eval_as_f32<typename _V0::value_type>())
+      else if constexpr (_Traits.template _M_eval_as_f32<typename _Vp::value_type>())
         { // Any operation on value_type converts to float anyway (and back). Thus, it's more
           // efficient if we can reduce the number of conversions (and use a simpler formula).
           //
@@ -584,131 +691,195 @@ namespace std::simd
           // same .5 ULP loss of precision for (1-t).
           // This .5 ULP loss does not matter when computing ta+(1-t)a because ta is smaller by
           // a factor of 2^24 and thus after rounding to binary16, no error is left.
-          using _Vf = rebind_t<float, _V0>;
+          using _Vf = rebind_t<float, _Vp>;
           const _Vf __th = _Vf(__t);
-          return _V0(__th * __b + (_Vf(1) - __th) * __a);
+          return _Vp(__th * __b + (_Vf(1) - __th) * __a);
         }
-      else if constexpr (_V0::abi_type::_S_nreg > 1)
-        return _V0::_S_init(lerp(__a._M_get_low(), __b._M_get_low(), __t._M_get_low()),
-                            lerp(__a._M_get_high(), __b._M_get_high(), __t._M_get_high()));
+      else if constexpr (_Vp::abi_type::_S_nreg > 1)
+        return _Vp::_S_init(lerp<_Traits>(__a._M_get_low(), __b._M_get_low(), __t._M_get_low()),
+                            lerp<_Traits>(__a._M_get_high(), __b._M_get_high(), __t._M_get_high()));
       else
         return __lerp(__a, __b, __t);
     }
 
-  template<__math_floating_point _Vp>
+  _GLIBCXX_SIMD_MATH_3ARG_OVERLOADS(constexpr __deduced_vec_t<_Vp>, lerp)
+
+  template<_TargetTraits _Traits = {}, __math_floating_point _Vp>
     __deduced_vec_t<_Vp>
     assoc_laguerre(const rebind_t<unsigned, __deduced_vec_t<_Vp>>& __n,
                    const rebind_t<unsigned, __deduced_vec_t<_Vp>>& __m, const _Vp& __x)
     { static_assert(false, "TODO"); }
 
-  template<__math_floating_point _Vp>
+  template<_TargetTraits _Traits = {}, __math_floating_point _Vp>
     __deduced_vec_t<_Vp>
     assoc_legendre(const rebind_t<unsigned, __deduced_vec_t<_Vp>>& __l,
                    const rebind_t<unsigned, __deduced_vec_t<_Vp>>& __m, const _Vp& __x)
     { static_assert(false, "TODO"); }
 
-  template<class _V0, class _V1>
-    __math_common_simd_t<_V0, _V1>
-    beta(const _V0& __x, const _V1& __y)
+  template<_TargetTraits _Traits = {}, __math_floating_point _Vp>
+    __deduced_vec_t<_Vp>
+    beta(const _Vp& __x, const _Vp& __y)
     { static_assert(false, "TODO"); }
 
-  template<__math_floating_point _Vp> __deduced_vec_t<_Vp>
+  _GLIBCXX_SIMD_MATH_2ARG_OVERLOADS(__deduced_vec_t<_Vp>, beta)
+
+  template<_TargetTraits _Traits = {}, __math_floating_point _Vp>
+    __deduced_vec_t<_Vp>
     comp_ellint_1(const _Vp& __k)
     { static_assert(false, "TODO"); }
 
-  template<__math_floating_point _Vp> __deduced_vec_t<_Vp>
+  template<_TargetTraits _Traits = {}, __math_floating_point _Vp>
+    __deduced_vec_t<_Vp>
     comp_ellint_2(const _Vp& __k)
     { static_assert(false, "TODO"); }
 
-  template<class _V0, class _V1>
-    __math_common_simd_t<_V0, _V1>
-    comp_ellint_3(const _V0& __k, const _V1& __nu)
+  template<_TargetTraits _Traits = {}, __math_floating_point _Vp>
+    __deduced_vec_t<_Vp>
+    comp_ellint_3(const _Vp& __k, const _Vp& __nu)
     { static_assert(false, "TODO"); }
 
-  template<class _V0, class _V1>
-    __math_common_simd_t<_V0, _V1>
-    cyl_bessel_i(const _V0& __nu, const _V1& __x)
+  _GLIBCXX_SIMD_MATH_2ARG_OVERLOADS(__deduced_vec_t<_Vp>, comp_ellint_3)
+
+  template<_TargetTraits _Traits = {}, __math_floating_point _Vp>
+    __deduced_vec_t<_Vp>
+    cyl_bessel_i(const _Vp& __nu, const _Vp& __x)
     { static_assert(false, "TODO"); }
 
-  template<class _V0, class _V1>
-    __math_common_simd_t<_V0, _V1>
-    cyl_bessel_j(const _V0& __nu, const _V1& __x)
+  _GLIBCXX_SIMD_MATH_2ARG_OVERLOADS(__deduced_vec_t<_Vp>, cyl_bessel_i)
+
+  template<_TargetTraits _Traits = {}, __math_floating_point _Vp>
+    __deduced_vec_t<_Vp>
+    cyl_bessel_j(const _Vp& __nu, const _Vp& __x)
     { static_assert(false, "TODO"); }
 
-  template<class _V0, class _V1>
-    __math_common_simd_t<_V0, _V1>
-    cyl_bessel_k(const _V0& __nu, const _V1& __x)
+  _GLIBCXX_SIMD_MATH_2ARG_OVERLOADS(__deduced_vec_t<_Vp>, cyl_bessel_j)
+
+  template<_TargetTraits _Traits = {}, __math_floating_point _Vp>
+    __deduced_vec_t<_Vp>
+    cyl_bessel_k(const _Vp& __nu, const _Vp& __x)
     { static_assert(false, "TODO"); }
 
-  template<class _V0, class _V1>
-    __math_common_simd_t<_V0, _V1>
-    cyl_neumann(const _V0& __nu, const _V1& __x)
+  _GLIBCXX_SIMD_MATH_2ARG_OVERLOADS(__deduced_vec_t<_Vp>, cyl_bessel_k)
+
+  template<_TargetTraits _Traits = {}, __math_floating_point _Vp>
+    __deduced_vec_t<_Vp>
+    cyl_neumann(const _Vp& __nu, const _Vp& __x)
     { static_assert(false, "TODO"); }
 
-  template<class _V0, class _V1>
-    __math_common_simd_t<_V0, _V1>
-    ellint_1(const _V0& __k, const _V1& __phi)
+  _GLIBCXX_SIMD_MATH_2ARG_OVERLOADS(__deduced_vec_t<_Vp>, cyl_neumann)
+
+  template<_TargetTraits _Traits = {}, __math_floating_point _Vp>
+    __deduced_vec_t<_Vp>
+    ellint_1(const _Vp& __k, const _Vp& __phi)
     { static_assert(false, "TODO"); }
 
-  template<class _V0, class _V1>
-    __math_common_simd_t<_V0, _V1>
-    ellint_2(const _V0& __k, const _V1& __phi)
+  _GLIBCXX_SIMD_MATH_2ARG_OVERLOADS(__deduced_vec_t<_Vp>, ellint_1)
+
+  template<_TargetTraits _Traits = {}, __math_floating_point _Vp>
+    __deduced_vec_t<_Vp>
+    ellint_2(const _Vp& __k, const _Vp& __phi)
     { static_assert(false, "TODO"); }
 
-  template<class _V0, class _V1, class _V2>
-    __math_common_simd_t<_V0, _V1, _V2>
-    ellint_3(const _V0& __k, const _V1& __nu, const _V2& __phi)
+  _GLIBCXX_SIMD_MATH_2ARG_OVERLOADS(__deduced_vec_t<_Vp>, ellint_2)
+
+  template<_TargetTraits _Traits = {}, __math_floating_point _Vp>
+    __deduced_vec_t<_Vp>
+    ellint_3(const _Vp& __k, const _Vp& __nu, const _Vp& __phi)
     { static_assert(false, "TODO"); }
 
-  template<__math_floating_point _Vp> __deduced_vec_t<_Vp>
+  _GLIBCXX_SIMD_MATH_3ARG_OVERLOADS(__deduced_vec_t<_Vp>, ellint_3)
+
+  template<_TargetTraits _Traits = {}, __math_floating_point _Vp>
+    __deduced_vec_t<_Vp>
     expint(const _Vp& __x)
     { static_assert(false, "TODO"); }
 
-  template<__math_floating_point _Vp> __deduced_vec_t<_Vp>
-    hermite(const rebind_t<unsigned,
-                           __deduced_vec_t<_Vp>>& __n, const _Vp& __x)
+  template<_TargetTraits _Traits = {}, __math_floating_point _Vp>
+    __deduced_vec_t<_Vp>
+    hermite(const rebind_t<unsigned, __deduced_vec_t<_Vp>>& __n, const _Vp& __x)
     { static_assert(false, "TODO"); }
 
-  template<__math_floating_point _Vp> __deduced_vec_t<_Vp>
-    laguerre(const rebind_t<unsigned,
-                            __deduced_vec_t<_Vp>>& __n, const _Vp& __x)
+  template<_TargetTraits _Traits = {}, __math_floating_point _Vp>
+    __deduced_vec_t<_Vp>
+    laguerre(const rebind_t<unsigned, __deduced_vec_t<_Vp>>& __n, const _Vp& __x)
     { static_assert(false, "TODO"); }
 
-  template<__math_floating_point _Vp> __deduced_vec_t<_Vp>
-    legendre(const rebind_t<unsigned,
-                            __deduced_vec_t<_Vp>>& __l, const _Vp& __x)
+  template<_TargetTraits _Traits = {}, __math_floating_point _Vp>
+    __deduced_vec_t<_Vp>
+    legendre(const rebind_t<unsigned, __deduced_vec_t<_Vp>>& __l, const _Vp& __x)
     { static_assert(false, "TODO"); }
 
-  template<__math_floating_point _Vp> __deduced_vec_t<_Vp>
+  template<_TargetTraits _Traits = {}, __math_floating_point _Vp>
+    __deduced_vec_t<_Vp>
     riemann_zeta(const _Vp& __x)
     { static_assert(false, "TODO"); }
 
-  template<__math_floating_point _Vp> __deduced_vec_t<_Vp>
-    sph_bessel(const rebind_t<unsigned,
-                              __deduced_vec_t<_Vp>>& __n, const _Vp& __x)
+  template<_TargetTraits _Traits = {}, __math_floating_point _Vp>
+    __deduced_vec_t<_Vp>
+    sph_bessel(const rebind_t<unsigned, __deduced_vec_t<_Vp>>& __n, const _Vp& __x)
     { static_assert(false, "TODO"); }
 
-  template<__math_floating_point _Vp>
+  template<_TargetTraits _Traits = {}, __math_floating_point _Vp>
     __deduced_vec_t<_Vp>
     sph_legendre(const rebind_t<unsigned, __deduced_vec_t<_Vp>>& __l,
                  const rebind_t<unsigned, __deduced_vec_t<_Vp>>& __m, const _Vp& __theta)
     { static_assert(false, "TODO"); }
 
-  template<__math_floating_point _Vp> __deduced_vec_t<_Vp>
+  template<_TargetTraits _Traits = {}, __math_floating_point _Vp>
+    __deduced_vec_t<_Vp>
     sph_neumann(const rebind_t<unsigned, __deduced_vec_t<_Vp>>& __n, const _Vp& __x)
     { static_assert(false, "TODO"); }
 
-  template<__math_floating_point _Vp>
+  template<_TargetTraits _Traits = {}, __math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
     constexpr __deduced_vec_t<_Vp>
     frexp(const _Vp& __value, rebind_t<int, __deduced_vec_t<_Vp>>* __exp)
     { static_assert(false, "TODO"); }
 
-  template<class _V0, class _V1>
+  template<_TargetTraits _Traits = {}, __math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
-    constexpr __math_common_simd_t<_V0, _V1>
-    remquo(const _V0& __x, const _V1& __y, rebind_t<int, __math_common_simd_t<_V0, _V1>>* __quo)
-    { static_assert(false, "TODO"); }
+    constexpr __deduced_vec_t<_Vp>
+    remquo(const _Vp& __x, const _Vp& __y, rebind_t<int, __deduced_vec_t<_Vp>>* __quo)
+    {
+      if constexpr (!is_same_v<_Vp, __deduced_vec_t<_Vp>>)
+        return remquo<_Traits, __deduced_vec_t<_Vp>>(__x, __y, __quo);
+      else //if (__is_const_known(__x, __y))
+        {
+          int __tmp[_Vp::size()] = {};
+          const _Vp __r([&] [[__gnu__::__always_inline__]] (int __i) {
+                      return std::remquo(__x[__i], __y[__i], &__tmp[__i]);
+                    });
+          *__quo = rebind_t<int, __deduced_vec_t<_Vp>>(__tmp);
+          return __r;
+        }
+#if 0
+      else if constexpr (_Vp::size() == 1)
+        {
+          const _Vp __r = std::remquo(__x[0], __y[0], &__tmp[0]);
+          *__quo = __tmp[0];
+          return __r;
+        }
+      else if constexpr (_Traits.template _M_eval_as_f32<typename _Vp::value_type>())
+        // TODO: is __quo always of the correct type?
+        return _Vp(remquo<_Traits, rebind_t<float, _Vp>>(__x, __y, __quo));
+      else
+        static_assert(false, "TODO");
+#endif
+    }
+
+  template<_TargetTraits _Traits = {}, __math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr __deduced_vec_t<_Vp>
+    remquo(const __deduced_vec_t<_Vp>& __x, const _Vp& __y,
+           rebind_t<int, __deduced_vec_t<_Vp>>* __quo)
+    { return remquo<_Traits, __deduced_vec_t<_Vp>>(__x, __y, __quo); }
+
+  template<_TargetTraits _Traits = {}, __math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr __deduced_vec_t<_Vp>
+    remquo(const _Vp& __x, const __deduced_vec_t<_Vp>& __y,
+           rebind_t<int, __deduced_vec_t<_Vp>>* __quo)
+    { return remquo<_Traits, __deduced_vec_t<_Vp>>(__x, __y, __quo); }
 
   template<class T, class Abi>
     [[__gnu__::__always_inline__]]
