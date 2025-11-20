@@ -1567,7 +1567,7 @@ namespace std::simd
     }
 
   [[__gnu__::__always_inline__]]
-  constexpr bool
+  inline bool
   __ptr_is_aligned_to(const void* __ptr, size_t __align)
   {
     const auto __addr = __builtin_bit_cast(__UINTPTR_TYPE__, __ptr);
