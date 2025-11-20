@@ -412,7 +412,8 @@ namespace std::simd
     constexpr _TV
     __vec_not(_TV __a)
     {
-      using _UV = __vec_builtin_type_bytes<unsigned, sizeof(_TV)>;
+      using _Tp = __vec_value_type<_TV>;
+      using _UV = __vec_builtin_type_bytes<__integer_from<sizeof(_Tp)>, sizeof(_TV)>;
       if constexpr (is_floating_point_v<__vec_value_type<_TV>>)
         return __builtin_bit_cast(_TV, ~__builtin_bit_cast(_UV, __a));
       else
