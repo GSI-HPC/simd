@@ -1640,6 +1640,7 @@ namespace std::simd
                 {
                   if (is_integral_v<value_type> && sizeof(_M_data) >= 8
                         && _VO::_S_is_const_known_equal_to(__t._M_data, 1))
+                    // basic_mask::operator+ arrives here; '+__k' would be recursive
                     return basic_vec((-__k)._M_abs());
                   /*                  else if (is_integral_v<value_type> && sizeof(_M_data) >= 8
                              && _VO::_S_is_const_known_equal_to(__t._M_data, value_type(-1)))
