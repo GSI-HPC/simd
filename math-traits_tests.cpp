@@ -72,14 +72,15 @@ namespace math_tests
     return simd::lerp(x, y, 0.5f)[0];
   }() == 0x1'00'00'02);
 
-  template <typename T0, typename T1>
+  template <typename T0, typename... T1>
     concept not_hypot_invocable
-      = !requires(T1 y) { simd::hypot(T0(), y); } && !requires(T1 y) { simd::hypot(y, T0()); };
+      = !requires(T1... y) { simd::hypot(T0(), y...); }
+          && !requires(T1... y) { simd::hypot(y..., T0()); };
 
-  template <typename R, typename T0, typename T1>
-    concept hypot_invocable_r = requires(T1 y) {
-      { simd::hypot(T0(), y) } -> std::same_as<R>;
-      { simd::hypot(y, T0()) } -> std::same_as<R>;
+  template <typename R, typename T0, typename... T1>
+    concept hypot_invocable_r = requires(T1... y) {
+      { simd::hypot(T0(), y...) } -> std::same_as<R>;
+      { simd::hypot(y..., T0()) } -> std::same_as<R>;
     };
 
   static_assert(hypot_invocable_r<vf2, vf2, vf2>);
@@ -95,8 +96,6 @@ namespace math_tests
   static_assert(not_hypot_invocable<holder<short, true>, vf2>);
   static_assert(hypot_invocable_r<vf2, float, vf2>);
 
-#if 0
-
   constexpr simd::vec<float, 1>
     operator""_f1(long double x)
   { return float(x); }
@@ -105,7 +104,6 @@ namespace math_tests
     operator""_f4(long double x)
   { return float(x); }
 
-#ifndef AVOID_BROKEN_CLANG_FAILURES
   static_assert(simd::floor(1.1_f1)[0] == std::floor(1.1f));
   static_assert(simd::floor(simd::basic_vec(std::array{1.1f, 1.2f, 2.f, 3.f}))[0] == std::floor(1.1f));
   static_assert(simd::floor(holder {1.1_f1})[0] == std::floor(1.1f));
@@ -114,17 +112,15 @@ namespace math_tests
   // the next doesn't work with the P1928 spec, but it can be made to work
   static_assert(simd::hypot(simd::basic_vec(std::array{1.1f}), 1.2f)[0] == std::hypot(1.1f, 1.2f));
   static_assert(simd::hypot(1.1f, 1.2_f1)[0] == std::hypot(1.1f, 1.2f));
-  static_assert(simd::hypot(1_cw, 1.2_f1)[0] == std::hypot(1.f, 1.2f));
-  static_assert(simd::hypot(1.2_f1, 1_cw)[0] == std::hypot(1.f, 1.2f));
+  static_assert(simd::hypot(1, 1.2_f1)[0] == std::hypot(1.f, 1.2f));
+  static_assert(simd::hypot(1.2_f1, 1)[0] == std::hypot(1.f, 1.2f));
   static_assert(simd::hypot(holder {1.f}, 1.2_f1)[0] == std::hypot(1.f, 1.2f));
-#endif
   // the following must not be valid. if you want vec<double> be explicit about it:
-  static_assert(not_hypot_invocable<int, simd::vec<float, 1>>);
-  static_assert(not_hypot_invocable<int, simd::vec<float, 1>, simd::vec<float, 1>>);
+  static_assert(not_hypot_invocable<double, simd::vec<float, 1>>);
+  static_assert(not_hypot_invocable<double, simd::vec<float, 1>, simd::vec<float, 1>>);
 
   static_assert(hypot_invocable_r<simd::vec<float, 1>, holder<float>,
-                                  vir::constexpr_wrapper<2>, simd::vec<float, 1>>);
+                                  std::constant_wrapper<2>, simd::vec<float, 1>>);
   static_assert(hypot_invocable_r<simd::vec<float, 1>, holder<short>,
                                   simd::vec<float, 1>, float>);
-#endif
 }
