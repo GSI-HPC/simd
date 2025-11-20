@@ -378,7 +378,7 @@ namespace std::simd
         if constexpr (_S_use_bitmask)
           return __select_impl(*this, _Ip(-1), _Ip());
         else
-          return __builtin_bit_cast(_VecType, _M_data);
+          return __builtin_bit_cast(_VecType, -_M_data);
       }
 
       constexpr _VecType
