@@ -151,40 +151,8 @@ namespace std::simd
     constexpr __vec_builtin_type<__vec_value_type<_TV>, __width_of<_TV> * 2>
     __vec_concat(_TV __a, _TV __b)
     {
-      constexpr int _N0 = __width_of<_TV>;
-#ifdef _GLIBCXX_CLANG
-      using _RV = __vec_builtin_type<__vec_value_type<_TV>, _N0 * 2>;
-      if constexpr (_N0 == 1)
-        return _RV{__a[0], __b[0]};
-      else if constexpr (_N0 == 2)
-        return _RV{__a[0], __a[1], __b[0], __b[1]};
-      else if constexpr (_N0 == 4)
-        return _RV{__a[0], __a[1], __a[2], __a[3],
-                   __b[0], __b[1], __b[2], __b[3]};
-      else if constexpr (_N0 == 8)
-        return _RV{__a[0], __a[1], __a[2], __a[3], __a[4], __a[5], __a[6], __a[7],
-                   __b[0], __b[1], __b[2], __b[3], __b[4], __b[5], __b[6], __b[7]};
-      else if constexpr (_N0 == 16)
-        return _RV{__a[0], __a[1], __a[2], __a[3], __a[4], __a[5], __a[6], __a[7],
-                   __a[8], __a[9], __a[10], __a[11], __a[12], __a[13], __a[14], __a[15],
-                   __b[0], __b[1], __b[2], __b[3], __b[4], __b[5], __b[6], __b[7],
-                   __b[8], __b[9], __b[10], __b[11], __b[12], __b[13], __b[14], __b[15]};
-      else if constexpr (_N0 == 32)
-        return _RV{__a[0], __a[1], __a[2], __a[3], __a[4], __a[5], __a[6], __a[7],
-                   __a[8], __a[9], __a[10], __a[11], __a[12], __a[13], __a[14], __a[15],
-                   __a[16], __a[17], __a[18], __a[19], __a[20], __a[21], __a[22], __a[23],
-                   __a[24], __a[25], __a[26], __a[27], __a[28], __a[29], __a[30], __a[31],
-                   __b[0], __b[1], __b[2], __b[3], __b[4], __b[5], __b[6], __b[7],
-                   __b[8], __b[9], __b[10], __b[11], __b[12], __b[13], __b[14], __b[15],
-                   __b[16], __b[17], __b[18], __b[19], __b[20], __b[21], __b[22], __b[23],
-                   __b[24], __b[25], __b[26], __b[27], __b[28], __b[29], __b[30], __b[31]};
-      else
-        static_assert(false);
-#elif __has_builtin(__integer_pack)
-      return __builtin_shufflevector(__a, __b, __integer_pack(2 * _N0)...);
-#else
-#error "Neither Clang nor GCC?"
-#endif
+      constexpr auto [...__is] = _IotaArray<__width_of<_TV> * 2>;
+      return __builtin_shufflevector(__a, __b, __is...);
     }
 
   template <int _N0, int _N1, int... _Ns, __vec_builtin _TV0, __vec_builtin _TV1,
