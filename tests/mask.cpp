@@ -64,9 +64,9 @@ template <typename V>
 
         if constexpr (std::is_integral_v<T>)
           {
-            //t.verify_equal(V(~tr), ~V(1));
-            //t.verify_equal(V(~fa), ~V(0));
-            //t.verify_equal(V(~k), ~vec<V, 0, 1>);
+            t.verify_equal(V(~tr), ~V(1));
+            t.verify_equal(V(~fa), ~V(0));
+            t.verify_equal(V(~k), ~vec<V, 0, 1>);
           }
 
         t.verify(all_of(simd::rebind_t<char, M>(tr)));
@@ -108,8 +108,8 @@ template <typename V>
             t.verify_equal((k.to_bitset() >> shift).to_ullong(), alternating);
           }
 
-        //t.verify_equal(+tr, -(-tr));
-        //t.verify_equal(-+tr, -tr);
+        t.verify_equal(+tr, -(-tr));
+        t.verify_equal(-+tr, -tr);
       }
     };
 
