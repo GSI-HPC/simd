@@ -396,6 +396,13 @@ namespace std::simd
         return __a & __b;
     }
 
+  /** @internal
+   * Returns the bit-wise and of not @p __a and @p __b.
+   *
+   * Use __vec_and(__vec_not(__a), __b) unless an andnot instruction is necessary for optimization.
+   *
+   * @see __vec_andnot in simd_x86.h
+   */
   template <__vec_builtin _TV>
     [[__gnu__::__always_inline__]]
     constexpr _TV

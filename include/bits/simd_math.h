@@ -314,7 +314,7 @@ namespace std::simd
     [[__gnu__::__always_inline__]]
     constexpr __deduced_vec_t<_Vp>
     abs(const _Vp& __x)
-    { return static_cast<const __deduced_vec_t<_Vp>&>(__x)._M_abs(); }
+    { return static_cast<const __deduced_vec_t<_Vp>&>(__x)._M_fabs(); }
 
   template <_TargetTraits _Traits = {}, __math_floating_point _Vp>
     [[__gnu__::__always_inline__]]

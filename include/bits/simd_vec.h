@@ -867,10 +867,8 @@ namespace std::simd
       constexpr basic_vec
       _M_abs() const
       {
-        if constexpr (is_floating_point_v<value_type>)
-          return _M_fabs();
-        else
-          return _M_data < 0 ? -_M_data : _M_data;
+        static_assert(signed_integral<value_type>);
+        return _M_data < 0 ? -_M_data : _M_data;
       }
 
       [[__gnu__::__always_inline__]]
@@ -878,7 +876,10 @@ namespace std::simd
       _M_fabs() const
       {
         static_assert(is_floating_point_v<value_type>);
-        return __vec_andnot(_S_signmask<_DataType>, _M_data);
+        if constexpr (_S_is_scalar)
+          return std::fabs(_M_data);
+        else
+          return __vec_and(__vec_not(_S_signmask<_DataType>), _M_data);
       }
 
       template <_TargetTraits _Traits = {}>
@@ -1652,7 +1653,7 @@ namespace std::simd
                         && _VO::_S_is_const_known_equal_to(__f._M_data, 1))
                     return value_type(1) + basic_vec(-__k);
                   else
-                    return __vec_andnot(reinterpret_cast<_DataType>(__k._M_data), __f._M_data);
+                    return __vec_and(reinterpret_cast<_DataType>(__vec_not(__k._M_data)), __f._M_data);
                 }
               else
                 {
