@@ -708,7 +708,7 @@ namespace std::simd
       {
         using _Ip = typename _VecType::value_type;
         if constexpr (_S_is_scalar)
-          return -_Ip(_M_data);
+          return _Ip(-int(_M_data));
         else if constexpr (_S_use_bitmask)
           return __select_impl(*this, _Ip(-1), _Ip());
         else
@@ -727,7 +727,7 @@ namespace std::simd
       {
         using _Ip = typename _VecType::value_type;
         if constexpr (_S_is_scalar)
-          return ~_Ip(_M_data);
+          return _Ip(~int(_M_data));
         else if constexpr (_S_use_bitmask)
           return __select_impl(*this, _Ip(-2), _Ip(-1));
         else
