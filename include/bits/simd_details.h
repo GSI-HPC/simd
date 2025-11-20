@@ -61,9 +61,30 @@
 #define _GLIBCXX_SIMD_TOSTRING_IMPL(x) #x
 #define _GLIBCXX_SIMD_TOSTRING(x) _GLIBCXX_SIMD_TOSTRING_IMPL(x)
 
+#if !VIR_EXTENSIONS
 // This is used for unit-testing precondition checking
 #define __glibcxx_simd_precondition(expr, msg, ...)                                                \
   __glibcxx_assert(expr)
+#else
+#define _GLIBCXX_SIMD_LOC __FILE__ ":" _GLIBCXX_SIMD_TOSTRING(__LINE__) ": "
+
+#ifndef _GLIBCXX_SIMD_TRAP_ON_UB
+#define _GLIBCXX_SIMD_TRAP_ON_UB 1
+#endif
+
+#define __glibcxx_simd_precondition(expr, msg, ...)                                                \
+  do {                                                                                             \
+    const bool __precondition_result = !bool(expr);                                                \
+    if (__builtin_constant_p(__precondition_result) && __precondition_result)                      \
+      []() __attribute__((__noipa__, __warning__(                                                  \
+        "precondition failure. \n" _GLIBCXX_SIMD_LOC "note: " msg " (precondition '" #expr         \
+        "' does not hold)"))) {}();                                                                \
+    if (__builtin_expect(__precondition_result, false))                                            \
+      std::simd::__invoke_ub(                                                                      \
+        _GLIBCXX_SIMD_LOC "precondition failure in '%s':\n" msg " ('" #expr "' does not hold)",    \
+        __PRETTY_FUNCTION__ __VA_OPT__(,) __VA_ARGS__);                                            \
+  } while(false)
+#endif
 
 namespace std _GLIBCXX_VISIBILITY(default)
 {
@@ -77,23 +98,44 @@ _GLIBCXX_END_NAMESPACE_VERSION
 
 namespace std::simd
 {
+#if VIR_EXTENSIONS
+  template <typename... _Args>
+    [[noreturn, __gnu__::__cold__]]
+#if !defined _GLIBCXX_ASSERTIONS
+    [[__gnu__::__always_inline__]]
+#endif
+    inline void
+    __invoke_ub([[maybe_unused]] const char* __msg, [[maybe_unused]] const _Args&... __args)
+    {
+#ifdef _GLIBCXX_ASSERTIONS
+      __builtin_fprintf(stderr, __msg, __args...);
+      __builtin_fprintf(stderr, "\n");
+      __builtin_abort();
+#elif _GLIBCXX_SIMD_TRAP_ON_UB
+      __builtin_trap();
+#else
+      __builtin_unreachable();
+#endif
+    }
+#endif
+
   template <typename _Tp>
     inline constexpr _Tp
     __iota = [] { static_assert(false, "invalid __iota specialization"); }();
 
   // [simd.general] vectorizable types
-#if _GLIBCXX_SIMD_VECTORIZE_USER_DEFINED_COMPLEX
+#if VIR_EXTENSIONS
   template <typename _Cp, auto __re, auto __im, typename _Tp = typename _Cp::value_type>
     constexpr _Cp __complex_object = _Cp {_Tp(__re), _Tp(__im)};
 
   template <typename _Tp>
     struct _Arr2
     { _Tp _M_data[2]; };
-#endif
 
+#endif
   template <typename _Tp>
     concept __complex_like_impl
-#if !_GLIBCXX_SIMD_VECTORIZE_USER_DEFINED_COMPLEX
+#if !VIR_EXTENSIONS
       = same_as<_Tp, complex<typename _Tp::value_type>>;
 #else
       = requires(_Tp __x) {

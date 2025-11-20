@@ -83,12 +83,7 @@ namespace std::simd
   : _LoadStoreTag
   {};
 
-#if 0
-  template <typename _To>
-    struct __convert_to_flag
-    : _LoadStoreTag
-    { using type = _To; };
-
+#if VIR_EXTENSIONS
   struct __throw_flag
   : _LoadStoreTag
   {};
@@ -228,11 +223,8 @@ namespace std::simd
    */
   inline constexpr flags<__partial_loadstore_flag> __allow_partial_loadstore {};
 
-#if 0
+#if VIR_EXTENSIONS
   // extensions
-  template <typename _To>
-    inline constexpr flags<__convert_to_flag<_To>> __flag_convert_to {};
-
   inline constexpr flags<__throw_flag> __flag_throw {};
 
   inline constexpr flags<__streaming_flag> __flag_streaming {};
