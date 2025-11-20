@@ -100,31 +100,6 @@ namespace test02
   // not the same because of the __deduce_t difference above
   static_assert(!same_as<simd::vec<complex<float>, 1>::mask_type, simd::vec<double, 1>::mask_type>);
 
-  static_assert( __value_preserving_convertible_to<float, double>);
-  static_assert(!__value_preserving_convertible_to<double, float>);
-  static_assert( __value_preserving_convertible_to<float, complex<float>>);
-  static_assert( __value_preserving_convertible_to<float, complex<double>>);
-  static_assert( __value_preserving_convertible_to<double, complex<double>>);
-  static_assert(!__value_preserving_convertible_to<double, complex<float>>);
-
-  static_assert(!__broadcast_constructible<int, float>);
-  static_assert(!__broadcast_constructible<int&, float>);
-  static_assert(!__broadcast_constructible<int&&, float>);
-  static_assert(!__broadcast_constructible<const int&, float>);
-  static_assert(!__broadcast_constructible<const int, float>);
-
-  static_assert(__constexpr_wrapper_like<decltype(std::cw<0>)>);
-  static_assert(__broadcast_constructible<decltype(std::cw<2>), float>);
-  static_assert(__broadcast_constructible<decltype(std::cw<0.f>), std::float16_t>);
-
-  static_assert( __broadcast_constructible<complex<float>, complex<float>>);
-  static_assert( __broadcast_constructible<complex<float>, complex<double>>);
-  static_assert(!__broadcast_constructible<complex<double>, complex<float>>);
-
-  static_assert(!__math_floating_point<int>);
-  static_assert(!__math_floating_point<float>);
-  static_assert(!__math_floating_point<simd::vec<int>>);
-  static_assert( __math_floating_point<simd::vec<float>>);
 
   // ensure 'true ? int : vec<float>' doesn't work
   template <typename T>

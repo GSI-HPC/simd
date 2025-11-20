@@ -58,7 +58,10 @@ namespace math_tests
   static_assert(!has_common_type<holder<short, true>, vf2>);
 
   static_assert(!has_deduced_vec<int>);
+  static_assert(!__math_floating_point<int>);
   static_assert(!__math_floating_point<float>);
+  static_assert(!__math_floating_point<simd::vec<int>>);
+  static_assert( __math_floating_point<simd::vec<float>>);
 
   template <typename... Ts>
     concept lerp_invocable = requires(Ts... xs) { simd::lerp(xs...); };

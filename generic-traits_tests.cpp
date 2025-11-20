@@ -1,0 +1,150 @@
+/* SPDX-License-Identifier: BSD-3-Clause */
+/* Copyright © 2025      GSI Helmholtzzentrum fuer Schwerionenforschung GmbH
+ *                       Matthias Kretz <m.kretz@gsi.de>
+ */
+
+#define _GLIBCXX_SIMD_THROW_ON_BAD_VALUE 1
+
+#include "include/bits/simd_details.h"
+#include <complex>
+#include <stdfloat>
+
+namespace simd = std::simd;
+
+using std::complex;
+using std::float16_t;
+using std::float32_t;
+using std::float64_t;
+
+using namespace std::simd;
+
+void test()
+{
+  template for (auto t : {float(), double(), float16_t(), float32_t(), float64_t()})
+    {
+      using T = decltype(t);
+      static_assert(__complex_like<complex<T>>);
+      static_assert(__complex_like<const complex<T>&>);
+
+      static_assert(__vectorizable<T>);
+      static_assert(__vectorizable<complex<T>>);
+    }
+
+  static_assert(!__vectorizable<const float>);
+  static_assert(!__vectorizable<float&>);
+
+  template for (constexpr int N : {1, 2, 4, 8})
+    {
+      static_assert(std::signed_integral<__integer_from<N>>);
+      static_assert(sizeof(__integer_from<N>) == N);
+      static_assert(__vectorizable<__integer_from<N>>);
+    }
+
+  static_assert(__div_ceil(5, 3) == 2);
+
+  static_assert(sizeof(_Bitmask<3>) == 1);
+  static_assert(sizeof(_Bitmask<30>) == 4);
+
+  static_assert(__scalar_abi_tag<_ScalarAbi<1>>);
+  static_assert(__scalar_abi_tag<_ScalarAbi<2>>);
+
+  static_assert(__streq_to_1("1"));
+  static_assert(!__streq_to_1(""));
+  static_assert(!__streq_to_1(nullptr));
+  static_assert(!__streq_to_1("0"));
+  static_assert(!__streq_to_1("1 "));
+
+  static_assert(__static_sized_range<int[4]>);
+  static_assert(__static_sized_range<int[4], 4>);
+  static_assert(__static_sized_range<std::array<int, 4>, 4>);
+
+  static_assert( __value_preserving_convertible_to<int, double>);
+  static_assert(!__value_preserving_convertible_to<int, float>);
+  static_assert( __value_preserving_convertible_to<float, double>);
+  static_assert(!__value_preserving_convertible_to<double, float>);
+  static_assert( __value_preserving_convertible_to<float, complex<float>>);
+  static_assert( __value_preserving_convertible_to<float, complex<double>>);
+  static_assert( __value_preserving_convertible_to<double, complex<double>>);
+  static_assert(!__value_preserving_convertible_to<double, complex<float>>);
+
+  static_assert(__explicitly_convertible_to<float, float16_t>);
+  static_assert(__explicitly_convertible_to<long, float16_t>);
+
+  static_assert(__constexpr_wrapper_like<std::constant_wrapper<2>>);
+  static_assert(__constexpr_wrapper_like<std::integral_constant<int, 1>>);
+
+  static_assert(!__broadcast_constructible<int, float>);
+  static_assert(!__broadcast_constructible<int&, float>);
+  static_assert(!__broadcast_constructible<int&&, float>);
+  static_assert(!__broadcast_constructible<const int&, float>);
+  static_assert(!__broadcast_constructible<const int, float>);
+
+  static_assert(__broadcast_constructible<decltype(std::cw<2>), float>);
+  static_assert(__broadcast_constructible<decltype(std::cw<0.f>), std::float16_t>);
+
+  static_assert( __broadcast_constructible<complex<float>, complex<float>>);
+  static_assert( __broadcast_constructible<complex<float>, complex<double>>);
+  static_assert(!__broadcast_constructible<complex<double>, complex<float>>);
+
+  static_assert(__higher_rank_than<long, int>);
+  static_assert(__higher_rank_than<long long, long>);
+  static_assert(__higher_rank_than<int, short>);
+  static_assert(__higher_rank_than<short, char>);
+
+  static_assert(!__higher_rank_than<char, signed char>);
+  static_assert(!__higher_rank_than<signed char, char>);
+  static_assert(!__higher_rank_than<char, unsigned char>);
+  static_assert(!__higher_rank_than<unsigned char, char>);
+
+  static_assert(__higher_rank_than<unsigned int, short>);
+  static_assert(__higher_rank_than<unsigned long, int>);
+  static_assert(__higher_rank_than<unsigned long long, long>);
+
+  static_assert(__higher_rank_than<float, float16_t>);
+  static_assert(__higher_rank_than<float32_t, float>);
+  static_assert(__higher_rank_than<double, float32_t>);
+  static_assert(__higher_rank_than<double, float>);
+  static_assert(__higher_rank_than<float64_t, float32_t>);
+  static_assert(__higher_rank_than<float64_t, float>);
+  static_assert(__higher_rank_than<float64_t, double>);
+
+  static_assert(__mask_element_size<basic_mask<4>> == 4);
+
+  static_assert(__highest_bit(0b1000u) == 3);
+  static_assert(__highest_bit(0b10000001000ull) == 10);
+}
+
+consteval bool
+throws(auto f)
+{
+  try { f(); }
+  catch (...) { return true; }
+  return false;
+}
+
+static_assert(!throws([] { __value_preserving_cast<float>(1); }));
+static_assert(!throws([] { __value_preserving_cast<float>(1.5); }));
+static_assert(throws([] { __value_preserving_cast<float>(0x5EAF00D); }));
+static_assert(throws([] { __value_preserving_cast<unsigned>(-1); }));
+static_assert(!throws([] { __value_preserving_cast<unsigned short>(0xffff); }));
+static_assert(throws([] { __value_preserving_cast<unsigned short>(0x10000); }));
+
+static_assert(__converts_trivially<int, unsigned>);
+#if __SIZEOF_LONG__ == __SIZEOF_LONG_LONG__
+static_assert(__converts_trivially<long long, long>);
+#elif __SIZEOF_INT__ == __SIZEOF_LONG__
+static_assert(__converts_trivially<int, long>);
+#endif
+static_assert(__converts_trivially<float, float32_t>);
+
+static_assert([] {
+  bool to_find[10] = {0, 1, 1, 1, 0, 1, 0, 0, 1};
+  __bit_foreach(0b100101110u, [&](int i) {
+    if (!to_find[i]) throw false;
+    to_find[i] = false;
+  });
+  for (bool b : to_find)
+    if (b)
+      return false;
+  return true;
+}());

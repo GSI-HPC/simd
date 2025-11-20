@@ -1251,7 +1251,7 @@ namespace std::simd
           && _From >= std::numeric_limits<_To>::lowest();
 
   // [simd.ctor] p4
-  // This implements LWG???? (submitted on 2025-10-28)
+  // This implements LWG4436 (submitted on 2025-10-28)
   template <typename _From, typename _To>
     concept __broadcast_constructible
       = ((convertible_to<_From, _To> && !is_arithmetic_v<remove_cvref_t<_From>>
@@ -1403,7 +1403,7 @@ namespace std::simd
   template <typename _Tp, __simd_size_type _Np, __abi_tag _Ap>
     using __similar_vec = basic_vec<_Tp, decltype(__abi_rebind<_Tp, _Np, _Ap>())>;
 
-  // LWG???? [simd.expos]
+  // LWG4470 [simd.expos]
   template <size_t _Bytes, typename _Ap>
     using __simd_vec_from_mask_t = __similar_vec<__integer_from<_Bytes>, _Ap::_S_size, _Ap>;
 

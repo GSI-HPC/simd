@@ -230,7 +230,7 @@ $(foreach arch,$(testarchs),\
 	$(foreach t,$(tests),\
 	$(eval $(call exe_template,$(t),$(arch)))))
 
-constexpr_checks ::= $(foreach arch,$(testarchs),$(objdir)/constexpr.$(arch).s $(objdir)/math-traits.$(arch).s)
+constexpr_checks ::= $(foreach arch,$(testarchs),$(objdir)/constexpr.$(arch).s $(objdir)/math-traits.$(arch).s) $(objdir)/generic-traits.s
 
 .PHONY: check-constexpr
 check-constexpr: $(shell shuf -e -- $(constexpr_checks))
@@ -256,6 +256,10 @@ $(objdir)/constexpr.%.s: $(objdir)/%.hpp.gch constexpr_tests.cpp
 $(objdir)/math-traits.%.s: math-traits_tests.cpp $(objdir)/%.hpp.gch
 	@printf -- '$(msg_build) math traits tests for $*\n'
 	@$(call call_compiler, $(CXXFLAGS) -march=$* -include $(objdir)/$*.hpp -S -o $@ $<)
+
+$(objdir)/generic-traits.s: generic-traits_tests.cpp include/bits/simd_details.h
+	@printf -- '$(msg_build) generic traits tests\n'
+	@$(call call_compiler, $(CXXFLAGS) -S -o $@ $<)
 
 .PHONY: always-remake
 always-remake: ;
