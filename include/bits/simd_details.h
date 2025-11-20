@@ -1407,20 +1407,22 @@ namespace std::simd
   template <size_t _Bytes, typename _Ap>
     using __simd_vec_from_mask_t = __similar_vec<__integer_from<_Bytes>, _Ap::_S_size, _Ap>;
 
-#if _GLIBCXX_SIMD_THROW_ON_BAD_VALUE // see P3844
+#if _GLIBCXX_SIMD_THROW_ON_BAD_VALUE // used for unit tests (also see P3844)
   class __bad_value_preserving_cast
   {};
 
 #define __glibcxx_on_bad_value_preserving_cast throw __bad_value_preserving_cast
 #else
-#define __glibcxx_on_bad_value_preserving_cast __builtin_trap
+  void __bad_value_preserving_cast(); // not defined
+
+#define __glibcxx_on_bad_value_preserving_cast __bad_value_preserving_cast
 #endif
 
   template <typename _To, typename _From>
 #if _GLIBCXX_SIMD_THROW_ON_BAD_VALUE // see P3844
     [[__gnu__::__optimize__("exceptions")]] // work around potential -fno-exceptions
 #endif
-    constexpr _To
+    consteval _To
     __value_preserving_cast(const _From& __x)
     {
       static_assert(is_arithmetic_v<_From>);
