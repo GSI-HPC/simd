@@ -51,8 +51,7 @@ namespace std::simd
                     "The converting load is not value-preserving. "
                     "Pass 'flag_convert' if lossy conversion matches the intent.");
 
-      constexpr bool __allow_out_of_bounds
-        = (... || is_same_v<_Flags, __partial_loadstore_flag>);
+      constexpr bool __allow_out_of_bounds = __f._S_test(__allow_partial_loadstore);
       constexpr size_t __static_size = __static_range_size(__r);
 
       static_assert(__static_size >= _RV::size.value || __allow_out_of_bounds
@@ -101,7 +100,7 @@ namespace std::simd
                     "The converting load is not value-preserving. "
                     "Pass 'flag_convert' if lossy conversion matches the intent.");
 
-      constexpr bool __allow_out_of_bounds = (... || is_same_v<_Flags, __partial_loadstore_flag>);
+      constexpr bool __allow_out_of_bounds = __f._S_test(__allow_partial_loadstore);
       constexpr auto __static_size = __static_range_size(__r);
 
       static_assert(__static_size >= _RV::size.value || __allow_out_of_bounds
@@ -220,7 +219,7 @@ namespace std::simd
                     "The converting store is not value-preserving. "
                     "Pass 'flag_convert' if lossy conversion matches the intent.");
 
-      constexpr bool __allow_out_of_bounds = (... || is_same_v<_Flags, __partial_loadstore_flag>);
+      constexpr bool __allow_out_of_bounds = __f._S_test(__allow_partial_loadstore);
       constexpr auto __static_size = __static_range_size(__r);
 
       static_assert(__static_size >= _TV::size.value || __allow_out_of_bounds
@@ -268,7 +267,7 @@ namespace std::simd
                     "The converting store is not value-preserving. "
                     "Pass 'flag_convert' if lossy conversion matches the intent.");
 
-      constexpr bool __allow_out_of_bounds = (... || is_same_v<_Flags, __partial_loadstore_flag>);
+      constexpr bool __allow_out_of_bounds = __f._S_test(__allow_partial_loadstore);
       constexpr auto __static_size = __static_range_size(__r);
 
       static_assert(__static_size >= _TV::size.value || __allow_out_of_bounds

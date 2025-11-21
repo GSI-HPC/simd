@@ -802,37 +802,3 @@ static_assert(
 static_assert(
   all_of(simd::permute(simd::__iota<simd::vec<int, 7>>, permutations::rotate<-2>)
            == simd::vec<int, 7>(std::array {5, 6, 0, 1, 2, 3, 4})));
-
-// flags ////////////////////////
-
-static_assert(simd::flags<>()._M_is_equal(simd::flag_default));
-
-static_assert(!simd::flag_aligned._M_is_equal(simd::flag_default));
-
-static_assert(!simd::flag_default._M_is_equal(simd::flag_aligned));
-
-static_assert((simd::flag_default | simd::flag_default)
-                ._M_is_equal(simd::flag_default));
-
-static_assert((simd::flag_aligned | simd::flag_default)
-                ._M_is_equal(simd::flag_aligned));
-
-static_assert((simd::flag_aligned | simd::flag_aligned)
-                ._M_is_equal(simd::flag_aligned));
-
-static_assert((simd::flag_aligned | simd::flag_convert)
-                ._M_is_equal(simd::flag_convert | simd::flag_aligned));
-
-static_assert(!((simd::flag_aligned | simd::flag_convert)
-                     ._M_and(simd::flag_aligned))
-                ._M_is_equal(simd::flag_convert | simd::flag_aligned));
-
-static_assert(((simd::flag_aligned | simd::flag_convert)
-                 ._M_and(simd::flag_aligned))
-                ._M_is_equal(simd::flag_aligned));
-
-static_assert(simd::flag_aligned._M_test(simd::flag_aligned));
-
-static_assert(simd::flag_aligned._M_test(simd::flag_default));
-
-static_assert(!simd::flag_default._M_test(simd::flag_aligned));

@@ -1321,13 +1321,13 @@ namespace std::simd
 
   struct __convert_flag;
 
-  template <typename _From, typename _To, typename... _Traits>
+  template <typename _From, typename _To, typename... _Flags>
     concept __loadstore_convertible_to
       = same_as<_From, _To>
           || (__vectorizable<_From> && __vectorizable<_To>
                 && (__value_preserving_convertible_to<_From, _To>
                        || (__explicitly_convertible_to<_From, _To>
-                             && (std::same_as<_Traits, __convert_flag> || ...))));
+                             && (std::is_same_v<_Flags, __convert_flag> || ...))));
 
   template <typename _From, typename _To>
     concept __simd_generator_convertible_to
