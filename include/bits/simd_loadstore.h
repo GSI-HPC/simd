@@ -226,7 +226,7 @@ namespace std::simd
 
       if (__builtin_is_constant_evaluated())
         {
-          for (unsigned __i = 0; __i < (__allow_out_of_bounds ? __rg_size : _TV::size()); ++__i)
+          for (unsigned __i = 0; __i < __rg_size && __i < _TV::size(); ++__i)
             __ptr[__i] = static_cast<ranges::range_value_t<_Rg>>(__v[__i]);
         }
       else if constexpr ((__static_size != dynamic_extent && __static_size >= _TV::size())
