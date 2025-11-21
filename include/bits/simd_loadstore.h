@@ -132,7 +132,7 @@ namespace std::simd
     [[__gnu__::__always_inline__]]
     constexpr __vec_load_return_t<_Vp, iter_value_t<_It>>
     unchecked_load(_It __first, iter_difference_t<_It> __n, flags<_Flags...> __f = {})
-    { return unchecked_load<_Vp>(span<const iter_value_t<_It>>(__first, __n), __f); }
+    { return simd::unchecked_load<_Vp>(span<const iter_value_t<_It>>(__first, __n), __f); }
 
   template <typename _Vp = void, contiguous_iterator _It, typename... _Flags>
     [[__gnu__::__always_inline__]]
@@ -140,14 +140,14 @@ namespace std::simd
     unchecked_load(_It __first, iter_difference_t<_It> __n,
                    const __load_mask_type_t<_Vp, iter_value_t<_It>>& __mask,
                    flags<_Flags...> __f = {})
-    { return unchecked_load<_Vp>(span<const iter_value_t<_It>>(__first, __n), __mask, __f); }
+    { return simd::unchecked_load<_Vp>(span<const iter_value_t<_It>>(__first, __n), __mask, __f); }
 
   template <typename _Vp = void, contiguous_iterator _It, sized_sentinel_for<_It> _Sp,
             typename... _Flags>
     [[__gnu__::__always_inline__]]
     constexpr __vec_load_return_t<_Vp, iter_value_t<_It>>
     unchecked_load(_It __first, _Sp __last, flags<_Flags...> __f = {})
-    { return unchecked_load<_Vp>(span<const iter_value_t<_It>>(__first, __last), __f); }
+    { return simd::unchecked_load<_Vp>(span<const iter_value_t<_It>>(__first, __last), __f); }
 
   template <typename _Vp = void, contiguous_iterator _It, sized_sentinel_for<_It> _Sp,
             typename... _Flags>
@@ -156,20 +156,22 @@ namespace std::simd
     unchecked_load(_It __first, _Sp __last,
                    const __load_mask_type_t<_Vp, iter_value_t<_It>>& __mask,
                    flags<_Flags...> __f = {})
-    { return unchecked_load<_Vp>(span<const iter_value_t<_It>>(__first, __last), __mask, __f); }
+    {
+      return simd::unchecked_load<_Vp>(span<const iter_value_t<_It>>(__first, __last), __mask, __f);
+    }
 
   template <typename _Vp = void, __sized_contiguous_range _Rg, typename... _Flags>
     [[__gnu__::__always_inline__]]
     constexpr __vec_load_return_t<_Vp, ranges::range_value_t<_Rg>>
     partial_load(_Rg&& __r, flags<_Flags...> __f = {})
-    { return unchecked_load<_Vp>(__r, __f | __allow_partial_loadstore); }
+    { return simd::unchecked_load<_Vp>(__r, __f | __allow_partial_loadstore); }
 
   template <typename _Vp = void, __sized_contiguous_range _Rg, typename... _Flags>
     [[__gnu__::__always_inline__]]
     constexpr __vec_load_return_t<_Vp, ranges::range_value_t<_Rg>>
     partial_load(_Rg&& __r, const __load_mask_type_t<_Vp, ranges::range_value_t<_Rg>>& __mask,
                  flags<_Flags...> __f = {})
-    { return unchecked_load<_Vp>(__r, __mask, __f | __allow_partial_loadstore); }
+    { return simd::unchecked_load<_Vp>(__r, __mask, __f | __allow_partial_loadstore); }
 
   template <typename _Vp = void, contiguous_iterator _It, typename... _Flags>
     [[__gnu__::__always_inline__]]
@@ -291,7 +293,7 @@ namespace std::simd
     constexpr void
     unchecked_store(const basic_vec<_Tp, _Ap>& __v, _It __first,
                     iter_difference_t<_It> __n, flags<_Flags...> __f = {})
-    { unchecked_store(__v, std::span<iter_value_t<_It>>(__first, __n), __f); }
+    { simd::unchecked_store(__v, std::span<iter_value_t<_It>>(__first, __n), __f); }
 
   template <typename _Tp, typename _Ap, contiguous_iterator _It, typename... _Flags>
     requires indirectly_writable<_It, _Tp>
@@ -300,7 +302,7 @@ namespace std::simd
     unchecked_store(const basic_vec<_Tp, _Ap>& __v, _It __first, iter_difference_t<_It> __n,
                     const typename basic_vec<_Tp, _Ap>::mask_type& __mask,
                     flags<_Flags...> __f = {})
-    { unchecked_store(__v, std::span<iter_value_t<_It>>(__first, __n), __mask, __f); }
+    { simd::unchecked_store(__v, std::span<iter_value_t<_It>>(__first, __n), __mask, __f); }
 
   template <typename _Tp, typename _Ap, contiguous_iterator _It, sized_sentinel_for<_It> _Sp,
             typename... _Flags>
@@ -309,7 +311,7 @@ namespace std::simd
     constexpr void
     unchecked_store(const basic_vec<_Tp, _Ap>& __v, _It __first, _Sp __last,
                     flags<_Flags...> __f = {})
-    { unchecked_store(__v, std::span<iter_value_t<_It>>(__first, __last), __f); }
+    { simd::unchecked_store(__v, std::span<iter_value_t<_It>>(__first, __last), __f); }
 
   template <typename _Tp, typename _Ap, contiguous_iterator _It, sized_sentinel_for<_It> _Sp,
             typename... _Flags>
@@ -319,14 +321,14 @@ namespace std::simd
     unchecked_store(const basic_vec<_Tp, _Ap>& __v, _It __first, _Sp __last,
                     const typename basic_vec<_Tp, _Ap>::mask_type& __mask,
                     flags<_Flags...> __f = {})
-    { unchecked_store(__v, std::span<iter_value_t<_It>>(__first, __last), __mask, __f); }
+    { simd::unchecked_store(__v, std::span<iter_value_t<_It>>(__first, __last), __mask, __f); }
 
   template <typename _Tp, typename _Ap, __sized_contiguous_range _Rg, typename... _Flags>
     requires indirectly_writable<ranges::iterator_t<_Rg>, _Tp>
     [[__gnu__::__always_inline__]]
     constexpr void
     partial_store(const basic_vec<_Tp, _Ap>& __v, _Rg&& __r, flags<_Flags...> __f = {})
-    { unchecked_store(__v, __r, __f | __allow_partial_loadstore); }
+    { simd::unchecked_store(__v, __r, __f | __allow_partial_loadstore); }
 
   template <typename _Tp, typename _Ap, __sized_contiguous_range _Rg, typename... _Flags>
     requires indirectly_writable<ranges::iterator_t<_Rg>, _Tp>
@@ -335,7 +337,7 @@ namespace std::simd
     partial_store(const basic_vec<_Tp, _Ap>& __v, _Rg&& __r,
                   const typename basic_vec<_Tp, _Ap>::mask_type& __mask,
                   flags<_Flags...> __f = {})
-    { unchecked_store(__v, __r, __mask, __f | __allow_partial_loadstore); }
+    { simd::unchecked_store(__v, __r, __mask, __f | __allow_partial_loadstore); }
 
   template <typename _Tp, typename _Ap, contiguous_iterator _It, typename... _Flags>
     requires indirectly_writable<_It, _Tp>
