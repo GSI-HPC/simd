@@ -140,11 +140,11 @@ namespace std::simd
       { return __a._M_offset - __b._M_offset; }
 
       constexpr friend difference_type
-      operator-(__iterator __it, std::default_sentinel_t)
+      operator-(__iterator __it, std::default_sentinel_t) noexcept
       { return __it._M_offset - difference_type(_Vp::size.value); }
 
       constexpr friend difference_type
-      operator-(std::default_sentinel_t, __iterator __it)
+      operator-(std::default_sentinel_t, __iterator __it) noexcept
       { return difference_type(_Vp::size.value) - __it._M_offset; }
     };
 }
