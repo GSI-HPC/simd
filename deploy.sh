@@ -24,9 +24,33 @@ for file in "$SRC_DIR"/*.h; do
 
     # Use awk to handle VIR_EXTENSIONS conditional blocks
     awk '
-    /^#if VIR_EXTENSIONS$/ {
+    BEGIN {
+      skip = 0
+      in_negated_if = 0
+    }
+    /^#if VIR_EXTENSIONS\>/ {
+      if (skip != 0) {
+        print "Error: Nested VIR_EXTENSIONS at line " NR ": " $0 > "/dev/stderr"
+        exit 1
+      }
       skip = 1
       next
+    }
+    /^#elif VIR_EXTENSIONS\>/ {
+      if (skip > 1) {
+        print "Error: Nested VIR_EXTENSIONS at line " NR ": " $0 > "/dev/stderr"
+        exit 1
+      }
+      skip = 1
+      next
+    }
+    /^#if/ && skip > 0 {
+      skip += 1
+      next
+    }
+    /^#elif/ && skip == 1 {
+      skip = 0
+      sub(/^#elif/, "#if")
     }
     /^#if !VIR_EXTENSIONS$/ {
       in_negated_if = 1
@@ -34,15 +58,26 @@ for file in "$SRC_DIR"/*.h; do
     }
     /^#else$/ && in_negated_if {
       in_negated_if = 0
+      if (skip != 0) {
+        print "Error: Nested VIR_EXTENSIONS at line " NR ": " $0 > "/dev/stderr"
+        exit 1
+      }
       skip = 1
       next
     }
-    /^#endif$/ && skip {
-      skip = 0
-      next
+    /^#endif$/ && skip > 0 {
+      if (skip > 0) {
+        skip -= 1
+        if (skip == 0) {
+          next
+        }
+      } else if (in_negated_if) {
+        print "Error: #if !VIR_EXTENSIONS expects #else" > "/dev/stderr"
+        exit 1
+      }
     }
-    !skip {
-        print
+    skip == 0 {
+      print
     }
     ' "$file" > "$DEST_DIR/$filename"
   fi

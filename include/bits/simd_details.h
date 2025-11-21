@@ -639,7 +639,7 @@ namespace std::simd
 #define _GLIBCXX_SIMD_ARCH_FLAG(off, feat) \
   (static_cast<__UINT64_TYPE__>(std::simd::__streq_to_1(_GLIBCXX_SIMD_TOSTRING_IMPL(feat))) << off)
 
-#if __ARM_ARCH
+#if VIR_EXTENSIONS && __ARM_ARCH
 
 #if __ARM_ARCH >= 8
 #define _GLIBCXX_SIMD_HAVE_ARMv8 1
@@ -685,7 +685,7 @@ namespace std::simd
       { return is_same_v<_Tp, _Float16>; }
   };
 
-#elif __powerpc__
+#elif VIR_EXTENSIONS && __powerpc__
 
 #define _GLIBCXX_SIMD_ARCH_TRAITS_INIT {                      \
   (_GLIBCXX_SIMD_ARCH_FLAG(0, __ALTIVEC__)                    \
