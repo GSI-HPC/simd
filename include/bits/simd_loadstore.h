@@ -48,8 +48,7 @@ namespace std::simd
       using _RV = __vec_load_return_t<_Vp, _Tp>;
       using _Rp = typename _RV::value_type;
       static_assert(__loadstore_convertible_to<ranges::range_value_t<_Rg>, _Rp, _Flags...>,
-                    "The converting load is not value-preserving. "
-                    "Pass 'flag_convert' if lossy conversion matches the intent.");
+                    "'flag_convert' must be used for conversions that are not value-preserving");
 
       constexpr bool __allow_out_of_bounds = __f._S_test(__allow_partial_loadstore);
       constexpr size_t __static_size = __static_range_size(__r);
@@ -97,8 +96,7 @@ namespace std::simd
       static_assert(__vectorizable<ranges::range_value_t<_Rg>>);
       static_assert(__explicitly_convertible_to<ranges::range_value_t<_Rg>, _Rp>);
       static_assert(__loadstore_convertible_to<ranges::range_value_t<_Rg>, _Rp, _Flags...>,
-                    "The converting load is not value-preserving. "
-                    "Pass 'flag_convert' if lossy conversion matches the intent.");
+                    "'flag_convert' must be used for conversions that are not value-preserving");
 
       constexpr bool __allow_out_of_bounds = __f._S_test(__allow_partial_loadstore);
       constexpr auto __static_size = __static_range_size(__r);
@@ -216,8 +214,7 @@ namespace std::simd
       using _TV = basic_vec<_Tp, _Ap>;
       static_assert(destructible<_TV>);
       static_assert(__loadstore_convertible_to<_Tp, ranges::range_value_t<_Rg>, _Flags...>,
-                    "The converting store is not value-preserving. "
-                    "Pass 'flag_convert' if lossy conversion matches the intent.");
+                    "'flag_convert' must be used for conversions that are not value-preserving");
 
       constexpr bool __allow_out_of_bounds = __f._S_test(__allow_partial_loadstore);
       constexpr auto __static_size = __static_range_size(__r);
@@ -264,8 +261,7 @@ namespace std::simd
     {
       using _TV = basic_vec<_Tp, _Ap>;
       static_assert(__loadstore_convertible_to<_Tp, ranges::range_value_t<_Rg>, _Flags...>,
-                    "The converting store is not value-preserving. "
-                    "Pass 'flag_convert' if lossy conversion matches the intent.");
+                    "'flag_convert' must be used for conversions that are not value-preserving");
 
       constexpr bool __allow_out_of_bounds = __f._S_test(__allow_partial_loadstore);
       constexpr auto __static_size = __static_range_size(__r);
