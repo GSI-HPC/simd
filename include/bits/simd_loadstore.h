@@ -65,15 +65,14 @@ namespace std::simd
 
       if consteval
         {
-          if constexpr (__complex_like<_Rp> && !__complex_like<_Tp>)
-            return _RV([&](size_t __i) {
-                     return __i < __rg_size ? static_cast<typename _Rp::value_type>(__r[__i])
-                                            : _Rp();
-                   });
-          else
-            return _RV([&](size_t __i) {
-                     return __i < __rg_size ? static_cast<_Rp>(__r[__i]) : _Rp();
-                   });
+          return _RV([&](size_t __i) -> _Rp {
+                   if (__i >= __rg_size)
+                     return _Rp();
+                   else if constexpr (__complex_like<_Rp> && !__complex_like<_Tp>)
+                     return static_cast<typename _Rp::value_type>(__r[__i]);
+                   else
+                     return static_cast<_Rp>(__r[__i]);
+                 });
         }
       else
         {
@@ -113,13 +112,9 @@ namespace std::simd
 
       const size_t __rg_size = ranges::size(__r);
       if (__builtin_is_constant_evaluated())
-        {
-          if constexpr (__allow_out_of_bounds)
-            return _RV([&](size_t __i) { return __i < __rg_size && __mask[int(__i)] ? __r[__i]
-                                                                                    : _Rp(); });
-          else
-            return _RV([&](size_t __i) { return __mask[int(__i)] ? __r[__i] : _Rp(); });
-        }
+        return _RV([&](size_t __i) {
+                 return __i < __rg_size && __mask[int(__i)] ? __r[__i] : _Rp();
+               });
       else if constexpr (!__allow_out_of_bounds
                            || (__static_size != dynamic_extent
                                  && __static_size >= size_t(_RV::size.value)))
