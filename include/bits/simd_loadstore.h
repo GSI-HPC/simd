@@ -53,8 +53,8 @@ namespace std::simd
       constexpr bool __allow_out_of_bounds = __f._S_test(__allow_partial_loadstore);
       constexpr size_t __static_size = __static_range_size(__r);
 
-      static_assert(__static_size >= _RV::size.value || __allow_out_of_bounds
-                      || __static_size == dynamic_extent, "Out-of-bounds simd load");
+      if constexpr (!__allow_out_of_bounds && __static_sized_range<_Rg>)
+        static_assert(ranges::size(__r) >= _RV::size(), "Given range must have sufficient size");
 
       const auto* __ptr = __f.template _S_adjust_pointer<_RV>(ranges::data(__r));
       const auto __rg_size = std::ranges::size(__r);
@@ -101,8 +101,8 @@ namespace std::simd
       constexpr bool __allow_out_of_bounds = __f._S_test(__allow_partial_loadstore);
       constexpr auto __static_size = __static_range_size(__r);
 
-      static_assert(__static_size >= _RV::size.value || __allow_out_of_bounds
-                      || __static_size == dynamic_extent, "Out-of-bounds simd load");
+      if constexpr (!__allow_out_of_bounds && __static_sized_range<_Rg>)
+        static_assert(ranges::size(__r) >= _RV::size(), "Given range must have sufficient size");
 
       const auto* __ptr = __f.template _S_adjust_pointer<_RV>(ranges::data(__r));
 
@@ -219,8 +219,8 @@ namespace std::simd
       constexpr bool __allow_out_of_bounds = __f._S_test(__allow_partial_loadstore);
       constexpr auto __static_size = __static_range_size(__r);
 
-      static_assert(__static_size >= _TV::size.value || __allow_out_of_bounds
-                      || __static_size == dynamic_extent, "Out-of-bounds simd store");
+      if constexpr (!__allow_out_of_bounds && __static_sized_range<_Rg>)
+        static_assert(ranges::size(__r) >= _TV::size(), "Given range must have sufficient size");
 
       auto* __ptr = __f.template _S_adjust_pointer<_TV>(ranges::data(__r));
       const auto __rg_size = ranges::size(__r);
@@ -264,10 +264,8 @@ namespace std::simd
                     "'flag_convert' must be used for conversions that are not value-preserving");
 
       constexpr bool __allow_out_of_bounds = __f._S_test(__allow_partial_loadstore);
-      constexpr auto __static_size = __static_range_size(__r);
-
-      static_assert(__static_size >= _TV::size.value || __allow_out_of_bounds
-                      || __static_size == dynamic_extent, "Out-of-bounds simd store");
+      if constexpr (!__allow_out_of_bounds && __static_sized_range<_Rg>)
+        static_assert(ranges::size(__r) >= _TV::size(), "Given range must have sufficient size");
 
       auto* __ptr = __f.template _S_adjust_pointer<_TV>(ranges::data(__r));
 
