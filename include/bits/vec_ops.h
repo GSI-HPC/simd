@@ -203,8 +203,34 @@ namespace std::simd
       return __builtin_shufflevector(__v, __v, (__n + __is)...);
     }
 
-  /**
-   * Return a type with sizeof 16. If the input type is smaller, add zero-padding to \p __x.
+  /** @internal
+   * Return @p __x zero-padded to @p _Bytes bytes.
+   *
+   * Use this function when you need two objects of the same size (e.g. for __vec_concat).
+   */
+  template <size_t _Bytes, __vec_builtin _TV>
+    [[__gnu__::__always_inline__]]
+    constexpr auto
+    __vec_zero_pad_to(_TV __x)
+    {
+      if constexpr (sizeof(_TV) == _Bytes)
+        return __x;
+      else if constexpr (sizeof(_TV) <= sizeof(0ull))
+        {
+          using _Up = _UInt<sizeof(_TV)>;
+          __vec_builtin_type_bytes<_Up, _Bytes> __tmp = {__builtin_bit_cast(_Up, __x)};
+          return __builtin_bit_cast(__vec_builtin_type_bytes<__vec_value_type<_TV>, _Bytes>, __tmp);
+        }
+      else if constexpr (sizeof(_TV) < _Bytes)
+        return __vec_zero_pad_to<_Bytes>(__vec_concat(__x, _TV()));
+      else
+        static_assert(false);
+    }
+
+  /** @internal
+   * Return a type with sizeof 16, add zero-padding to @p __x. The input must be smaller.
+   *
+   * Use this function instead of the above when you need to pad an argument for a SIMD builtin.
    */
   template <__vec_builtin _TV>
     [[__gnu__::__always_inline__]]
@@ -212,22 +238,7 @@ namespace std::simd
     __vec_zero_pad_to_16(_TV __x)
     {
       static_assert(sizeof(_TV) < 16);
-      using _Up = _UInt<sizeof(_TV)>;
-      __vec_builtin_type_bytes<_Up, 16> __tmp = {__builtin_bit_cast(_Up, __x)};
-      return __builtin_bit_cast(__vec_builtin_type_bytes<__vec_value_type<_TV>, 16>, __tmp);
-    }
-
-  /// Return \p __x zero-padded to \p _Bytes bytes.
-  template <size_t _Bytes, __vec_builtin _TV>
-    [[__gnu__::__always_inline__]]
-    constexpr auto
-    __vec_zero_pad_to(_TV __x)
-    {
-      static_assert(sizeof(_TV) <= _Bytes);
-      if constexpr (sizeof(_TV) == _Bytes)
-        return __x;
-      else
-        return __vec_zero_pad_to<_Bytes>(__vec_concat(__x, _TV()));
+      return __vec_zero_pad_to<16>(__x);
     }
 
   // work around __builtin_constant_p returning false unless passed a variable
