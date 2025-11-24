@@ -1525,7 +1525,11 @@ namespace std::simd
   }
 
   /** @internal
-   * Optimized memcpy for use in partial loads and stores.
+   * Optimized @c memcpy for use in partial loads and stores.
+   *
+   * The implementation uses at most two fixed-size power-of-2 @c memcpy calls and reduces the
+   * number of branches to a minimum. The variable size is achieved by overlapping two @c memcpy
+   * calls.
    *
    * @tparam _Chunk   Copies @p __n times @p _Chunk bytes.
    * @tparam _Max     Copy no more than @p _Max bytes.
@@ -1542,7 +1546,12 @@ namespace std::simd
       static_assert(_Max <= 64);
       static_assert(__has_single_bit(_Chunk) && _Chunk <= 8);
       size_t __bytes = _Chunk * __n;
-      if (__bytes > 32 && _Max > 32)
+      if (__builtin_constant_p(__bytes))
+        { // If __n is known via constant propagation use a single memcpy call. Since this is still
+          // a fixed-size memcpy to the compiler, this leaves more room for optimization.
+          __builtin_memcpy(__dst, __src, __bytes);
+        }
+      else if (__bytes > 32 && _Max > 32)
         {
           __builtin_memcpy(__dst, __src, 32);
           __bytes -= 32;

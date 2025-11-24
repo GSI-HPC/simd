@@ -214,8 +214,6 @@ namespace std::simd
                     "'flag_convert' must be used for conversions that are not value-preserving");
 
       constexpr bool __allow_out_of_bounds = __f._S_test(__allow_partial_loadstore);
-      constexpr auto __static_size = __static_range_size(__r);
-
       if constexpr (!__allow_out_of_bounds && __static_sized_range<_Rg>)
         static_assert(ranges::size(__r) >= _TV::size(), "given range must have sufficient size");
 
@@ -231,19 +229,10 @@ namespace std::simd
           for (unsigned __i = 0; __i < __rg_size && __i < _TV::size(); ++__i)
             __ptr[__i] = static_cast<ranges::range_value_t<_Rg>>(__v[__i]);
         }
-      else if constexpr ((__static_size != dynamic_extent && __static_size >= _TV::size())
-                        || !__allow_out_of_bounds)
+      else if constexpr (!__allow_out_of_bounds)
         __v._M_store(__ptr);
-      else if (__builtin_constant_p(__rg_size))
-        {
-          if (__rg_size >= _TV::size())
-            __v._M_store(__ptr);
-          else
-            {
-              for (unsigned __i = 0; __i < __rg_size; ++__i)
-                __ptr[__i] = static_cast<std::ranges::range_value_t<_Rg>>(__v[__i]);
-            }
-        }
+      else if (__is_const_known_equal_to(__rg_size >= _TV::size(), true))
+        __v._M_store(__ptr);
       else
         _TV::_S_partial_store(__v, __ptr, __rg_size);
     }
