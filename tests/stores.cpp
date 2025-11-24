@@ -35,7 +35,7 @@ template <typename V>
           {
             simd::unchecked_store(v, ints, simd::flag_convert);
             simd::partial_store(v, ints.begin() + V::size() + 1, ints.end(),
-                              simd::flag_convert | simd::flag_overaligned<alignof(T)>);
+                              simd::flag_convert | simd::flag_overaligned<alignof(int)>);
             for (int i = 0; i < V::size; ++i)
               {
                 t.verify_equal(ints[i], int(T(i + 1)));
