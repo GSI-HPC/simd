@@ -142,7 +142,7 @@ namespace std::simd
         __v[__i] = __x;
     }
 
-  /**
+  /** @internal
    * Return vector builtin with all values from \p __a and \p __b.
    */
   template <__vec_builtin _TV>
@@ -154,6 +154,12 @@ namespace std::simd
       return __builtin_shufflevector(__a, __b, __is...);
     }
 
+  /** @internal
+   * Concatenate the first @p _N0 elements from @p __a with the first @p _N1 elements from @p __b
+   * with the elements from applying this function recursively to @p __rest.
+   *
+   * @pre _N0 <= __width_of<_TV0> && _N1 <= __width_of<_TV1> && _Ns <= __width_of<_TVs> && ...
+   */
   template <int _N0, int _N1, int... _Ns, __vec_builtin _TV0, __vec_builtin _TV1,
            __vec_builtin... _TVs>
     [[__gnu__::__always_inline__]]
@@ -161,11 +167,16 @@ namespace std::simd
                                  __bit_ceil(unsigned(_N0 + (_N1 + ... + _Ns)))>
     __vec_concat_sized(const _TV0& __a, const _TV1& __b, const _TVs&... __rest)
     {
+      // __is is rounded up because we need to generate a power-of-2 vector:
       constexpr auto [...__is] = _IotaArray<__bit_ceil(unsigned(_N0 + _N1)), int>;
-      const auto __ab = __builtin_shufflevector(
-                          __a, __b, (__is < _N0 ? __is
-                                                : __is < _N0 + _N1 ? __is - _N0 + __width_of<_TV0>
-                                                                   : -1)...);
+      const auto __ab = __builtin_shufflevector(__a, __b, [](int __i) consteval {
+                          if (__i < _N0) // copy from __a
+                            return __i;
+                          else if (__i < _N0 + _N1) // copy from __b
+                            return __i - _N0 + __width_of<_TV0>; // _N0 <= __width_of<_TV0>
+                          else // can't index into __rest
+                            return -1; // don't care
+                        }(__is)...);
       if constexpr (sizeof...(__rest) == 0)
         return __ab;
       else
