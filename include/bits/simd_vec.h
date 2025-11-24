@@ -632,16 +632,16 @@ namespace std::simd
         {
           using _A0 = _As...[0];
           using _A1 = _As...[1];
-          if constexpr (!_S_is_partial
-                          && ((!basic_vec<value_type, _As>::_S_is_partial
-                                  && _As::_S_size * sizeof...(_As) == _S_size) && ...))
+          if constexpr (!_S_is_partial && _A0::_S_size == _A1::_S_size)
+            // simple power-of-2 concat
             return basic_vec::_S_init(__vec_concat(__xs._M_concat_data()...));
-
           else
             {
+#if VIR_EXTENSIONS && 0
               constexpr bool __simple_inserts
                 = sizeof...(_As) == 2 && _A1::_S_size <= 2
                     && is_same_v<_DataType, typename basic_vec<value_type, _A0>::_DataType>;
+              // TODO: sometimes concats can be better. But the conditions here are not sufficient.
               if (!__builtin_is_constant_evaluated() && __simple_inserts)
                 {
                   if constexpr (__simple_inserts)
@@ -650,19 +650,14 @@ namespace std::simd
                       const auto& __x1 = __xs...[1];
                       basic_vec __r;
                       __r._M_data = __x0._M_data;
-                      if constexpr (_A1::_S_size == 1)
-                        __r._M_data[_S_size - 1] = __x1[0];
-                      else
-                        {
-                          for (int __i = __x0.size.value; __i < _S_size; ++__i)
-                            __r._M_data[__i] = __x1._M_data[__i - __x0.size.value];
-                        }
+                      template for (int __i : _IotaArray<_A1::_S_size>)
+                        __r._M_data[_A0::_S_size + __i] = __x1[__i];
                       return __r;
                     }
                 }
-              else
-                return basic_vec::_S_init(__vec_concat_sized<_As::_S_size...>(
-                                            __xs._M_concat_data()...));
+#endif
+              return basic_vec::_S_init(__vec_concat_sized<_As::_S_size...>(
+                                          __xs._M_concat_data()...));
             }
         }
 
