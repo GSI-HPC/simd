@@ -382,22 +382,21 @@ namespace std::simd
                     return __simd_size_c<__j>;
                   }
               };
-              constexpr bool __needs_zero_element = [&] {
-                constexpr auto [...__is] = _IotaArray<_S_size>;
-                return ((__idxmap2(__simd_size_c<__is>).value == simd::zero_element) || ...);
-              }();
-              constexpr auto [...__is] = _IotaArray<_S_full_size>;
+              constexpr auto [...__is0] = _IotaArray<_S_size>;
+              constexpr bool __needs_zero_element
+                = ((__idxmap2(__simd_size_c<__is0>).value == simd::zero_element) || ...);
+              constexpr auto [...__is_full] = _IotaArray<_S_full_size>;
               if constexpr (_A0::_S_nreg == 2 && !__needs_zero_element)
                 {
                   __r._M_data = __builtin_shufflevector(
                                   __x._M_data0._M_data, __x._M_data1._M_data,
-                                  __adj_idx(__idxmap2(__simd_size_c<__is>)).value...);
+                                  __adj_idx(__idxmap2(__simd_size_c<__is_full>)).value...);
                 }
               else
                 {
                   __r._M_data = __builtin_shufflevector(
                                   __x._M_concat_data(), decltype(__x._M_concat_data())(),
-                                  __adj_idx(__idxmap2(__simd_size_c<__is>)).value...);
+                                  __adj_idx(__idxmap2(__simd_size_c<__is_full>)).value...);
                 }
             }
           return __r;
