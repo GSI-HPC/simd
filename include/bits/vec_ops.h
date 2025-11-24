@@ -58,9 +58,8 @@ namespace std::simd
    */
   template <typename _Tp>
     concept __vec_builtin
-      = !is_class_v<_Tp> && requires(const _Tp& __x) {
-        requires __vec_builtin_of<_Tp, remove_cvref_t<decltype(__x[0])>>;
-      };
+      = !is_class_v<_Tp>
+          && __vec_builtin_of<_Tp, remove_cvref_t<decltype(declval<const _Tp>()[0])>>;
 
   /**
    * Alias for the value type of the given __vec_builtin type \p _Tp.
