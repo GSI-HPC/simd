@@ -231,8 +231,6 @@ namespace std::simd
         }
       else if constexpr (!__allow_out_of_bounds)
         __v._M_store(__ptr);
-      else if (__is_const_known_equal_to(__rg_size >= _TV::size(), true))
-        __v._M_store(__ptr);
       else
         _TV::_S_partial_store(__v, __ptr, __rg_size);
     }

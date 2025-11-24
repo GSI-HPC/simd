@@ -913,6 +913,8 @@ namespace std::simd
         {
           if constexpr (_S_is_scalar)
             return __n == 0 ? basic_vec() : basic_vec(static_cast<value_type>(*__mem));
+          else if (__is_const_known_equal_to(__n >= size_t(_S_size), true))
+            return basic_vec(_LoadCtorTag(), __mem);
           else if constexpr (__converts_trivially<_Up, value_type>)
             {
 #if _GLIBCXX_X86
@@ -1031,15 +1033,17 @@ namespace std::simd
         static inline void
         _S_partial_store(const basic_vec __v, _Up* __mem, size_t __n)
         {
+          if (__is_const_known_equal_to(__n >= _S_size, true))
+            __v._M_store(__mem);
 #if _GLIBCXX_X86
-          if constexpr (_Traits._M_have_avx512f() && !_S_is_scalar)
+          else if constexpr (_Traits._M_have_avx512f() && !_S_is_scalar)
             {
               const auto __k = __n < _S_size ? mask_type::_S_partial_mask_of_n(int(__n))
                                              : mask_type(true);
               return _S_masked_store(__v, __mem, __k);
             }
 #endif
-          if (__n >= _S_size) [[unlikely]]
+          else if (__n >= _S_size) [[unlikely]]
             __v._M_store(__mem);
           else if (__n == 0) [[unlikely]]
             return;
