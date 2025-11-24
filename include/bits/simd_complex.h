@@ -235,9 +235,9 @@ namespace std::simd
               const auto [...__xs] = _M_data.template _M_chunk<typename _Mp::_DataType>();
               static_assert(is_same_v<decltype(__to_cx_ileav(__xs...[0])), _Mp>);
               if constexpr (__rem == 0)
-                return array {__to_cx_ileav(__xs)...};
+                return array{__to_cx_ileav(__xs)...};
               else
-                return tuple {__to_cx_ileav(__xs)...};
+                return tuple(__to_cx_ileav(__xs)...);
             }
         }
 
@@ -649,8 +649,8 @@ namespace std::simd
           else
             {
               using _Rest = resize_t<__rem, _Vp>;
-              return tuple {_Vp::_S_init(get<__is>(__chunked))...,
-                            _Rest::_S_init(get<__n>(__chunked))};
+              return tuple(_Vp::_S_init(get<__is>(__chunked))...,
+                           _Rest::_S_init(get<__n>(__chunked)));
             }
         }
 
@@ -1063,9 +1063,9 @@ namespace std::simd
           const auto [...__rs, __rN] = _M_real.template _M_chunk<typename _Vp::_RealSimd>();
           const auto [...__is, __iN] = _M_imag.template _M_chunk<typename _Vp::_RealSimd>();
           if constexpr (__rem == 0)
-            return array<_Vp, __n> {_Vp(__rs, __is)..., _Vp(__rN, __iN)};
+            return array<_Vp, __n>{_Vp(__rs, __is)..., _Vp(__rN, __iN)};
           else
-            return tuple {_Vp(__rs, __is)..., resize_t<__rem, _Vp>(__rN, __iN)};
+            return tuple(_Vp(__rs, __is)..., resize_t<__rem, _Vp>(__rN, __iN));
         }
 
       template <typename _A0>

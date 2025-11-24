@@ -418,13 +418,13 @@ namespace std::simd
               else
                 {
                   using _Rest = resize_t<__rem, _Mp>;
-                  return tuple {_Mp::_S_init(_M_data >> (__is * __stride))...,
-                                _Rest::_S_init([&] [[__gnu__::__always_inline__]]() {
-                                  if constexpr (is_same_v<typename _Rest::_DataType, bool>)
-                                    return operator[](__n * _Mp::_S_size);
-                                  else
-                                    return _M_data >> (__n * __stride);
-                                }())};
+                  return tuple(_Mp::_S_init(_M_data >> (__is * __stride))...,
+                               _Rest::_S_init([&] [[__gnu__::__always_inline__]]() {
+                                 if constexpr (is_same_v<typename _Rest::_DataType, bool>)
+                                   return operator[](__n * _Mp::_S_size);
+                                 else
+                                   return _M_data >> (__n * __stride);
+                               }()));
                 }
             }
           else if constexpr (__rem == 0)
@@ -444,18 +444,16 @@ namespace std::simd
           else
             {
               using _Rest = resize_t<__rem, _Mp>;
-              return tuple {
-                _Mp::_S_init(
-                  _VecOps<typename _Mp::_DataType>::_S_extract(
-                    _M_data, integral_constant<int, __is * __stride>()))...,
-                _Rest::_S_init([&] [[__gnu__::__always_inline__]]() {
-                  if constexpr (is_same_v<typename _Rest::_DataType, bool>)
-                    return operator[](__n * _Mp::_S_size);
-                  else
-                    return _VecOps<typename _Rest::_DataType>::_S_extract(
-                             _M_data, integral_constant<int, __n * __stride>());
-                }())
-              };
+              return tuple(_Mp::_S_init(
+                             _VecOps<typename _Mp::_DataType>::_S_extract(
+                               _M_data, integral_constant<int, __is * __stride>()))...,
+                           _Rest::_S_init([&] [[__gnu__::__always_inline__]]() {
+                             if constexpr (is_same_v<typename _Rest::_DataType, bool>)
+                               return operator[](__n * _Mp::_S_size);
+                             else
+                               return _VecOps<typename _Rest::_DataType>::_S_extract(
+                                        _M_data, integral_constant<int, __n * __stride>());
+                           }()));
             }
         }
 
@@ -1342,10 +1340,8 @@ namespace std::simd
             {
               using _Rest = resize_t<__rem, _Mp>;
               // can't bit-cast because the member order of tuple is reversed
-              return tuple {
-                _Mp  ([&](int __i) { return (*this)[__i + __is * _Mp::_S_size]; })...,
-                _Rest([&](int __i) { return (*this)[__i + __n * _Mp::_S_size]; })
-              };
+              return tuple(_Mp  ([&](int __i) { return (*this)[__i + __is * _Mp::_S_size]; })...,
+                           _Rest([&](int __i) { return (*this)[__i + __n * _Mp::_S_size]; }));
             }
         }
 

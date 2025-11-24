@@ -588,12 +588,10 @@ namespace std::simd
                            _M_data, integral_constant<int, __n * _Vp::_S_size>());
               else
                 __rest = _M_data[__n * _Vp::_S_size];
-              return tuple {
-                _Vp::_S_init(
-                  _VecOps<typename _Vp::_DataType>::_S_extract(
-                    _M_data, integral_constant<int, __is * _Vp::_S_size>()))...,
-                __rest
-              };
+              return tuple(_Vp::_S_init(
+                             _VecOps<typename _Vp::_DataType>::_S_extract(
+                               _M_data, integral_constant<int, __is * _Vp::_S_size>()))...,
+                           __rest);
             }
         }
 
@@ -1835,10 +1833,8 @@ namespace std::simd
               constexpr auto [...__is] = _IotaArray<__n>;
               using _Rest = resize_t<__rem, _Vp>;
               // can't bit-cast because the member order of tuple is reversed
-              return tuple {
-                _Vp  ([&](int __i) { return (*this)[__i + __is * _Vp::_S_size]; })...,
-                _Rest([&](int __i) { return (*this)[__i + __n * _Vp::_S_size]; })
-              };
+              return tuple(_Vp  ([&](int __i) { return (*this)[__i + __is * _Vp::_S_size]; })...,
+                           _Rest([&](int __i) { return (*this)[__i + __n * _Vp::_S_size]; }));
             }
         }
 
