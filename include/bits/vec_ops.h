@@ -187,7 +187,11 @@ namespace std::simd
     [[__gnu__::__always_inline__]]
     constexpr __half_vec_builtin_t<_TV>
     __vec_split_lo(_TV __v)
-    { return __builtin_shufflevector(__v, __v, __integer_pack(__width_of<_TV> / 2)...); }
+    {
+      constexpr int __n = __width_of<_TV> / 2;
+      constexpr auto [...__is] = _IotaArray<__n>;
+      return __builtin_shufflevector(__v, __v, __is...);
+    }
 
   template <__vec_builtin _TV>
     [[__gnu__::__always_inline__]]
@@ -196,7 +200,7 @@ namespace std::simd
     {
       constexpr int __n = __width_of<_TV> / 2;
       constexpr auto [...__is] = _IotaArray<__n>;
-      return __half_vec_builtin_t<_TV> {__v[(__n + __is)]...};
+      return __builtin_shufflevector(__v, __v, (__n + __is)...);
     }
 
   /**
