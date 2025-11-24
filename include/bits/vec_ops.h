@@ -271,7 +271,7 @@ namespace std::simd
   [[__gnu__::__always_inline__]]
   constexpr bool
   __is_const_known_equal_to(const auto& __x, const auto& __expect)
-  { return __is_const_known(__x) && __x == __expect; }
+  { return __is_const_known(__x == __expect) && __x == __expect; }
 
 #if _GLIBCXX_X86
   template <__vec_builtin _UV, __vec_builtin _TV>
