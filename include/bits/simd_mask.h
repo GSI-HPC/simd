@@ -179,17 +179,16 @@ namespace std::simd
 
       using abi_type = _Ap;
 
-#define _GLIBCXX_DELETE_SIMD                                                       \
-      delete("This specialization is disabled because of an invalid combination "  \
-             "of template arguments to basic_mask.")
+#define _GLIBCXX_DELETE_SIMD "This specialization is disabled because of an invalid combination "  \
+                             "of template arguments to basic_mask."
 
-      basic_mask() = _GLIBCXX_DELETE_SIMD;
+      basic_mask() = delete(_GLIBCXX_DELETE_SIMD);
 
-      ~basic_mask() = _GLIBCXX_DELETE_SIMD;
+      ~basic_mask() = delete(_GLIBCXX_DELETE_SIMD);
 
-      basic_mask(const basic_mask&) = _GLIBCXX_DELETE_SIMD;
+      basic_mask(const basic_mask&) = delete(_GLIBCXX_DELETE_SIMD);
 
-      basic_mask& operator=(const basic_mask&) = _GLIBCXX_DELETE_SIMD;
+      basic_mask& operator=(const basic_mask&) = delete(_GLIBCXX_DELETE_SIMD);
 
 #undef _GLIBCXX_DELETE_SIMD
     };

@@ -36,17 +36,16 @@ namespace std::simd
 
       using mask_type = basic_mask<0, void>; // disabled
 
-#define _GLIBCXX_DELETE_SIMD                                                       \
-      delete("This specialization is disabled because of an invalid combination "  \
-             "of template arguments to basic_vec.")
+#define _GLIBCXX_DELETE_SIMD "This specialization is disabled because of an invalid combination "  \
+                             "of template arguments to basic_vec."
 
-      basic_vec() = _GLIBCXX_DELETE_SIMD;
+      basic_vec() = delete(_GLIBCXX_DELETE_SIMD);
 
-      ~basic_vec() = _GLIBCXX_DELETE_SIMD;
+      ~basic_vec() = delete(_GLIBCXX_DELETE_SIMD);
 
-      basic_vec(const basic_vec&) = _GLIBCXX_DELETE_SIMD;
+      basic_vec(const basic_vec&) = delete(_GLIBCXX_DELETE_SIMD);
 
-      basic_vec& operator=(const basic_vec&) = _GLIBCXX_DELETE_SIMD;
+      basic_vec& operator=(const basic_vec&) = delete(_GLIBCXX_DELETE_SIMD);
 
 #undef _GLIBCXX_DELETE_SIMD
     };
