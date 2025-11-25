@@ -1309,19 +1309,25 @@ namespace std::simd
 
   // __higher_floating_point_rank_than<_Tp, U> (_Tp has higher or equal floating point rank than U)
   template <typename _From, typename _To>
-    concept __higher_floating_point_rank_than
-      = floating_point<_From> && floating_point<_To>
-          && same_as<common_type_t<_From, _To>, _From>;
+    consteval bool
+    __higher_floating_point_rank_than()
+    {
+      return floating_point<_From> && floating_point<_To>
+               && same_as<common_type_t<_From, _To>, _From>;
+    }
 
   // __higher_integer_rank_than<_Tp, U> (_Tp has higher or equal integer rank than U)
   template <typename _From, typename _To>
-    concept __higher_integer_rank_than
-      = integral<_From> && integral<_To>
-          && (sizeof(_From) > sizeof(_To) || same_as<common_type_t<_From, _To>, _From>);
+    consteval bool
+    __higher_integer_rank_than()
+    {
+      return integral<_From> && integral<_To>
+               && (sizeof(_From) > sizeof(_To) || same_as<common_type_t<_From, _To>, _From>);
+    }
 
   template <typename _From, typename _To>
     concept __higher_rank_than
-      = __higher_floating_point_rank_than<_From, _To> || __higher_integer_rank_than<_From, _To>;
+      = __higher_floating_point_rank_than<_From, _To>() || __higher_integer_rank_than<_From, _To>();
 
   struct __convert_flag;
 
