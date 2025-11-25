@@ -907,7 +907,9 @@ namespace std::simd
             return __n == 0 ? basic_vec() : basic_vec(static_cast<value_type>(*__mem));
           else if (__is_const_known_equal_to(__n >= size_t(_S_size), true))
             return basic_vec(_LoadCtorTag(), __mem);
-          else if constexpr (__converts_trivially<_Up, value_type>)
+          else if constexpr (!__converts_trivially<_Up, value_type>)
+            return static_cast<basic_vec>(rebind_t<_Up, basic_vec>::_S_partial_load(__mem, __n));
+          else
             {
 #if _GLIBCXX_X86
               if constexpr (_Traits._M_have_avx512f()
@@ -947,8 +949,6 @@ namespace std::simd
                   };
                 }
             }
-          else
-            return static_cast<basic_vec>(rebind_t<_Up, basic_vec>::_S_partial_load(__mem, __n));
         }
 
       /** @internal
