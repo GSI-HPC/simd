@@ -189,10 +189,14 @@ namespace std::simd
 
   // [simd.general] p2
   template <typename _Tp>
+#if VIR_EXTENSIONS || 1
     concept __vectorizable
       = __vectorizable_scalar<_Tp>
           || (__complex_like_impl<_Tp> && __vectorizable_scalar<typename _Tp::value_type>
                 && floating_point<typename _Tp::value_type>);
+#else
+    concept __vectorizable = __vectorizable_scalar<_Tp>;
+#endif
 
   /** @internal
    * Describes variants of _Abi.
