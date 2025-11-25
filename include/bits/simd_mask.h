@@ -79,11 +79,19 @@ namespace std::simd
     struct rebind
     {};
 
+  /**
+   * Computes a member @c type <tt>basic_vec<_Tp, Abi></tt>, where @c Abi is chosen such that the
+   * number of elements is equal to <tt>_Vp::size()</tt> and features of the ABI tag (such as the
+   * internal representation of masks, or storage order of complex components) are preserved.
+   */
   template <__vectorizable _Tp, __simd_vec_type _Vp, _ArchTraits _Traits>
     //requires requires { typename __deduce_abi_t<_Tp, _Vp::size()>; }
     struct rebind<_Tp, _Vp, _Traits>
     { using type = __similar_vec<_Tp, _Vp::size(), typename _Vp::abi_type>; };
 
+  /**
+   * As above, except for @c basic_mask.
+   */
   template <__vectorizable _Tp, __simd_mask_type _Mp, _ArchTraits _Traits>
     //requires requires { typename __deduce_abi_t<_Tp, _Mp::size()>; }
     struct rebind<_Tp, _Mp, _Traits>
