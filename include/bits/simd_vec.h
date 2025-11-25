@@ -767,8 +767,8 @@ namespace std::simd
 #ifdef __SSE2__
                 // avoid pshufb by "promoting" to int
                 if constexpr (is_integral_v<value_type> && sizeof(value_type) <= 1)
-                  return resize_t<4, rebind_t<int, basic_vec>>(chunk<4>(__x)[0])
-                           ._M_reduce(__binary_op);
+                  return value_type(resize_t<4, rebind_t<int, basic_vec>>(chunk<4>(__x)[0])
+                                      ._M_reduce(__binary_op));
 #endif
                 if constexpr (_S_size > 2)
                   __x = __binary_op(__x, _S_static_permute(__x, _SwapNeighbors<2>()));
