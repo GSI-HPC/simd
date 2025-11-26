@@ -184,6 +184,34 @@ template <typename V>
       }
     };
 #endif
+
+    ADD_TEST(Cat_n_Chunk) {
+      std::tuple{M([](int i) { return 1 == (i & 1); }), M([](int i) { return 1 == (i % 3); })},
+      [](auto& t, const M k0, const M k1) {
+        auto c = cat(k0, k1);
+        t.verify_equal(c.size(), V::size() * 2);
+        for (int i = 0; i < V::size(); ++i)
+          t.verify_equal(c[i], k0[i])(i);
+        for (int i = 0; i < V::size(); ++i)
+          t.verify_equal(c[i + V::size()], k1[i])(i);
+        const auto [c0, c1] = simd::chunk<M>(c);
+        t.verify_equal(c0, k0);
+        t.verify_equal(c1, k1);
+        if constexpr (V::size() <= 35)
+          {
+            auto d = cat(k1, c, k0);
+            for (int i = 0; i < V::size(); ++i)
+              {
+                t.verify_equal(d[i], k1[i])(i);
+                t.verify_equal(d[i + V::size()], k0[i])(i);
+                t.verify_equal(d[i + 2 * V::size()], k1[i])(i);
+                t.verify_equal(d[i + 3 * V::size()], k0[i])(i);
+              }
+            const auto [...chunked] = simd::chunk<3>(d);
+            t.verify_equal(cat(chunked...), d);
+          }
+      }
+    };
   };
 
 #include "unittest.h"

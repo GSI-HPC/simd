@@ -241,6 +241,18 @@ namespace std::simd
             }
         }
 
+      [[__gnu__::__always_inline__]]
+      static constexpr const basic_mask&
+      _S_concat(const basic_mask& __x0) noexcept
+      { return __x0; }
+
+      template <typename... _As>
+        requires (sizeof...(_As) > 1)
+        [[__gnu__::__always_inline__]]
+        static constexpr basic_mask
+        _S_concat(const basic_mask<_Bytes, _As>&... __xs) noexcept
+        { return basic_mask::_S_init(_DataType::_S_concat(__xs._M_data...)); }
+
       // [simd.mask.overview] default constructor -----------------------------
       basic_mask() = default;
 
@@ -654,11 +666,10 @@ namespace std::simd
             }
         }
 
-      template <typename _A0>
-        [[__gnu__::__always_inline__]]
-        static constexpr basic_vec
-        _S_concat(const basic_vec<value_type, _A0>& __x0) noexcept
-        { return static_cast<const basic_vec&>(__x0); }
+      [[__gnu__::__always_inline__]]
+      static constexpr const basic_vec&
+      _S_concat(const basic_vec& __x0) noexcept
+      { return __x0; }
 
       template <typename... _As>
         requires (sizeof...(_As) > 1)

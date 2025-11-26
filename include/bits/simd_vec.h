@@ -1693,6 +1693,8 @@ namespace std::simd
 
       _DataType1 _M_data1;
 
+      static constexpr bool _S_is_partial = _DataType1::_S_is_partial;
+
     public:
       using value_type = _Tp;
 
