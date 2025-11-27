@@ -15,6 +15,7 @@ static constexpr bool is_iec559 =
       false;
 #endif
 
+#if VIR_NEXT_PATCH
 template <typename V>
   requires complex_like<typename V::value_type>
   struct Tests<V>
@@ -135,6 +136,7 @@ template <typename V>
       }
     };
   };
+#endif
 
 template <typename V>
   struct Tests

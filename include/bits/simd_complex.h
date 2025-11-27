@@ -3,6 +3,7 @@
  *                       Matthias Kretz <m.kretz@gsi.de>
  */
 
+#if VIR_NEXT_PATCH
 #ifndef _GLIBCXX_SIMD_COMPLEX_H
 #define _GLIBCXX_SIMD_COMPLEX_H 1
 
@@ -1452,3 +1453,4 @@ namespace std::simd
 #pragma GCC diagnostic pop
 #endif // C++26
 #endif // _GLIBCXX_SIMD_COMPLEX_H
+#endif

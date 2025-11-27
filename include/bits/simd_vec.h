@@ -175,6 +175,7 @@ namespace std::simd
   struct _LoadCtorTag
   {};
 
+#if VIR_NEXT_PATCH
   template <typename _Cx, __vec_builtin _TV, _TargetTraits = {}>
     [[__gnu__::__cold__]]
     constexpr _TV
@@ -243,13 +244,16 @@ namespace std::simd
       __im0 = __cr.imag();
     }
 
+#endif
   template <integral _Tp>
     inline constexpr _Tp __max_shift
       = (sizeof(_Tp) < sizeof(int) ? sizeof(int) : sizeof(_Tp)) * __CHAR_BIT__;
 
   template <__vectorizable _Tp, __abi_tag _Ap>
     requires (_Ap::_S_nreg == 1)
+#if VIR_NEXT_PATCH
       && (!__complex_like<_Tp>)
+#endif
     class basic_vec<_Tp, _Ap>
     : _BinaryOps<_Tp, _Ap>
     {
@@ -401,6 +405,7 @@ namespace std::simd
           return __r;
         }
 
+#if VIR_NEXT_PATCH
       using _HalfVec = __similar_vec<value_type, _S_size / 2, _Ap>;
 
       [[__gnu__::__always_inline__]]
@@ -560,6 +565,7 @@ namespace std::simd
             }
         }
 
+#endif
       template <typename _Vp>
         [[__gnu__::__always_inline__]]
         constexpr auto
@@ -1597,7 +1603,9 @@ namespace std::simd
 
   template <__vectorizable _Tp, __abi_tag _Ap>
     requires (_Ap::_S_nreg > 1)
+#if VIR_NEXT_PATCH
       && (!__complex_like<_Tp>)
+#endif
     class basic_vec<_Tp, _Ap>
     : _BinaryOps<_Tp, _Ap>
     {
@@ -1701,6 +1709,7 @@ namespace std::simd
                    _DataType1::template _S_static_permute<_Size, _Offset + _N0>(__x, __idxmap));
         }
 
+#if VIR_NEXT_PATCH
       [[__gnu__::__always_inline__]]
       constexpr basic_vec
       _M_complex_conj() const
@@ -1727,6 +1736,7 @@ namespace std::simd
                                                    __re1._M_data1, __im1._M_data1);
         }
 
+#endif
       template <typename _Vp>
         [[__gnu__::__always_inline__]]
         constexpr auto

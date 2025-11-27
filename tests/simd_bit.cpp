@@ -7,6 +7,7 @@
 
 #include <climits>
 
+#if VIR_NEXT_PATCH
 template <typename V>
   requires std::integral<typename V::value_type>
   struct Tests<V>
@@ -116,6 +117,7 @@ template <typename V>
       }
     };
   };
+#endif
 
 template <typename V>
   struct Tests

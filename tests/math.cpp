@@ -32,6 +32,7 @@ template <typename V, typename... Ts>
 template <typename V>
   struct Tests {};
 
+#if VIR_NEXT_PATCH
 template <typename V>
   requires std::floating_point<typename V::value_type>
   struct Tests<V>
@@ -81,3 +82,4 @@ template <typename V>
       }
     };
   };
+#endif

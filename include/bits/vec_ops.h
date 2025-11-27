@@ -248,9 +248,11 @@ namespace std::simd
     constexpr bool
     __is_const_known(const _Tp& __x)
     {
+#if VIR_NEXT_PATCH
       if constexpr (__complex_like<_Tp>)
         return __is_const_known(__x.real()) && __is_const_known(__x.imag());
       else
+#endif
         return __builtin_constant_p(__x);
     }
 
@@ -540,6 +542,7 @@ namespace std::simd
         __xh = __builtin_shufflevector(__xh, __y, ((_Is & 1) == 1 ? __nh + _Is / 2 : _Is)...);
       }
 
+#if VIR_NEXT_PATCH
       // negate every even element (real part of interleaved complex)
       [[__gnu__::__always_inline__]]
       static constexpr _TV
@@ -566,17 +569,19 @@ namespace std::simd
 #endif
       }
 
+#endif
       // true if all elements are know to be equal to __ref at compile time
       [[__gnu__::__always_inline__]]
       static constexpr bool
       _S_is_const_known_equal_to(_TV __x, _Tp __ref)
       { return (__is_const_known_equal_to(__x[_Is], __ref) && ...); }
 
+#if VIR_NEXT_PATCH
       // True iff all elements at even indexes are zero. This includes signed zeros only when
       // -fno-signed-zeros is in effect.
       template <_OptTraits _Traits = {}>
         [[__gnu__::__always_inline__]]
-      static constexpr bool
+        static constexpr bool
         _S_complex_real_is_const_known_zero(_TV __x)
         {
           if constexpr (_Traits._M_conforming_to_STDC_annex_G())
@@ -605,6 +610,7 @@ namespace std::simd
           else
             return (((_Is & 1) == 0 || __is_const_known_equal_to(__x[_Is], _Tp())) && ...);
         }
+#endif
     };
 }
 
