@@ -44,36 +44,6 @@ namespace std::simd
       }
     };
 
-  consteval int
-  __packs_to_skip_at_front(int _Offset, auto... _Sizes)
-  {
-    int __i = 0;
-    int __n = 0;
-    for (int __s : {_Sizes...})
-      {
-        __n += __s;
-        if (__n > _Offset)
-          return __i;
-        ++__i;
-      }
-    __builtin_trap(); // called out of contract
-  }
-
-  consteval int
-  __packs_to_skip_at_back(int _Offset, int _Max, auto... _Sizes)
-  {
-    int __i = 0;
-    int __n = -_Offset;
-    for (int __s : {_Sizes...})
-      {
-        ++__i;
-        __n += __s;
-        if (__n >= _Max)
-          return int(sizeof...(_Sizes)) - __i;
-      }
-    return 0;
-  }
-
   template <size_t _Np, size_t _Mp>
     constexpr auto
     __bitset_split(const bitset<_Mp>& __b)
@@ -216,6 +186,181 @@ namespace std::simd
                ::_S_concat(__x0, __xs...);
     }
 
+  // implementation helper for chunk and cat
+  consteval int
+  __packs_to_skip_at_front(int _Offset, auto... _Sizes)
+  {
+    int __i = 0;
+    int __n = 0;
+    for (int __s : {_Sizes...})
+      {
+        __n += __s;
+        if (__n > _Offset)
+          return __i;
+        ++__i;
+      }
+    __builtin_trap(); // called out of contract
+  }
+
+  consteval int
+  __packs_to_skip_at_back(int _Offset, int _Max, auto... _Sizes)
+  {
+    int __i = 0;
+    int __n = -_Offset;
+    for (int __s : {_Sizes...})
+      {
+        ++__i;
+        __n += __s;
+        if (__n >= _Max)
+          return int(sizeof...(_Sizes)) - __i;
+      }
+    return 0;
+  }
+
+  template <typename _Dst>
+    [[__gnu__::__always_inline__]]
+    constexpr _Dst
+    __extract_simd_at(auto _Offset, const _Dst& __r, const auto&...)
+    requires(_Offset.value == 0)
+    { return __r; }
+
+  template <typename _Dst, typename _V0>
+    [[__gnu__::__always_inline__]]
+    constexpr _Dst
+    __extract_simd_at(auto _Offset, const _V0&, const _Dst& __r, const auto&...)
+    requires(_Offset.value == _V0::size.value)
+    { return __r; }
+
+  template <typename _Dst, typename... _Vs>
+    [[__gnu__::__always_inline__]]
+    constexpr _Dst
+    __extract_simd_at(auto _Offset, const _Vs&... __xs)
+    {
+      using _Ap = typename _Dst::abi_type;
+      if constexpr (_Ap::_S_nreg >= 2)
+        {
+          using _Dst0 = remove_cvref_t<decltype(declval<_Dst>()._M_get_low())>;
+          using _Dst1 = remove_cvref_t<decltype(declval<_Dst>()._M_get_high())>;
+          return _Dst::_S_init(__extract_simd_at<_Dst0>(_Offset, __xs...),
+                               __extract_simd_at<_Dst1>(_Offset + _Dst0::size, __xs...));
+        }
+      else
+        {
+          using _Ret = remove_cvref_t<decltype(declval<_Dst>()._M_get())>;
+          constexpr bool __use_bitmask = __simd_mask_type<_Dst> && _Ap::_S_is_bitmask;
+          constexpr int __dst_full_size = __bit_ceil(unsigned(_Ap::_S_size));
+          constexpr int __nargs = sizeof...(__xs);
+          using _A0 = typename _Vs...[0]::abi_type;
+          using _Alast = typename _Vs...[__nargs - 1]::abi_type;
+          const auto& __x0 = __xs...[0];
+          constexpr int __ninputs = (_Vs::size.value + ...);
+          if constexpr (_Offset.value >= _A0::_S_size
+                          || __ninputs - _Offset.value - _Alast::_S_size >= _Ap::_S_size)
+            { // can drop inputs at the front and/or back of the pack
+              constexpr int __skip_front = __packs_to_skip_at_front(_Offset.value, _Vs::size.value...);
+              constexpr int __skip_back = __packs_to_skip_at_back(_Offset.value, _Ap::_S_size,
+                                                                  _Vs::size.value...);
+              static_assert(__skip_front > 0 || __skip_back > 0);
+              constexpr auto [...__skip] = _IotaArray<__skip_front>;
+              constexpr auto [...__is] = _IotaArray<__nargs - __skip_front - __skip_back>;
+              constexpr int __new_offset = _Offset.value - (0 + ... + _Vs...[__skip]::size.value);
+              return __extract_simd_at<_Dst>(cw<__new_offset>, __xs...[__is + __skip_front]...);
+            }
+          else if constexpr (__scalar_abi_tag<_Ap>)
+            { // trivial conversion to one value_type
+              return _Dst(__x0[_Offset.value]);
+            }
+          else if constexpr (_A0::_S_nreg >= 2 || _Alast::_S_nreg >= 2)
+            { // flatten first and/or last multi-register argument
+              const auto& __xlast = __xs...[__nargs - 1];
+              constexpr bool __flatten_first = _A0::_S_nreg >= 2;
+              constexpr bool __flatten_last = __nargs > 1 && _Alast::_S_nreg >= 2;
+              constexpr auto [...__is] = _IotaArray<__nargs - __flatten_first - __flatten_last>;
+              if constexpr (__flatten_first && __flatten_last)
+                return __extract_simd_at<_Dst>(
+                         _Offset, __x0._M_get_low(), __x0._M_get_high(), __xs...[__is + 1]...,
+                         __xlast._M_get_low(), __xlast._M_get_high());
+              else if constexpr (__flatten_first)
+                return __extract_simd_at<_Dst>(
+                         _Offset, __x0._M_get_low(), __x0._M_get_high(), __xs...[__is + 1]...);
+              else
+                return __extract_simd_at<_Dst>(
+                         _Offset, __xs...[__is]..., __xlast._M_get_low(), __xlast._M_get_high());
+            }
+          else if constexpr (__simd_mask_type<_Dst>
+                               && ((_Ap::_S_variant != _Vs::abi_type::_S_variant
+                                      && !__scalar_abi_tag<typename _Vs::abi_type>) || ...))
+            { // convert ABI tag if incompatible
+              return __extract_simd_at<_Dst>(
+                       _Offset, static_cast<const resize_t<_Vs::size.value, _Dst>&>(__xs)...);
+            }
+
+          // at this point __xs should be as small as possible; there may be some corner cases left
+
+          else if constexpr (__nargs == 1)
+            { // simple and optimal
+              if constexpr (__use_bitmask)
+                return _Dst(_Ret(__x0._M_to_uint() >> _Offset.value));
+              else
+                return _VecOps<_Ret>::_S_extract(__x0._M_concat_data(false), _Offset);
+            }
+          else if constexpr (__use_bitmask)
+            { // fairly simple and optimal bit shifting solution
+              static_assert(_A0::_S_nreg == 1);
+              static_assert(_Offset.value < _A0::_S_size);
+              int __offset = -_Offset.value;
+              _Ret __r;
+              template for (const auto& __x : {__xs...})
+                {
+                  if (__offset <= 0)
+                    __r = _Ret(__x._M_to_uint() >> -__offset);
+                  else if (__offset < _Ap::_S_size)
+                    __r |= _Ret(_Ret(__x._M_to_uint()) << __offset);
+                  __offset += __x.size.value;
+                }
+              return _Dst(__r);
+            }
+          else if constexpr (__nargs == 2 && _A0::_S_nreg == 1 && _Alast::_S_nreg == 1)
+            { // optimize concat of two input vectors (e.g. using palignr)
+              constexpr auto [...__is] = _IotaArray<__dst_full_size>;
+              constexpr int __v2_offset = __width_of<decltype(__x0._M_concat_data())>;
+              return __builtin_shufflevector(
+                       __x0._M_concat_data(), __xs...[1]._M_concat_data(), [](int __i) consteval {
+                       if (__i < _A0::_S_size)
+                         return __i;
+                       __i -= _A0::_S_size;
+                       if (__i < _Alast::_S_size)
+                         return __i + __v2_offset;
+                       else
+                         return -1;
+                     }(__is + _Offset.value)...);
+            }
+          else if (__is_const_known(__xs...) || __ninputs == _Ap::_S_size)
+            { // hard to optimize for the compiler, but necessary in constant expressions
+              return _VecOps<_Ret>::_S_extract(
+                       __vec_concat_sized<__xs.size.value...>(__xs._M_concat_data(false)...),
+                       _Offset);
+            }
+          else
+            { // fallback to concatenation in memory => load the result
+              alignas(_Ret) __vec_value_type<_Ret>
+                __tmp[std::max(__ninputs, _Offset.value + __dst_full_size)] = {};
+              int __offset = 0;
+              template for (const auto& __x : {__xs...})
+                {
+                  if constexpr (__simd_mask_type<_Dst>)
+                    (-__x)._M_store(__tmp + __offset);
+                  else
+                    __x._M_store(__tmp + __offset);
+                  __offset += __x.size.value;
+                }
+              _Ret __r;
+              __builtin_memcpy(&__r, __tmp + _Offset.value, sizeof(_Ret));
+              return __r;
+            }
+        }
+    }
+
   // [simd.mask] --------------------------------------------------------------
   template <size_t _Bytes, typename _Ap>
     class basic_mask
@@ -340,6 +485,11 @@ namespace std::simd
       _S_init(unsigned_integral auto __bits)
       { return basic_mask(__bits); }
 
+      [[__gnu__::__always_inline__]]
+      constexpr const _DataType&
+      _M_get() const
+      { return _M_data; }
+
       /** \internal
        * Bit-cast the given object \p __x to basic_mask.
        *
@@ -447,166 +597,14 @@ namespace std::simd
         {
           constexpr int __n = _S_size / _Mp::_S_size;
           constexpr int __rem = _S_size % _Mp::_S_size;
-          constexpr int __stride = _Mp::_S_size;
           constexpr auto [...__is] = _IotaArray<__n>;
-          if constexpr (_S_is_scalar)
-            {
-              if constexpr (__n == 0)
-                return array<_Mp, 1> {*this};
-              else
-                return tuple<basic_mask> {*this};
-            }
-          else if constexpr (_S_use_bitmask != _Mp::_S_use_bitmask)
-            // convert to whatever _Mp uses first and then recurse into _M_chunk
-            return resize_t<_S_size, _Mp>(*this).template _M_chunk<_Mp>();
-          else if constexpr (_S_use_bitmask && _Mp::_S_use_bitmask)
-            {
-              static_assert(is_unsigned_v<_DataType>);
-              if constexpr (__rem == 0)
-                return array<_Mp, __n> {_Mp::_S_init(_M_data >> (__is * __stride))...};
-              else
-                {
-                  using _Rest = resize_t<__rem, _Mp>;
-                  return tuple(_Mp::_S_init(_M_data >> (__is * __stride))...,
-                               _Rest::_S_init([&] [[__gnu__::__always_inline__]]() {
-                                 if constexpr (is_same_v<typename _Rest::_DataType, bool>)
-                                   return operator[](__n * _Mp::_S_size);
-                                 else
-                                   return _M_data >> (__n * __stride);
-                               }()));
-                }
-            }
-          else if constexpr (__rem == 0)
-            {
-              if constexpr (_Mp::_S_size == 1)
-                return array<_Mp, __n> {_Mp(operator[](__is))...};
-              else
-                {
-                  static_assert(is_same_v<__vec_value_type<typename _Mp::_DataType>,
-                                          __vec_value_type<_DataType>>);
-                  return array<_Mp, __n> {
-                    _Mp::_S_init(
-                      _VecOps<typename _Mp::_DataType>::_S_extract(
-                        _M_data, integral_constant<int, __is * __stride>()))...};
-                }
-            }
+          if constexpr (__rem == 0)
+            return array<_Mp, __n>{__extract_simd_at<_Mp>(cw<_Mp::_S_size * __is>, *this)...};
           else
             {
               using _Rest = resize_t<__rem, _Mp>;
-              return tuple(_Mp::_S_init(
-                             _VecOps<typename _Mp::_DataType>::_S_extract(
-                               _M_data, integral_constant<int, __is * __stride>()))...,
-                           _Rest::_S_init([&] [[__gnu__::__always_inline__]]() {
-                             if constexpr (is_same_v<typename _Rest::_DataType, bool>)
-                               return operator[](__n * _Mp::_S_size);
-                             else
-                               return _VecOps<typename _Rest::_DataType>::_S_extract(
-                                        _M_data, integral_constant<int, __n * __stride>());
-                           }()));
-            }
-        }
-
-      template <typename... _As>
-        [[__gnu__::__always_inline__]]
-        constexpr void
-        _M_assign_from(auto _Offset, const basic_mask<_Bytes, _As>&... __xs)
-        {
-          constexpr int __nargs = sizeof...(_As);
-          using _A0 = _As...[0];
-          using _Alast = _As...[__nargs - 1];
-          const auto& __x0 = __xs...[0];
-          constexpr int __ninputs = (_As::_S_size + ...) - _Offset.value;
-          if constexpr (_Offset.value >= _A0::_S_size || __ninputs - _Alast::_S_size >= _S_size)
-            { // can drop inputs at the front and/or back of the pack
-              constexpr int __skip_front = __packs_to_skip_at_front(_Offset.value, _As::_S_size...);
-              constexpr int __skip_back = __packs_to_skip_at_back(_Offset.value, _S_size,
-                                                                  _As::_S_size...);
-              static_assert(__skip_front > 0 || __skip_back > 0);
-              constexpr auto [...__skip] = _IotaArray<__skip_front>;
-              constexpr auto [...__is] = _IotaArray<__nargs - __skip_front - __skip_back>;
-              constexpr int __new_offset = _Offset.value - (0 + ... + _As...[__skip]::_S_size);
-              _M_assign_from(cw<__new_offset>, __xs...[__is + __skip_front]...);
-            }
-          else if constexpr (_S_is_scalar)
-            { // trivial conversion to one bool
-              _M_data = __x0[_Offset.value];
-            }
-          else if constexpr (_A0::_S_nreg >= 2 || _Alast::_S_nreg >= 2)
-            { // flatten first and/or last multi-register argument
-              const auto& __xlast = __xs...[__nargs - 1];
-              constexpr bool __flatten_first = _A0::_S_nreg >= 2;
-              constexpr bool __flatten_last = __nargs > 1 && _Alast::_S_nreg >= 2;
-              constexpr auto [...__is] = _IotaArray<__nargs - __flatten_first - __flatten_last>;
-              if constexpr (__flatten_first && __flatten_last)
-                _M_assign_from(_Offset, __x0._M_data0, __x0._M_data1, __xs...[__is + 1]...,
-                               __xlast._M_data0, __xlast._M_data1);
-              else if constexpr (__flatten_first)
-                _M_assign_from(_Offset, __x0._M_data0, __x0._M_data1, __xs...[__is + 1]...);
-              else
-                _M_assign_from(_Offset, __xs...[__is]..., __xlast._M_data0, __xlast._M_data1);
-            }
-          else if constexpr (((_Ap::_S_variant != _As::_S_variant && !__scalar_abi_tag<_As>)
-                                || ...))
-            { // convert ABI tag if incompatible
-              _M_assign_from(_Offset,
-                             static_cast<const resize_t<_As::_S_size, basic_mask>&>(__xs)...);
-            }
-
-          // at this point __xs should be as small as possible; there may be some corner cases left
-
-          else if constexpr (__nargs == 1)
-            { // simple and optimal
-              if constexpr (_S_use_bitmask)
-                _M_data = __x0._M_to_uint() >> _Offset.value;
-              else
-                _M_data = _VecOps<_DataType>::_S_extract(__x0._M_concat_data(false), _Offset);
-            }
-          else if constexpr (_S_use_bitmask)
-            { // fairly simple and optimal bit shifting solution
-              static_assert(_A0::_S_nreg == 1);
-              static_assert(_Offset.value < _A0::_S_size);
-              int __offset = -_Offset.value;
-              template for (const auto& __x : {__xs...})
-                {
-                  if (__offset <= 0)
-                    _M_data = _DataType(__x._M_to_uint() >> -__offset);
-                  else if (__offset < _S_size)
-                    _M_data |= _DataType(_DataType(__x._M_to_uint()) << __offset);
-                  __offset += __x.size.value;
-                }
-            }
-          else if constexpr (__nargs == 2 && _A0::_S_nreg == 1 && _Alast::_S_nreg == 1)
-            { // optimize concat of two input vectors (e.g. using palignr)
-              constexpr auto [...__is] = _IotaArray<_S_full_size>;
-              constexpr int __v2_offset = __x0._S_full_size;
-              _M_data = __builtin_shufflevector(
-                          __x0._M_concat_data(), __xs...[1]._M_concat_data(), [](int __i) consteval {
-                          if (__i < _A0::_S_size)
-                            return __i;
-                          __i -= _A0::_S_size;
-                          if (__i < _Alast::_S_size)
-                            return __i + __v2_offset;
-                          else
-                            return -1;
-                        }(__is + _Offset.value)...);
-            }
-          else if (__is_const_known(__xs...) || (_As::_S_size + ...) == _S_size)
-            { // hard to optimize for the compiler, but necessary in constant expressions
-              _M_data = _VecOps<_DataType>::_S_extract(
-                          __vec_concat_sized<__xs.size()...>(__xs._M_concat_data(false)...),
-                          _Offset);
-            }
-          else
-            { // fallback to concatenation in memory => load the result
-              alignas(_DataType) __vec_value_type<_DataType>
-                __tmp[std::max((... + _As::_S_size), _Offset.value + _S_full_size)] = {};
-              int __offset = 0;
-              template for (const auto& __x : {__xs...})
-                {
-                  (-__x)._M_store(__tmp + __offset);
-                  __offset += __x.size.value;
-                }
-              __builtin_memcpy(&_M_data, __tmp + _Offset.value, sizeof(_M_data));
+              return tuple(__extract_simd_at<_Mp>(cw<_Mp::_S_size * __is>, *this)...,
+                           __extract_simd_at<_Rest>(cw<_Mp::_S_size * __n>, *this));
             }
         }
 
@@ -620,11 +618,7 @@ namespace std::simd
         [[__gnu__::__always_inline__]]
         static constexpr basic_mask
         _S_concat(const basic_mask<_Bytes, _As>&... __xs) noexcept
-        {
-          basic_mask __r;
-          __r._M_assign_from(cw<0>, __xs...);
-          return __r;
-        }
+        { return __extract_simd_at<basic_mask>(cw<0>, __xs...); }
 
       // [simd.mask.overview] default constructor -----------------------------
       basic_mask() = default;
@@ -1406,6 +1400,16 @@ namespace std::simd
             return _S_init(_Mask0::_S_init(__bits._M_first), _Mask1::_S_init(__bits._M_second));
         }
 
+      [[__gnu__::__always_inline__]]
+      constexpr const _Mask0&
+      _M_get_low() const
+      { return _M_data0; }
+
+      [[__gnu__::__always_inline__]]
+      constexpr const _Mask1&
+      _M_get_high() const
+      { return _M_data1; }
+
       template <size_t _UBytes, typename _UAbi>
         [[__gnu__::__always_inline__]]
         static constexpr basic_mask
@@ -1484,41 +1488,16 @@ namespace std::simd
         {
           constexpr int __n = _S_size / _Mp::_S_size;
           constexpr int __rem = _S_size % _Mp::_S_size;
-          [[maybe_unused]] constexpr auto [...__is] = _IotaArray<__n>;
-          if constexpr (_N0 == _Mp::_S_size)
-            {
-              if constexpr (__rem == 0 && is_same_v<_Mp, _Mask0>)
-                return array<_Mp, __n> {_M_data0, _M_data1};
-              else if constexpr (__rem == 0)
-                return array<_Mp, __n> {_Mp(_M_data0), _Mp(_M_data1)};
-              else
-                return tuple<_Mp, resize_t<__rem, _Mp>> {_M_data0, _M_data1};
-            }
-          else if constexpr (__rem == 0)
-            {
-              array<_Mp, __n> __r;
-              template for (constexpr int __i : _IotaArray<__n>)
-                __r[__i]._M_assign_from(cw<_Mp::_S_size * __i>, _M_data0, _M_data1);
-              return __r;
-            }
+          constexpr auto [...__is] = _IotaArray<__n>;
+          if constexpr (__rem == 0)
+            return array<_Mp, __n>{__extract_simd_at<_Mp>(cw<_Mp::_S_size * __is>,
+                                                            _M_data0, _M_data1)...};
           else
             {
-              constexpr auto [...__is] = _IotaArray<__n + 1>;
               using _Rest = resize_t<__rem, _Mp>;
-              tuple<conditional_t<(__is < __n), _Mp, _Rest>...> __r;
-              template for (constexpr int __i : _IotaArray<__n + 1>)
-                std::get<__i>(__r)._M_assign_from(cw<_Mp::_S_size * __i>, _M_data0, _M_data1);
-              return __r;
+              return tuple(__extract_simd_at<_Mp>(cw<_Mp::_S_size * __is>, _M_data0, _M_data1)...,
+                           __extract_simd_at<_Rest>(cw<_Mp::_S_size * __n>, _M_data0, _M_data1));
             }
-        }
-
-      template <typename... _As>
-        [[__gnu__::__always_inline__]]
-        constexpr void
-        _M_assign_from(auto _Offset, const basic_mask<_Bytes, _As>&... __xs)
-        {
-          _M_data0._M_assign_from(_Offset, __xs...);
-          _M_data1._M_assign_from(_Offset + _Mask0::size, __xs...);
         }
 
       [[__gnu__::__always_inline__]]
@@ -1526,27 +1505,14 @@ namespace std::simd
       _S_concat(const basic_mask& __x0) noexcept
       { return __x0; }
 
-      template <typename _A0, typename... _As>
-        requires (sizeof...(_As) >= 1)
+      template <typename... _As>
+        requires (sizeof...(_As) >= 2)
         [[__gnu__::__always_inline__]]
         static constexpr basic_mask
-        _S_concat(const basic_mask<_Bytes, _A0>& __x0,
-                  const basic_mask<_Bytes, _As>&... __xs) noexcept
+        _S_concat(const basic_mask<_Bytes, _As>&... __xs) noexcept
         {
-          if constexpr (_A0::_S_size == _N0)
-            {
-              if constexpr (sizeof...(_As) == 1)
-                return _S_init(__x0, __xs...);
-              else
-                return _S_init(__x0, _Mask1::_S_concat(__xs...));
-            }
-          else
-            {
-              basic_mask __r;
-              __r._M_data0._M_assign_from(cw<0>, __x0, __xs...);
-              __r._M_data1._M_assign_from(cw<_Mask0::size()>, __x0, __xs...);
-              return __r;
-            }
+          return _S_init(__extract_simd_at<_Mask0>(cw<0>, __xs...),
+                         __extract_simd_at<_Mask1>(cw<_N0>, __xs...));
         }
 
       // [simd.mask.overview] default constructor -----------------------------

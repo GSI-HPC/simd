@@ -330,7 +330,7 @@ namespace std::simd
 
       [[__gnu__::__always_inline__]]
       constexpr auto
-      _M_concat_data() const
+      _M_concat_data([[maybe_unused]] bool __do_sanitize = false) const
       {
         if constexpr (_S_is_scalar)
           return __vec_builtin_type<__canonical_vec_type_t<value_type>, 1>{_M_data};
@@ -569,110 +569,12 @@ namespace std::simd
           constexpr int __rem = _S_size % _Vp::_S_size;
           constexpr auto [...__is] = _IotaArray<__n>;
           if constexpr (__rem == 0)
-            {
-              if constexpr (_Vp::_S_is_scalar)
-                return array<_Vp, __n> {_Vp::_S_init(_M_data[__is])...};
-              else
-                return array<_Vp, __n> {
-                  _Vp::_S_init(
-                    _VecOps<typename _Vp::_DataType>::_S_extract(
-                      _M_data, integral_constant<int, __is * _Vp::_S_size>()))...
-              };
-            }
+            return array<_Vp, __n> {__extract_simd_at<_Vp>(cw<_Vp::_S_size * __is>, *this)...};
           else
             {
               using _Rest = resize_t<__rem, _Vp>;
-              _Rest __rest;
-              if constexpr (_Rest::_S_size > 1)
-                __rest = _VecOps<typename _Rest::_DataType>::_S_extract(
-                           _M_data, integral_constant<int, __n * _Vp::_S_size>());
-              else
-                __rest = _M_data[__n * _Vp::_S_size];
-              return tuple(_Vp::_S_init(
-                             _VecOps<typename _Vp::_DataType>::_S_extract(
-                               _M_data, integral_constant<int, __is * _Vp::_S_size>()))...,
-                           __rest);
-            }
-        }
-
-      template <typename... _As>
-        [[__gnu__::__always_inline__]]
-        constexpr void
-        _M_assign_from(auto _Offset, const basic_vec<value_type, _As>&... __xs)
-        {
-          constexpr int __nargs = sizeof...(_As);
-          using _A0 = _As...[0];
-          using _Alast = _As...[__nargs - 1];
-          const auto& __x0 = __xs...[0];
-          constexpr int __ninputs = (_As::_S_size + ...) - _Offset.value;
-          if constexpr (_Offset.value >= _A0::_S_size || __ninputs - _Alast::_S_size >= _S_size)
-            { // can drop inputs at the front and/or back of the pack
-              constexpr int __skip_front = __packs_to_skip_at_front(_Offset.value, _As::_S_size...);
-              constexpr int __skip_back = __packs_to_skip_at_back(_Offset.value, _S_size,
-                                                                  _As::_S_size...);
-              static_assert(__skip_front > 0 || __skip_back > 0);
-              constexpr auto [...__skip] = _IotaArray<__skip_front>;
-              constexpr auto [...__is] = _IotaArray<__nargs - __skip_front - __skip_back>;
-              constexpr int __new_offset = _Offset.value - (0 + ... + _As...[__skip]::_S_size);
-              _M_assign_from(cw<__new_offset>, __xs...[__is + __skip_front]...);
-            }
-          else if constexpr (_S_is_scalar)
-            { // trivial conversion to one value_type
-              _M_data = __x0[_Offset.value];
-            }
-          else if constexpr (_A0::_S_nreg >= 2 || _Alast::_S_nreg >= 2)
-            { // flatten first and/or last multi-register argument
-              const auto& __xlast = __xs...[__nargs - 1];
-              constexpr bool __flatten_first = _A0::_S_nreg >= 2;
-              constexpr bool __flatten_last = __nargs > 1 && _Alast::_S_nreg >= 2;
-              constexpr auto [...__is] = _IotaArray<__nargs - __flatten_first - __flatten_last>;
-              if constexpr (__flatten_first && __flatten_last)
-                _M_assign_from(_Offset, __x0._M_data0, __x0._M_data1, __xs...[__is + 1]...,
-                               __xlast._M_data0, __xlast._M_data1);
-              else if constexpr (__flatten_first)
-                _M_assign_from(_Offset, __x0._M_data0, __x0._M_data1, __xs...[__is + 1]...);
-              else
-                _M_assign_from(_Offset, __xs...[__is]..., __xlast._M_data0, __xlast._M_data1);
-            }
-
-          // at this point __xs should be as small as possible; there may be some corner cases left
-
-          else if constexpr (__nargs == 1)
-            { // simple and optimal
-              _M_data = _VecOps<_DataType>::_S_extract(__x0._M_concat_data(), _Offset);
-            }
-          else if constexpr (__nargs == 2 && _A0::_S_nreg == 1 && _Alast::_S_nreg == 1)
-            { // optimize concat of two input vectors (e.g. using palignr)
-              constexpr auto [...__is] = _IotaArray<_S_full_size>;
-              constexpr int __v2_offset = __x0._S_full_size;
-              _M_data = __builtin_shufflevector(
-                          __x0._M_concat_data(), __xs...[1]._M_concat_data(), [](int __i) consteval {
-                          if (__i < _A0::_S_size)
-                            return __i;
-                          __i -= _A0::_S_size;
-                          if (__i < _Alast::_S_size)
-                            return __i + __v2_offset;
-                          else
-                            return -1;
-                        }(__is + _Offset.value)...);
-            }
-          else if (__is_const_known(__xs...) || (_As::_S_size + ...) == _S_size)
-            { // hard to optimize for the compiler, but necessary in constant expressions
-              _M_data = _VecOps<_DataType>::_S_extract(
-                          __vec_concat_sized<__xs.size()...>(__xs._M_concat_data()...),
-                          _Offset);
-            }
-          else
-            { // fallback to concatenation in memory => load the result
-              alignas(_DataType) value_type
-                __tmp[std::max((... + _As::_S_size), _Offset.value + _S_full_size)] = {};
-              int __offset = 0;
-              template for (const auto& __x : {__xs...})
-                {
-                  __x._M_store(__tmp + __offset);
-                  __offset += __x.size.value;
-                }
-              __builtin_memcpy(&_M_data, __tmp + _Offset.value, sizeof(_M_data));
+              return tuple(__extract_simd_at<_Vp>(cw<_Vp::_S_size * __is>, *this)...,
+                           __extract_simd_at<_Rest>(cw<_Vp::_S_size * __n>, *this));
             }
         }
 
@@ -686,11 +588,7 @@ namespace std::simd
         [[__gnu__::__always_inline__]]
         static constexpr basic_vec
         _S_concat(const basic_vec<value_type, _As>&... __xs) noexcept
-        {
-          basic_vec __r;
-          __r._M_assign_from(cw<0>, __xs...);
-          return __r;
-        }
+        { return __extract_simd_at<basic_vec>(cw<0>, __xs...); }
 
       [[__gnu__::__always_inline__]]
       constexpr auto
@@ -1786,10 +1684,11 @@ namespace std::simd
 
       [[__gnu__::__always_inline__]]
       constexpr auto
-      _M_concat_data() const
+      _M_concat_data([[maybe_unused]] bool __do_sanitize = false) const
       {
-        return __vec_concat(_M_data0._M_concat_data(),
-                            __vec_zero_pad_to<sizeof(_M_data0)>(_M_data1._M_concat_data()));
+        return __vec_concat(_M_data0._M_concat_data(false),
+                            __vec_zero_pad_to<sizeof(_M_data0)>(
+                              _M_data1._M_concat_data(__do_sanitize)));
       }
 
       template <int _Size = _S_size, int _Offset = 0, typename _A0, typename _Fp>
@@ -1835,38 +1734,16 @@ namespace std::simd
         {
           constexpr int __n = _S_size / _Vp::_S_size;
           constexpr int __rem = _S_size % _Vp::_S_size;
-          if constexpr (_N0 == _Vp::_S_size)
-            {
-              if constexpr (__rem == 0)
-                return array<_Vp, __n> {_M_data0, _M_data1};
-              else
-                return tuple<_Vp, resize_t<__rem, _Vp>> {_M_data0, _M_data1};
-            }
-          else if constexpr (__rem == 0)
-            {
-              array<_Vp, __n> __r;
-              template for (constexpr int __i : _IotaArray<__n>)
-                __r[__i]._M_assign_from(cw<_Vp::_S_size * __i>, _M_data0, _M_data1);
-              return __r;
-            }
+          constexpr auto [...__is] = _IotaArray<__n>;
+          if constexpr (__rem == 0)
+            return array<_Vp, __n>{__extract_simd_at<_Vp>(cw<_Vp::_S_size * __is>,
+                                                            _M_data0, _M_data1)...};
           else
             {
-              constexpr auto [...__is] = _IotaArray<__n + 1>;
               using _Rest = resize_t<__rem, _Vp>;
-              tuple<conditional_t<(__is < __n), _Vp, _Rest>...> __r;
-              template for (constexpr int __i : _IotaArray<__n + 1>)
-                std::get<__i>(__r)._M_assign_from(cw<_Vp::_S_size * __i>, _M_data0, _M_data1);
-              return __r;
+              return tuple(__extract_simd_at<_Vp>(cw<_Vp::_S_size * __is>, _M_data0, _M_data1)...,
+                           __extract_simd_at<_Rest>(cw<_Vp::_S_size * __n>, _M_data0, _M_data1));
             }
-        }
-
-      template <typename... _As>
-        [[__gnu__::__always_inline__]]
-        constexpr void
-        _M_assign_from(auto _Offset, const basic_vec<value_type, _As>&... __xs)
-        {
-          _M_data0._M_assign_from(_Offset, __xs...);
-          _M_data1._M_assign_from(_Offset + _DataType0::size, __xs...);
         }
 
       [[__gnu__::__always_inline__]]
@@ -1874,42 +1751,14 @@ namespace std::simd
       _S_concat(const basic_vec& __x0) noexcept
       { return __x0; }
 
-      template <typename _A0, typename... _As>
-        requires (sizeof...(_As) >= 1)
+      template <typename... _As>
+        requires (sizeof...(_As) >= 2)
         [[__gnu__::__always_inline__]]
         static constexpr basic_vec
-        _S_concat(const basic_vec<value_type, _A0>& __x0,
-                  const basic_vec<value_type, _As>&... __xs) noexcept
+        _S_concat(const basic_vec<value_type, _As>&... __xs) noexcept
         {
-          if constexpr (_A0::_S_size == _N0)
-            {
-              if constexpr (sizeof...(_As) == 1)
-                return _S_init(__x0, __xs...);
-              else
-                return _S_init(__x0, _DataType1::_S_concat(__xs...));
-            }
-          else if (__is_const_known(__x0, __xs...))
-            {
-              basic_vec __r;
-              __r._M_data0.template _M_assign_from(cw<0>, __x0, __xs...);
-              __r._M_data1.template _M_assign_from(cw<_DataType0::size()>, __x0, __xs...);
-              return __r;
-            }
-          else
-            {
-              basic_vec __r = {};
-              byte* __dst = reinterpret_cast<byte*>(&__r);
-              constexpr size_t __nbytes0 = sizeof(value_type) * _A0::_S_size;
-              __builtin_memcpy(__dst, &__x0, _A0::_S_nreg == 1 ? sizeof(__x0) : __nbytes0);
-              __dst += sizeof(value_type) * _A0::_S_size;
-              template for (const auto& __x : {__xs...})
-                {
-                  constexpr size_t __nbytes = sizeof(value_type) * __x.size.value;
-                  __builtin_memcpy(__dst, &__x, __nbytes);
-                  __dst += __nbytes;
-                }
-              return __r;
-            }
+          return _S_init(__extract_simd_at<_DataType0>(cw<0>, __xs...),
+                         __extract_simd_at<_DataType1>(cw<_N0>, __xs...));
         }
 
       [[__gnu__::__always_inline__]]
