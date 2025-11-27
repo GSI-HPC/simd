@@ -273,7 +273,7 @@ namespace std::simd
       // [simd.mask.ctor] broadcast constructor -------------------------------
       [[__gnu__::__always_inline__]]
       constexpr explicit
-      basic_mask(same_as<bool> auto __x) noexcept
+      basic_mask(same_as<bool> auto __x) noexcept // LWG 4382.
         : _M_data(__x)
       {}
 
@@ -349,13 +349,13 @@ namespace std::simd
       // [simd.mask.ctor] bitset constructor ----------------------------------
       [[__gnu__::__always_inline__]]
       constexpr
-      basic_mask(const same_as<bitset<_S_size>> auto& __b) noexcept
+      basic_mask(const same_as<bitset<_S_size>> auto& __b) noexcept // LWG 4382.
       : _M_data(_DataType::_S_init(__duplicate_each_bit<_S_size>(__bitset_to_pairs(__b))))
       {}
 
       // [simd.mask.ctor] uint constructor ------------------------------------
       template <unsigned_integral _Tp>
-        requires (!same_as<_Tp, bool>)
+        requires (!same_as<_Tp, bool>) // LWG 4382.
         [[__gnu__::__always_inline__]]
         constexpr explicit
         basic_mask(_Tp __val) noexcept

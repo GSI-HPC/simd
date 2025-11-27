@@ -638,7 +638,7 @@ namespace std::simd
       // [simd.mask.ctor] broadcast constructor -------------------------------
       [[__gnu__::__always_inline__]]
       constexpr explicit
-      basic_mask(same_as<bool> auto __x) noexcept
+      basic_mask(same_as<bool> auto __x) noexcept // LWG 4382.
         : _M_data(__x ? _S_implicit_mask : _DataType())
       {}
 
@@ -759,7 +759,7 @@ namespace std::simd
       // [simd.mask.ctor] bitset constructor ----------------------------------
       [[__gnu__::__always_inline__]]
       constexpr
-      basic_mask(const same_as<bitset<size()>> auto& __b) noexcept
+      basic_mask(const same_as<bitset<size()>> auto& __b) noexcept // LWG 4382.
       : basic_mask(static_cast<_Bitmask<_S_size>>(__b.to_ullong()))
       {
         static_assert(_S_size <= 64); // more than 64 elements in one register? not yet.
@@ -767,7 +767,7 @@ namespace std::simd
 
       // [simd.mask.ctor] uint constructor ------------------------------------
       template <unsigned_integral _Tp>
-        requires (!same_as<_Tp, bool>)
+        requires (!same_as<_Tp, bool>) // LWG 4382.
         [[__gnu__::__always_inline__]]
         constexpr explicit
         basic_mask(_Tp __val) noexcept
@@ -1524,7 +1524,7 @@ namespace std::simd
       // [simd.mask.ctor] broadcast constructor -------------------------------
       [[__gnu__::__always_inline__]]
       constexpr explicit
-      basic_mask(same_as<bool> auto __x) noexcept
+      basic_mask(same_as<bool> auto __x) noexcept // LWG 4382.
         : _M_data0(__x), _M_data1(__x)
       {}
 
@@ -1571,13 +1571,13 @@ namespace std::simd
       // [simd.mask.ctor] bitset constructor ----------------------------------
       [[__gnu__::__always_inline__]]
       constexpr
-      basic_mask(const same_as<bitset<size()>> auto& __b) noexcept
+      basic_mask(const same_as<bitset<size()>> auto& __b) noexcept // LWG 4382.
       : _M_data0(__bitset_split<_N0>(__b)._M_lo), _M_data1(__bitset_split<_N0>(__b)._M_hi)
       {}
 
       // [simd.mask.ctor] uint constructor ------------------------------------------
       template <unsigned_integral _Tp>
-        requires (!same_as<_Tp, bool>)
+        requires (!same_as<_Tp, bool>) // LWG 4382.
         [[__gnu__::__always_inline__]]
         constexpr explicit
         basic_mask(_Tp __val) noexcept
