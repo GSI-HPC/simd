@@ -692,6 +692,8 @@ namespace std::simd
                       __x = __binary_op(__x, __x.template _M_elements_shifted_down<4>());
                     if constexpr (_S_size > 2)
                       __x = __binary_op(__x, __x.template _M_elements_shifted_down<2>());
+                    // We could also call __binary_op with vec<T, 1> arguments. However,
+                    // micro-benchmarking on Intel Ultra 7 165U showed this to be more efficient:
                     return __binary_op(__x, __x.template _M_elements_shifted_down<1>())[0];
                   }
 #endif
