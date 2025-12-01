@@ -1089,18 +1089,23 @@ namespace std::simd
       template <typename _Up, typename _UAbi>
         requires (__simd_size_v<_Up, _UAbi> == _S_size)
           && __explicitly_convertible_to<_Up, value_type>
-        // FIXME(file LWG issue): missing constraint `constructible_from<value_type, _Up>`
         [[__gnu__::__always_inline__]]
         constexpr
         explicit(!__value_preserving_convertible_to<_Up, value_type>
                    || __higher_rank_than<_Up, value_type>)
         basic_vec(const basic_vec<_Up, _UAbi>& __x) noexcept
-          : _M_data([&] [[__gnu__::__always_inline__]]() {
-              if constexpr (_S_is_scalar)
-                return static_cast<value_type>(__x[0]);
-              else
-                return __vec_cast<_DataType>(__x._M_concat_data());
-            }())
+        : _M_data([&] [[__gnu__::__always_inline__]] {
+            if constexpr (_S_is_scalar)
+              return static_cast<value_type>(__x[0]);
+            else if constexpr (_UAbi::_S_nreg >= 2)
+              // __builtin_convertvector (__vec_cast) is inefficient for over-sized inputs.
+              // Also e.g. vec<float, 12> -> vec<char, 12> (with SSE2) would otherwise emit 4
+              // vcvttps2dq instructions, where only 3 are needed
+              return _S_concat(resize_t<__x._N0, basic_vec>(__x._M_data0),
+                               resize_t<__x._N1, basic_vec>(__x._M_data1))._M_data;
+            else
+              return __vec_cast<_DataType>(__x._M_concat_data());
+          }())
         {}
 
       // [simd.ctor] generator constructor ------------------------------------
