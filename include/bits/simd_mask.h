@@ -149,21 +149,25 @@ namespace std::simd
 
   // [simd.creation] ----------------------------------------------------------
   template<__simd_vec_type _Vp, typename _Ap>
+    [[__gnu__::__always_inline__]]
     constexpr auto
     chunk(const basic_vec<typename _Vp::value_type, _Ap>& __x) noexcept
     { return __x.template _M_chunk<_Vp>(); }
 
   template<__simd_mask_type _Mp, typename _Ap>
+    [[__gnu__::__always_inline__]]
     constexpr auto
     chunk(const basic_mask<__mask_element_size<_Mp>, _Ap>& __x) noexcept
     { return __x.template _M_chunk<_Mp>(); }
 
   template<__simd_size_type _Np, typename _Tp, typename _Ap>
+    [[__gnu__::__always_inline__]]
     constexpr auto
     chunk(const basic_vec<_Tp, _Ap>& __x) noexcept
     { return chunk<resize_t<_Np, basic_vec<_Tp, _Ap>>>(__x); }
 
   template<__simd_size_type _Np, size_t _Bytes, typename _Ap>
+    [[__gnu__::__always_inline__]]
     constexpr auto
     chunk(const basic_mask<_Bytes, _Ap>& __x) noexcept
     { return chunk<resize_t<_Np, basic_mask<_Bytes, _Ap>>>(__x); }
