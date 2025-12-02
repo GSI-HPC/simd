@@ -14,20 +14,6 @@ static constexpr bool is_iec559 =
       false;
 #endif
 
-template <typename V, typename... Ts>
-  consteval std::array<V, simd::__div_ceil(int(sizeof...(Ts)), V::size())>
-  make_packed_array(Ts... values)
-  {
-    using T = typename V::value_type;
-    const std::array<T, sizeof...(Ts)> inputs = {static_cast<T>(values)...};
-    std::array<V, simd::__div_ceil(int(sizeof...(Ts)), V::size())> r = {};
-    auto it = inputs.begin();
-    for (std::size_t i = 0; i < r.size() - 1; ++i, it += V::size())
-      r[i] = simd::unchecked_load<V>(it, inputs.end());
-    r.back() = simd::partial_load<V>(it, inputs.end());
-    return r;
-  }
-
 // no tests for non-floating-point types
 template <typename V>
   struct Tests {};

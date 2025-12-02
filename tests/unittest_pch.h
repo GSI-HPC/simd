@@ -994,4 +994,28 @@ int main()
   return failed_tests != 0 ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
+template <typename V, typename... Ts>
+  consteval std::array<V, simd::__div_ceil(int(sizeof...(Ts)), V::size())>
+  make_packed_array(Ts... values)
+  {
+    using T = typename V::value_type;
+    const std::array<T, sizeof...(Ts)> inputs = {static_cast<T>(values)...};
+    std::array<V, simd::__div_ceil(int(sizeof...(Ts)), V::size())> r = {};
+    if constexpr (r.size() == 1)
+      {
+        constexpr int ndups = simd::__div_ceil(V::size(), int(sizeof...(Ts)));
+        simd::basic_vec tmp = inputs;
+        constexpr auto [...is] = std::_IotaArray<ndups>;
+        r[0] = std::get<0>(simd::chunk<V>(simd::cat(((void)is, tmp)...)));
+      }
+    else
+      {
+        auto it = inputs.begin();
+        for (std::size_t i = 0; i < r.size() - 1; ++i, it += V::size())
+          r[i] = simd::unchecked_load<V>(it, inputs.end());
+        r.back() = simd::partial_load<V>(it, inputs.end());
+      }
+    return r;
+  }
+
 #endif  // TESTS_UNITTEST_PCH_H_
