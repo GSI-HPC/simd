@@ -293,8 +293,10 @@ namespace std::simd
     {
       static_assert(__width_of<_UV> == __width_of<_TV>);
 #if _GLIBCXX_X86
-      constexpr bool __to_f16 = is_same_v<__vec_value_type<_UV>, _Float16>;
-      constexpr bool __from_f16 = is_same_v<__vec_value_type<_TV>, _Float16>;
+      using _Up = __vec_value_type<_UV>;
+      using _Tp = __vec_value_type<_TV>;
+      constexpr bool __to_f16 = is_same_v<_Up, _Float16>;
+      constexpr bool __from_f16 = is_same_v<_Tp, _Float16>;
       constexpr bool __needs_f16c = _Traits._M_have_f16c() && !_Traits._M_have_avx512fp16()
                                       && (__to_f16 || __from_f16);
       if (__needs_f16c && !__is_const_known(__v))
@@ -302,11 +304,10 @@ namespace std::simd
           if constexpr (__needs_f16c)
             return __x86_cvt_f16c<_UV>(__v);
         }
-      if constexpr (is_floating_point_v<__vec_value_type<_TV>>
-                      && is_integral_v<__vec_value_type<_UV>> && sizeof(_UV) < sizeof(_TV)
-                      && sizeof(__vec_value_type<_UV>) < sizeof(int))
+      if constexpr (is_floating_point_v<_Tp> && is_integral_v<_Up>
+                      && sizeof(_UV) < sizeof(_TV) && sizeof(_Up) < sizeof(int))
         {
-          using _Ip = __integer_from<std::min(sizeof(int), sizeof(__vec_value_type<_TV>))>;
+          using _Ip = __integer_from<std::min(sizeof(int), sizeof(_Tp))>;
           using _IV = __vec_builtin_type<_Ip, __width_of<_TV>>;
           return __vec_cast<_UV>(__vec_cast<_IV>(__v));
         }
