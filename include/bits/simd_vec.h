@@ -1037,6 +1037,13 @@ namespace std::simd
             }
         }
 
+#if VIR_NEXT_PATCH
+      [[__gnu__::__always_inline__]]
+      inline basic_vec
+      _M_assoc_barrier() const
+      { return __builtin_assoc_barrier(_M_data); }
+
+#endif
       // [simd.overview] default constructor ----------------------------------
       basic_vec() = default;
 

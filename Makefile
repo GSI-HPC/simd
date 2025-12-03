@@ -50,6 +50,36 @@ info: $(check_targets)
 	@echo "Compile and run tests via 'make check'."
 	@echo "For all possible check targets call 'make help'."
 
+lib_srcs ::= $(patsubst lib/%.cpp,%,$(wildcard lib/*.cpp))
+
+libarchs ::= v1 v2 v3a v3b v4
+
+archv1 := -march=x86-64 -mtune=generic
+archv2 := -msse4.1 -mtune=generic
+archv3a := -mavx -mtune=ivybridge
+archv3b := -march=x86-64-v3 -mtune=znver3
+archv4 := -march=x86-64-v4 -mtune=znver5 -mavx512fp16
+
+define lib_template
+$(objdir)/$(1)/%.o: lib/%.cpp include/bits/*.h lib/*.h
+	@printf -- '$$(msg_build) $$@\n'
+	@mkdir -p $$(dir $$@)
+	@$$(call call_compiler,$$(CXXFLAGS) -U_GLIBCXX_ASSERTIONS $(arch$(1)) -I include -c -o $$@ $$<)
+
+$(objdir)/$(1)/finite-%.o: lib/%.cpp include/bits/*.h lib/*.h
+	@printf -- '$$(msg_build) $$@\n'
+	@mkdir -p $$(dir $$@)
+	@$$(call call_compiler,$$(CXXFLAGS) -U_GLIBCXX_ASSERTIONS $(arch$(1)) -ffinite-math-only -I include -c -o $$@ $$<)
+
+endef
+
+$(foreach arch,$(libarchs),$(eval $(call lib_template,$(arch))))
+
+$(objdir)/libsimd.so: $(foreach src,$(lib_srcs),$(foreach arch,$(libarchs),$(objdir)/$(arch)/$(src).o)) \
+                      $(foreach src,$(lib_srcs),$(foreach arch,$(libarchs),$(objdir)/$(arch)/finite-$(src).o))
+	@printf -- '$(msg_link) $@\n'
+	@$(LINK_CXX) $(CXXFLAGS) -fno-lto -shared -o $@ $^
+
 fortests := for t in $(tests); do
 fortestarchs := for a in $(testarchs); do
 fortesttypes := for type in $(testtypes); do

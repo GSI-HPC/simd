@@ -22,6 +22,11 @@
 // [simd.math] ----------------------------------------------------------------
 namespace std::simd
 {
+  template <typename _TV>
+    concept __simd_clonable = __vec_builtin<_TV> && sizeof(_TV) >= 16
+                                && (is_same_v<__vec_value_type<_TV>, float>
+                                      || is_same_v<__vec_value_type<_TV>, double>);
+
   /** \internal
    * Check whether \p __s matches "(( *__simd__". If it matches we assume it's a simd-clones
    * attribute declaration as used in glibc's <math.h>.
@@ -60,9 +65,6 @@ namespace std::simd
   // fn(double) math function. We assume that a float simd-clone exists then, too. However, if for
   // some reason the body of __fast_fn does not compile to something GCC wants to inline, then the
   // gnu_inline attribute makes a call to the __fast_fn function in the library.
-  //
-  // FIXME: The __fast_<fn>[_2x] and __<fn>[_2x] functions currently use a _TargetTraits template
-  // parameter, which is way too coarse.
 
 #if _GLIBCXX_X86
 
@@ -72,6 +74,46 @@ namespace std::simd
   // calling convention function attribute, though.
   // (asm: it is important to fake a read-write to xmm0 in order to ensure no function gets called
   // without saving xmm1 to the stack - unless xmm1 is an argument to that function call)
+  //
+  // with this hack (hypot2 benchmark on Intel(R) Core(TM) Ultra 7 165U):
+  //   TYPE                  Latency     Speedup     Throughput     Speedup
+  //                   [cycles/call] [per value]  [cycles/call] [per value]
+  //  float,                    56.2           1           11.9           1
+  //  float, 8                    67        6.71           24.9        3.83
+  //  float, 16                 69.8        12.9             46        4.15
+  //  float, 32                 95.1        18.9           95.1        4.01
+  //  float, 64                  193        18.6            194        3.93
+  // ----------------------------------------------------------------------
+  //   TYPE                  Latency     Speedup     Throughput     Speedup
+  //                   [cycles/call] [per value]  [cycles/call] [per value]
+  // double,                    97.4           1             18           1
+  // double, 4                  79.9        4.88           21.1         3.4
+  // double, 8                  81.5        9.56           42.9        3.34
+  // double, 16                  100        15.6           91.9        3.13
+  // double, 32                  190        16.4            188        3.05
+  //
+  // without this hack:
+  //  TYPE                   Latency     Speedup     Throughput     Speedup
+  //                   [cycles/call] [per value]  [cycles/call] [per value]
+  //  float,                    56.2           1           11.9           1
+  //  float, 8                  66.9        6.71           24.9        3.84
+  //  float, 16                 79.3        11.3             47        4.06
+  //  float, 32                 99.9          18            101        3.78
+  //  float, 64                  206        17.4            208        3.68
+  // ----------------------------------------------------------------------
+  //  TYPE                   Latency     Speedup     Throughput     Speedup
+  //                   [cycles/call] [per value]  [cycles/call] [per value]
+  // double,                    97.5           1             18           1
+  // double, 4                  79.8        4.89           21.1        3.41
+  // double, 8                  91.1        8.56           46.9        3.07
+  // double, 16                  107        14.5           99.1         2.9
+  // double, 32                  203        15.3            202        2.85
+  //
+  // The Latency benchmark uses the result as one input to the next hypot call. The Throughput
+  // benchmark completely discards the result. Consequently, the performance difference in
+  // Throughput is only due to the library function having to store to memory rather than returning
+  // in registers.
+
 #define _GLIBCXX_SIMD_MATH_2X_CALL(fn, arg)                                                        \
   remove_cvref_t<decltype(arg._M_get_high()._M_get())> __hi;                                       \
   auto __lo = fn(arg._M_get_low()._M_get(), arg._M_get_high()._M_get());                           \
@@ -85,12 +127,16 @@ namespace std::simd
 
 #define _GLIBCXX_SIMD_MATH_2X_CALL3(fn, arg0, arg1, arg2)                                          \
   remove_cvref_t<decltype(arg0._M_get_high()._M_get())> __hi;                                      \
-  auto __lo = fn<_Traits>(arg0._M_get_low()._M_get(), arg1._M_get_low()._M_get(),                  \
-                          arg2._M_get_low()._M_get(), arg0._M_get_high()._M_get(),                 \
-                          arg1._M_get_high()._M_get(), arg2._M_get_high()._M_get());               \
+  auto __lo = fn(arg0._M_get_low()._M_get(), arg1._M_get_low()._M_get(),                           \
+                 arg2._M_get_low()._M_get(), arg0._M_get_high()._M_get(),                          \
+                 arg1._M_get_high()._M_get(), arg2._M_get_high()._M_get());                        \
   asm("" : "={xmm1}"(__hi), "+{xmm0}"(__lo))
 
-#define _GLIBCXX_SIMD_MATH_RET_TYPE _V0
+#define _GLIBCXX_SIMD_MATH_RET_TYPE(V0, V1) V0
+
+#define _GLIBCXX_SIMD_MATH_RETURN(lo, hi)                                                          \
+  asm("" :: "{xmm1}"(hi), "{xmm0}"(lo));                                                           \
+  return lo
 
 #else
 
@@ -102,11 +148,13 @@ namespace std::simd
                                arg0._M_get_high()._M_get(), arg1._M_get_high()._M_get())
 
 #define _GLIBCXX_SIMD_MATH_2X_CALL3(fn, arg0, arg1, arg2)                                          \
-  const auto [__lo, __hi] = fn<_Traits>(arg0._M_get_low()._M_get(), arg1._M_get_low()._M_get(),    \
-                                        arg2._M_get_low()._M_get(), arg0._M_get_high()._M_get(),   \
-                                        arg1._M_get_high()._M_get(), arg2._M_get_high()._M_get())
+  const auto [__lo, __hi] = fn(arg0._M_get_low()._M_get(), arg1._M_get_low()._M_get(),             \
+                               arg2._M_get_low()._M_get(), arg0._M_get_high()._M_get(),            \
+                               arg1._M_get_high()._M_get(), arg2._M_get_high()._M_get())
 
-#define _GLIBCXX_SIMD_MATH_RET_TYPE pair<_V0, _V1>
+#define _GLIBCXX_SIMD_MATH_RET_TYPE(V0, V1) pair<V0, V1>
+
+#define _GLIBCXX_SIMD_MATH_RETURN(lo, hi) return pair(lo, hi)
 
 #endif
 
@@ -153,7 +201,7 @@ namespace std::simd
     { return fn<_Traits, __deduced_vec_t<_Vp>>(__x, __y, __z); }
 
 #define _GLIBCXX_SIMD_MATH_CALL(fn)                                                                \
-  template <typename _TV>                                                                          \
+  template <_ArchTraits, __simd_clonable _TV>                                                      \
     requires (_GLIBCXX_SIMD_HAS_SIMD_CLONE(fn))                                                    \
     [[__gnu__::__gnu_inline__]]                                                                    \
     inline _TV                                                                                     \
@@ -163,22 +211,21 @@ namespace std::simd
       return _TV{std::fn(__x[__is])...};                                                           \
     }                                                                                              \
                                                                                                    \
-  template <typename _Vp, _TargetTraits = {}>                                                      \
-    requires (!_GLIBCXX_SIMD_HAS_SIMD_CLONE(fn))                                                   \
+  template <_ArchTraits, typename _Vp>                                                             \
+    requires (!__simd_clonable<_Vp> || !_GLIBCXX_SIMD_HAS_SIMD_CLONE(fn))                          \
     extern _Vp                                                                                     \
     __fast_##fn(_Vp);                                                                              \
                                                                                                    \
-  template <typename _V0, typename _V1, _TargetTraits = {}>                                        \
-    requires (!_GLIBCXX_SIMD_HAS_SIMD_CLONE(fn))                                                   \
-    extern _GLIBCXX_SIMD_MATH_RET_TYPE                                                             \
+  template <_ArchTraits, typename _V0, typename _V1>                                               \
+    extern _GLIBCXX_SIMD_MATH_RET_TYPE(_V0, _V1)                                                   \
     __fast_2x_##fn(_V0, _V1);                                                                      \
                                                                                                    \
-  template <typename _Vp, _TargetTraits = {}>                                                      \
-    _Vp                                                                                            \
+  template <_TargetTraits, typename _Vp>                                                           \
+    extern _Vp                                                                                     \
     __##fn(_Vp);                                                                                   \
                                                                                                    \
-  template <typename _V0, typename _V1, _TargetTraits = {}>                                        \
-    _GLIBCXX_SIMD_MATH_RET_TYPE                                                                    \
+  template <_TargetTraits, typename _V0, typename _V1>                                             \
+    extern _GLIBCXX_SIMD_MATH_RET_TYPE(_V0, _V1)                                                   \
     __2x_##fn(_V0, _V1);                                                                           \
                                                                                                    \
   template<_TargetTraits _Traits = {}, __math_floating_point _Vp>                                  \
@@ -197,52 +244,53 @@ namespace std::simd
       else if constexpr (_Traits.template _M_eval_as_f32<typename _Vp::value_type>())              \
         return _Vp(fn<_Traits, rebind_t<float, _Vp>>(__x));                                        \
       else if constexpr (_Vp::abi_type::_S_nreg == 1 && _Traits._M_fast_math())                    \
-        return __fast_##fn(__x._M_get());                                                          \
+        return __fast_##fn<_ArchTraits(_Traits)._M_math_abi()>(__x._M_get());                      \
       else if constexpr (_Vp::abi_type::_S_nreg == 1)                                              \
-        return __##fn(__x._M_get());                                                               \
+        return __##fn<_Traits._M_math_abi()>(__x._M_get());                                        \
       else if constexpr (_Vp::abi_type::_S_nreg == 2 && _Traits._M_fast_math()                     \
                            && !_GLIBCXX_SIMD_HAS_SIMD_CLONE(fn))                                   \
         {                                                                                          \
-          _GLIBCXX_SIMD_MATH_2X_CALL(__fast_2x_##fn, __x);                                         \
+          _GLIBCXX_SIMD_MATH_2X_CALL(__fast_2x_##fn<_ArchTraits(_Traits)._M_math_abi()>, __x);     \
           return _Vp::_S_init(__lo, __hi);                                                         \
         }                                                                                          \
       else if constexpr (_Vp::abi_type::_S_nreg == 2 && !_Traits._M_fast_math())                   \
         {                                                                                          \
-          _GLIBCXX_SIMD_MATH_2X_CALL(__2x_##fn, __x);                                              \
+          _GLIBCXX_SIMD_MATH_2X_CALL(__2x_##fn<_Traits._M_math_abi()>, __x);                       \
           return _Vp::_S_init(__lo, __hi);                                                         \
         }                                                                                          \
       else                                                                                         \
         return _Vp::_S_init(fn<_Traits>(__x._M_get_low()), fn(__x._M_get_high()));                 \
     }
 
-#define _GLIBCXX_SIMD_MATH_CALL2(fn)                                                               \
-  template <typename _TV>                                                                          \
-    requires (_GLIBCXX_SIMD_HAS_SIMD_CLONE(fn))                                                    \
+#define _GLIBCXX_SIMD_MATH_CALL2(fn, allow_clone)                                                  \
+  template <_ArchTraits, __simd_clonable _TV>                                                      \
+    requires (allow_clone && _GLIBCXX_SIMD_HAS_SIMD_CLONE(fn))                                     \
     [[__gnu__::__gnu_inline__]]                                                                    \
     inline _TV                                                                                     \
-    __fast_##fn(_TV __x0, _TV __x1)                                                                \
+    __fast_##fn(_TV __x0, _TV __x1) noexcept                                                       \
     {                                                                                              \
       constexpr auto [...__is] = _IotaArray<__width_of<_TV>>;                                      \
       return _TV{std::fn(__x0[__is], __x1[__is])...};                                              \
     }                                                                                              \
                                                                                                    \
-  template <typename _TV, _TargetTraits = {}>                                                      \
-    requires (!_GLIBCXX_SIMD_HAS_SIMD_CLONE(fn))                                                   \
+  template <_ArchTraits, typename _TV>                                                             \
+    requires (!allow_clone || !__simd_clonable<_TV> || !_GLIBCXX_SIMD_HAS_SIMD_CLONE(fn))          \
+    [[__gnu__::__const__]]                                                                         \
     extern _TV                                                                                     \
-    __fast_##fn(_TV, _TV);                                                                         \
+    __fast_##fn(_TV, _TV) noexcept;                                                                \
                                                                                                    \
-  template <typename _V0, typename _V1, _TargetTraits = {}>                                        \
-    requires (!_GLIBCXX_SIMD_HAS_SIMD_CLONE(fn))                                                   \
-    extern _GLIBCXX_SIMD_MATH_RET_TYPE                                                             \
-    __fast_2x_##fn(_V0, _V0, _V1, _V1);                                                            \
+  template <_ArchTraits, typename _V0, typename _V1>                                               \
+    [[__gnu__::__const__]]                                                                         \
+    extern _GLIBCXX_SIMD_MATH_RET_TYPE(_V0, _V1)                                                   \
+    __fast_2x_##fn(_V0, _V0, _V1, _V1) noexcept;                                                   \
                                                                                                    \
-  template <typename _TV, _TargetTraits = {}>                                                      \
+  template <_TargetTraits, typename _TV>                                                           \
     _TV                                                                                            \
-    __##fn(_TV, _TV);                                                                              \
+    __##fn(_TV, _TV) noexcept;                                                                     \
                                                                                                    \
-  template <typename _V0, typename _V1, _TargetTraits = {}>                                        \
-    _GLIBCXX_SIMD_MATH_RET_TYPE                                                                    \
-    __2x_##fn(_V0, _V0, _V1, _V1);                                                                 \
+  template <_TargetTraits, typename _V0, typename _V1>                                             \
+    _GLIBCXX_SIMD_MATH_RET_TYPE(_V0, _V1)                                                          \
+    __2x_##fn(_V0, _V0, _V1, _V1) noexcept;                                                        \
                                                                                                    \
   template <_TargetTraits _Traits = {}, __math_floating_point _Vp>                                 \
     [[__gnu__::__always_inline__]]                                                                 \
@@ -260,18 +308,19 @@ namespace std::simd
       else if constexpr (_Traits.template _M_eval_as_f32<typename _Vp::value_type>())              \
         return _Vp(fn<_Traits, rebind_t<float, _Vp>>(__x, __y));                                   \
       else if constexpr (_Vp::abi_type::_S_nreg == 1 && _Traits._M_fast_math())                    \
-        return __fast_##fn(__x._M_get(), __y._M_get());                                            \
+        return __fast_##fn<_ArchTraits(_Traits)._M_math_abi()>(__x._M_get(), __y._M_get());        \
       else if constexpr (_Vp::abi_type::_S_nreg == 1)                                              \
-        return __##fn(__x._M_get(), __y._M_get());                                                 \
+        return __##fn<_Traits._M_math_abi()>(__x._M_get(), __y._M_get());                          \
       else if constexpr (_Vp::abi_type::_S_nreg == 2 && _Traits._M_fast_math()                     \
                            && !_GLIBCXX_SIMD_HAS_SIMD_CLONE(fn))                                   \
         {                                                                                          \
-          _GLIBCXX_SIMD_MATH_2X_CALL2(__fast_2x_##fn, __x, __y);                                   \
+          _GLIBCXX_SIMD_MATH_2X_CALL2(__fast_2x_##fn<_ArchTraits(_Traits)._M_math_abi()>,          \
+                                      __x, __y);                                                   \
           return _Vp::_S_init(__lo, __hi);                                                         \
         }                                                                                          \
       else if constexpr (_Vp::abi_type::_S_nreg == 2 && !_Traits._M_fast_math())                   \
         {                                                                                          \
-          _GLIBCXX_SIMD_MATH_2X_CALL2(__2x_##fn, __x, __y);                                        \
+          _GLIBCXX_SIMD_MATH_2X_CALL2(__2x_##fn<_Traits._M_math_abi()>, __x, __y);                 \
           return _Vp::_S_init(__lo, __hi);                                                         \
         }                                                                                          \
       else                                                                                         \
@@ -577,7 +626,39 @@ namespace std::simd
     [[__gnu__::__always_inline__]]
     constexpr typename __deduced_vec_t<_Vp>::mask_type
     isnormal(const _Vp& __x)
-    { static_assert(false, "TODO"); }
+    {
+      using _Kp = typename __deduced_vec_t<_Vp>::mask_type;
+      if constexpr (!is_same_v<_Vp, __deduced_vec_t<_Vp>>)
+        return isnormal<_Traits, __deduced_vec_t<_Vp>>(__x);
+      else if (__is_const_known(__x))
+        return _Kp([&] [[__gnu__::__always_inline__]] (int __i) {
+                 return std::isnormal(__x[__i]);
+               });
+      else if constexpr (_Vp::size() == 1)
+        return std::isnormal(__x[0]);
+      else if constexpr (_Traits.template _M_eval_as_f32<typename _Vp::value_type>())
+        return _Kp(isnormal<_Traits, rebind_t<float, _Vp>>(__x));
+      else if constexpr (_Vp::abi_type::_S_nreg > 1)
+        return _Kp::_S_concat(isnormal<_Traits>(__x._M_get_low()),
+                              isnormal<_Traits>(__x._M_get_high()));
+      // TODO: Use fpclassp[ds] instruction with AVX512
+      else
+        {
+          using _Tp = typename _Vp::value_type;
+          using _Lm = numeric_limits<_Tp>;
+          const _Vp __a = fabs<_Traits>(__x);
+          if constexpr (_Traits._M_finite_math_only())
+            return __a >= _Lm::min();
+          else
+            { // use integer compare to avoid raising FE_INVALID
+              using _Ip = __integer_from<sizeof(_Tp)>;
+              using _IV = rebind_t<_Ip, _Vp>;
+              const _IV __ai = __builtin_bit_cast(_IV, __a);
+              return __ai >= __builtin_bit_cast(_Ip, _Lm::min())
+                       && __ai <= __builtin_bit_cast(_Ip, _Lm::max());
+            }
+        }
+    }
 
   template <_TargetTraits _Traits = {}, __math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
@@ -647,7 +728,7 @@ namespace std::simd
   _GLIBCXX_SIMD_MATH_CALL(acos)
   _GLIBCXX_SIMD_MATH_CALL(asin)
   _GLIBCXX_SIMD_MATH_CALL(atan)
-  _GLIBCXX_SIMD_MATH_CALL2(atan2)
+  _GLIBCXX_SIMD_MATH_CALL2(atan2, true)
   _GLIBCXX_SIMD_MATH_CALL(cos)
   _GLIBCXX_SIMD_MATH_CALL(sin)
   _GLIBCXX_SIMD_MATH_CALL(tan)
@@ -670,30 +751,32 @@ namespace std::simd
 
   _GLIBCXX_SIMD_MATH_CALL(cbrt)
 
-  _GLIBCXX_SIMD_MATH_CALL2(hypot)
+  _GLIBCXX_SIMD_MATH_CALL2(hypot, false)
+
+  template <_ArchTraits, typename _TV>
+    [[__gnu__::__const__]]
+    extern _TV
+    __fast_hypot(_TV, _TV, _TV) noexcept;
+
+  template <_ArchTraits, typename _V0, typename _V1>
+    [[__gnu__::__const__]]
+    extern _GLIBCXX_SIMD_MATH_RET_TYPE(_V0, _V1)
+    __fast_2x_hypot(_V0, _V0, _V0, _V1, _V1, _V1) noexcept;
 
   template <_TargetTraits, typename _TV>
     extern _TV
-    __fast_hypot(_TV, _TV, _TV);
+    __hypot(_TV, _TV, _TV) noexcept;
 
   template <_TargetTraits, typename _V0, typename _V1>
-    requires (!_GLIBCXX_SIMD_HAS_SIMD_CLONE(fn))
-    extern _GLIBCXX_SIMD_MATH_RET_TYPE
-    __fast_2x_hypot(_V0, _V0, _V0, _V1, _V1, _V1);
-
-  template <_TargetTraits, typename _TV>
-    _TV
-    __hypot(_TV, _TV, _TV);
-
-  template <_TargetTraits, typename _V0, typename _V1>
-    _GLIBCXX_SIMD_MATH_RET_TYPE
-    __2x_hypot(_V0, _V0, _V0, _V1, _V1, _V1);
+    extern _GLIBCXX_SIMD_MATH_RET_TYPE(_V0, _V1)
+    __2x_hypot(_V0, _V0, _V0, _V1, _V1, _V1) noexcept;
 
   template<_TargetTraits _Traits = {}, typename _Vp>
     [[__gnu__::__always_inline__]]
     constexpr __deduced_vec_t<_Vp>
     hypot(const _Vp& __x, const _Vp& __y, const _Vp& __z)
     {
+      static_assert(!_Traits._M_math_abi()._M_have_mmx());
       if constexpr (!is_same_v<_Vp, __deduced_vec_t<_Vp>>)
         return hypot<_Traits, __deduced_vec_t<_Vp>>(__x, __y, __z);
       else if (__is_const_known(__x, __y, __z))
@@ -709,26 +792,68 @@ namespace std::simd
                             hypot<_Traits>(__x._M_get_high(), __y._M_get_high()));
       else if constexpr (_Vp::abi_type::_S_nreg == 2 && _Traits._M_fast_math())
         {
-          _GLIBCXX_SIMD_MATH_2X_CALL3(__fast_2x_hypot, __x, __y, __z);
+          _GLIBCXX_SIMD_MATH_2X_CALL3(__fast_2x_hypot<_ArchTraits(_Traits)._M_math_abi()>,
+                                      __x, __y, __z);
           return _Vp::_S_init(__lo, __hi);
         }
       else if constexpr (_Vp::abi_type::_S_nreg == 2 && !_Traits._M_fast_math())
         {
-          _GLIBCXX_SIMD_MATH_2X_CALL3(__2x_hypot, __x, __y, __z);
+          _GLIBCXX_SIMD_MATH_2X_CALL3(__2x_hypot<_Traits._M_math_abi()>, __x, __y, __z);
           return _Vp::_S_init(__lo, __hi);
         }
       else if constexpr (_Vp::abi_type::_S_nreg == 1 && _Traits._M_fast_math())
-        return __fast_hypot<_Traits>(__x._M_get(), __y._M_get(), __z._M_get());
+        return __fast_hypot<_ArchTraits(_Traits)._M_math_abi()>(__x._M_get(), __y._M_get(),
+                                                                __z._M_get());
       else if constexpr (_Vp::abi_type::_S_nreg == 1)
-        return __hypot<_Traits>(__x._M_get(), __y._M_get(), __z._M_get());
+        return __hypot<_Traits._M_math_abi()>(__x._M_get(), __y._M_get(), __z._M_get());
       else
         static_assert(false);
     }
 
   _GLIBCXX_SIMD_MATH_3ARG_OVERLOADS(constexpr __deduced_vec_t<_Vp>, hypot)
 
-  _GLIBCXX_SIMD_MATH_CALL2(pow)
-  _GLIBCXX_SIMD_MATH_CALL(sqrt)
+  _GLIBCXX_SIMD_MATH_CALL2(pow, true)
+
+  template <_TargetTraits _Traits, __vec_builtin _TV>
+    [[__gnu__::__always_inline__]]
+    inline _TV
+    __sqrt(_TV __x)
+    {
+      constexpr bool __is_double = is_same_v<__vec_value_type<_TV>, double>;
+      constexpr bool __is_float = is_same_v<__vec_value_type<_TV>, float>;
+      constexpr bool __is_flt16 = is_same_v<__vec_value_type<_TV>, _Float16>;
+#if _GLIBCXX_X86
+      if constexpr (sizeof(__x) < 16)
+        return _VecOps<_TV>::_S_extract(__sqrt<_Traits>(__vec_zero_pad_to_16(__x)));
+      else if constexpr (__is_double && sizeof(__x) == 16)
+        return __builtin_ia32_sqrtpd(__x);
+      else if constexpr (__is_double && sizeof(__x) == 32)
+        return __builtin_ia32_sqrtpd256(__x);
+      else if constexpr (__is_double && sizeof(__x) == 64)
+        return __builtin_ia32_sqrtpd512_mask(__x, _TV(), -1, 0x04);
+      else if constexpr (__is_float && sizeof(__x) == 16)
+        return __builtin_ia32_sqrtps(__x);
+      else if constexpr (__is_float && sizeof(__x) == 32)
+        return __builtin_ia32_sqrtps256(__x);
+      else if constexpr (__is_float && sizeof(__x) == 64)
+        return __builtin_ia32_sqrtps512_mask(__x, _TV(), -1, 0x04);
+      else if constexpr (__is_flt16 && sizeof(__x) == 16)
+        return __builtin_ia32_sqrtph128_mask(__x, _TV(), -1);
+      else if constexpr (__is_flt16 && sizeof(__x) == 32)
+        return __builtin_ia32_sqrtph256_mask(__x, _TV(), -1);
+      else if constexpr (__is_flt16 && sizeof(__x) == 64)
+        return __builtin_ia32_sqrtph512_mask_round (__x, _TV(), -1, 0x04);
+      else
+        static_assert(false);
+#endif
+    }
+
+  template <_TargetTraits _Traits = {}, __math_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr __deduced_vec_t<_Vp>
+    sqrt(const _Vp& __x)
+    { _GLIBCXX_SIMD_MATH_1ARG_IMPL(sqrt); }
+
   _GLIBCXX_SIMD_MATH_CALL(erf)
   _GLIBCXX_SIMD_MATH_CALL(erfc)
   _GLIBCXX_SIMD_MATH_CALL(lgamma)
@@ -1000,7 +1125,6 @@ namespace std::simd
 #undef _GLIBCXX_SIMD_FN_NAME
 #undef _GLIBCXX_SIMD_MATH_2X_CALL
 #undef _GLIBCXX_SIMD_MATH_2X_CALL2
-#undef _GLIBCXX_SIMD_MATH_RET_TYPE
 #undef _GLIBCXX_SIMD_MATH_CALL
 #undef _GLIBCXX_SIMD_MATH_CALL2
 

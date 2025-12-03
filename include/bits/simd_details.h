@@ -548,6 +548,13 @@ namespace std::simd
    */
   struct _OptTraits
   {
+#if VIR_NEXT_PATCH
+    // keep only finite-math-only flag
+    consteval _OptTraits
+    _M_math_abi() const
+    { return _OptTraits{_M_build_flags & 0b100}; }
+
+#endif
     consteval bool
     _M_test(int __bit) const
     { return ((_M_build_flags >> __bit) & 1) == 1; }
@@ -789,6 +796,30 @@ namespace std::simd
   {
     __UINT64_TYPE__ _M_flags = _GLIBCXX_SIMD_ARCH_TRAITS_INIT;
 
+#if VIR_NEXT_PATCH
+    consteval _ArchTraits
+    _M_math_abi() const
+    {
+      // keep only SSE4.1, AVX, FMA, AVX512F, (AVX512FP16)
+      constexpr __UINT64_TYPE__ __v1_mask  = 0b0000000000'0000000110; // SSE2
+      constexpr __UINT64_TYPE__ __v2_mask  = 0b0000000000'0000111110; // SSE4.1
+      constexpr __UINT64_TYPE__ __v3a_mask = 0b0000000000'0111111110; // AVX
+      constexpr __UINT64_TYPE__ __v3b_mask = 0b0000011111'1111111110; // Haswell–...lake / Zen1–3
+      constexpr __UINT64_TYPE__ __v4_mask  = 0b1111111111'1111111110; // Xeon / Xen4–5
+      // the FP16 flag is implied by passing float16_t vectors
+      if ((_M_flags & __v4_mask) == __v4_mask)
+        return _ArchTraits{__v4_mask};
+      if ((_M_flags & __v3b_mask) == __v3b_mask)
+        return _ArchTraits{__v3b_mask};
+      if ((_M_flags & __v3a_mask) == __v3a_mask)
+        return _ArchTraits{__v3a_mask};
+      if ((_M_flags & __v2_mask) == __v2_mask)
+        return _ArchTraits{__v2_mask};
+      if ((_M_flags & __v1_mask) == __v1_mask)
+        return _ArchTraits{__v1_mask};
+    }
+
+#endif
     consteval bool
     _M_test(int __bit) const
     { return ((_M_flags >> __bit) & 1) == 1; }
@@ -1023,7 +1054,15 @@ namespace std::simd
    */
   struct _TargetTraits
   : _ArchTraits, _OptTraits
+#if VIR_NEXT_PATCH
+  {
+    consteval _TargetTraits
+    _M_math_abi() const
+    { return _TargetTraits{_ArchTraits::_M_math_abi(), _OptTraits::_M_math_abi()}; }
+  };
+#else
   {};
+#endif
 
   /** @internal
    * Alias for an ABI tag such that basic_vec<_Tp, __native_abi_t_<_Tp>> stores one SIMD register of
