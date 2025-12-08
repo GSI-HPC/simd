@@ -1392,8 +1392,11 @@ namespace std::simd
 
   template<__simd_floating_point _Vp>
     rebind_t<complex<typename _Vp::value_type>, _Vp>
-    polar(const _Vp& __x, const _Vp& __y = {})
-    { static_assert(false, "TODO"); }
+    polar(const _Vp& __r, const _Vp& __theta = {})
+    {
+      // TODO: use sincos instead of two calls
+      return {__r * cos(__theta), __r * sin(__theta)};
+    }
 
   template<__simd_complex _Vp>
     [[__gnu__::__always_inline__]]
