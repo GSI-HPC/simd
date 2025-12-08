@@ -608,7 +608,33 @@ namespace std::simd
     [[__gnu__::__always_inline__]]
     constexpr typename __deduced_vec_t<_Vp>::mask_type
     isfinite(const _Vp& __x)
-    { static_assert(false, "TODO"); }
+    {
+      using _Kp = typename __deduced_vec_t<_Vp>::mask_type;
+      if constexpr (_Traits._M_finite_math_only())
+        return _Kp(true);
+      else if constexpr (!is_same_v<_Vp, __deduced_vec_t<_Vp>>)
+        return isfinite<_Traits, __deduced_vec_t<_Vp>>(__x);
+      else if (__is_const_known(__x))
+        return _Kp([&] [[__gnu__::__always_inline__]] (int __i) {
+                 return std::isfinite(__x[__i]);
+               });
+      else if constexpr (_Vp::size() == 1)
+        return std::isfinite(__x[0]);
+      else if constexpr (_Traits.template _M_eval_as_f32<typename _Vp::value_type>())
+        return _Kp(isfinite<_Traits, rebind_t<float, _Vp>>(__x));
+      else if constexpr (_Vp::abi_type::_S_nreg > 1)
+        return _Kp::_S_concat(isfinite<_Traits>(__x._M_get_low()),
+                              isfinite<_Traits>(__x._M_get_high()));
+      else
+        {
+          using _Tp = typename _Vp::value_type;
+          // use integer compare to avoid raising FE_INVALID
+          using _Ip = __integer_from<sizeof(_Tp)>;
+          using _IV = rebind_t<_Ip, _Vp>;
+          const _IV __ai = __builtin_bit_cast(_IV, fabs<_Traits>(__x));
+          return __ai <= __builtin_bit_cast(_Ip, numeric_limits<_Tp>::max());
+        }
+    }
 
   template <__math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
