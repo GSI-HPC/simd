@@ -2334,14 +2334,11 @@ namespace std::simd
                                 decltype(std::span(__r))::extent>>;
 #endif
 
-#if 1
-  // FIXME: file new LWG issue about this missing deduction guide
   template <size_t _Bytes, typename _Ap>
     basic_vec(basic_mask<_Bytes, _Ap>)
     -> basic_vec<__integer_from<_Bytes>,
                  decltype(__abi_rebind<__integer_from<_Bytes>, basic_mask<_Bytes, _Ap>::size.value,
                                        _Ap>())>;
-#endif
 
   // [P3319R5] ----------------------------------------------------------------
   template <__vectorizable _Tp>
