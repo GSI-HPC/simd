@@ -281,6 +281,36 @@ namespace std::simd
     __x86_cvt_f16c(_TV __v);
 #endif
 
+#if VIR_NEXT_PATCH
+  template <__vec_builtin _TV>
+    [[__gnu__::__always_inline__]]
+    constexpr _TV
+    __vec_interleave_lo(_TV __x, _TV __y)
+    {
+      constexpr int __n = __width_of<_TV>;
+      auto __rotr = [](int __i) consteval {
+        int __b = __i & 1;
+        return (__i >> 1) | (__b * __n);
+      };
+      constexpr auto [...__is] = _IotaArray<__n>;
+      return __builtin_shufflevector(__x, __y, __rotr(__is)...);
+    }
+
+  template <__vec_builtin _TV>
+    [[__gnu__::__always_inline__]]
+    constexpr _TV
+    __vec_interleave_hi(_TV __x, _TV __y)
+    {
+      constexpr int __n = __width_of<_TV>;
+      auto __rotr = [](int __i) consteval {
+        int __b = __i & 1;
+        return (__i >> 1) | (__b * __n);
+      };
+      constexpr auto [...__is] = _IotaArray<__n>;
+      return __builtin_shufflevector(__x, __y, __n / 2 + __rotr(__is)...);
+    }
+#endif
+
   /** \internal
    * Simple wrapper around __builtin_convertvector to provide static_cast-like syntax.
    *
@@ -311,6 +341,51 @@ namespace std::simd
           using _IV = __vec_builtin_type<_Ip, __width_of<_TV>>;
           return __vec_cast<_UV>(__vec_cast<_IV>(__v));
         }
+#if VIR_NEXT_PATCH
+      if constexpr (!_Traits._M_have_sse4_1() && is_integral_v<_Tp>
+                      && sizeof(_Up) == sizeof(_Tp) * 4)
+        { // GCC uses scalar conversions unless it can use SSE4.1 instructions
+          if constexpr (!is_integral_v<_Up>)
+            {
+              using _Ip = __integer_from<std::min(sizeof(int), sizeof(_Up))>;
+              using _IV = __vec_builtin_type<_Ip, __width_of<_TV>>;
+              return __vec_cast<_UV>(__vec_cast<_IV>(__v));
+            }
+          else if constexpr (sizeof(_TV) == 2)
+            return __vec_split_lo(__vec_cast<__vec_builtin_type<_Up, __width_of<_UV> * 2>>(
+                                    __vec_concat(__v, _TV())));
+          else if constexpr (sizeof(_TV) == 4)
+            {
+              auto __v1 = __vec_zero_pad_to_16(__v);
+              using _V1 = decltype(__v1);
+              if constexpr (is_signed_v<_Tp>)
+                {
+                  if constexpr (sizeof(_Tp) == 1)
+                    {
+                      auto __v2 = __vec_interleave_lo(__v1, __v1);
+                      auto __v4 = __vec_interleave_lo(__v2, __v2);
+                      return reinterpret_cast<_UV>(__vec_bit_cast<__integer_from<sizeof(_Up)>>(__v4)
+                               >> __CHAR_BIT__ * (sizeof(_Up) - 1));
+                    }
+                  else
+                    {
+                      _V1 __sign = __v1 < 0;
+                      using _V2 = __vec_builtin_type_bytes<__integer_from<sizeof(_Tp) * 2>,
+                                                           sizeof(__v1)>;
+                      _V2 __v2 = reinterpret_cast<_V2>(__vec_interleave_lo(__v1, __sign));
+                      _V2 __s2 = reinterpret_cast<_V2>(__vec_interleave_lo(__sign, __sign));
+                      return reinterpret_cast<_UV>(__vec_interleave_lo(__v2, __s2));
+                    }
+                }
+              else
+                {
+                  auto __v2 = __vec_interleave_lo(__v1, _V1());
+                  auto __v4 = __vec_interleave_lo(__v2, _V1());
+                  return reinterpret_cast<_UV>(__v4);
+                }
+            }
+        }
+#endif
 #endif
       return __builtin_convertvector(__v, _UV);
     }

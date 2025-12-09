@@ -1093,7 +1093,7 @@ namespace std::simd
         {}
 
       // [simd.ctor] conversion constructor -----------------------------------
-      template <typename _Up, typename _UAbi>
+      template <typename _Up, typename _UAbi, _TargetTraits _Traits = {}>
         requires (__simd_size_v<_Up, _UAbi> == _S_size)
           && __explicitly_convertible_to<_Up, value_type>
         [[__gnu__::__always_inline__]]
@@ -1104,6 +1104,87 @@ namespace std::simd
         : _M_data([&] [[__gnu__::__always_inline__]] {
             if constexpr (_S_is_scalar)
               return static_cast<value_type>(__x[0]);
+#if VIR_NEXT_PATCH && _GLIBCXX_X86
+            else if constexpr (!_Traits._M_have_ssse3() && sizeof(__x) == 32
+                                 && sizeof(value_type) == 2 && sizeof(_M_data) == 16)
+              {
+                if constexpr (is_floating_point_v<_Up>)
+                  return basic_vec(rebind_t<int, basic_vec>(__x))._M_data;
+                else
+                  {
+                    static_assert(_UAbi::_S_nreg == 2);
+                    auto __a = reinterpret_cast<_DataType>( // a.b.c.d.
+                                 __x._M_data0._M_data);
+                    auto __b = reinterpret_cast<_DataType>( // e.f.g.h.
+                                 __vec_zero_pad_to<16>(__x._M_data1._M_concat_data()));
+                    auto __c = __vec_interleave_lo(__a, __b); // ae..bf..
+                    auto __d = __vec_interleave_hi(__a, __b); // cg..dh..
+                    auto __e = __vec_interleave_lo(__c, __d); // aceg....
+                    auto __f = __vec_interleave_hi(__c, __d); // bdfh....
+                    return __vec_interleave_lo(__e, __f); // abcdefgh
+                  }
+              }
+            else if constexpr (!_Traits._M_have_ssse3() && (sizeof(__x) == 32)
+                                 && sizeof(value_type) == 1 && sizeof(_M_data) == 8)
+              {
+                if constexpr (is_floating_point_v<_Up>)
+                  return basic_vec(rebind_t<int, basic_vec>(__x))._M_data;
+                else
+                  {
+                    using _TV = __vec_builtin_type_bytes<__canonical_vec_type_t<value_type>, 16>;
+                    static_assert(_UAbi::_S_nreg == 2);
+                    _TV __a = reinterpret_cast<_TV>(__x._M_data0._M_data);
+                    _TV __b = reinterpret_cast<_TV>(
+                                __vec_zero_pad_to<16>(__x._M_data1._M_concat_data()));
+                    auto __c = __vec_interleave_lo(__a, __b); // aeim....bfjn....
+                    auto __d = __vec_interleave_hi(__a, __b); // cgko....dhlp....
+                    auto __e = __vec_interleave_lo(__c, __d); // acegikmo........
+                    auto __f = __vec_interleave_hi(__c, __d); // bdfhjlnp........
+                    auto __g = __vec_interleave_lo(__e, __f); // abcdefghijklmnop
+                    return __vec_split_lo(__g);
+                  }
+              }
+            else if constexpr (!_Traits._M_have_ssse3() && (sizeof(__x) == 48 || sizeof(__x) == 64)
+                                 && sizeof(value_type) == 1 && sizeof(_M_data) == 16)
+              {
+                if constexpr (is_floating_point_v<_Up>)
+                  return basic_vec(rebind_t<int, basic_vec>(__x))._M_data;
+                else
+                  {
+                    // a...b...c...d...
+                    // .i...j...k...l..
+                    _DataType __a;
+                    _DataType __b;
+                    // e...f...g...h...
+                    // .m...n...o...p..
+                    if constexpr (_UAbi::_S_nreg == 3)
+                      {
+                        __a = reinterpret_cast<_DataType>( // ai..bj..ck..dl..
+                                (__x._M_data0._M_data0 & 0xff)._M_data
+                                  | __vec_zero_pad_to<16>((__x._M_data1 << 8)._M_concat_data()));
+                        __b = reinterpret_cast<_DataType>(__x._M_data0._M_data1._M_data);
+                      }
+                    else if constexpr (_UAbi::_S_nreg == 4)
+                      {
+                        __a = reinterpret_cast<_DataType>( // ai..bj..ck..dl..
+                                (__x._M_data0._M_data0 & 0xff)._M_data
+                                  | (__x._M_data1._M_data0 << 8)._M_data);
+                        __b = reinterpret_cast<_DataType>( // em..fn..go..hp..
+                                (__x._M_data0._M_data1 & 0xff)._M_data
+                                  | __vec_zero_pad_to<16>(
+                                      (__x._M_data1._M_data1 << 8)._M_concat_data()));
+                      }
+                    else
+                      static_assert(false);
+                    auto __c = __vec_interleave_lo(__a, __b); // aeim....bfjn....
+                    auto __d = __vec_interleave_hi(__a, __b); // cgko....dhlp....
+                    auto __e = __vec_interleave_lo(__c, __d); // acegikmo........
+                    auto __f = __vec_interleave_hi(__c, __d); // bdfhjlnp........
+                    auto __g = __vec_interleave_lo(__e, __f); // abcdefghijklmnop
+                    return __g;
+                  }
+              }
+#endif
             else if constexpr (_UAbi::_S_nreg >= 2)
               // __builtin_convertvector (__vec_cast) is inefficient for over-sized inputs.
               // Also e.g. vec<float, 12> -> vec<char, 12> (with SSE2) would otherwise emit 4
