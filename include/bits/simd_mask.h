@@ -1052,14 +1052,14 @@ namespace std::simd
               }();
               constexpr int __n = _IV::size();
               if constexpr (_Bytes * __CHAR_BIT__ >= __n) // '1 << __iota' cannot overflow
-                {
+                { // reduce(select(k, powers_of_2, 0))
                   constexpr _IV __pow2 = _IV(1) << __iota<_IV>;
                   return _Ur(_U0(__select_impl(__k, __pow2, _IV())
                                    ._M_reduce(bit_or<>()))) << _Offset;
                 }
-              else if constexpr (__n % 8 != 0)
-                {
-                  constexpr int __n_lo = __n - __n % 8;
+              else if constexpr (__n % __CHAR_BIT__ != 0)
+                { // recurse after splitting in two
+                  constexpr int __n_lo = __n - __n % __CHAR_BIT__;
                   const auto [__lo, __hi] = chunk<__n_lo>(__k);
 #if VIR_NEXT_PATCH
                   _Ur __bits = __hi.template _M_to_uint<_Offset + __n_lo, _Use_2_for_1>();
@@ -1070,17 +1070,21 @@ namespace std::simd
 #endif
                 }
               else
-                {
-                  constexpr _IV __pow2 = _IV(1) << __iota<_IV> % _IV(8);
+                { // limit powers_of_2 to 1, 2, 4, ..., 128
+                  constexpr _IV __pow2 = _IV(1) << (__iota<_IV> % _IV(__CHAR_BIT__));
                   _IV __x = __select_impl(__k, __pow2, _IV());
+                  // partial reductions of 8 neighboring elements
                   __x |= _IV::_S_static_permute(__x, _SwapNeighbors<4>());
                   __x |= _IV::_S_static_permute(__x, _SwapNeighbors<2>());
                   __x |= _IV::_S_static_permute(__x, _SwapNeighbors<1>());
+                  // permute partial reduction results to the front
                   __x = _IV::_S_static_permute(__x, [](int __i) {
                           return __i * 8 < __n ? __i * 8 : uninit_element;
                         });
+                  // extract front as scalar unsigned
                   _U0 __bits = __builtin_bit_cast(
                                  __similar_vec<_U0, __n * _Bytes / sizeof(_U0), _Ap>, __x)[0];
+                  // mask off unused bits
                   if constexpr (!__has_single_bit(unsigned(__nbits)))
                     __bits &= (_U0(1) << __nbits) - 1;
                   return _Ur(__bits) << _Offset;
