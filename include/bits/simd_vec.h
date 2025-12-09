@@ -622,10 +622,29 @@ namespace std::simd
           return _M_reduce_1(__binary_op)._M_reduce_tail(__rest, __binary_op);
       }
 
+      /** @internal
+       * Shifts elements to the front by @p _Shift positions.
+       *
+       * This function moves elements towards lower indices (front of the vector).
+       * Elements that would shift beyond the vector bounds are replaced with zero.
+       *
+       * @warning The naming can be confusing due to little-endian byte order:
+       * - Despite the name "shifted_to_front", the underlying hardware instruction
+       *   shifts bits to the right (psrl...)
+       * - The function name refers to element indices, not bit positions
+       *
+       * @tparam _Shift Number of positions to shift elements towards the front.
+       *                Must be > 0 and < vector size.
+       *
+       * @return A new vector with elements shifted towards the front.
+       *
+       * Example: vec<int, 4>{1, 2, 3, 4}._M_elements_shifted_to_front<2>()
+       * returns vec<int, 4>{3, 4, 0, 0}
+       */
       template <int _Shift, _ArchTraits _Traits = {}>
         [[__gnu__::__always_inline__]]
         constexpr basic_vec
-        _M_elements_shifted_down() const
+        _M_elements_shifted_to_front() const
         {
           static_assert(_Shift < _S_size && _Shift > 0);
 #ifdef __SSE2__
@@ -687,14 +706,14 @@ namespace std::simd
                 if constexpr (sizeof(_M_data) <= 16 && is_integral_v<value_type>)
                   {
                     if constexpr (_S_size > 8)
-                      __x = __binary_op(__x, __x.template _M_elements_shifted_down<8>());
+                      __x = __binary_op(__x, __x.template _M_elements_shifted_to_front<8>());
                     if constexpr (_S_size > 4)
-                      __x = __binary_op(__x, __x.template _M_elements_shifted_down<4>());
+                      __x = __binary_op(__x, __x.template _M_elements_shifted_to_front<4>());
                     if constexpr (_S_size > 2)
-                      __x = __binary_op(__x, __x.template _M_elements_shifted_down<2>());
+                      __x = __binary_op(__x, __x.template _M_elements_shifted_to_front<2>());
                     // We could also call __binary_op with vec<T, 1> arguments. However,
                     // micro-benchmarking on Intel Ultra 7 165U showed this to be more efficient:
-                    return __binary_op(__x, __x.template _M_elements_shifted_down<1>())[0];
+                    return __binary_op(__x, __x.template _M_elements_shifted_to_front<1>())[0];
                   }
 #endif
                 if constexpr (_S_size > 8)
