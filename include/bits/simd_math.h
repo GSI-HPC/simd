@@ -262,6 +262,24 @@ namespace std::simd
         return _Vp::_S_init(fn<_Traits>(__x._M_get_low()), fn(__x._M_get_high()));                 \
     }
 
+#if 1
+#define _GLIBCXX_SIMD_MATH_CALL2_HANDLE_2X(fn)                                                     \
+      else if constexpr (_Vp::abi_type::_S_nreg == 2 && _Traits._M_fast_math()                     \
+                           && !_GLIBCXX_SIMD_HAS_SIMD_CLONE(fn))                                   \
+        {                                                                                          \
+          _GLIBCXX_SIMD_MATH_2X_CALL2(__fast_2x_##fn<_ArchTraits(_Traits)._M_math_abi()>,          \
+                                      __x, __y);                                                   \
+          return _Vp::_S_init(__lo, __hi);                                                         \
+        }                                                                                          \
+      else if constexpr (_Vp::abi_type::_S_nreg == 2 && !_Traits._M_fast_math())                   \
+        {                                                                                          \
+          _GLIBCXX_SIMD_MATH_2X_CALL2(__2x_##fn<_Traits._M_math_abi()>, __x, __y);                 \
+          return _Vp::_S_init(__lo, __hi);                                                         \
+        }
+#else
+#define _GLIBCXX_SIMD_MATH_CALL2_HANDLE_2X(fn)
+#endif
+
 #define _GLIBCXX_SIMD_MATH_CALL2(fn, allow_clone)                                                  \
   template <_ArchTraits, __simd_clonable _TV>                                                      \
     requires (allow_clone && _GLIBCXX_SIMD_HAS_SIMD_CLONE(fn))                                     \
@@ -311,18 +329,7 @@ namespace std::simd
         return __fast_##fn<_ArchTraits(_Traits)._M_math_abi()>(__x._M_get(), __y._M_get());        \
       else if constexpr (_Vp::abi_type::_S_nreg == 1)                                              \
         return __##fn<_Traits._M_math_abi()>(__x._M_get(), __y._M_get());                          \
-      else if constexpr (_Vp::abi_type::_S_nreg == 2 && _Traits._M_fast_math()                     \
-                           && !_GLIBCXX_SIMD_HAS_SIMD_CLONE(fn))                                   \
-        {                                                                                          \
-          _GLIBCXX_SIMD_MATH_2X_CALL2(__fast_2x_##fn<_ArchTraits(_Traits)._M_math_abi()>,          \
-                                      __x, __y);                                                   \
-          return _Vp::_S_init(__lo, __hi);                                                         \
-        }                                                                                          \
-      else if constexpr (_Vp::abi_type::_S_nreg == 2 && !_Traits._M_fast_math())                   \
-        {                                                                                          \
-          _GLIBCXX_SIMD_MATH_2X_CALL2(__2x_##fn<_Traits._M_math_abi()>, __x, __y);                 \
-          return _Vp::_S_init(__lo, __hi);                                                         \
-        }                                                                                          \
+      _GLIBCXX_SIMD_MATH_CALL2_HANDLE_2X(fn)                                                       \
       else                                                                                         \
         return _Vp::_S_init(fn<_Traits>(__x._M_get_low(), __y._M_get_low()),                       \
                             fn<_Traits>(__x._M_get_high(), __y._M_get_high()));                    \
