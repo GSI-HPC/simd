@@ -1088,18 +1088,42 @@ namespace std::simd
       // [simd.overview] default constructor ----------------------------------
       basic_vec() = default;
 
-      // [simd.overview] impl-def conversions ---------------------------------
+      // [simd.overview] p2 impl-def conversions ---------------------------------
+      /**
+       * @brief Converting constructor from GCC vector builtins.
+       *
+       * This constructor enables direct construction from GCC vector builtins
+       * (<tt>[[gnu::vector_size(N)]]</tt>).
+       *
+       * @param __x GCC vector builtin to convert from.
+       *
+       * @note This constructor is not available when size() equals 1.
+       *
+       * @see operator _DataType() for the reverse conversion.
+       */
       constexpr
       basic_vec(_DataType __x) requires (!_S_is_scalar)
         : _M_data(__x)
       {}
 
+      /**
+       * @brief Conversion operator to GCC vector builtins.
+       *
+       * This operator enables implicit conversion from basic_vec to GCC vector builtins.
+       *
+       * @note This operator is not available when size() equals 1.
+       *
+       * @see basic_vec(_DataType) for the reverse conversion.
+       */
       constexpr
       operator _DataType() const
       requires (!_S_is_scalar)
       { return _M_data; }
 
 #if _GLIBCXX_X86
+      /**
+       * @brief Converting constructor from Intel Intrinsics (__m128, __m128i, ...).
+       */
       template <__vec_builtin _IV>
         requires same_as<__x86_intel_intrin_value_type<value_type>, __vec_value_type<_IV>>
           && (sizeof(_IV) == sizeof(_DataType) && sizeof(_IV) >= 16
@@ -1109,6 +1133,9 @@ namespace std::simd
         : _M_data(reinterpret_cast<_DataType>(__x))
         {}
 
+      /**
+       * @brief Conversion operator to Intel Intrinsics (__m128, __m128i, ...).
+       */
       template <__vec_builtin _IV>
         requires same_as<__x86_intel_intrin_value_type<value_type>, __vec_value_type<_IV>>
           && (sizeof(_IV) == sizeof(_DataType) && sizeof(_IV) >= 16
