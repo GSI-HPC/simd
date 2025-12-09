@@ -1290,10 +1290,8 @@ namespace std::simd
               _M_data = _DataType{static_cast<value_type>(__ptr[__is])...};
             }
           else if constexpr (__converts_trivially<_Up, value_type>)
-            {
-              // This assumes std::floatN_t to be bitwise equal to float/double
-              __builtin_memcpy(&_M_data, __ptr, sizeof(value_type) * _S_size);
-            }
+            // This assumes std::floatN_t to be bitwise equal to float/double
+            __builtin_memcpy(&_M_data, __ptr, sizeof(value_type) * _S_size);
           else
             {
               __vec_builtin_type<_Up, _S_full_size> __tmp = {};
