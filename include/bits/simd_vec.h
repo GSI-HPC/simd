@@ -908,7 +908,16 @@ namespace std::simd
         }
 
       /** @internal
-       * Implementation of @ref masked_load.
+       * Loads elements from @p __mem according to mask @p __k.
+       *
+       * @param __mem Pointer (in)to array.
+       * @param __k   Mask controlling which elements to load. For each bit i in the mask:
+       *              - If bit i is 1: copy __mem[i] into result[i]
+       *              - If bit i is 0: result[i] is default initialized
+       *
+       * @note This function assumes it's called after determining that no other method
+       *       (like full load) is more appropriate. Calling with all mask bits set to 1
+       *       is suboptimal for performance but still correct.
        */
       template <typename _Up, _ArchTraits _Traits = {}>
         static inline basic_vec
@@ -1008,6 +1017,19 @@ namespace std::simd
             }
         }
 
+      /** @internal
+       * Stores elements of @p __v to @p __mem according to mask @p __k.
+       *
+       * @param __v   Values to store to @p __mem.
+       * @param __mem Pointer (in)to array.
+       * @param __k   Mask controlling which elements to store. For each bit i in the mask:
+       *              - If bit i is 1: store __v[i] to __mem[i]
+       *              - If bit i is 0: __mem[i] is left unchanged
+       *
+       * @note This function assumes it's called after determining that no other method
+       *       (like full store) is more appropriate. Calling with all mask bits set to 1
+       *       is suboptimal for performance but still correct.
+       */
       template <typename _Up, _ArchTraits _Traits = {}>
         //[[__gnu__::__always_inline__]]
         static inline void
