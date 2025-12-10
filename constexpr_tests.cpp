@@ -13,6 +13,15 @@ namespace simd = std::simd;
 
 using std::complex;
 
+// test that instantiation of the complete class is well-formed
+template class simd::basic_vec<int, typename simd::vec<int, 1>::abi_type>;
+template class simd::basic_vec<int, typename simd::vec<int, 5>::abi_type>;
+template class simd::basic_vec<int, typename simd::vec<int, 8>::abi_type>;
+template class simd::basic_vec<int, typename simd::vec<int, 13>::abi_type>;
+template class simd::basic_vec<float, typename simd::vec<float, 8>::abi_type>;
+template class simd::basic_vec<float, typename simd::vec<float, 13>::abi_type>;
+template class simd::basic_vec<complex<double>, typename simd::vec<complex<double>, 3>::abi_type>;
+
 // LWG4420 ///////////////////////////////////////
 
 namespace LWG4420

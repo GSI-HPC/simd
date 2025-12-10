@@ -446,13 +446,14 @@ namespace std::simd
 
       [[__gnu__::__always_inline__]]
       constexpr basic_vec
-      _M_complex_conj() const
+      _M_complex_conj() const requires __complex_like<value_type>
       {
         static_assert((_S_size & 1) == 0);
         return _VecOps<_DataType>::_S_complex_negate_imag(_M_data);
       }
 
       template <typename _CxVec, _TargetTraits _Traits = {}>
+        requires __complex_like<value_type>
         [[__gnu__::__always_inline__]]
         constexpr void
         _M_complex_multiply_with(basic_vec __yvec)
@@ -818,17 +819,13 @@ namespace std::simd
 
       [[__gnu__::__always_inline__]]
       constexpr basic_vec
-      _M_abs() const
-      {
-        static_assert(signed_integral<value_type>);
-        return _M_data < 0 ? -_M_data : _M_data;
-      }
+      _M_abs() const requires signed_integral<value_type>
+      { return _M_data < 0 ? -_M_data : _M_data; }
 
       [[__gnu__::__always_inline__]]
       constexpr basic_vec
-      _M_fabs() const
+      _M_fabs() const requires floating_point<value_type>
       {
-        static_assert(is_floating_point_v<value_type>);
         if constexpr (_S_is_scalar)
           return std::fabs(_M_data);
         else
@@ -1094,7 +1091,13 @@ namespace std::simd
       // [simd.overview] default constructor ----------------------------------
       basic_vec() = default;
 
-      // [simd.overview] p2 impl-def conversions ---------------------------------
+      // [simd.overview] p2 impl-def conversions ------------------------------
+      using _NativeVecType = decltype([] {
+            if constexpr (_S_is_scalar)
+              return __vec_builtin_type<value_type, 1>();
+            else
+              return _DataType();
+          }());
       /**
        * @brief Converting constructor from GCC vector builtins.
        *
@@ -1105,11 +1108,16 @@ namespace std::simd
        *
        * @note This constructor is not available when size() equals 1.
        *
-       * @see operator _DataType() for the reverse conversion.
+       * @see operator _NativeVecType() for the reverse conversion.
        */
       constexpr
-      basic_vec(_DataType __x) requires (!_S_is_scalar)
-        : _M_data(__x)
+      basic_vec(_NativeVecType __x)
+      : _M_data([&] [[__gnu__::__always_inline__]] {
+          if constexpr (_S_is_scalar)
+            return __x[0];
+          else
+            return __x;
+        }())
       {}
 
       /**
@@ -1119,12 +1127,16 @@ namespace std::simd
        *
        * @note This operator is not available when size() equals 1.
        *
-       * @see basic_vec(_DataType) for the reverse conversion.
+       * @see basic_vec(_NativeVecType) for the reverse conversion.
        */
       constexpr
-      operator _DataType() const
-      requires (!_S_is_scalar)
-      { return _M_data; }
+      operator _NativeVecType() const
+      {
+        if constexpr (_S_is_scalar)
+          return _NativeVecType{_M_data};
+        else
+          return _M_data;
+      }
 
 #if _GLIBCXX_X86
       /**
@@ -1364,7 +1376,7 @@ namespace std::simd
       [[__gnu__::__always_inline__]]
       constexpr mask_type
       operator!() const noexcept requires requires(value_type __a) { !__a; }
-      { return mask_type::_S_init(!_M_data); }
+      { return *this == value_type(); }
 
       [[__gnu__::__always_inline__]]
       constexpr basic_vec
@@ -1909,10 +1921,11 @@ namespace std::simd
 #if VIR_NEXT_PATCH
       [[__gnu__::__always_inline__]]
       constexpr basic_vec
-      _M_complex_conj() const
+      _M_complex_conj() const requires __complex_like<value_type>
       { return _S_init(_M_data0._M_complex_conj(), _M_data1._M_complex_conj()); }
 
       template <typename _CxVec, _TargetTraits _Traits = {}>
+        requires __complex_like<value_type>
         [[__gnu__::__always_inline__]]
         constexpr void
         _M_complex_multiply_with(const basic_vec& __yvec)
@@ -1922,6 +1935,7 @@ namespace std::simd
         }
 
       template <typename _Cx>
+        requires __complex_like<value_type>
         [[__gnu__::__always_inline__]]
         static constexpr void
         _S_cxctgus_mul(basic_vec& __re0, basic_vec& __im0,
@@ -1970,11 +1984,8 @@ namespace std::simd
 
       [[__gnu__::__always_inline__]]
       constexpr auto
-      _M_reduce_1(auto __binary_op) const
-      {
-        static_assert(_N0 == _N1);
-        return __binary_op(_M_data0, _M_data1);
-      }
+      _M_reduce_1(auto __binary_op) const requires (_N0 == _N1)
+      { return __binary_op(_M_data0, _M_data1); }
 
       [[__gnu__::__always_inline__]]
       constexpr value_type
@@ -2057,12 +2068,12 @@ namespace std::simd
 
       [[__gnu__::__always_inline__]]
       constexpr basic_vec
-      _M_abs() const
+      _M_abs() const requires signed_integral<value_type>
       { return _S_init(_M_data0._M_abs(), _M_data1._M_abs()); }
 
       [[__gnu__::__always_inline__]]
       constexpr basic_vec
-      _M_fabs() const
+      _M_fabs() const requires floating_point<value_type>
       { return _S_init(_M_data0._M_fabs(), _M_data1._M_fabs()); }
 
       template <typename _Up>
@@ -2122,18 +2133,12 @@ namespace std::simd
 
       basic_vec() = default;
 
-      // [simd.overview] impl-def conversions ---------------------------------
-      using _NativeVecType
-        = decltype([] {
-            if constexpr (_S_is_scalar)
-              return _InvalidInteger();
-            else
-              return __vec_builtin_type<value_type, __bit_ceil(unsigned(_S_size))>();
-          }());
+      // [simd.overview] p2 impl-def conversions ------------------------------
+      using _NativeVecType = __vec_builtin_type<value_type, __bit_ceil(unsigned(_S_size))>;
 
       [[__gnu__::__always_inline__]]
       constexpr
-      basic_vec(const _NativeVecType& __x) requires (!_S_is_scalar)
+      basic_vec(const _NativeVecType& __x)
       : _M_data0(_VecOps<__vec_builtin_type<value_type, _N0>>::_S_extract(__x)),
         _M_data1(_VecOps<__vec_builtin_type<value_type, __bit_ceil(unsigned(_N1))>>
                    ::_S_extract(__x, integral_constant<int, _N0>()))
@@ -2141,7 +2146,7 @@ namespace std::simd
 
       [[__gnu__::__always_inline__]]
       constexpr
-      operator _NativeVecType() const requires (!_S_is_scalar)
+      operator _NativeVecType() const
       { return _M_concat_data(); }
 
       // [simd.ctor] broadcast constructor ------------------------------------
