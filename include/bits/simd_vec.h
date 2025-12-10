@@ -693,10 +693,25 @@ namespace std::simd
           {
             // convert to unsigned short because of missing 8-bit mul instruction
             // we don't need to preserve the order of elements
+            //
+            // The left columns under Latency and Throughput show bit-cast to ushort with shift by
+            // 8. The right column uses the alternative in the #else branch.
+            // Benchmark on Intel Ultra 7 165U (AVX2)
+            //   TYPE            Latency      Throughput
+            //             [cycles/call]   [cycles/call]
+            //schar, 2        9.11  7.73      3.17  3.21
+            //schar, 4        31.6  34.9      5.11  6.97
+            //schar, 8        35.7  41.5      7.77  7.17
+            //schar, 16       36.7  44.1      6.66  8.96
+            //schar, 32       42.2  61.1      8.82  10.1
+#if 1
             using _V16 = resize_t<_S_size / 2, rebind_t<unsigned short, basic_vec>>;
             auto __a = __builtin_bit_cast(_V16, *this);
             return __binary_op(__a, __a >> 8)._M_reduce(__binary_op);
-            // alternative: return _V16(*this)._M_reduce(__binary_op);
+#else
+            using _V16 = rebind_t<unsigned short, basic_vec>;
+            return _V16(*this)._M_reduce(__binary_op);
+#endif
           }
 #endif
         else if constexpr (__has_single_bit(unsigned(_S_size)))
@@ -2017,12 +2032,20 @@ namespace std::simd
             {
               // convert to unsigned short because of missing 8-bit mul instruction
               // we don't need to preserve the order of elements
+              //
+              // The left columns under Latency and Throughput show bit-cast to ushort with shift by
+              // 8. The right column uses the alternative in the #else branch.
+              // Benchmark on Intel Ultra 7 165U (AVX2)
+              //   TYPE             Latency           Throughput
+              //              [cycles/call]        [cycles/call]
+              //schar, 64        59.9  70.7           10.5  13.3
+              //schar, 128       81.4  97.2           12.2    21
+              //schar, 256       92.4   129           17.2  35.2
 #if 1
               using _V16 = resize_t<_S_size / 2, rebind_t<unsigned short, basic_vec>>;
               auto __a = __builtin_bit_cast(_V16, *this);
-              return __binary_op(__a, __a >> 8)._M_reduce(__binary_op);
+              return __binary_op(__a, __a >> __CHAR_BIT__)._M_reduce(__binary_op);
 #else
-              // alternative:
               using _V16 = rebind_t<unsigned short, basic_vec>;
               return _V16(*this)._M_reduce(__binary_op);
 #endif
