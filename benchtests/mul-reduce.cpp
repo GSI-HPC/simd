@@ -5,6 +5,7 @@
 
 #include "bench.h"
 #include <climits>
+#include <functional>
 
 namespace my
 {
@@ -13,16 +14,16 @@ namespace my
   template <typename T>
     requires(std::integral<T> or std::floating_point<T>)
     T
-    reduce(T x)
+    reduce(T x, std::multiplies<>)
     { return x; }
 
   template <vec_builtin V>
     auto
-    reduce(const V v)
+    reduce(const V v, std::multiplies<>)
     {
       auto acc = v[0];
       for (unsigned i = 1; i < sizeof(v) / sizeof(acc); ++i)
-        acc += v[i];
+        acc *= v[i];
       return acc;
     }
 }
@@ -49,14 +50,14 @@ template <int Special>
               if constexpr (fake)
                 x = x[0];
               else
-                x = my::reduce(x);
+                x = my::reduce(x, std::multiplies<>());
             }
           else
             {
               if constexpr (fake)
                 x = V() + x[0];
               else
-                x = V() + my::reduce(x);
+                x = V() + my::reduce(x, std::multiplies<>());
             }
           x = [] [[gnu::noipa]] (auto& tmp) { return tmp; }(x);
           return x;
@@ -70,14 +71,14 @@ template <int Special>
               if constexpr (fake)
                 x = x[0];
               else
-                x = my::reduce(x);
+                x = my::reduce(x, std::multiplies<>());
             }
           else
             {
               if constexpr (fake)
                 x = V() + x[0];
               else
-                x = V() + my::reduce(x);
+                x = V() + my::reduce(x, std::multiplies<>());
             }
           return x;
         };
@@ -92,7 +93,7 @@ int
 main()
 {
   bench_all<signed char>();
-  bench_all<unsigned char>();
+  /*  bench_all<unsigned char>();
   bench_all<signed short>();
   bench_all<unsigned short>();
   bench_all<signed int>();
@@ -101,7 +102,7 @@ main()
   bench_all<unsigned long>();
   bench_all<std::float16_t>();
   bench_all<float>();
-  bench_all<double>();
+  bench_all<double>();*/
   //bench_all<std::complex<std::float16_t>>();
   //bench_all<std::complex<float>>();
   //bench_all<std::complex<double>>();
