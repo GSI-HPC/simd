@@ -275,6 +275,12 @@ namespace std::simd
 
       using _DataType = typename _Ap::template _DataType<_Tp>;
 
+      /** @internal
+       * @brief Underlying vector data storage.
+       *
+       * This member holds the vector object using a GNU vector type or a platform-specific vector
+       * type determined by the ABI tag. For size 1 vectors, this is a single value (_Tp).
+       */
       _DataType _M_data;
 
       static constexpr bool _S_is_partial = sizeof(_M_data) > sizeof(_Tp) * _S_size;
@@ -1386,12 +1392,37 @@ namespace std::simd
         return __x;                                                  \
       }
 
+      /**
+       * @brief Bitwise AND operator.
+       *
+       * Returns a new SIMD vector after element-wise AND.
+       */
       _GLIBCXX_SIMD_DEFINE_OP(&)
+
+      /**
+       * @brief Bitwise OR operator.
+       *
+       * Returns a new SIMD vector after element-wise OR.
+       */
       _GLIBCXX_SIMD_DEFINE_OP(|)
+      /**
+       * @brief Bitwise XOR operator.
+       *
+       * Returns a new SIMD vector after element-wise XOR.
+       */
       _GLIBCXX_SIMD_DEFINE_OP(^)
 
 #undef _GLIBCXX_SIMD_DEFINE_OP
 
+      /**
+       * @brief Applies the compound assignment operator element-wise.
+       *
+       * @pre If @c value_type is a signed integral type, the result is representable by @c
+       * value_type. (This does not apply to padding elements the implementation might add for
+       * non-power-of-2 widths.) UBsan will only see a call to @c unreachable() on overflow.
+       *
+       * @note The overflow detection code is discarded unless UBsan is active.
+       */
       [[__gnu__::__always_inline__]]
       friend constexpr basic_vec&
       operator+=(basic_vec& __x, const basic_vec& __y) noexcept
@@ -1417,6 +1448,8 @@ namespace std::simd
         return __x;
       }
 
+      /** @copydoc operator+=
+       */
       [[__gnu__::__always_inline__]]
       friend constexpr basic_vec&
       operator-=(basic_vec& __x, const basic_vec& __y) noexcept
@@ -1442,6 +1475,8 @@ namespace std::simd
         return __x;
       }
 
+      /** @copydoc operator+=
+       */
       [[__gnu__::__always_inline__]]
       friend constexpr basic_vec&
       operator*=(basic_vec& __x, const basic_vec& __y) noexcept
