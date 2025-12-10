@@ -1761,22 +1761,23 @@ namespace std::simd
             return __k._M_data ? __t._M_data : __f._M_data;
           else
             {
+              constexpr bool __uses_simd_register = sizeof(_M_data) >= 8;
               using _VO = _VecOps<_DataType>;
               if (_VO::_S_is_const_known_equal_to(__f._M_data, 0))
                 {
-                  if (is_integral_v<value_type> && sizeof(_M_data) >= 8
+                  if (is_integral_v<value_type> && __uses_simd_register
                         && _VO::_S_is_const_known_equal_to(__t._M_data, 1))
-                    // basic_mask::operator+ arrives here; '+__k' would be recursive
+                    // This is equivalent to converting the mask into a vec of 0s and 1s. So +__k.
+                    // However, basic_mask::operator+ arrives here; returning +__k would be
+                    // recursive. Instead we use -__k (which is a no-op for vector-masks) and then
+                    // flip all -1 elements to +1 by taking the absolute value.
                     return basic_vec((-__k)._M_abs());
-                  /*                  else if (is_integral_v<value_type> && sizeof(_M_data) >= 8
-                             && _VO::_S_is_const_known_equal_to(__t._M_data, value_type(-1)))
-                    return basic_vec(-__k);*/
                   else
                     return __vec_and(reinterpret_cast<_DataType>(__k._M_data), __t._M_data);
                 }
               else if (_VecOps<_DataType>::_S_is_const_known_equal_to(__t._M_data, 0))
                 {
-                  if (is_integral_v<value_type> && sizeof(_M_data) >= 8
+                  if (is_integral_v<value_type> && __uses_simd_register
                         && _VO::_S_is_const_known_equal_to(__f._M_data, 1))
                     return value_type(1) + basic_vec(-__k);
                   else
