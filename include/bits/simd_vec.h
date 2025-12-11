@@ -607,6 +607,122 @@ namespace std::simd
         _S_concat(const basic_vec<value_type, _As>&... __xs) noexcept
         { return __extract_simd_at<basic_vec>(cw<0>, __xs...); }
 
+      /** @internal
+       * Shifts elements to the front by @p _Shift positions (or to the back for negative @p
+       * _Shift).
+       *
+       * This function moves elements towards lower indices (front of the vector).
+       * Elements that would shift beyond the vector bounds are replaced with zero. Negative shift
+       * values shift in the opposite direction.
+       *
+       * @warning The naming can be confusing due to little-endian byte order:
+       * - Despite the name "shifted_to_front", the underlying hardware instruction
+       *   shifts bits to the right (psrl...)
+       * - The function name refers to element indices, not bit positions
+       *
+       * @tparam _Shift Number of positions to shift elements towards the front.
+       *                Must be -size() < _Shift < size().
+       *
+       * @return A new vector with elements shifted to front or back.
+       *
+       * Example:
+       * @code
+       * __iota<vec<int, 4>>._M_elements_shifted_to_front<2>(); // {2, 3, 0, 0}
+       * __iota<vec<int, 4>>._M_elements_shifted_to_front<-2>(); // {0, 0, 0, 1}
+       * @endcode
+       */
+      template <int _Shift, _ArchTraits _Traits = {}>
+        [[__gnu__::__always_inline__]]
+        constexpr basic_vec
+        _M_elements_shifted_to_front() const
+        {
+          static_assert(_Shift < _S_size && -_Shift < _S_size);
+          if constexpr (_Shift == 0)
+            return *this;
+#ifdef __SSE2__
+          else if (!__is_const_known(*this))
+            {
+              if constexpr (sizeof(_M_data) == 16 && _Shift > 0)
+                return reinterpret_cast<_DataType>(
+                         __builtin_ia32_psrldqi128(__vec_bit_cast<long long>(_M_data),
+                                                   _Shift * sizeof(value_type) * 8));
+              else if constexpr (sizeof(_M_data) == 16 && _Shift < 0)
+                return reinterpret_cast<_DataType>(
+                         __builtin_ia32_pslldqi128(__vec_bit_cast<long long>(_M_data),
+                                                   -_Shift * sizeof(value_type) * 8));
+              else if constexpr (sizeof(_M_data) < 16)
+                {
+                  auto __x = reinterpret_cast<__vec_builtin_type_bytes<long long, 16>>(
+                               __vec_zero_pad_to_16(_M_data));
+                  if constexpr (_Shift > 0)
+                    __x = __builtin_ia32_psrldqi128(__x, _Shift * sizeof(value_type) * 8);
+                  else
+                    __x = __builtin_ia32_pslldqi128(__x, -_Shift * sizeof(value_type) * 8);
+                  return _VecOps<_DataType>::_S_extract(__vec_bit_cast<__canon_value_type>(__x));
+                }
+            }
+#endif
+          return _S_static_permute(*this, [](int __i) {
+                   int __off = __i + _Shift;
+                   return __off >= _S_size || __off < 0 ? zero_element : __off;
+                 });
+        }
+
+      /** @internal
+       * @brief Set padding elements to @p __id; add more padding elements if necessary.
+       */
+      template <typename _Vp, __canon_value_type __id>
+        [[__gnu__::__always_inline__]]
+        constexpr _Vp
+        _M_pad_to_T_with_value() const noexcept
+        {
+          static_assert(!_Vp::_S_is_partial);
+          static_assert(abi_type::_S_nreg == 1);
+          if constexpr (sizeof(_Vp) == 32)
+            { // when we need to reduce from a 512-bit register
+              static_assert(sizeof(_M_data) == 32);
+              constexpr auto __k = _Vp::mask_type::_S_partial_mask_of_n(_S_size);
+              return __select_impl(__k, _Vp::_S_init(_M_data), __id);
+            }
+          else
+            {
+              static_assert(sizeof(_Vp) <= 16);
+              static_assert(sizeof(_M_data) <= sizeof(_Vp));
+              _Vp __v1 = __vec_zero_pad_to<sizeof(_Vp)>(_M_data);
+              if constexpr (__id == 0 && _S_is_partial)
+                // cheapest solution: shift values to the back while shifting in zeros
+                __v1 = __v1.template _M_elements_shifted_to_front<-(_Vp::_S_size - _S_size)>();
+              else if constexpr (_Vp::_S_size - _S_size == 1)
+                // if a single element needs to be changed, use an insert instruction
+                __vec_set(__v1._M_data, _Vp::_S_size - 1, __id);
+              else if constexpr (__has_single_bit(unsigned(_Vp::_S_size - _S_size)))
+                { // if a single element needs to be changed, use an insert instruction
+                  constexpr int __n = _Vp::_S_size - _S_size;
+                  using _Ip = __integer_from<__n * sizeof(__canon_value_type)>;
+                  constexpr auto [...__is] = _IotaArray<__n>;
+                  constexpr __canon_value_type __idn[__n] = {((void)__is, __id)...};
+                  auto __vn = __vec_bit_cast<_Ip>(__v1._M_data);
+                  __vec_set(__vn, _Vp::_S_size / __n - 1, __builtin_bit_cast(_Ip, __idn));
+                  __v1._M_data = reinterpret_cast<typename _Vp::_DataType>(__vn);
+                }
+              else if constexpr (__id != 0 && !_S_is_partial)
+                { // if __vec_zero_pad_to added zeros in all the places where we need __id, a
+                  // bitwise or is sufficient (needs a vector constant for the __id vector, which
+                  // isn't optimal)
+                  constexpr _Vp __idn([](int __i) {
+                                  return __i >= _S_size ? __id : __canon_value_type();
+                                });
+                  __v1._M_data = __vec_or(__v1._M_data, __idn._M_data);
+                }
+              else if constexpr (__id != 0 || _S_is_partial)
+                { // fallback
+                  constexpr auto __k = _Vp::mask_type::_S_partial_mask_of_n(_S_size);
+                  __v1 = __select_impl(__k, __v1, __id);
+                }
+              return __v1;
+            }
+        }
+
       [[__gnu__::__always_inline__]]
       constexpr auto
       _M_reduce_1(auto __binary_op) const
@@ -616,170 +732,193 @@ namespace std::simd
         return __binary_op(__a, __b);
       }
 
-      [[__gnu__::__always_inline__]]
-      constexpr value_type
-      _M_reduce_tail(const auto& __rest, auto __binary_op) const
-      {
-        if constexpr (__rest.size() > _S_size)
-          {
-            auto [__a, __b] = __rest.template _M_chunk<basic_vec>();
-            return __binary_op(*this, __a)._M_reduce_tail(__b, __binary_op);
-          }
-        else if constexpr (_S_is_scalar)
-          return __binary_op(*this, __rest)._M_data;
-        else if constexpr (__rest.size() == _S_size)
-          return __binary_op(*this, __rest)._M_reduce(__binary_op);
-        else
-          return _M_reduce_1(__binary_op)._M_reduce_tail(__rest, __binary_op);
-      }
-
-      /** @internal
-       * Shifts elements to the front by @p _Shift positions.
-       *
-       * This function moves elements towards lower indices (front of the vector).
-       * Elements that would shift beyond the vector bounds are replaced with zero.
-       *
-       * @warning The naming can be confusing due to little-endian byte order:
-       * - Despite the name "shifted_to_front", the underlying hardware instruction
-       *   shifts bits to the right (psrl...)
-       * - The function name refers to element indices, not bit positions
-       *
-       * @tparam _Shift Number of positions to shift elements towards the front.
-       *                Must be > 0 and < vector size.
-       *
-       * @return A new vector with elements shifted towards the front.
-       *
-       * Example: vec<int, 4>{1, 2, 3, 4}._M_elements_shifted_to_front<2>()
-       * returns vec<int, 4>{3, 4, 0, 0}
-       */
-      template <int _Shift, _ArchTraits _Traits = {}>
+      template <typename _Rest, typename _BinaryOp>
         [[__gnu__::__always_inline__]]
-        constexpr basic_vec
-        _M_elements_shifted_to_front() const
+        constexpr value_type
+        _M_reduce_tail(const _Rest& __rest, _BinaryOp __binary_op) const
         {
-          static_assert(_Shift < _S_size && _Shift > 0);
-#ifdef __SSE2__
-          if (!__is_const_known(*this))
+          if constexpr (_S_is_scalar)
+            return __binary_op(*this, __rest)._M_data;
+          else if constexpr (_Rest::_S_size == _S_size)
+            return __binary_op(*this, __rest)._M_reduce(__binary_op);
+          else if constexpr (_Rest::_S_size > _S_size)
             {
-              if constexpr (sizeof(_M_data) == 16)
-                return reinterpret_cast<_DataType>(
-                         __builtin_ia32_psrldqi128(__vec_bit_cast<long long>(_M_data),
-                                                   _Shift * sizeof(value_type) * 8));
-              else
-                {
-                  const auto __x = reinterpret_cast<__vec_builtin_type_bytes<long long, 16>>(
-                                     __vec_zero_pad_to_16(_M_data));
-                  const auto __shifted = __builtin_ia32_psrldqi128(
-                                           __x, _Shift * sizeof(value_type) * 8);
-                  return _VecOps<_DataType>::_S_extract(__vec_bit_cast<value_type>(__shifted));
-                }
+              auto [__a, __b] = __rest.template _M_chunk<basic_vec>();
+              return __binary_op(*this, __a)._M_reduce_tail(__b, __binary_op);
+            }
+          else if constexpr (_Rest::_S_size == 1)
+            return __binary_op(_Rest(_M_reduce(__binary_op)), __rest)[0];
+#if 1 // TODO: benchmark the difference this branch makes
+          else if constexpr (sizeof(_M_data) <= 16 // less work that way
+                               && requires { __default_identity_element<__canon_value_type, _BinaryOp>(); })
+            { // extend __rest with identity element for more parallelism
+              constexpr __canon_value_type __id
+                = __default_identity_element<__canon_value_type, _BinaryOp>();
+              return __binary_op(_M_data, __rest.template _M_pad_to_T_with_value<basic_vec, __id>())
+                       ._M_reduce(__binary_op);
             }
 #endif
-          return _S_static_permute(*this, [](int __i) {
-                   return __i + _Shift >= _S_size ? zero_element : __i + _Shift;
-                 });
+          else
+            return _M_reduce_1(__binary_op)._M_reduce_tail(__rest, __binary_op);
         }
 
+      /** @internal
+       * @brief Reduction over @p __binary_op of all (non-padding) elements.
+       *
+       * @note The implementation assumes it is most efficient to first reduce to one 128-bit SIMD
+       * register and then shuffle elements while sticking to 128-bit registers.
+       */
       template <typename _BinaryOp, _ArchTraits _Traits = {}>
         [[__gnu__::__always_inline__]]
         constexpr value_type
         _M_reduce(_BinaryOp __binary_op) const
-      {
-        if constexpr (_S_size == 1)
-          return operator[](0);
-        else if constexpr (_Traits.template _M_eval_as_f32<value_type>()
-                             && (is_same_v<_BinaryOp, plus<>>
-                                    || is_same_v<_BinaryOp, multiplies<>>))
-          return value_type(rebind_t<float, basic_vec>(*this)._M_reduce(__binary_op));
+        {
+          if constexpr (_S_size == 1)
+            return operator[](0);
+          else if constexpr (_Traits.template _M_eval_as_f32<value_type>()
+                               && (is_same_v<_BinaryOp, plus<>>
+                                     || is_same_v<_BinaryOp, multiplies<>>))
+            return value_type(rebind_t<float, basic_vec>(*this)._M_reduce(__binary_op));
 #ifdef __SSE2__
-        else if constexpr (is_integral_v<value_type> && sizeof(value_type) == 1
-                             && is_same_v<decltype(__binary_op), multiplies<>>)
-          {
-            // convert to unsigned short because of missing 8-bit mul instruction
-            // we don't need to preserve the order of elements
-            //
-            // The left columns under Latency and Throughput show bit-cast to ushort with shift by
-            // 8. The right column uses the alternative in the #else branch.
-            // Benchmark on Intel Ultra 7 165U (AVX2)
-            //   TYPE            Latency      Throughput
-            //             [cycles/call]   [cycles/call]
-            //schar, 2        9.11  7.73      3.17  3.21
-            //schar, 4        31.6  34.9      5.11  6.97
-            //schar, 8        35.7  41.5      7.77  7.17
-            //schar, 16       36.7  44.1      6.66  8.96
-            //schar, 32       42.2  61.1      8.82  10.1
-#if 1
-            using _V16 = resize_t<_S_size / 2, rebind_t<unsigned short, basic_vec>>;
-            auto __a = __builtin_bit_cast(_V16, *this);
-            return __binary_op(__a, __a >> 8)._M_reduce(__binary_op);
-#else
-            using _V16 = rebind_t<unsigned short, basic_vec>;
-            return _V16(*this)._M_reduce(__binary_op);
+          else if constexpr (is_integral_v<value_type> && sizeof(value_type) == 1
+                               && is_same_v<decltype(__binary_op), multiplies<>>)
+            {
+              // convert to unsigned short because of missing 8-bit mul instruction
+              // we don't need to preserve the order of elements
+              //
+              // The left columns under Latency and Throughput show bit-cast to ushort with shift by
+              // 8. The right column uses the alternative in the else branch.
+              // Benchmark on Intel Ultra 7 165U (AVX2)
+              //   TYPE            Latency      Throughput
+              //             [cycles/call]   [cycles/call]
+              //schar, 2        9.11  7.73      3.17  3.21
+              //schar, 4        31.6  34.9      5.11  6.97
+              //schar, 8        35.7  41.5      7.77  7.17
+              //schar, 16       36.7  44.1      6.66  8.96
+              //schar, 32       42.2  61.1      8.82  10.1
+              if constexpr (!_S_is_partial)
+                { // If all elements participate in the reduction we can take this shortcut
+                  using _V16 = resize_t<_S_size / 2, rebind_t<unsigned short, basic_vec>>;
+                  auto __a = __builtin_bit_cast(_V16, *this);
+                  return __binary_op(__a, __a >> 8)._M_reduce(__binary_op);
+                }
+              else
+                {
+                  using _V16 = rebind_t<unsigned short, basic_vec>;
+                  return _V16(*this)._M_reduce(__binary_op);
+                }
+            }
 #endif
-          }
-#endif
-        else if constexpr (__has_single_bit(unsigned(_S_size)))
-          {
-            if constexpr (sizeof(_M_data) > 16)
-              return _M_reduce_1(__binary_op)._M_reduce(__binary_op);
-            else if constexpr (_S_size == 2)
-              return _M_reduce_1(__binary_op)[0];
-            else
-              {
-                static_assert(_S_size <= 16);
-                auto __x = *this;
+          else if constexpr (__has_single_bit(unsigned(_S_size)))
+            {
+              if constexpr (sizeof(_M_data) > 16)
+                return _M_reduce_1(__binary_op)._M_reduce(__binary_op);
+              else if constexpr (_S_size == 2)
+                return _M_reduce_1(__binary_op)[0];
+              else
+                {
+                  static_assert(_S_size <= 16);
+                  auto __x = *this;
 #ifdef __SSE2__
-                if constexpr (sizeof(_M_data) <= 16 && is_integral_v<value_type>)
-                  {
-                    if constexpr (_S_size > 8)
-                      __x = __binary_op(__x, __x.template _M_elements_shifted_to_front<8>());
-                    if constexpr (_S_size > 4)
-                      __x = __binary_op(__x, __x.template _M_elements_shifted_to_front<4>());
-                    if constexpr (_S_size > 2)
-                      __x = __binary_op(__x, __x.template _M_elements_shifted_to_front<2>());
-                    // We could also call __binary_op with vec<T, 1> arguments. However,
-                    // micro-benchmarking on Intel Ultra 7 165U showed this to be more efficient:
-                    return __binary_op(__x, __x.template _M_elements_shifted_to_front<1>())[0];
-                  }
+                  if constexpr (sizeof(_M_data) <= 16 && is_integral_v<value_type>)
+                    {
+                      if constexpr (_S_size > 8)
+                        __x = __binary_op(__x, __x.template _M_elements_shifted_to_front<8>());
+                      if constexpr (_S_size > 4)
+                        __x = __binary_op(__x, __x.template _M_elements_shifted_to_front<4>());
+                      if constexpr (_S_size > 2)
+                        __x = __binary_op(__x, __x.template _M_elements_shifted_to_front<2>());
+                      // We could also call __binary_op with vec<T, 1> arguments. However,
+                      // micro-benchmarking on Intel Ultra 7 165U showed this to be more efficient:
+                      return __binary_op(__x, __x.template _M_elements_shifted_to_front<1>())[0];
+                    }
 #endif
-                if constexpr (_S_size > 8)
-                  __x = __binary_op(__x, _S_static_permute(__x, _SwapNeighbors<8>()));
-                if constexpr (_S_size > 4)
-                  __x = __binary_op(__x, _S_static_permute(__x, _SwapNeighbors<4>()));
+                  if constexpr (_S_size > 8)
+                    __x = __binary_op(__x, _S_static_permute(__x, _SwapNeighbors<8>()));
+                  if constexpr (_S_size > 4)
+                    __x = __binary_op(__x, _S_static_permute(__x, _SwapNeighbors<4>()));
 #ifdef __SSE2__
-                // avoid pshufb by "promoting" to int
-                if constexpr (is_integral_v<value_type> && sizeof(value_type) <= 1)
-                  return value_type(resize_t<4, rebind_t<int, basic_vec>>(chunk<4>(__x)[0])
-                                      ._M_reduce(__binary_op));
+                  // avoid pshufb by "promoting" to int
+                  if constexpr (is_integral_v<value_type> && sizeof(value_type) <= 1)
+                    return value_type(resize_t<4, rebind_t<int, basic_vec>>(chunk<4>(__x)[0])
+                                        ._M_reduce(__binary_op));
 #endif
-                if constexpr (_S_size > 2)
-                  __x = __binary_op(__x, _S_static_permute(__x, _SwapNeighbors<2>()));
-                if constexpr (is_integral_v<value_type> && sizeof(value_type) == 2)
-                  return __binary_op(__x, _S_static_permute(__x, _SwapNeighbors<1>()))[0];
-                else
-                  return __binary_op(vec<value_type, 1>(__x[0]), vec<value_type, 1>(__x[1]))[0];
-              }
-          }
-        else
-          {
-            // e.g. _S_size = 16 + 16 + 15 (vec<char, 47>)
-            // -> 8 + 8 + 7 -> 4 + 4 + 3 -> 2 + 2 + 1 -> 1
-            auto __chunked = chunk<__bit_floor(unsigned(_S_size)) / 2>(*this);
-            using _Cp = decltype(__chunked);
-            if constexpr (tuple_size_v<_Cp> == 4)
-              {
-                const auto& [__a, __b, __c, __rest] = __chunked;
-                return __binary_op(__binary_op(__a, __b), __c)._M_reduce_tail(__rest, __binary_op);
-              }
-            else if constexpr (tuple_size_v<_Cp> == 3)
-              {
-                const auto& [__a, __b, __rest] = __chunked;
-                return __binary_op(__a, __b)._M_reduce_tail(__rest, __binary_op);
-              }
-            else
-              static_assert(false);
-          }
-      }
+                  if constexpr (_S_size > 2)
+                    __x = __binary_op(__x, _S_static_permute(__x, _SwapNeighbors<2>()));
+                  if constexpr (is_integral_v<value_type> && sizeof(value_type) == 2)
+                    return __binary_op(__x, _S_static_permute(__x, _SwapNeighbors<1>()))[0];
+                  else
+                    return __binary_op(vec<value_type, 1>(__x[0]), vec<value_type, 1>(__x[1]))[0];
+                }
+            }
+          else if constexpr (sizeof(_M_data) == 32)
+            {
+              const auto [__lo, __hi] = chunk<__bit_floor(unsigned(_S_size))>(*this);
+              return __lo._M_reduce_tail(__hi, __binary_op);
+            }
+          else if constexpr (sizeof(_M_data) == 64)
+            {
+              // e.g. _S_size = 16 + 16 + 15 (vec<char, 47>)
+              // -> 8 + 8 + 7 -> 4 + 4 + 3 -> 2 + 2 + 1 -> 1
+              auto __chunked = chunk<__bit_floor(unsigned(_S_size)) / 2>(*this);
+              using _Cp = decltype(__chunked);
+              if constexpr (tuple_size_v<_Cp> == 4)
+                {
+                  const auto& [__a, __b, __c, __rest] = __chunked;
+                  constexpr bool __have_id_elem
+                    = requires { __default_identity_element<__canon_value_type, _BinaryOp>(); };
+                  constexpr bool __amd_cpu = _Traits._M_have_sse4a();
+                  if constexpr (__have_id_elem && __rest._S_size > 1 && __amd_cpu)
+                    { // do one 256-bit op -> one 128-bit op
+                      // 4 cycles on Zen4/5 until _M_reduce (short, 26, plus<>)
+                      // 9 cycles on Skylake-AVX512 until _M_reduce
+                      // 9 cycles on Zen4/5 until _M_reduce (short, 27, multiplies<>)
+                      // 17 cycles on Skylake-AVX512 until _M_reduce (short, 27, multiplies<>)
+                      const auto& [__a, __rest] = chunk<__bit_floor(unsigned(_S_size))>(*this);
+                      using _Vp = remove_cvref_t<decltype(__a)>;
+                      constexpr __canon_value_type __id
+                        = __default_identity_element<__canon_value_type, _BinaryOp>();
+                      const _Vp __b = __rest.template _M_pad_to_T_with_value<_Vp, __id>();
+                      return __binary_op(__a, __b)._M_reduce(__binary_op);
+                    }
+                  else if constexpr (__have_id_elem && __rest._S_size > 1)
+                    { // do two 128-bit ops -> one 128-bit op
+                      // 5 cycles on Zen4/5 until _M_reduce (short, 26, plus<>)
+                      // 7 cycles on Skylake-AVX512 until _M_reduce (short, 26, plus<>)
+                      // 9 cycles on Zen4/5 until _M_reduce (short, 27, multiplies<>)
+                      // 16 cycles on Skylake-AVX512 until _M_reduce (short, 27, multiplies<>)
+                      using _Vp = remove_cvref_t<decltype(__a)>;
+                      constexpr __canon_value_type __id
+                        = __default_identity_element<__canon_value_type, _BinaryOp>();
+                      const _Vp __d = __rest.template _M_pad_to_T_with_value<_Vp, __id>();
+                      return __binary_op(__binary_op(__a, __b), __binary_op(__c, __d))
+                               ._M_reduce(__binary_op);
+                    }
+                  else
+                    return __binary_op(__binary_op(__a, __b), __c)
+                             ._M_reduce_tail(__rest, __binary_op);
+                }
+              else if constexpr (tuple_size_v<_Cp> == 3)
+                {
+                  const auto& [__a, __b, __rest] = __chunked;
+                  return __binary_op(__a, __b)._M_reduce_tail(__rest, __binary_op);
+                }
+              else
+                static_assert(false);
+            }
+          else if constexpr (requires { __default_identity_element<__canon_value_type, _BinaryOp>(); })
+            {
+              constexpr __canon_value_type __id
+                = __default_identity_element<__canon_value_type, _BinaryOp>();
+              using _Vp = resize_t<__bit_ceil(unsigned(_S_size)), basic_vec>;
+              return _M_pad_to_T_with_value<_Vp, __id>()._M_reduce(__binary_op);
+            }
+          else
+            {
+              const auto& [__a, __rest] = chunk<__bit_floor(unsigned(_S_size))>(*this);
+              return __a._M_reduce_tail(__rest, __binary_op);
+            }
+        }
 
       // [simd.math] ----------------------------------------------------------
       //
@@ -2038,41 +2177,31 @@ namespace std::simd
               // we don't need to preserve the order of elements
               //
               // The left columns under Latency and Throughput show bit-cast to ushort with shift by
-              // 8. The right column uses the alternative in the #else branch.
+              // 8. The right column uses the alternative in the else branch.
               // Benchmark on Intel Ultra 7 165U (AVX2)
               //   TYPE             Latency           Throughput
               //              [cycles/call]        [cycles/call]
               //schar, 64        59.9  70.7           10.5  13.3
               //schar, 128       81.4  97.2           12.2    21
               //schar, 256       92.4   129           17.2  35.2
-#if 1
-              using _V16 = resize_t<_S_size / 2, rebind_t<unsigned short, basic_vec>>;
-              auto __a = __builtin_bit_cast(_V16, *this);
-              return __binary_op(__a, __a >> __CHAR_BIT__)._M_reduce(__binary_op);
-#else
-              using _V16 = rebind_t<unsigned short, basic_vec>;
-              return _V16(*this)._M_reduce(__binary_op);
-#endif
-            }
-#endif
-          else if constexpr (_N0 == _N1)
-            return _M_reduce_1(__binary_op)._M_reduce(__binary_op);
-#if 0 // needs benchmarking before we do this
-          else if constexpr (sizeof(_M_data0) == sizeof(_M_data1)
-                               && requires {
-                                 __default_identity_element<value_type, decltype(__binary_op)>();
-                               })
-            { // extend to power-of-2 with identity element for more parallelism
-              _DataType0 __v1 = __builtin_bit_cast(_DataType0, _M_data1);
-              constexpr _DataType0 __id
-                = __default_identity_element<value_type, decltype(__binary_op)>();
-              constexpr auto __k = _DataType0::mask_type::_S_partial_mask_of_n(_N1);
-              __v1 = __select_impl(__k, __v1, __id);
-              return __binary_op(_M_data0, __v1)._M_reduce(__binary_op);
+              if constexpr (_DataType1::_S_is_scalar)
+                return __binary_op(_DataType1(_M_data0._M_reduce(__binary_op)), _M_data1)[0];
+              // TODO: optimize trailing scalar (e.g. (8+8)+(8+1))
+              else if constexpr (_S_size % 2 == 0)
+                { // If all elements participate in the reduction we can take this shortcut
+                  using _V16 = resize_t<_S_size / 2, rebind_t<unsigned short, basic_vec>>;
+                  auto __a = __builtin_bit_cast(_V16, *this);
+                  return __binary_op(__a, __a >> __CHAR_BIT__)._M_reduce(__binary_op);
+                }
+              else
+                {
+                  using _V16 = rebind_t<unsigned short, basic_vec>;
+                  return _V16(*this)._M_reduce(__binary_op);
+                }
             }
 #endif
           else
-            return _M_data0._M_reduce_1(__binary_op)._M_reduce_tail(_M_data1, __binary_op);
+            return _M_data0._M_reduce_tail(_M_data1, __binary_op);
         }
 
       [[__gnu__::__always_inline__]]

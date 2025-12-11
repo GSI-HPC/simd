@@ -1713,6 +1713,25 @@ namespace std::simd
     const auto __addr = __builtin_bit_cast(__UINTPTR_TYPE__, __ptr);
     return (__addr % __align) == 0;
   }
+
+  // [simd.reductions] identity_element = *see below*
+  template <typename _Tp, typename _BinaryOperation>
+    requires __is_one_of<_BinaryOperation,
+                         plus<>, multiplies<>, bit_and<>, bit_or<>, bit_xor<>>::value
+    consteval _Tp
+    __default_identity_element()
+    {
+      if constexpr (same_as<_BinaryOperation, plus<>>)
+        return _Tp(0);
+      else if constexpr (same_as<_BinaryOperation, multiplies<>>)
+        return _Tp(1);
+      else if constexpr (same_as<_BinaryOperation, bit_and<>>)
+        return _Tp(~_Tp());
+      else if constexpr (same_as<_BinaryOperation, bit_or<>>)
+        return _Tp(0);
+      else if constexpr (same_as<_BinaryOperation, bit_xor<>>)
+        return _Tp(0);
+    }
 }
 
 #pragma GCC diagnostic pop

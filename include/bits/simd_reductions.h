@@ -21,33 +21,6 @@
 // [simd.reductions] ----------------------------------------------------------
 namespace std::simd
 {
-  template <typename _Tp, typename _BinaryOperation>
-    inline constexpr _Tp __identity_element_for = nullptr;
-
-  template <typename _Tp>
-    inline constexpr _Tp __identity_element_for<_Tp, plus<>> = _Tp(0);
-
-  template <typename _Tp>
-    inline constexpr _Tp __identity_element_for<_Tp, multiplies<>> = _Tp(1);
-
-  template <typename _Tp>
-    inline constexpr _Tp __identity_element_for<_Tp, bit_and<>> = _Tp(~_Tp());
-
-  template <typename _Tp>
-    inline constexpr _Tp __identity_element_for<_Tp, bit_or<>> = _Tp(0);
-
-  template <typename _Tp>
-    inline constexpr _Tp __identity_element_for<_Tp, bit_xor<>> = _Tp(0);
-
-  template <typename _Tp, typename _BinaryOperation>
-    requires same_as<_BinaryOperation, plus<>>
-      || same_as<_BinaryOperation, multiplies<>>
-      || same_as<_BinaryOperation, bit_and<>>
-      || same_as<_BinaryOperation, bit_or<>>
-      || same_as<_BinaryOperation, bit_xor<>>
-    consteval _Tp __default_identity_element()
-    { return __identity_element_for<_Tp, _BinaryOperation>; }
-
   template <typename _Tp, typename _Ap, __reduction_binary_operation<_Tp> _BinaryOperation = plus<>>
     [[__gnu__::__always_inline__]]
     constexpr _Tp
