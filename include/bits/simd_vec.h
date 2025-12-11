@@ -285,6 +285,8 @@ namespace std::simd
 
       static constexpr bool _S_is_partial = sizeof(_M_data) > sizeof(_Tp) * _S_size;
 
+      using __canon_value_type = __canonical_vec_type_t<_Tp>;
+
     public:
       using value_type = _Tp;
 
@@ -343,7 +345,7 @@ namespace std::simd
       _M_concat_data([[maybe_unused]] bool __do_sanitize = false) const
       {
         if constexpr (_S_is_scalar)
-          return __vec_builtin_type<__canonical_vec_type_t<value_type>, 1>{_M_data};
+          return __vec_builtin_type<__canon_value_type, 1>{_M_data};
         else
           return _M_data;
       }
@@ -421,7 +423,8 @@ namespace std::simd
         if (__is_const_known(*this, __x))
           {
             constexpr auto [...__is] = _IotaArray<_S_size>;
-            _M_data = _DataType { ((__is & 1) == 0 ? value_type(__x[__is / 2]) : _M_data[__is])...};
+            _M_data = _DataType { ((__is & 1) == 0 ? __canon_value_type(__x[__is / 2])
+                                                   : _M_data[__is])...};
           }
         else if constexpr (_S_size == 2)
           _M_data[0] = __x[0];
@@ -436,7 +439,8 @@ namespace std::simd
         if (__is_const_known(*this, __x))
           {
             constexpr auto [...__is] = _IotaArray<_S_size>;
-            _M_data = _DataType { ((__is & 1) == 1 ? value_type(__x[__is / 2]) : _M_data[__is])...};
+            _M_data = _DataType { ((__is & 1) == 1 ? __canon_value_type(__x[__is / 2])
+                                                   : _M_data[__is])...};
           }
         else if constexpr (_S_size == 2)
           _M_data[1] = __x[0];
@@ -1109,7 +1113,7 @@ namespace std::simd
       // [simd.overview] p2 impl-def conversions ------------------------------
       using _NativeVecType = decltype([] {
             if constexpr (_S_is_scalar)
-              return __vec_builtin_type<value_type, 1>();
+              return __vec_builtin_type<__canon_value_type, 1>();
             else
               return _DataType();
           }());
@@ -1232,7 +1236,7 @@ namespace std::simd
                   return basic_vec(rebind_t<int, basic_vec>(__x))._M_data;
                 else
                   {
-                    using _TV = __vec_builtin_type_bytes<__canonical_vec_type_t<value_type>, 16>;
+                    using _TV = __vec_builtin_type_bytes<__canon_value_type, 16>;
                     static_assert(_UAbi::_S_nreg == 2);
                     _TV __a = reinterpret_cast<_TV>(__x._M_data0._M_data);
                     _TV __b = reinterpret_cast<_TV>(
