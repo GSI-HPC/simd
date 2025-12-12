@@ -17,7 +17,12 @@
 #include <iomanip>
 #include <iostream>
 #include <stdfloat>
+#include <ranges>
+#include <vector>
 #include <x86gprintrin.h>
+#include <sched.h>
+#include <cerrno>
+#include <cstring>
 
 namespace simd = std::simd;
 
@@ -140,27 +145,65 @@ template <vec_builtin V>
 template <int N>
   using Info = std::array<const char*, N>;
 
+struct TimeResults
+{
+  const size_t addr;
+  const double cycles_per_call;
+
+  friend TimeResults
+  operator-(TimeResults a, TimeResults b)
+  { return TimeResults{a.addr, a.cycles_per_call - b.cycles_per_call}; }
+
+  friend TimeResults
+  operator*(TimeResults a, double b)
+  { return TimeResults{a.addr, a.cycles_per_call * b}; }
+
+  friend TimeResults
+  operator*(double b, TimeResults a)
+  { return TimeResults{a.addr, a.cycles_per_call * b}; }
+};
+
+[[gnu::always_inline]]
+static inline size_t
+determine_ip()
+{
+  size_t _ip = 0;
+#ifdef __x86_64__
+  asm volatile("lea 0(%%rip),%0" : "=r"(_ip));
+#elif defined __i386__
+  asm volatile("1: movl $1b,%0" : "=r"(_ip));
+#elif defined __arm__
+  asm volatile("mov %0,pc" : "=r"(_ip));
+#elif defined __aarch64__
+  asm volatile("adr %0,." : "=r"(_ip));
+#endif
+  return _ip;
+}
+
 template <int N>
   struct Times
   {
-    std::array<double, N> cycles_per_call;
+    std::array<TimeResults, N> results;
     int size;
-
-    using DoubleN = double[N];
 
     constexpr
     Times(std::floating_point auto... init)
-    : cycles_per_call{init...}, size(-1)
+    : results{TimeResults{determine_ip(), init}...}, size(-1)
     { static_assert(sizeof...(init) == N); }
 
     constexpr
-    Times(const std::array<double, N>& init, int init_size)
-    : cycles_per_call(init), size(init_size)
+    Times(std::same_as<TimeResults> auto... init)
+    : results{init...}, size(-1)
+    { static_assert(sizeof...(init) == N); }
+
+    constexpr
+    Times(const std::array<TimeResults, N>& init, int init_size)
+    : results(init), size(init_size)
     {}
 
     constexpr double
     operator[](int i) const
-    { return cycles_per_call[i]; }
+    { return results[i].cycles_per_call; }
   };
 
 template <int Special, class...>
@@ -175,6 +218,12 @@ template <typename T, typename B>
     = std::default_initializable<T>
         and (not requires { { auto(not B::template accept<T>) } -> std::convertible_to<bool>; }
                or B::template accept<T>);
+
+namespace
+{
+  bool g_print_ip = false;
+  bool g_print_speedup = true;
+}
 
 template <class T, class B, class Ref = NoRef>
   requires (not accept_type_for_benchmark<T, B>)
@@ -200,7 +249,7 @@ template <class T, class B, class Ref = NoRef>
     static constexpr char normal[] = "\033[0m";
 #endif
 
-    const Times<N> results = { B::template run<T>().cycles_per_call, size_v<T> };
+    const Times<N> results{ B::template run<T>().results, size_v<T> };
     std::cout << id;
     for (int i = 0; i < N; ++i)
       {
@@ -209,22 +258,27 @@ template <class T, class B, class Ref = NoRef>
           speedup = ref[i] * size_v<T> / (results[i] * ref.size);
 
         std::cout << std::setprecision(3) << std::setw(15) << results[i];
-        if (speedup_size_v<T> <= ref.size)
+        if (g_print_speedup)
           {
-            if (speedup >= 1.1)
+            if (speedup_size_v<T> <= ref.size)
+              {
+                if (speedup >= 1.1)
+                  std::cout << green;
+                else if (speedup > 0.995)
+                  std::cout << dgreen;
+                else
+                  std::cout << red;
+              }
+            else if (speedup >= speedup_size_v<T> * 0.90 / ref.size && speedup >= 1.5)
               std::cout << green;
-            else if (speedup > 0.995)
+            else if (speedup > 1.1)
               std::cout << dgreen;
-            else
+            else if (speedup < 0.95)
               std::cout << red;
+            std::cout << std::setw(12) << speedup << normal;
           }
-        else if (speedup >= speedup_size_v<T> * 0.90 / ref.size && speedup >= 1.5)
-          std::cout << green;
-        else if (speedup > 1.1)
-          std::cout << dgreen;
-        else if (speedup < 0.95)
-          std::cout << red;
-        std::cout << std::setw(12) << speedup << normal;
+        if (g_print_ip)
+          std::cout << std::hex << std::setw(8) << results.results[i].addr << std::dec;
       }
     std::cout << std::endl;
     if constexpr (std::same_as<Ref, NoRef>)
@@ -242,7 +296,13 @@ template <class B, std::size_t N>
   {
     std::cout << id_name;
     for (unsigned i = 0; i < B::info.size(); ++i)
-      std::cout << ' ' << std::setw(14) << B::info[i] << std::setw(12) << "Speedup";
+      {
+        std::cout << ' ' << std::setw(14) << B::info[i];
+        if (g_print_speedup)
+          std::cout << std::setw(12) << "Speedup";
+        if (g_print_ip)
+          std::cout << std::setw(8) << "Address";
+      }
     std::cout << '\n';
 
     char pad[N] = {};
@@ -250,7 +310,13 @@ template <class B, std::size_t N>
     pad[N - 1] = '\0';
     std::cout << pad;
     for (unsigned i = 0; i < B::info.size(); ++i)
-      std::cout << std::setw(15) << "[cycles/call]" << std::setw(12) << "[per value]";
+      {
+        std::cout << std::setw(15) << "[cycles/call]";
+        if (g_print_speedup)
+          std::cout << std::setw(12) << "[per value]";
+        if (g_print_ip)
+          std::cout << std::setw(8) << "[Bytes]";
+      }
     std::cout << '\n';
   }
 
@@ -420,16 +486,25 @@ template <class T, class... ExtraFlags>
         return ref1;
     }();
 
-    [&]<int... Is>(std::integer_sequence<int, Is...>) {
-      ([&] {
-        constexpr int N = 2 << Is;
+    template for (constexpr int i : std::_IotaArray<simd::vec<T>::size() * 2>)
+      {
+        constexpr int N = i + 1;
         if constexpr (std::constructible_from<simd::vec<T, N>> and N / simd::vec<T>::size() <= 8)
           {
             set_abistr(std::to_string(N).c_str());
             bench_lat_thr<simd::vec<T, N>, B>(id, ref);
           }
-      }(), ...);
-    }(std::make_integer_sequence<int, 8>());
+      }
+
+    template for (constexpr int i : std::_IotaArray<4>)
+      {
+        constexpr int N = simd::vec<T>::size() << (i + 2);
+        if constexpr (std::constructible_from<simd::vec<T, N>> and N / simd::vec<T>::size() <= 8)
+          {
+            set_abistr(std::to_string(N).c_str());
+            bench_lat_thr<simd::vec<T, N>, B>(id, ref);
+          }
+      }
 
     if constexpr (requires { { B::more_types[0] } -> std::same_as<const char* const&>; })
       {
@@ -445,16 +520,24 @@ template <class T, class... ExtraFlags>
     if constexpr (not use_gnu_reference)
       bench_gnu_vectors(ref);
 
-    char sep[id_size + 2 * 15 + 2 * 12];
+    char sep[id_size + B::info.size() * (15 + 12 + 8)] = {};
     std::memset(sep, '-', sizeof(sep) - 1);
-    sep[sizeof(sep) - 1] = '\0';
+    std::size_t end = sizeof(sep) - 1;
+    if (!g_print_ip)
+     end -= B::info.size() * 8;
+    if (!g_print_speedup)
+     end -= B::info.size() * 12;
+    sep[end] = '\0';
     std::cout << sep << std::endl;
   }
 
-template <long Iterations = 50'000, int Retries = 20, class F>
+constexpr int DefaultRetries = 30;
+constexpr long DefaultIterations = 50'000;
+
+template <long Iterations = DefaultIterations, int Retries = DefaultRetries>
   [[gnu::noinline]]
   double
-  time_mean2(F&& fun)
+  time_mean2(auto&& fun)
   {
     struct {
 #if USE_MEAN
@@ -506,45 +589,121 @@ template <long Iterations = 50'000, int Retries = 20, class F>
 #endif
   }
 
-template <long Iterations = 50'000, int Retries = 20, class F, class... Args>
-  double
-  time_mean(F&& fun, Args&&... args)
+template <typename Stat, long Iterations = DefaultIterations, int Retries = DefaultRetries>
+  TimeResults
+  time_generic(auto&& fun, auto&&... args)
   {
-#if USE_MEAN
-    double mean = 0;
-#else
-    double minimum = std::numeric_limits<double>::max();
-#endif
+    Stat accum;
     for (int tries = 0; tries < Retries; ++tries)
       {
         unsigned int tmp;
         long i = Iterations;
         const auto start = __rdtscp(&tmp);
         for (; i; --i)
-          fun(std::forward<Args>(args)...);
+          fun(args...);
         const auto end = __rdtscp(&tmp);
-        const double elapsed = end - start;
-#if USE_MEAN
-        mean += elapsed;
-#else
-        if (elapsed < minimum)
-          {
-            minimum = elapsed;
-            tries = -1;
-          }
-#endif
+        const auto elapsed = end - start;
+        accum.add(elapsed, tries);
       }
-#if USE_MEAN
-    return mean / (Retries * Iterations);
-#else
-    return minimum / Iterations;
-#endif
+    return {
+      determine_ip(),
+      accum.result(1./Retries, 1./Iterations)
+    };
   }
+
+using TscType = decltype(__rdtscp(nullptr));
+
+struct AccMean
+{
+  TscType mean = 0.;
+
+  void
+  add(const TscType elapsed, int)
+  { mean += elapsed; }
+
+  double
+  result(double norm_retries, double norm_iterations)
+  { return double(mean) * norm_retries * norm_iterations; }
+};
+
+struct AccMinimum
+{
+  TscType minimum = std::numeric_limits<TscType>::max();
+
+  void
+  add(const TscType elapsed, int& tries)
+  {
+    if (elapsed < minimum)
+      {
+        minimum = elapsed;
+        tries = -1;
+      }
+  }
+
+  double
+  result(double, double norm_iterations)
+  { return double(minimum) * norm_iterations; }
+};
+
+struct AccMedian
+{
+  std::vector<TscType> times;
+
+  AccMedian()
+  { times.reserve(DefaultRetries); }
+
+  void
+  add(const TscType elapsed, int)
+  { times.push_back(elapsed); }
+
+  double
+  result(double, double norm_iterations)
+  {
+    std::ranges::sort(times);
+    return double(times[times.size() / 2]) * norm_iterations;
+  }
+};
+
+struct AccMeanLowHalf
+{
+  std::vector<TscType> times;
+
+  AccMeanLowHalf()
+  { times.reserve(DefaultRetries); }
+
+  void
+  add(const TscType elapsed, int)
+  { times.push_back(elapsed); }
+
+  double
+  result(double, double norm_iterations)
+  {
+    std::ranges::sort(times);
+    const std::size_t n = times.size() / 2;
+    double norm = norm_iterations / double(n);
+    return norm * double(std::ranges::fold_left(times | std::views::take(n), 0., std::plus<>()));
+  }
+};
+
+template <long Iterations = DefaultIterations, int Retries = DefaultRetries>
+  auto
+  time_mean(auto&& fun, auto&&... args)
+  { return time_generic<AccMean, Iterations, Retries>(fun, args...); }
+
+template <long Iterations = DefaultIterations, int Retries = DefaultRetries>
+  auto
+  time_minimum(auto&& fun, auto&&... args)
+  { return time_generic<AccMinimum, Iterations, Retries>(fun, args...); }
+
+template <long Iterations = DefaultIterations, int Retries = DefaultRetries>
+  auto
+  time_median(auto&& fun, auto&&... args)
+  { return time_generic<AccMedian, Iterations, Retries>(fun, args...); }
 
 template <typename T, std::size_t N>
   using carray = T[N];
 
-template <long Iterations = 50'000, int Retries = 20, typename T, std::size_t N>
+template <long Iterations = DefaultIterations, int Retries = 20, typename T, std::size_t N>
   [[gnu::noinline]]
   double
   time_latency(carray<T, N>& data, auto&& process_one)
@@ -567,7 +726,7 @@ template <long Iterations = 50'000, int Retries = 20, typename T, std::size_t N>
     return dt;
   }
 
-template <long Iterations = 50'000, int Retries = 20, typename T, std::size_t N>
+template <long Iterations = DefaultIterations, int Retries = 20, typename T, std::size_t N>
   [[gnu::noinline]]
   double
   time_throughput(carray<T, N>& init_data, auto&& process_one)
@@ -616,6 +775,37 @@ template <typename T>
       return x[i];
   }
 
+template <class T>
+  [[gnu::always_inline]]
+  inline T
+  load(std::span<const value_type_t<T>> mem, int offset)
+  {
+    if constexpr (simd::__simd_vec_type<T>)
+      return simd::unchecked_load<T>(mem.subspan(offset, T::size()));
+    else if constexpr (std::is_scalar_v<T>)
+      return mem[offset];
+    else
+      {
+        T r;
+        std::memcpy(&r, mem.data() + offset, sizeof(r));
+        return r;
+      }
+  }
+
+template <typename T>
+  [[gnu::always_inline]]
+  constexpr T
+  broadcast(const value_type_t<T>& x)
+  {
+    if constexpr (vec_builtin<T>)
+      {
+        constexpr auto true_ = T() == T();
+        return true_ ? x : x;
+      }
+    else
+      return x;
+  }
+
 #define MAKE_VECTORMATH_OVERLOAD(name)                              \
 template <vec_builtin T, class... More>                             \
   T name(T a, More... more)                                         \
@@ -658,6 +848,62 @@ typedef struct F_##fun                                            \
       using std::fun;                                             \
       return fun(x, y);                                           \
     }                                                             \
+}
+
+void
+bench_main();
+
+void
+usage()
+{
+  std::cout << "Options:\n"
+               " -a, --print-addr    Print instruction pointer for each RDTSCP loop\n"
+               "     --no-speedup    Do not print Speedup column\n"
+               "     --no-sched      Do not set CPU affinity and FIFO scheduler\n"
+               " -h, --help          This message.\n";
+}
+
+int
+main(int argc, char** argv)
+{
+  std::vector<std::string> args;
+  for (int i = 0; i < argc; ++i)
+    args.emplace_back(argv[i]);
+
+  bool set_affinity = true;
+  for (const std::string& a : args)
+    {
+      if (a == "-a" || a == "--print-addr")
+        g_print_ip = true;
+      else if (a == "--no-speedup")
+        g_print_speedup = false;
+      else if (a == "-h" || a == "--help")
+        {
+          usage();
+          return 0;
+        }
+      else if (a == "--no-sched")
+        set_affinity = false;
+    }
+  if (set_affinity)
+    {
+      // attempt to set affinity to CPU 0
+      cpu_set_t cpuset;
+      CPU_ZERO(&cpuset);
+      CPU_SET(0, &cpuset);
+      if (sched_setaffinity(0, sizeof(cpuset), &cpuset) != 0)
+        std::cerr << "Failed to set CPU affinity to CPU 0\n";
+      else
+        std::cout << "Pinned to CPU 0\n";
+      struct sched_param sp;
+      sp.sched_priority = 10;
+      if (sched_setscheduler(0, SCHED_FIFO, &sp) != 0)
+        std::cerr << "Failed to set FIFO scheduler\n";
+      else
+        std::cout << "Using FIFO scheduler with priority " << sp.sched_priority << "\n";
+    }
+  bench_main();
+  return 0;
 }
 
 #endif  // BENCH_H_

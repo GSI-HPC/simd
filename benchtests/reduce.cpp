@@ -30,66 +30,73 @@ namespace my
 template <int Special>
   struct Benchmark<Special>
   {
-    static constexpr Info<2> info = {"Latency", "Throughput"};
+    static constexpr std::array info = {
+      "Latency", "Throughput"
+    };
 
     template <typename T>
       static constexpr bool accept = size_v<T> >= 2;
 
+    template <class T, class Stat>
+      static TimeResults
+      do_latency()
+      {
+        T a = {};
+        vir::fake_modify(a);
+        using my::reduce;
+        return (time_generic<Stat>([=]() mutable {
+                  T r = a;
+                  r = broadcast<T>(reduce(vir::make_unknown(r)));
+                  r = broadcast<T>(reduce(vir::make_unknown(r)));
+                  r = broadcast<T>(reduce(vir::make_unknown(r)));
+                  r = broadcast<T>(reduce(vir::make_unknown(r)));
+                  vir::fake_read(r);
+                  a = r;
+                }) - time_minimum([=]() mutable {
+                       T r = a;
+                       r = broadcast<T>(vir::make_unknown(r)[0]);
+                       r = broadcast<T>(vir::make_unknown(r)[0]);
+                       r = broadcast<T>(vir::make_unknown(r)[0]);
+                       r = broadcast<T>(vir::make_unknown(r)[0]);
+                       vir::fake_read(r);
+                       a = r;
+                     })
+               ) * 0.25;
+      }
+
+    template <class T, class Stat>
+      static TimeResults
+      do_throughput()
+      {
+        T a = {};
+        vir::fake_modify(a);
+        using my::reduce;
+        return time_generic<Stat>([=]() {
+                 vir::fake_read(reduce(vir::make_unknown(a)));
+                 vir::fake_read(reduce(vir::make_unknown(a)));
+                 vir::fake_read(reduce(vir::make_unknown(a)));
+                 vir::fake_read(reduce(vir::make_unknown(a)));
+                 vir::fake_read(reduce(vir::make_unknown(a)));
+                 vir::fake_read(reduce(vir::make_unknown(a)));
+                 vir::fake_read(reduce(vir::make_unknown(a)));
+                 vir::fake_read(reduce(vir::make_unknown(a)));
+               }) * 0.125;
+      }
+
     template <class V>
       [[gnu::flatten]]
-      static Times<2>
+      static Times<info.size()>
       run()
       {
-        using TT = value_type_t<V>;
-
-        auto lat_process_one = [=] [[gnu::always_inline]] (auto fake, V in) {
-          V x = [] [[gnu::noipa]] (auto& tmp) { return tmp; }(in);
-          if constexpr (std::convertible_to<TT, V>)
-            {
-              if constexpr (fake)
-                x = x[0];
-              else
-                x = my::reduce(x);
-            }
-          else
-            {
-              if constexpr (fake)
-                x = V() + x[0];
-              else
-                x = V() + my::reduce(x);
-            }
-          x = [] [[gnu::noipa]] (auto& tmp) { return tmp; }(x);
-          return x;
+        return {
+          do_latency<V, AccMeanLowHalf>(),
+          do_throughput<V, AccMeanLowHalf>()
         };
-
-        auto thr_process_one = [=] [[gnu::always_inline]] (auto fake, V in) {
-          V x = in;
-          vir::fake_modify_one(x);
-          if constexpr (std::convertible_to<TT, V>)
-            {
-              if constexpr (fake)
-                x = x[0];
-              else
-                x = my::reduce(x);
-            }
-          else
-            {
-              if constexpr (fake)
-                x = V() + x[0];
-              else
-                x = V() + my::reduce(x);
-            }
-          return x;
-        };
-
-        V a[8] = {};
-        return { time_latency(a, lat_process_one),
-                 time_throughput(a, thr_process_one) };
       }
   };
 
-int
-main()
+void
+bench_main()
 {
   bench_all<signed char>();
   bench_all<unsigned char>();

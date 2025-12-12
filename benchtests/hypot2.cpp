@@ -49,23 +49,6 @@ template <int Special>
       }
 
     template <class T>
-      [[gnu::always_inline]]
-      static inline T
-      load(std::span<value_type_t<T>> mem, int offset)
-      {
-        if constexpr (simd::__simd_vec_type<T>)
-          return simd::unchecked_load<T>(mem.subspan(offset, T::size()));
-        else if constexpr (std::is_scalar_v<T>)
-          return mem[offset];
-        else
-          {
-            T r;
-            std::memcpy(&r, mem.data() + offset, sizeof(r));
-            return r;
-          }
-      }
-
-    template <class T>
       static double
       sweep()
       {

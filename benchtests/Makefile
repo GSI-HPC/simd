@@ -7,13 +7,7 @@ default=
 
 variants=default fastmath
 
-realtime::=chrt --fifo 10
-realtime::=$(shell $(realtime) true 2>/dev/null && echo "$(realtime)")
-
 all: all-targets
-
-debug:
-	@echo "$(realtime)"
 
 bin:
 	@mkdir -p bin
@@ -28,13 +22,15 @@ bin/$1-$2-$3: $1.cpp bench.h ../obj/libsimd.so bin/compile_commands.json | bin
 
 data/$1-$2-$3.out: bin/$1-$2-$3 | data
 	@./benchmark-mode.sh on
-	@$$(realtime) $$< | tee $$@
+	@$$< | tee $$@
 	@./benchmark-mode.sh off
 
 .PHONY: $1-$2-$3
-$1-$2-$3: data/$1-$2-$3.out
+$1-$2-$3: bin/$1-$2-$3
+run-$1-$2-$3: data/$1-$2-$3.out
 
 targets+=$1-$2-$3
+targets+=run-$1-$2-$3
 
 endef
 
