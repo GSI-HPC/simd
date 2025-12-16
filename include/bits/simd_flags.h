@@ -169,7 +169,7 @@ namespace std::simd
         static constexpr _Up*
         _S_adjust_pointer(_Up* __ptr)
         {
-          template for (constexpr auto __f : {_Flags()...})
+          template for ([[maybe_unused]] constexpr auto __f : {_Flags()...})
             {
               if constexpr (requires {__f.template _S_adjust_pointer<_Tp>(__ptr); })
                 __ptr = __f.template _S_adjust_pointer<_Tp>(__ptr);
