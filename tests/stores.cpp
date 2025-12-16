@@ -28,7 +28,7 @@ template <typename V>
             t.verify_equal(mem[i], T(i + 1));
             t.verify_equal(mem[V::size + i], T(i + 1));
           }
-#if VIR_EXTENSIONS
+#if VIR_NEXT_PATCH
         if constexpr (complex_like<T>)
           {
           }
