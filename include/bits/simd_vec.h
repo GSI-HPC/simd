@@ -450,14 +450,11 @@ namespace std::simd
 
       [[__gnu__::__always_inline__]]
       constexpr basic_vec
-      _M_complex_conj() const requires __complex_like<value_type>
-      {
-        static_assert((_S_size & 1) == 0);
-        return _VecOps<_DataType>::_S_complex_negate_imag(_M_data);
-      }
+      _M_complex_conj() const requires ((_S_size & 1) == 0)
+      { return _VecOps<_DataType>::_S_complex_negate_imag(_M_data); }
 
       template <typename _CxVec, _TargetTraits _Traits = {}>
-        requires __complex_like<value_type>
+        requires _CxVec::abi_type::_S_is_cx_ileav
         [[__gnu__::__always_inline__]]
         constexpr void
         _M_complex_multiply_with(basic_vec __yvec)
@@ -538,7 +535,7 @@ namespace std::simd
             }
         }
 
-      template <typename _Cx, _TargetTraits _Traits = {}>
+      template <__complex_like _Cx, _TargetTraits _Traits = {}>
         [[__gnu__::__always_inline__]]
         static constexpr void
         _S_cxctgus_mul(basic_vec& __re0, basic_vec& __im0, basic_vec __re1, basic_vec __im1)
@@ -2079,11 +2076,11 @@ namespace std::simd
 #if VIR_NEXT_PATCH
       [[__gnu__::__always_inline__]]
       constexpr basic_vec
-      _M_complex_conj() const requires __complex_like<value_type>
+      _M_complex_conj() const requires ((_S_size & 1) == 0)
       { return _S_init(_M_data0._M_complex_conj(), _M_data1._M_complex_conj()); }
 
       template <typename _CxVec, _TargetTraits _Traits = {}>
-        requires __complex_like<value_type>
+        requires _CxVec::abi_type::_S_is_cx_ileav
         [[__gnu__::__always_inline__]]
         constexpr void
         _M_complex_multiply_with(const basic_vec& __yvec)
@@ -2092,8 +2089,7 @@ namespace std::simd
           _M_data1.template _M_complex_multiply_with<_CxVec>(__yvec._M_data1);
         }
 
-      template <typename _Cx>
-        requires __complex_like<value_type>
+      template <__complex_like _Cx>
         [[__gnu__::__always_inline__]]
         static constexpr void
         _S_cxctgus_mul(basic_vec& __re0, basic_vec& __im0,
