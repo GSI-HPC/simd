@@ -1226,15 +1226,29 @@ namespace std::simd
       template <__complex_like _Up, typename _UAbi>
         requires (__simd_size_v<_Up, _UAbi> == size.value)
           && __explicitly_convertible_to<_Up, value_type>
+          && _UAbi::_S_is_cx_ctgus
         [[__gnu__::__always_inline__]]
         constexpr
         explicit(!convertible_to<_Up, value_type>)
         basic_vec(const basic_vec<_Up, _UAbi>& __x) noexcept
-        : _M_real(__x._M_real), _M_imag(__x._M_imag)
+        : _M_real(__x._M_real), _M_imag(__x._M_imag) // using real() instead of _M_real is possible
+          // but potentially leads to memcpy because of oversized _M_real (likewise for imag)
+        {}
+
+      template <__complex_like _Up, typename _UAbi>
+        requires (__simd_size_v<_Up, _UAbi> == size.value)
+          && __explicitly_convertible_to<_Up, value_type>
+          && _UAbi::_S_is_cx_ileav
+        [[__gnu__::__always_inline__]]
+        constexpr
+        explicit(!convertible_to<_Up, value_type>)
+        basic_vec(const basic_vec<_Up, _UAbi>& __x) noexcept
+        : _M_real(__x.real()), _M_imag(__x.imag())
         {}
 
       template <typename _Up, typename _UAbi> // _Up is not complex!
-        requires (__simd_size_v<_Up, _UAbi> == _S_size)
+        requires (!__complex_like<_Up>)
+          && (__simd_size_v<_Up, _UAbi> == _S_size)
           && __explicitly_convertible_to<_Up, value_type>
         [[__gnu__::__always_inline__]]
         constexpr
