@@ -808,7 +808,20 @@ namespace std::simd
         [[__gnu__::__always_inline__]]
         constexpr
         basic_vec(_LoadCtorTag, const _Up* __ptr)
-          : _M_data(_LoadCtorTag(), reinterpret_cast<const typename _Up::value_type*>(__ptr))
+        : _M_data([&] {
+            if consteval
+              {
+                return _TSimd([&](int __i) {
+                         const _Up& __cx = __ptr[__i / 2];
+                         return static_cast<_T0>(__i % 2 == 0 ? __cx.real() : __cx.imag());
+                       });
+              }
+            else
+              {
+                return _TSimd(_LoadCtorTag(),
+                              reinterpret_cast<const typename _Up::value_type*>(__ptr));
+              }
+          }())
         {}
 
       template <typename _Up>
