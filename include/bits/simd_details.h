@@ -439,6 +439,7 @@ namespace std::simd
       static constexpr bool _S_is_cx_ctgus
         = __filter_abi_variant(_S_variant, _AbiVariant::_CxCtgus) == _AbiVariant::_CxCtgus;
 
+      static_assert(_S_size > _S_nreg || (_S_is_cx_ileav && _S_size * 2 > _S_nreg)); // when equal use _ScalarAbi
 #endif
       static constexpr bool _S_is_bitmask
         = __filter_abi_variant(_S_variant, _AbiVariant::_BitMask) == _AbiVariant::_BitMask;
@@ -1108,20 +1109,23 @@ namespace std::simd
         return _InvalidAbi();
       else
         {
-          constexpr auto __native = std::simd::__native_abi<_Tp>();
-          static_assert(0 != __native._S_size);
-          constexpr int __nreg = __div_ceil(_Np, __native._S_size);
+          using _Native = remove_const_t<decltype(std::simd::__native_abi<_Tp>())>;
+          static_assert(0 != _Native::_S_size);
+          constexpr int __nreg = __div_ceil(_Np, _Native::_S_size);
 
           if constexpr (__scalar_abi_tag<_A0>)
             return std::simd::__deduce_abi<_Tp, _Np>();
 
 #if VIR_NEXT_PATCH
-          else if constexpr (__complex_like<_Tp> && _A0::_S_is_cx_ctgus && __native._S_is_cx_ileav)
+          else if constexpr (__scalar_abi_tag<_Native>)
+            return _ScalarAbi<_Np>();
+
+          else if constexpr (__complex_like<_Tp> && _A0::_S_is_cx_ctgus && _Native::_S_is_cx_ileav)
             // we need half the number of registers since the number applies twice, to reals and
             // imaginaries.
             return _Abi_t<_Np, __nreg / 2, _A0::_S_variant>();
 
-          else if constexpr (__complex_like<_Tp> && _A0::_S_is_cx_ileav && __native._S_is_cx_ctgus)
+          else if constexpr (__complex_like<_Tp> && _A0::_S_is_cx_ileav && _Native::_S_is_cx_ctgus)
             return _Abi_t<_Np, __nreg * 2, _A0::_S_variant>();
 
           else if constexpr (__complex_like<_Tp>)
