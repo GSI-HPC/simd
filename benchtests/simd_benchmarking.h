@@ -45,6 +45,13 @@ namespace vir
               fake_modify_one(x._M_get_low());
               fake_modify_one(x._M_get_high());
             }
+          else if constexpr (T::abi_type::_S_is_cx_ctgus)
+            {
+              fake_modify_one(x._M_get_real());
+              fake_modify_one(x._M_get_imag());
+            }
+          else if constexpr (T::abi_type::_S_is_cx_ileav)
+            fake_modify_one(x._M_get_ileav());
           else
             static_assert(false);
         }
@@ -78,6 +85,13 @@ namespace vir
               fake_read_one(x._M_get_low());
               fake_read_one(x._M_get_high());
             }
+          else if constexpr (T::abi_type::_S_is_cx_ctgus)
+            {
+              fake_read_one(x._M_get_real());
+              fake_read_one(x._M_get_imag());
+            }
+          else if constexpr (T::abi_type::_S_is_cx_ileav)
+            fake_read_one(x._M_get_ileav());
           else
             static_assert(false);
         }

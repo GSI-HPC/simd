@@ -643,6 +643,12 @@ namespace std::simd
 
       static constexpr auto size = __simd_size_c<_S_size>;
 
+      // internal but public API ----------------------------------------------
+      [[__gnu__::__always_inline__]]
+      constexpr const _TSimd&
+      _M_get_ileav() const
+      { return _M_data; }
+
       [[__gnu__::__always_inline__]]
       friend constexpr bool
       __is_const_known(const basic_vec& __x)
@@ -1140,6 +1146,17 @@ namespace std::simd
       { return {}; }
 
       static constexpr auto size = __simd_size_c<_S_size>;
+
+      // internal but public API ----------------------------------------------
+      [[__gnu__::__always_inline__]]
+      constexpr const _RealSimd&
+      _M_get_real() const
+      { return _M_real; }
+
+      [[__gnu__::__always_inline__]]
+      constexpr const _RealSimd&
+      _M_get_imag() const
+      { return _M_imag; }
 
       [[__gnu__::__always_inline__]]
       friend constexpr bool
