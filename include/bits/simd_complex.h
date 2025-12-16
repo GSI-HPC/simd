@@ -756,10 +756,10 @@ namespace std::simd
         {}
 
       // [simd.ctor] conversion constructor -----------------------------------
-      // FIXME: Handle _Ap::_S_is_cx_ctgus
       template <__complex_like _Up, typename _UAbi>
         requires (__simd_size_v<_Up, _UAbi> == size.value)
           && __explicitly_convertible_to<_Up, value_type>
+          && _UAbi::_S_is_cx_ileav
         [[__gnu__::__always_inline__]]
         constexpr
         explicit(!convertible_to<_Up, value_type>)
@@ -767,8 +767,21 @@ namespace std::simd
         : _M_data(__x._M_data)
         {}
 
-      template <typename _Up, typename _UAbi> // _Up is not complex!
-        requires (__simd_size_v<_Up, _UAbi> == _S_size)
+      template <__complex_like _Up, typename _UAbi>
+        requires (__simd_size_v<_Up, _UAbi> == size.value)
+          && __explicitly_convertible_to<_Up, value_type>
+          && _UAbi::_S_is_cx_ctgus
+        [[__gnu__::__always_inline__]]
+        constexpr
+        explicit(!convertible_to<_Up, value_type>)
+        basic_vec(const basic_vec<_Up, _UAbi>& __x) noexcept
+        : basic_vec(static_cast<const _RealSimd&>(__x._M_real),
+                    static_cast<const _RealSimd&>(__x._M_imag))
+        {}
+
+      template <typename _Up, typename _UAbi>
+        requires (!__complex_like<_Up>)
+          && (__simd_size_v<_Up, _UAbi> == _S_size)
           && __explicitly_convertible_to<_Up, value_type>
         [[__gnu__::__always_inline__]]
         constexpr
