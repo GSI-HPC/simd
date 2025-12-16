@@ -679,6 +679,59 @@ namespace std::simd
         _S_concat(const basic_vec<value_type, _As>&... __xs) noexcept
         { return basic_vec::_S_init(_TSimd::_S_concat(__xs._M_data...)); }
 
+      template <typename _BinaryOp>
+        [[__gnu__::__always_inline__]]
+        constexpr auto
+        _M_reduce_to_register(_BinaryOp __binary_op) const
+        {
+          if constexpr (_TSimd::abi_type::_S_nreg == 1)
+            return *this;
+          else
+            {
+              auto [__lo, __hi] = _M_chunk<resize_t<__bit_ceil(unsigned(_S_size)) / 2,
+                                                    basic_vec>>();
+              auto __a = __lo._M_reduce_to_register(__binary_op);
+              auto __b = __hi._M_reduce_to_register(__binary_op);
+              if constexpr (__a._S_size == __b._S_size)
+                return __binary_op(__a, __b);
+              else
+                {
+                  using _V1 = resize_t<1, basic_vec>;
+                  return __binary_op(_V1(__a._M_reduce(__binary_op)),
+                                     _V1(__b._M_reduce(__binary_op)));
+                }
+            }
+        }
+
+      template <typename _BinaryOp, _ArchTraits _Traits = {}>
+        [[__gnu__::__always_inline__]]
+        constexpr value_type
+        _M_reduce(_BinaryOp __binary_op) const
+        {
+          if constexpr (_S_size == 1)
+            return operator[](0);
+          else if constexpr (_Traits.template _M_eval_as_f32<_T0>())
+            return value_type(rebind_t<complex<float>, basic_vec>(*this)._M_reduce(__binary_op));
+          else if constexpr (_TSimd::abi_type::_S_nreg >= 2)
+            return _M_reduce_to_register(__binary_op)._M_reduce(__binary_op);
+          else if constexpr (__has_single_bit(unsigned(_S_size)))
+            {
+              const auto [__a, __b] = _M_chunk<resize_t<_S_size / 2, basic_vec>>();
+              return __binary_op(__a, __b)._M_reduce(__binary_op);
+            }
+          else
+            {
+              const auto [__a, __b, __c, ...__rest]
+                = _M_chunk<resize_t<__bit_floor(unsigned(_S_size)) / 2, basic_vec>>();
+              const auto __ab = __binary_op(__a, __b);
+              static_assert(sizeof...(__rest) <= 1);
+              if constexpr (__a._S_size != __c._S_size)
+                return __ab._S_concat(__ab, __c)._M_reduce(__binary_op);
+              else
+                return __ab._S_concat(__binary_op(__ab, __c), __rest...)._M_reduce(__binary_op);
+            }
+        }
+
       template <typename _Up>
         [[__gnu__::__always_inline__]]
         static inline basic_vec
@@ -1120,6 +1173,58 @@ namespace std::simd
         static constexpr basic_vec
         _S_concat(const basic_vec<value_type, _As>&... __xs) noexcept
         { return {_RealSimd::_S_concat(__xs._M_real...), _RealSimd::_S_concat(__xs._M_imag...) }; }
+
+      template <typename _BinaryOp>
+        [[__gnu__::__always_inline__]]
+        constexpr auto
+        _M_reduce_to_register(_BinaryOp __binary_op) const
+        {
+          if constexpr (_RealSimd::abi_type::_S_nreg == 1)
+            return *this;
+          else
+            {
+              auto [__lo, __hi] = _M_chunk<resize_t<_RealSimd::_N0, basic_vec>>();
+              auto __a = __lo._M_reduce_to_register(__binary_op);
+              auto __b = __hi._M_reduce_to_register(__binary_op);
+              if constexpr (__a._S_size == __b._S_size)
+                return __binary_op(__a, __b);
+              else
+                {
+                  using _V1 = resize_t<1, basic_vec>;
+                  return __binary_op(_V1(__a._M_reduce(__binary_op)),
+                                     _V1(__b._M_reduce(__binary_op)));
+                }
+            }
+        }
+
+      template <typename _BinaryOp, _ArchTraits _Traits = {}>
+        [[__gnu__::__always_inline__]]
+        constexpr value_type
+        _M_reduce(_BinaryOp __binary_op) const
+        {
+          if constexpr (_S_size == 1)
+            return operator[](0);
+          else if constexpr (_Traits.template _M_eval_as_f32<_T0>())
+            return value_type(rebind_t<complex<float>, basic_vec>(*this)._M_reduce(__binary_op));
+          else if constexpr (_RealSimd::abi_type::_S_nreg >= 2)
+            return _M_reduce_to_register(__binary_op)._M_reduce(__binary_op);
+          else if constexpr (__has_single_bit(unsigned(_S_size)))
+            {
+              const auto [__a, __b] = _M_chunk<resize_t<_S_size / 2, basic_vec>>();
+              return __binary_op(__a, __b)._M_reduce(__binary_op);
+            }
+          else
+            {
+              const auto [__a, __b, __c, ...__rest]
+                = _M_chunk<resize_t<__bit_floor(unsigned(_S_size)) / 2, basic_vec>>();
+              const auto __ab = __binary_op(__a, __b);
+              static_assert(sizeof...(__rest) <= 1);
+              if constexpr (__a._S_size != __c._S_size)
+                return __ab._S_concat(__ab, __c)._M_reduce(__binary_op);
+              else
+                return __ab._S_concat(__binary_op(__ab, __c), __rest...)._M_reduce(__binary_op);
+            }
+        }
 
       /** @internal
        * Implementation of @ref partial_load.
