@@ -849,8 +849,10 @@ namespace std::simd
       [[__gnu__::__always_inline__]]
       constexpr
       basic_vec(const _RealSimd& __re, const _RealSimd& __im = {}) noexcept
-        : _M_data([&](int __i) { return ((__i & 1) == 0 ? __re : __im)[__i / 2]; })
-      {}
+      {
+        _M_data._M_complex_set_real(__re);
+        _M_data._M_complex_set_imag(__im);
+      }
 
       // [simd.subscr] --------------------------------------------------------
       [[__gnu__::__always_inline__]]

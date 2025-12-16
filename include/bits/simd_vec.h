@@ -2074,6 +2074,28 @@ namespace std::simd
         }
 
 #if VIR_NEXT_PATCH
+      using _HalfVec = __similar_vec<value_type, _S_size / 2, _Ap>;
+
+      [[__gnu__::__always_inline__]]
+      constexpr void
+      _M_complex_set_real(const _HalfVec& __x) requires ((_S_size & 1) == 0)
+      {
+        const auto& [__lo, __hi]
+          = __x.template _M_chunk<__similar_vec<value_type, _N0 / 2, _Ap>>();
+        _M_data0._M_complex_set_real(__lo);
+        _M_data1._M_complex_set_real(__hi);
+      }
+
+      [[__gnu__::__always_inline__]]
+      constexpr void
+      _M_complex_set_imag(const _HalfVec& __x) requires ((_S_size & 1) == 0)
+      {
+        const auto& [__lo, __hi]
+          = __x.template _M_chunk<__similar_vec<value_type, _N0 / 2, _Ap>>();
+        _M_data0._M_complex_set_imag(__lo);
+        _M_data1._M_complex_set_imag(__hi);
+      }
+
       [[__gnu__::__always_inline__]]
       constexpr basic_vec
       _M_complex_conj() const requires ((_S_size & 1) == 0)
