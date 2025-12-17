@@ -48,7 +48,8 @@ namespace std::simd
   template <typename _Tp, typename _ValueType,
             __simd_size_type _Width = sizeof(_Tp) / sizeof(_ValueType)>
     concept __vec_builtin_of
-      = !is_arithmetic_v<_Tp> && __vectorizable<_ValueType>
+      = !is_class_v<_Tp> && !is_pointer_v<_Tp> && !is_arithmetic_v<_Tp>
+          && __vectorizable<_ValueType>
           && _Width >= 1 && sizeof(_Tp) / sizeof(_ValueType) == _Width
           && same_as<__vec_builtin_type_bytes<_ValueType, sizeof(_Tp)>, _Tp>
           && requires(_Tp& __v, _ValueType __x) { __v[0] = __x; };
@@ -58,8 +59,7 @@ namespace std::simd
    */
   template <typename _Tp>
     concept __vec_builtin
-      = !is_class_v<_Tp>
-          && __vec_builtin_of<_Tp, remove_cvref_t<decltype(declval<const _Tp>()[0])>>;
+      = __vec_builtin_of<_Tp, remove_cvref_t<decltype(declval<const _Tp>()[0])>>;
 
   /**
    * Alias for the value type of the given __vec_builtin type \p _Tp.
