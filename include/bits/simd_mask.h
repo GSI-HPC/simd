@@ -845,6 +845,7 @@ namespace std::simd
       constexpr value_type
       operator[](__simd_size_type __i) const
       {
+        __glibcxx_simd_precondition(__i >= 0 && __i < _S_size, "subscript is out of bounds");
         if constexpr (_S_is_scalar)
           return _M_data;
         else if constexpr (_S_use_bitmask)
@@ -1646,55 +1647,44 @@ namespace std::simd
       constexpr value_type
       operator[](__simd_size_type __i) const
       {
-        // in some cases the last element can be 'bool' instead of bit-/vector-mask;
-        // e.g. mask<short, 17> is {mask<short, 16>, mask<short, 1>}, where the latter uses
-        // _ScalarAbi<1>, which is stored as 'bool'
-        if constexpr (_M_data1._S_has_bool_member)
-          {
-            if (__i < _N0)
-              return _M_data0[__i];
-            else
-              return _M_data1[__i - _N0];
-          }
+        __glibcxx_simd_precondition(__i >= 0 && __i < _S_size, "subscript is out of bounds");
+        if (__is_const_known(__i))
+          return __i < _N0 ? _M_data0[__i] : _M_data1[__i - _N0];
+        else if constexpr (_M_data1._S_has_bool_member)
+          // in some cases the last element can be 'bool' instead of bit-/vector-mask;
+          // e.g. mask<short, 17> is {mask<short, 16>, mask<short, 1>}, where the latter uses
+          // _ScalarAbi<1>, which is stored as 'bool'
+          return __i < _N0 ? _M_data0[__i] : _M_data1[__i - _N0];
 #if VIR_NEXT_PATCH
         else if constexpr (abi_type::_S_is_cx_ileav)
           {
             // values are duplicated
             if constexpr (abi_type::_S_is_bitmask)
               {
-                struct _Tmp
-                {
-                  alignas(basic_mask) unsigned char _M_bytes[__div_ceil(2 * _S_size, __CHAR_BIT__)];
-                };
-                return bool((__builtin_bit_cast(_Tmp, *this)
-                               ._M_bytes[2 * __i / __CHAR_BIT__] >> (2 * __i % __CHAR_BIT__)) & 1);
+                using _AliasingArray [[__gnu__::__may_alias__]]
+                  = unsigned char[__div_ceil(2 * _S_size, __CHAR_BIT__)];
+                return bool((reinterpret_cast<const _AliasingArray&>(*this)
+                               [2 * __i / __CHAR_BIT__] >> (2 * __i % __CHAR_BIT__)) & 1);
               }
             else
               {
-                struct _Tmp
-                {
-                  alignas(basic_mask) __integer_from<_Bytes / 2> _M_values[2 * _S_size];
-                };
-                return __builtin_bit_cast(_Tmp, *this)._M_values[2 * __i] != 0;
+                using _AliasingArray [[__gnu__::__may_alias__]]
+                  = __integer_from<_Bytes / 2>[2 * _S_size];
+                return reinterpret_cast<const _AliasingArray&>(*this)[2 * __i] != 0;
               }
           }
 #endif
         else if constexpr (abi_type::_S_is_bitmask)
           {
-            struct _Tmp
-            {
-              alignas(basic_mask) unsigned char _M_bytes[__div_ceil(_S_size, __CHAR_BIT__)];
-            };
-            return bool((__builtin_bit_cast(_Tmp, *this)
-                           ._M_bytes[__i / __CHAR_BIT__] >> (__i % __CHAR_BIT__)) & 1);
+            using _AliasingArray [[__gnu__::__may_alias__]]
+              = unsigned char[__div_ceil(_S_size, __CHAR_BIT__)];
+            return bool((reinterpret_cast<const _AliasingArray&>(*this)
+                           [__i / __CHAR_BIT__] >> (__i % __CHAR_BIT__)) & 1);
           }
         else
           {
-            struct _Tmp
-            {
-              alignas(basic_mask) __integer_from<_Bytes> _M_values[_S_size];
-            };
-            return __builtin_bit_cast(_Tmp, *this)._M_values[__i] != 0;
+            using _AliasingArray [[__gnu__::__may_alias__]] = __integer_from<_Bytes>[_S_size];
+            return reinterpret_cast<const _AliasingArray&>(*this)[__i] != 0;
           }
       }
 

@@ -1491,6 +1491,7 @@ namespace std::simd
       constexpr value_type
       operator[](__simd_size_type __i) const
       {
+        __glibcxx_simd_precondition(__i >= 0 && __i < _S_size, "subscript is out of bounds");
         if constexpr (_S_is_scalar)
           return _M_data;
         else
@@ -2387,9 +2388,14 @@ namespace std::simd
       constexpr value_type
       operator[](__simd_size_type __i) const
       {
-        struct _Tmp
-        { alignas(basic_vec) const value_type _M_values[_S_size]; };
-        return __builtin_bit_cast(_Tmp, *this)._M_values[__i];
+        __glibcxx_simd_precondition(__i >= 0 && __i < _S_size, "subscript is out of bounds");
+        if (__is_const_known(__i))
+          return __i < _N0 ? _M_data0[__i] : _M_data1[__i - _N0];
+        else
+          {
+            using _AliasingArray [[__gnu__::__may_alias__]] = value_type[_S_size];
+            return reinterpret_cast<const _AliasingArray&>(*this)[__i];
+          }
       }
 
       // [simd.unary] unary operators -----------------------------------------
