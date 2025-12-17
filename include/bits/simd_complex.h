@@ -1098,7 +1098,7 @@ namespace std::simd
 
       using _T0 = typename _Tp::value_type;
 
-      using _RealSimd = __similar_vec<_T0, _S_size, _Ap>;
+      using _RealSimd = __similar_resized_vec<_T0, _S_size, _Ap>;
 
       _RealSimd _M_real = {};
 

@@ -109,7 +109,7 @@ namespace std::simd
     requires requires { typename _Vp::mask_type; }
     //requires requires { typename __deduce_abi_t<typename _Vp::value_type, _Np>; }
     struct resize<_Np, _Vp, _Traits>
-    { using type = __similar_vec<typename _Vp::value_type, _Np, typename _Vp::abi_type>; };
+    { using type = __similar_resized_vec<typename _Vp::value_type, _Np, typename _Vp::abi_type>; };
 
   template <__simd_size_type _Np, __simd_mask_type _Mp, _ArchTraits _Traits>
     //requires requires { typename __deduce_abi_t<typename _Mp::value_type, _Np>; }

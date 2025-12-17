@@ -430,6 +430,9 @@ namespace std::simd
        */
       static constexpr int _S_nreg = _Nreg;
 
+      static_assert(_S_size > 0);
+      static_assert(_S_nreg > 0);
+
       static constexpr _AbiVariant _S_variant = static_cast<_AbiVariant>(_Var);
 
 #if VIR_NEXT_PATCH
@@ -438,6 +441,8 @@ namespace std::simd
 
       static constexpr bool _S_is_cx_ctgus
         = __filter_abi_variant(_S_variant, _AbiVariant::_CxCtgus) == _AbiVariant::_CxCtgus;
+
+      static_assert(!(_S_is_cx_ileav && _S_is_cx_ctgus)); // can't be both
 
       static_assert(_S_size > _S_nreg || (_S_is_cx_ileav && _S_size * 2 > _S_nreg)); // when equal use _ScalarAbi
 #endif
@@ -1117,16 +1122,19 @@ namespace std::simd
             return std::simd::__deduce_abi<_Tp, _Np>();
 
 #if VIR_NEXT_PATCH
-          else if constexpr (__scalar_abi_tag<_Native>)
+          else if constexpr (__scalar_abi_tag<_Native> || (_A0::_S_is_cx_ctgus && _Np == 1))
             return _ScalarAbi<_Np>();
 
           else if constexpr (__complex_like<_Tp> && _A0::_S_is_cx_ctgus && _Native::_S_is_cx_ileav)
             // we need half the number of registers since the number applies twice, to reals and
             // imaginaries.
-            return _Abi_t<_Np, __nreg / 2, _A0::_S_variant>();
+            return _Abi_t<_Np, __div_ceil(__nreg, 2), _A0::_S_variant>();
 
           else if constexpr (__complex_like<_Tp> && _A0::_S_is_cx_ileav && _Native::_S_is_cx_ctgus)
             return _Abi_t<_Np, __nreg * 2, _A0::_S_variant>();
+
+          else if constexpr (__complex_like<_Tp> && (_A0::_S_is_cx_ctgus || _A0::_S_is_cx_ileav))
+            return _Abi_t<_Np, __nreg, _A0::_S_variant>();
 
           else if constexpr (__complex_like<_Tp>)
             return _Abi_t<_Np, __nreg, _A0::_S_variant, _AbiVariant::_CxIleav>();
@@ -1537,6 +1545,10 @@ namespace std::simd
   // Allow _Tp to be _InvalidInteger for __integer_from<16>
   template <typename _Tp, __simd_size_type _Np, __abi_tag _Ap>
     using __similar_vec = basic_vec<_Tp, decltype(__abi_rebind<_Tp, _Np, _Ap>())>;
+
+  template <typename _Tp, __simd_size_type _Np, __abi_tag _Ap>
+    using __similar_resized_vec = conditional_t<__scalar_abi_tag<_Ap>, basic_vec<_Tp, _ScalarAbi<_Np>>,
+                                                basic_vec<_Tp, decltype(__abi_rebind<_Tp, _Np, _Ap>())>>;
 
   // LWG4470 [simd.expos]
   template <size_t _Bytes, typename _Ap>

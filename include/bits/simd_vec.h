@@ -414,7 +414,7 @@ namespace std::simd
         }
 
 #if VIR_NEXT_PATCH
-      using _HalfVec = __similar_vec<value_type, _S_size / 2, _Ap>;
+      using _HalfVec = __similar_resized_vec<value_type, _S_size / 2, _Ap>;
 
       [[__gnu__::__always_inline__]]
       constexpr void
@@ -1982,9 +1982,9 @@ namespace std::simd
 
       static constexpr int _N1 = _S_size - _N0;
 
-      using _DataType0 = __similar_vec<_Tp, _N0, _Ap>;
+      using _DataType0 = __similar_resized_vec<_Tp, _N0, _Ap>;
 
-      using _DataType1 = __similar_vec<_Tp, _N1, _Ap>;
+      using _DataType1 = __similar_resized_vec<_Tp, _N1, _Ap>;
 
       static_assert(_DataType0::abi_type::_S_nreg + _DataType1::abi_type::_S_nreg == _Ap::_S_nreg);
 
@@ -2074,14 +2074,14 @@ namespace std::simd
         }
 
 #if VIR_NEXT_PATCH
-      using _HalfVec = __similar_vec<value_type, _S_size / 2, _Ap>;
+      using _HalfVec = __similar_resized_vec<value_type, _S_size / 2, _Ap>;
 
       [[__gnu__::__always_inline__]]
       constexpr void
       _M_complex_set_real(const _HalfVec& __x) requires ((_S_size & 1) == 0)
       {
         const auto& [__lo, __hi]
-          = __x.template _M_chunk<__similar_vec<value_type, _N0 / 2, _Ap>>();
+          = __x.template _M_chunk<__similar_resized_vec<value_type, _N0 / 2, _Ap>>();
         _M_data0._M_complex_set_real(__lo);
         _M_data1._M_complex_set_real(__hi);
       }
@@ -2091,7 +2091,7 @@ namespace std::simd
       _M_complex_set_imag(const _HalfVec& __x) requires ((_S_size & 1) == 0)
       {
         const auto& [__lo, __hi]
-          = __x.template _M_chunk<__similar_vec<value_type, _N0 / 2, _Ap>>();
+          = __x.template _M_chunk<__similar_resized_vec<value_type, _N0 / 2, _Ap>>();
         _M_data0._M_complex_set_imag(__lo);
         _M_data1._M_complex_set_imag(__hi);
       }
