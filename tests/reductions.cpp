@@ -27,13 +27,15 @@ template <typename V>
     static consteval V
     poisoned(T x)
     {
-      if constexpr (std::has_single_bit(unsigned(V::size())))
+      if constexpr (sizeof(V) == sizeof(T) * V::size())
         return V(x);
       else
         {
-          constexpr auto [...is] = std::_IotaArray<int(sizeof(V) / sizeof(T))>;
-          const T tmp[] = {(is < V::size() ? x : T(7))...};
-          return std::bit_cast<V>(tmp);
+          using P = simd::resize_t<sizeof(V) / sizeof(T), V>;
+          static_assert(P::size() > V::size());
+          constexpr auto [...is] = std::_IotaArray<P::size()>;
+          const T arr[P::size()] = {(is < V::size() ? x : T(7))...};
+          return std::bit_cast<V>(P(arr));
         }
     }
 
