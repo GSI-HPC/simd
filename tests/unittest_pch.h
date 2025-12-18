@@ -286,6 +286,11 @@ template <typename T>
         using TT = typename T::value_type;
         if constexpr (std::is_integral_v<TT>)
           return all_of(a == b);
+        else if constexpr (T::abi_type::_S_nreg > 1)
+          {
+            return bit_equal(a._M_get_low(), b._M_get_low())
+                     && bit_equal(a._M_get_high(), b._M_get_high());
+          }
         else
           {
             // float, 4 -> unsigned, 4 (uint_size = 4)

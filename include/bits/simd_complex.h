@@ -650,6 +650,16 @@ namespace std::simd
       { return _M_data; }
 
       [[__gnu__::__always_inline__]]
+      constexpr const auto&
+      _M_get_low() const requires (_Ap::_S_nreg >= 2)
+      { return _M_data._M_get_low(); }
+
+      [[__gnu__::__always_inline__]]
+      constexpr const auto&
+      _M_get_high() const requires (_Ap::_S_nreg >= 2)
+      { return _M_data._M_get_high(); }
+
+      [[__gnu__::__always_inline__]]
       friend constexpr bool
       __is_const_known(const basic_vec& __x)
       { return __is_const_known(__x._M_data); }
@@ -1157,6 +1167,22 @@ namespace std::simd
       constexpr const _RealSimd&
       _M_get_imag() const
       { return _M_imag; }
+
+      [[__gnu__::__always_inline__]]
+      constexpr auto
+      _M_get_low() const requires (_Ap::_S_nreg >= 2)
+      {
+        return resize_t<_M_real._N0, basic_vec>(
+                 _M_real._M_get_low(), _M_imag._M_get_low());
+      }
+
+      [[__gnu__::__always_inline__]]
+      constexpr auto
+      _M_get_high() const requires (_Ap::_S_nreg >= 2)
+      {
+        return resize_t<_M_real._N1, basic_vec>(
+                 _M_real._M_get_high(), _M_imag._M_get_high());
+      }
 
       [[__gnu__::__always_inline__]]
       friend constexpr bool
