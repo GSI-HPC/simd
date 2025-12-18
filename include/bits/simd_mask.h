@@ -668,7 +668,10 @@ namespace std::simd
               else if constexpr (_UV::_S_is_scalar)
                 {
                   constexpr auto [...__is] = _IotaArray<_S_size>;
-                  return _DataType{__vec_value_type<_DataType>(-__x[__is])...};
+                  if constexpr (_S_use_bitmask)
+                    return ((_DataType(__x[__is]) << __is) | ...);
+                  else
+                    return _DataType{__vec_value_type<_DataType>(-__x[__is])...};
                 }
 
               // vec-/bit-mask to bit-mask | bit-mask to vec-mask
