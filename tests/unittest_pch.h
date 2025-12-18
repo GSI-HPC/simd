@@ -413,21 +413,38 @@ struct constexpr_verifier
     return {};
   }
 
-  constexpr ignore_the_rest
-  verify_equal(const auto& v, const auto& ref) &
-  {
-    using V = decltype(std::simd::select(v == ref, v, ref));
-    okay = okay && equal_with_nan_and_inf_fixup<V>(v, ref);
-    return {};
-  }
+  template <typename V, typename Ref>
+    constexpr ignore_the_rest
+    verify_equal(const V& v, const Ref& ref) &
+    {
+      if constexpr (std::is_convertible_v<V, Ref> && std::is_convertible_v<Ref, V>)
+        {
+          okay = okay && equal_with_nan_and_inf_fixup<V>(v, ref)
+                   && equal_with_nan_and_inf_fixup<Ref>(v, ref);
+        }
+      else
+        {
+          using Common = decltype(std::simd::select(v == ref, v, ref));
+          okay = okay && equal_with_nan_and_inf_fixup<Common>(v, ref);
+        }
+      return {};
+    }
 
-  constexpr ignore_the_rest
-  verify_bit_equal(const auto& v, const auto& ref) &
-  {
-    using V = decltype(std::simd::select(v == ref, v, ref));
-    okay = okay && bit_equal<V>(v, ref);
-    return {};
-  }
+  template <typename V, typename Ref>
+    constexpr ignore_the_rest
+    verify_bit_equal(const V& v, const Ref& ref) &
+    {
+      if constexpr (std::is_convertible_v<V, Ref> && std::is_convertible_v<Ref, V>)
+        {
+          okay = okay && bit_equal<V>(v, ref) && bit_equal<Ref>(v, ref);
+        }
+      else
+        {
+          using Common = decltype(std::simd::select(v == ref, v, ref));
+          okay = okay && bit_equal<Common>(v, ref);
+        }
+      return {};
+    }
 
   template <typename T, typename U>
     constexpr ignore_the_rest
@@ -588,41 +605,49 @@ struct runtime_verifier
       return log_failure(log_novalue(), log_novalue(), loc, ip, "verify");
   }
 
-  [[gnu::always_inline]]
-  additional_info
-  verify_equal(auto&& x, auto&& y,
-               std::source_location loc = std::source_location::current())
-  {
-    const auto ip = determine_ip();
-    bool ok;
-    if constexpr (pair_specialization<decltype(x)> && pair_specialization<decltype(y)>)
-      ok = std::simd::all_of(x.first == y.first) && std::simd::all_of(x.second == y.second);
-    else
-      ok = equal_with_nan_and_inf_fixup<decltype(std::simd::select(x == y, x, y))>(x, y);
-    if (ok)
-      {
-        ++passed_tests;
-        return {};
-      }
-    else
-      return log_failure(x, y, loc, ip, "verify_equal");
-  }
+  template <typename V, typename Ref>
+    [[gnu::always_inline]]
+    additional_info
+    verify_equal(const V& v, const Ref& ref,
+                 std::source_location loc = std::source_location::current())
+    {
+      const auto ip = determine_ip();
+      bool ok;
+      if constexpr (pair_specialization<V> && pair_specialization<Ref>)
+        ok = std::simd::all_of(v.first == ref.first) && std::simd::all_of(v.second == ref.second);
+      else if constexpr (std::is_convertible_v<V, Ref> && std::is_convertible_v<Ref, V>)
+        ok = equal_with_nan_and_inf_fixup<V>(v, ref) && equal_with_nan_and_inf_fixup<Ref>(v, ref);
+      else
+        ok = equal_with_nan_and_inf_fixup<decltype(std::simd::select(v == ref, v, ref))>(v, ref);
+      if (ok)
+        {
+          ++passed_tests;
+          return {};
+        }
+      else
+        return log_failure(v, ref, loc, ip, "verify_equal");
+    }
 
-  [[gnu::always_inline]]
-  additional_info
-  verify_bit_equal(auto&& x, auto&& y,
-                   std::source_location loc = std::source_location::current())
-  {
-    using V = decltype(std::simd::select(x == y, x, y));
-    const auto ip = determine_ip();
-    if (bit_equal<V>(x, y))
-      {
-        ++passed_tests;
-        return {};
-      }
-    else
-      return log_failure(x, y, loc, ip, "verify_bit_equal");
-  }
+  template <typename V, typename Ref>
+    [[gnu::always_inline]]
+    additional_info
+    verify_bit_equal(const V& v, const Ref& ref,
+                     std::source_location loc = std::source_location::current())
+    {
+      const auto ip = determine_ip();
+      bool ok = false;
+      if constexpr (std::is_convertible_v<V, Ref> && std::is_convertible_v<Ref, V>)
+        ok = bit_equal<V>(v, ref) && bit_equal<Ref>(v, ref);
+      else
+        ok = bit_equal<decltype(std::simd::select(v == ref, v, ref))>(v, ref);
+      if (ok)
+        {
+          ++passed_tests;
+          return {};
+        }
+      else
+        return log_failure(v, ref, loc, ip, "verify_bit_equal");
+    }
 
   [[gnu::always_inline]]
   additional_info
