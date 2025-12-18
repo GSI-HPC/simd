@@ -671,7 +671,10 @@ namespace std::simd
         [[__gnu__::__always_inline__]]
         static constexpr basic_mask
         _S_concat(const basic_mask<_Bytes, _As>&... __xs) noexcept
-        { return __extract_simd_at<basic_mask>(cw<0>, __xs...); }
+        {
+          static_assert(_S_size == (_As::_S_size + ...));
+          return __extract_simd_at<basic_mask>(cw<0>, __xs...);
+        }
 
       // [simd.mask.overview] default constructor -----------------------------
       basic_mask() = default;
@@ -1611,6 +1614,7 @@ namespace std::simd
         static constexpr basic_mask
         _S_concat(const basic_mask<_Bytes, _As>&... __xs) noexcept
         {
+          static_assert(_S_size == (_As::_S_size + ...));
           return _S_init(__extract_simd_at<_Mask0>(cw<0>, __xs...),
                          __extract_simd_at<_Mask1>(cw<_N0>, __xs...));
         }

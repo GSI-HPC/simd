@@ -604,7 +604,10 @@ namespace std::simd
         [[__gnu__::__always_inline__]]
         static constexpr basic_vec
         _S_concat(const basic_vec<value_type, _As>&... __xs) noexcept
-        { return __extract_simd_at<basic_vec>(cw<0>, __xs...); }
+        {
+          static_assert(_S_size == (_As::_S_size + ...));
+          return __extract_simd_at<basic_vec>(cw<0>, __xs...);
+        }
 
       /** @internal
        * Shifts elements to the front by @p _Shift positions (or to the back for negative @p
@@ -2160,6 +2163,7 @@ namespace std::simd
         static constexpr basic_vec
         _S_concat(const basic_vec<value_type, _As>&... __xs) noexcept
         {
+          static_assert(_S_size == (_As::_S_size + ...));
           return _S_init(__extract_simd_at<_DataType0>(cw<0>, __xs...),
                          __extract_simd_at<_DataType1>(cw<_N0>, __xs...));
         }

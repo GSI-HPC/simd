@@ -751,9 +751,9 @@ namespace std::simd
               const auto __ab = __binary_op(__a, __b);
               static_assert(sizeof...(__rest) <= 1);
               if constexpr (__a._S_size != __c._S_size)
-                return __ab._S_concat(__ab, __c)._M_reduce(__binary_op);
+                return cat(__ab, __c)._M_reduce(__binary_op);
               else
-                return __ab._S_concat(__binary_op(__ab, __c), __rest...)._M_reduce(__binary_op);
+                return cat(__binary_op(__ab, __c), __rest...)._M_reduce(__binary_op);
             }
         }
 
