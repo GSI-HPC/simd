@@ -1170,17 +1170,16 @@ namespace std::simd
       if constexpr (_Bytes == 0 || _Np <= 0)
         return _InvalidAbi();
 
-#if VIR_NEXT_PATCH
-      // If _Bytes is sizeof(complex<double>) we can be certain it's a mask<complex<double>, _Np>.
-      else if constexpr (_Bytes == sizeof(double) * 2)
-        return __abi_rebind<complex<double>, _Np, _A0>();
-
-#endif
       else if constexpr (__scalar_abi_tag<_A0>)
         {
           if constexpr (_IsOnlyResize)
             // stick to _ScalarAbi (e.g. _Float16 without hardware support)
             return _ScalarAbi<_Np>();
+#if VIR_NEXT_PATCH
+          else if constexpr (_Bytes == sizeof(double) * 2)
+            // we can be certain it's a mask<complex<double>, _Np>.
+            return __abi_rebind<complex<double>, _Np, _A0>();
+#endif
           else
             // otherwise, fresh start via __deduce_abi_t using __integer_from
             return std::simd::__deduce_abi<__integer_from<_Bytes>, _Np>();
@@ -1190,6 +1189,8 @@ namespace std::simd
       // If the source ABI is complex, _Bytes == sizeof(complex<float>) or
       // sizeof(complex<float16_t>), and _IsOnlyResize is true, then it's a mask<complex<float>,
       // _Np>
+      else if constexpr (__from_cx && _IsOnlyResize && _Bytes == 2 * sizeof(double))
+        return __abi_rebind<complex<double>, _Np, _A0>();
       else if constexpr (__from_cx && _IsOnlyResize && _Bytes == 2 * sizeof(float))
         return __abi_rebind<complex<float>, _Np, _A0>();
       else if constexpr (__from_cx && _IsOnlyResize && _Bytes == 2 * sizeof(_Float16))
