@@ -288,11 +288,14 @@ template <typename T>
           return all_of(a == b);
         else
           {
+            // float, 4 -> unsigned, 4 (uint_size = 4)
+            // double, 4 -> ullong, 4 (uint_size = 8)
+            // complex<double>, 4 -> ullong, 8 (uint_size = 8)
             constexpr size_t uint_size = std::min(size_t(8), sizeof(TT));
             struct B
             {
               alignas(T) simd::rebind_t<_UInt<uint_size>,
-                                        simd::resize_t<T::size() * uint_size / 8, T>> data;
+                                        simd::resize_t<T::size() * sizeof(TT) / uint_size, T>> data;
             };
             if constexpr (sizeof(B) == sizeof(a))
               return all_of(std::bit_cast<B>(a).data == std::bit_cast<B>(b).data);
