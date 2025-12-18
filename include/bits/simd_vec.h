@@ -1348,14 +1348,14 @@ namespace std::simd
             if constexpr (_S_is_scalar)
               return static_cast<value_type>(__x[0]);
 #if VIR_NEXT_PATCH && _GLIBCXX_X86
-            else if constexpr (!_Traits._M_have_ssse3() && sizeof(__x) == 32
+            else if constexpr (!_Traits._M_have_ssse3()
+                                 && _UAbi::_S_nreg == 2 && sizeof(__x) == 32
                                  && sizeof(value_type) == 2 && sizeof(_M_data) == 16)
               {
                 if constexpr (is_floating_point_v<_Up>)
                   return basic_vec(rebind_t<int, basic_vec>(__x))._M_data;
                 else
                   {
-                    static_assert(_UAbi::_S_nreg == 2);
                     auto __a = reinterpret_cast<_DataType>( // a.b.c.d.
                                  __x._M_data0._M_data);
                     auto __b = reinterpret_cast<_DataType>( // e.f.g.h.
@@ -1367,7 +1367,8 @@ namespace std::simd
                     return __vec_interleave_lo(__e, __f); // abcdefgh
                   }
               }
-            else if constexpr (!_Traits._M_have_ssse3() && (sizeof(__x) == 32)
+            else if constexpr (!_Traits._M_have_ssse3()
+                                 && _UAbi::_S_nreg == 2 && (sizeof(__x) == 32)
                                  && sizeof(value_type) == 1 && sizeof(_M_data) == 8)
               {
                 if constexpr (is_floating_point_v<_Up>)
@@ -1375,7 +1376,6 @@ namespace std::simd
                 else
                   {
                     using _TV = __vec_builtin_type_bytes<__canon_value_type, 16>;
-                    static_assert(_UAbi::_S_nreg == 2);
                     _TV __a = reinterpret_cast<_TV>(__x._M_data0._M_data);
                     _TV __b = reinterpret_cast<_TV>(
                                 __vec_zero_pad_to<16>(__x._M_data1._M_concat_data()));
@@ -1387,7 +1387,8 @@ namespace std::simd
                     return __vec_split_lo(__g);
                   }
               }
-            else if constexpr (!_Traits._M_have_ssse3() && (sizeof(__x) == 48 || sizeof(__x) == 64)
+            else if constexpr (!_Traits._M_have_ssse3()
+                                 && _UAbi::_S_nreg <= 4 && (sizeof(__x) == 48 || sizeof(__x) == 64)
                                  && sizeof(value_type) == 1 && sizeof(_M_data) == 16)
               {
                 if constexpr (is_floating_point_v<_Up>)
