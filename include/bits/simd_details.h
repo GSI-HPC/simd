@@ -1402,7 +1402,7 @@ namespace std::simd
     __higher_floating_point_rank_than()
     {
       return floating_point<_From> && floating_point<_To>
-               && same_as<common_type_t<_From, _To>, _From>;
+               && is_same_v<common_type_t<_From, _To>, _From> && !is_same_v<_From, _To>;
     }
 
   // __higher_integer_rank_than<_Tp, U> (_Tp has higher or equal integer rank than U)
@@ -1411,7 +1411,8 @@ namespace std::simd
     __higher_integer_rank_than()
     {
       return integral<_From> && integral<_To>
-               && (sizeof(_From) > sizeof(_To) || same_as<common_type_t<_From, _To>, _From>);
+               && (sizeof(_From) > sizeof(_To) || is_same_v<common_type_t<_From, _To>, _From>)
+               && !is_same_v<_From, _To>;
     }
 
   template <typename _From, typename _To>
