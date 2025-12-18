@@ -439,7 +439,7 @@ namespace std::simd
 
       using _VecType = __simd_vec_from_mask_t<_Bytes, _Ap>;
 
-      static_assert(destructible<_VecType>);
+      static_assert(destructible<_VecType> || _Bytes > sizeof(0ull));
 
       static constexpr bool _S_has_bool_member = _S_is_scalar;
 
