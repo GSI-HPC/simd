@@ -229,7 +229,11 @@ namespace std::simd
         _M_chunk() const noexcept
         {
           if constexpr (_Mp::abi_type::_S_variant != _Ap::_S_variant)
-            return resize_t<_S_size, _Mp>(*this).template _M_chunk<_Mp>();
+            {
+              using _M2 = resize_t<_S_size, _Mp>;
+              static_assert(!is_same_v<_M2, basic_mask>);
+              return static_cast<_M2>(*this).template _M_chunk<_Mp>();
+            }
           else // _Mp is the same partial specialization
             {
               constexpr int __rem = _S_size % _Mp::_S_size;
