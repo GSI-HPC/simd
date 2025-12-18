@@ -326,6 +326,13 @@ namespace std::simd
                 }
               return _Dst(__r);
             }
+          else if constexpr (__nargs == 2 && _Ap::_S_nreg == 1
+                               && _A0::_S_nreg == 1 && _Alast::_S_size == 1)
+            { // optimize insertion of one element at the end
+              _Ret __r = __vec_zero_pad_to<sizeof(_Ret)>(__x0._M_get());
+              __vec_set(__r, _A0::_S_size, __xs...[1]._M_concat_data()[0]);
+              return __r;
+            }
           else if constexpr (__nargs == 2 && _A0::_S_nreg == 1 && _Alast::_S_nreg == 1)
             { // optimize concat of two input vectors (e.g. using palignr)
               constexpr auto [...__is] = _IotaArray<__dst_full_size>;
