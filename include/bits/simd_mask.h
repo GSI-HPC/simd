@@ -1709,30 +1709,27 @@ namespace std::simd
             // values are duplicated
             if constexpr (abi_type::_S_is_bitmask)
               {
-                using _AliasingArray [[__gnu__::__may_alias__]]
-                  = unsigned char[__div_ceil(2 * _S_size, __CHAR_BIT__)];
-                return bool((reinterpret_cast<const _AliasingArray&>(*this)
+                using _AliasingByte [[__gnu__::__may_alias__]] = unsigned char;
+                return bool((reinterpret_cast<const _AliasingByte*>(this)
                                [2 * __i / __CHAR_BIT__] >> (2 * __i % __CHAR_BIT__)) & 1);
               }
             else
               {
-                using _AliasingArray [[__gnu__::__may_alias__]]
-                  = __integer_from<_Bytes / 2>[2 * _S_size];
-                return reinterpret_cast<const _AliasingArray&>(*this)[2 * __i] != 0;
+                using _AliasingInt [[__gnu__::__may_alias__]] = __integer_from<_Bytes / 2>;
+                return reinterpret_cast<const _AliasingInt*>(this)[2 * __i] != 0;
               }
           }
 #endif
         else if constexpr (abi_type::_S_is_bitmask)
           {
-            using _AliasingArray [[__gnu__::__may_alias__]]
-              = unsigned char[__div_ceil(_S_size, __CHAR_BIT__)];
-            return bool((reinterpret_cast<const _AliasingArray&>(*this)
+            using _AliasingByte [[__gnu__::__may_alias__]] = unsigned char;
+            return bool((reinterpret_cast<const _AliasingByte*>(this)
                            [__i / __CHAR_BIT__] >> (__i % __CHAR_BIT__)) & 1);
           }
         else
           {
-            using _AliasingArray [[__gnu__::__may_alias__]] = __integer_from<_Bytes>[_S_size];
-            return reinterpret_cast<const _AliasingArray&>(*this)[__i] != 0;
+            using _AliasingInt [[__gnu__::__may_alias__]] = __integer_from<_Bytes>;
+            return reinterpret_cast<const _AliasingInt*>(this)[__i] != 0;
           }
       }
 

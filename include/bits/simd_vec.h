@@ -2398,8 +2398,8 @@ namespace std::simd
           return __i < _N0 ? _M_data0[__i] : _M_data1[__i - _N0];
         else
           {
-            using _AliasingArray [[__gnu__::__may_alias__]] = value_type[_S_size];
-            return reinterpret_cast<const _AliasingArray&>(*this)[__i];
+            using _AliasingT [[__gnu__::__may_alias__]] = value_type;
+            return reinterpret_cast<const _AliasingT*>(this)[__i];
           }
       }
 
