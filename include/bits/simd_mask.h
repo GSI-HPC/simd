@@ -164,12 +164,14 @@ namespace std::simd
     [[__gnu__::__always_inline__]]
     constexpr auto
     chunk(const basic_vec<_Tp, _Ap>& __x) noexcept
+    -> decltype(chunk<resize_t<_Np, basic_vec<_Tp, _Ap>>>(__x))
     { return chunk<resize_t<_Np, basic_vec<_Tp, _Ap>>>(__x); }
 
   template<__simd_size_type _Np, size_t _Bytes, typename _Ap>
     [[__gnu__::__always_inline__]]
     constexpr auto
     chunk(const basic_mask<_Bytes, _Ap>& __x) noexcept
+    -> decltype(chunk<resize_t<_Np, basic_mask<_Bytes, _Ap>>>(__x))
     { return chunk<resize_t<_Np, basic_mask<_Bytes, _Ap>>>(__x); }
 
   // LWG???? (reported 2025-11-25)
