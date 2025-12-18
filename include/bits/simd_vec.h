@@ -416,9 +416,11 @@ namespace std::simd
 #if VIR_NEXT_PATCH
       using _HalfVec = __similar_resized_vec<value_type, _S_size / 2, _Ap>;
 
+      static constexpr bool _SupportCxApi = (_S_size & 1) == 0 && is_floating_point_v<value_type>;
+
       [[__gnu__::__always_inline__]]
       constexpr void
-      _M_complex_set_real(const _HalfVec& __x) requires ((_S_size & 1) == 0)
+      _M_complex_set_real(const _HalfVec& __x) requires _SupportCxApi
       {
         if (__is_const_known(*this, __x))
           {
@@ -434,7 +436,7 @@ namespace std::simd
 
       [[__gnu__::__always_inline__]]
       constexpr void
-      _M_complex_set_imag(const _HalfVec& __x) requires ((_S_size & 1) == 0)
+      _M_complex_set_imag(const _HalfVec& __x) requires _SupportCxApi
       {
         if (__is_const_known(*this, __x))
           {
@@ -450,7 +452,7 @@ namespace std::simd
 
       [[__gnu__::__always_inline__]]
       constexpr basic_vec
-      _M_complex_conj() const requires ((_S_size & 1) == 0)
+      _M_complex_conj() const requires _SupportCxApi
       { return _VecOps<_DataType>::_S_complex_negate_imag(_M_data); }
 
       template <typename _CxVec, _TargetTraits _Traits = {}>
@@ -2077,9 +2079,11 @@ namespace std::simd
 #if VIR_NEXT_PATCH
       using _HalfVec = __similar_resized_vec<value_type, _S_size / 2, _Ap>;
 
+      static constexpr bool _SupportCxApi = (_S_size & 1) == 0 && is_floating_point_v<value_type>;
+
       [[__gnu__::__always_inline__]]
       constexpr void
-      _M_complex_set_real(const _HalfVec& __x) requires ((_S_size & 1) == 0)
+      _M_complex_set_real(const _HalfVec& __x) requires _SupportCxApi
       {
         const auto& [__lo, __hi]
           = __x.template _M_chunk<__similar_resized_vec<value_type, _N0 / 2, _Ap>>();
@@ -2089,7 +2093,7 @@ namespace std::simd
 
       [[__gnu__::__always_inline__]]
       constexpr void
-      _M_complex_set_imag(const _HalfVec& __x) requires ((_S_size & 1) == 0)
+      _M_complex_set_imag(const _HalfVec& __x) requires _SupportCxApi
       {
         const auto& [__lo, __hi]
           = __x.template _M_chunk<__similar_resized_vec<value_type, _N0 / 2, _Ap>>();
@@ -2099,7 +2103,7 @@ namespace std::simd
 
       [[__gnu__::__always_inline__]]
       constexpr basic_vec
-      _M_complex_conj() const requires ((_S_size & 1) == 0)
+      _M_complex_conj() const requires _SupportCxApi
       { return _S_init(_M_data0._M_complex_conj(), _M_data1._M_complex_conj()); }
 
       template <typename _CxVec, _TargetTraits _Traits = {}>
