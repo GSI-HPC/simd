@@ -259,6 +259,7 @@ namespace std::simd
           using _A0 = typename _Vs...[0]::abi_type;
           using _Alast = typename _Vs...[__nargs - 1]::abi_type;
           const auto& __x0 = __xs...[0];
+          const auto& __xlast = __xs...[__nargs - 1];
           constexpr int __ninputs = (_Vs::size.value + ...);
           if constexpr (_Offset.value >= _A0::_S_size
                           || __ninputs - _Offset.value - _Alast::_S_size >= _Ap::_S_size)
@@ -278,7 +279,6 @@ namespace std::simd
             }
           else if constexpr (_A0::_S_nreg >= 2 || _Alast::_S_nreg >= 2)
             { // flatten first and/or last multi-register argument
-              const auto& __xlast = __xs...[__nargs - 1];
               constexpr bool __flatten_first = _A0::_S_nreg >= 2;
               constexpr bool __flatten_last = __nargs > 1 && _Alast::_S_nreg >= 2;
               constexpr auto [...__is] = _IotaArray<__nargs - __flatten_first - __flatten_last>;
@@ -326,11 +326,47 @@ namespace std::simd
                 }
               return _Dst(__r);
             }
-          else if constexpr (__nargs == 2 && _Ap::_S_nreg == 1
+          else if constexpr (__nargs == 2 && _Offset == 0 && _Ap::_S_nreg == 1
+                               && _A0::_S_size >= _Alast::_S_size
+                               && __has_single_bit(unsigned(_A0::_S_size)))
+            { // simple __vec_concat
+              if constexpr (_A0::_S_size == 1)
+                // even simpler init from two values
+                return _Ret{__x0._M_concat_data()[0], __xlast._M_concat_data()[0]};
+              else
+                {
+                  const auto __v0 = __x0._M_concat_data();
+                  const auto __v1 = __vec_zero_pad_to<sizeof(__v0)>(__xlast._M_concat_data());
+                  return __vec_concat(__v0, __v1);
+                }
+            }
+          else if constexpr (__nargs == 2 && _Ap::_S_nreg == 1 && _Offset == 0
                                && _A0::_S_nreg == 1 && _Alast::_S_size == 1)
             { // optimize insertion of one element at the end
               _Ret __r = __vec_zero_pad_to<sizeof(_Ret)>(__x0._M_get());
-              __vec_set(__r, _A0::_S_size, __xs...[1]._M_concat_data()[0]);
+              __vec_set(__r, _A0::_S_size, __xlast._M_concat_data()[0]);
+              return __r;
+            }
+          else if constexpr (__nargs == 2 && _Ap::_S_nreg == 1 && _Offset == 0
+                               && _A0::_S_nreg == 1 && _Alast::_S_size == 2)
+            { // optimize insertion of two elements at the end
+              _Ret __r = __vec_zero_pad_to<sizeof(_Ret)>(__x0._M_concat_data());
+              const auto __x1 = __xlast._M_concat_data();
+              if constexpr (sizeof(__x1) <= sizeof(double) && (_A0::_S_size & 1) == 0)
+                { // can use a single insert instruction
+                  using _Up = conditional_t<
+                                is_floating_point_v<__vec_value_type<_Ret>>,
+                                conditional_t<sizeof(__x1) == sizeof(double), double, float>,
+                                __integer_from<sizeof(__x1)>>;
+                  auto __r2 = __vec_bit_cast<_Up>(__r);
+                  __vec_set(__r2, _A0::_S_size / 2, __vec_bit_cast<_Up>(__x1)[0]);
+                  __r = reinterpret_cast<_Ret>(__r2);
+                }
+              else
+                {
+                  __vec_set(__r, _A0::_S_size, __x1[0]);
+                  __vec_set(__r, _A0::_S_size + 1, __x1[1]);
+                }
               return __r;
             }
           else if constexpr (__nargs == 2 && _A0::_S_nreg == 1 && _Alast::_S_nreg == 1)
@@ -338,7 +374,7 @@ namespace std::simd
               constexpr auto [...__is] = _IotaArray<__dst_full_size>;
               constexpr int __v2_offset = __width_of<decltype(__x0._M_concat_data())>;
               return __builtin_shufflevector(
-                       __x0._M_concat_data(), __xs...[1]._M_concat_data(), [](int __i) consteval {
+                       __x0._M_concat_data(), __xlast._M_concat_data(), [](int __i) consteval {
                        if (__i < _A0::_S_size)
                          return __i;
                        __i -= _A0::_S_size;

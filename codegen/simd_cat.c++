@@ -35,6 +35,14 @@ vinsertf128
 ?vmov
 v(perm|shuf)
 vblendp
+
+^"f6(
+vextractf128
+vunpcklpd
+vinsertf128
+
+^"f7(
+vunpcklps
 */
 
 #include "../include/simd"
@@ -63,5 +71,13 @@ void f4(simd::vec<float, 5> a, simd::vec<float, 2> b) {
 }
 
 void f5(simd::vec<float, 5> a, simd::vec<float, 3> b) {
+  g(simd::cat(a, b));
+}
+
+void f6(simd::vec<float, 6> a, simd::vec<float, 2> b) {
+  g(simd::cat(a, b));
+}
+
+void f7(simd::vec<float, 1> a, simd::vec<float, 1> b) {
   g(simd::cat(a, b));
 }
