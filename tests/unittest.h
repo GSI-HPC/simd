@@ -197,6 +197,15 @@ void test_runner()
               for (auto f : run_functions)
                 f();
             }
+          if constexpr (!std::is_same_v<typename simd::vec<T, N>::abi_type, simd::_ScalarAbi<N>>)
+            {
+              using V = simd::basic_vec<T, simd::_ScalarAbi<N>>;
+              std::cout << "Testing " << type_to_string<V>() << ':' << std::endl;
+              run_functions.clear();
+              [[maybe_unused]] Tests<V> t0 = {};
+              for (auto f : run_functions)
+                f();
+            }
         }
       else
         {
