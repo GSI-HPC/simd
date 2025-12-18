@@ -1928,12 +1928,14 @@ namespace std::simd
         __select_impl(const basic_mask& __k, const _T0& __t, const _T1& __f) noexcept
         {
           using _Vp = vec<_T0, _S_size>;
+          if constexpr (!is_same_v<basic_mask, typename _Vp::mask_type>)
+            return __select_impl(static_cast<typename _Vp::mask_type>(__k), __t, __f);
 #if VIR_NEXT_PATCH
-          if constexpr (__complex_like<_T0>)
+          else if constexpr (__complex_like<_T0>)
             return _Vp::_S_concat(__select_impl(__k._M_data0, __t, __f),
                                   __select_impl(__k._M_data1, __t, __f));
-          else
 #endif
+          else
             return _Vp::_S_init(__select_impl(__k._M_data0, __t, __f),
                                 __select_impl(__k._M_data1, __t, __f));
         }
