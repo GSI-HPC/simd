@@ -673,17 +673,22 @@ namespace std::simd
         constexpr auto
         _M_chunk() const noexcept
         {
-          constexpr int __n = _S_size / _Vp::_S_size;
-          constexpr int __rem = _S_size % _Vp::_S_size;
-          const auto __chunked = _M_data.template _M_chunk<typename _Vp::_TSimd>();
-          constexpr auto [...__is] = _IotaArray<__n>;
-          if constexpr (__rem == 0)
-            return array<_Vp, __n> {_Vp::_S_init(__chunked[__is])...};
+          if constexpr (_Vp::abi_type::_S_is_cx_ctgus)
+            return resize_t<_S_size, _Vp>(*this).template _M_chunk<_Vp>();
           else
             {
-              using _Rest = resize_t<__rem, _Vp>;
-              return tuple(_Vp::_S_init(get<__is>(__chunked))...,
-                           _Rest::_S_init(get<__n>(__chunked)));
+              constexpr int __n = _S_size / _Vp::_S_size;
+              constexpr int __rem = _S_size % _Vp::_S_size;
+              const auto __chunked = _M_data.template _M_chunk<typename _Vp::_TSimd>();
+              constexpr auto [...__is] = _IotaArray<__n>;
+              if constexpr (__rem == 0)
+                return array<_Vp, __n> {_Vp::_S_init(__chunked[__is])...};
+              else
+                {
+                  using _Rest = resize_t<__rem, _Vp>;
+                  return tuple(_Vp::_S_init(get<__is>(__chunked))...,
+                               _Rest::_S_init(get<__n>(__chunked)));
+                }
             }
         }
 
