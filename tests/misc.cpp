@@ -25,14 +25,15 @@ template <typename V>
         if !consteval
         {
 #ifdef __SSE__
+          V r = x;
           if constexpr (sizeof(x) == 16 && std::is_same_v<T, float>)
-            t.verify_equal(_mm_and_ps(x, x), x);
+            t.verify_equal(r = _mm_and_ps(x, x), x);
 #endif
 #ifdef __SSE2__
           if constexpr (sizeof(x) == 16 && std::is_integral_v<T>)
-            t.verify_equal(_mm_and_si128(x, x), x);
+            t.verify_equal(r = _mm_and_si128(x, x), x);
           if constexpr (sizeof(x) == 16 && std::is_same_v<T, double>)
-            t.verify_equal(_mm_and_pd(x, x), x);
+            t.verify_equal(r = _mm_and_pd(x, x), x);
 #endif
         }
       }
