@@ -848,8 +848,7 @@ namespace std::simd
         constexpr
         explicit(!convertible_to<_Up, value_type>)
         basic_vec(const basic_vec<_Up, _UAbi>& __x) noexcept
-        : basic_vec(static_cast<const _RealSimd&>(__x._M_real),
-                    static_cast<const _RealSimd&>(__x._M_imag))
+        : basic_vec(static_cast<_RealSimd>(__x._M_real), static_cast<_RealSimd>(__x._M_imag))
         {}
 
       template <typename _Up, typename _UAbi>
@@ -1212,7 +1211,7 @@ namespace std::simd
         [[__gnu__::__always_inline__]]
         static constexpr basic_vec
         _S_concat(const basic_vec<value_type, _A0>& __x0) noexcept
-        { return static_cast<const basic_vec&>(__x0); }
+        { return static_cast<basic_vec>(__x0); }
 
       template <typename... _As>
         requires (sizeof...(_As) > 1)
