@@ -386,8 +386,7 @@ namespace std::simd
 #if VIR_NEXT_PATCH
       static constexpr bool _S_is_cx_ileav = false;
 
-      // store one mask element per complex value
-      static constexpr bool _S_is_cx_ctgus = true;
+      static constexpr bool _S_is_cx_ctgus = false;
 #endif
 
       static constexpr bool _S_is_vecmask = false;
@@ -1284,6 +1283,8 @@ namespace std::simd
       // prefer non-_Cx over _CxCtgus
       else if constexpr (_To::_S_is_cx_ctgus)
         return true;
+      else if constexpr (_From::_S_is_cx_ctgus)
+        return false;
 #endif
       else
         __builtin_unreachable();

@@ -1988,6 +1988,9 @@ namespace std::simd
       template <typename, typename>
         friend class basic_vec;
 
+      template <size_t, typename>
+        friend class basic_mask;
+
       static constexpr int _S_size = _Ap::_S_size;
 
       static constexpr int _N0 = __bit_ceil(unsigned(_S_size)) / 2;

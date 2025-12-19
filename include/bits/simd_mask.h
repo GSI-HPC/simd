@@ -434,10 +434,9 @@ namespace std::simd
     };
 
   template <size_t _Bytes, __abi_tag _Ap>
-#if VIR_NEXT_PATCH
-    requires (_Ap::_S_nreg == 1) && (!_Ap::_S_is_cx_ileav)
-#else
     requires (_Ap::_S_nreg == 1)
+#if VIR_NEXT_PATCH
+      && (__filter_abi_variant(_Ap::_S_variant, _AbiVariant::_CxVariants) == _AbiVariant())
 #endif
     class basic_mask<_Bytes, _Ap>
     {
@@ -972,7 +971,10 @@ namespace std::simd
           if constexpr (_S_is_scalar)
             return _Up(_M_data);
           else
-            return __select_impl(*this, _Up(1), _Up(0));
+            {
+              using _UV = basic_vec<_Up, _UAbi>;
+              return __select_impl(static_cast<_UV::mask_type>(*this), _UV(1), _UV(0));
+            }
         }
 
       // [simd.mask.namedconv] ------------------------------------------------
@@ -1387,10 +1389,9 @@ namespace std::simd
     };
 
   template <size_t _Bytes, __abi_tag _Ap>
-#if VIR_NEXT_PATCH
-    requires (_Ap::_S_nreg > 1) && (!_Ap::_S_is_cx_ileav)
-#else
     requires (_Ap::_S_nreg > 1)
+#if VIR_NEXT_PATCH
+      && (__filter_abi_variant(_Ap::_S_variant, _AbiVariant::_CxVariants) == _AbiVariant())
 #endif
     class basic_mask<_Bytes, _Ap>
     {
@@ -1633,8 +1634,22 @@ namespace std::simd
       {}
 
       // [simd.mask.ctor] conversion constructor ------------------------------
+#if VIR_NEXT_PATCH
       template <size_t _UBytes, typename _UAbi>
         requires (_S_size == _UAbi::_S_size)
+          && (_UAbi::_S_is_cx_ctgus && !__scalar_abi_tag<_UAbi>)
+        [[__gnu__::__always_inline__]]
+        constexpr explicit(__is_mask_conversion_explicit<_Ap, _UAbi>(_Bytes, _UBytes))
+        basic_mask(const basic_mask<_UBytes, _UAbi>& __x) noexcept
+        : basic_mask(__x._M_data) // unwrap _CxCtgus basic_mask partial specialization
+        {}
+
+#endif
+      template <size_t _UBytes, typename _UAbi>
+        requires (_S_size == _UAbi::_S_size)
+#if VIR_NEXT_PATCH
+          && (!_UAbi::_S_is_cx_ctgus || __scalar_abi_tag<_UAbi>)
+#endif
         [[__gnu__::__always_inline__]]
         constexpr explicit(__is_mask_conversion_explicit<_Ap, _UAbi>(_Bytes, _UBytes))
         basic_mask(const basic_mask<_UBytes, _UAbi>& __x) noexcept
@@ -1775,7 +1790,8 @@ namespace std::simd
         operator basic_vec<_Up, _UAbi>() const noexcept
         {
           using _Rp = basic_vec<_Up, _UAbi>;
-          return _Rp::_S_init(_M_data0, _M_data1);
+          return _Rp::_S_init(static_cast<_Rp::_DataType0>(_M_data0),
+                              static_cast<_Rp::_DataType1>(_M_data1));
         }
 
       // [simd.mask.namedconv] ------------------------------------------------
@@ -1973,7 +1989,7 @@ namespace std::simd
         {
           using _Vp = vec<_T0, _S_size>;
           if constexpr (!is_same_v<basic_mask, typename _Vp::mask_type>)
-            return __select_impl(static_cast<typename _Vp::mask_type>(__k), __t, __f);
+            return __select_impl(static_cast<_Vp::mask_type>(__k), __t, __f);
 #if VIR_NEXT_PATCH
           else if constexpr (__complex_like<_T0>)
             return _Vp::_S_concat(__select_impl(__k._M_data0, __t, __f),

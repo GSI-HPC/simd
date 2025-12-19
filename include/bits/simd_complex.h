@@ -296,6 +296,8 @@ namespace std::simd
                 return __x._M_data; // calls conversion ctor on _DataType
               else if constexpr (_S_use_bitmask || _UV::_S_use_bitmask)
                 return _DataType::_S_init(__duplicate_each_bit<_S_size>(__x._M_to_uint()));
+              else if constexpr (_UAbi::_S_is_cx_ctgus)
+                return basic_mask(__x._M_data)._M_data;
               else if constexpr (sizeof(__x) == sizeof(_M_data) && _Bytes == _UBytes
                                    && _UV::_S_padding_bytes == 0)
                 {
@@ -529,19 +531,22 @@ namespace std::simd
       [[__gnu__::__always_inline__]]
       friend constexpr basic_mask
       __select_impl(const basic_mask& __k, const basic_mask& __t, const basic_mask& __f) noexcept
-      { return __select_impl(__k._M_data, __t._M_data, __f._M_data); }
+      { return _S_init(__select_impl(__k._M_data, __t._M_data, __f._M_data)); }
 
       [[__gnu__::__always_inline__]]
       friend constexpr basic_mask
       __select_impl(const basic_mask& __k, same_as<bool> auto __t, same_as<bool> auto __f) noexcept
-      { return __select_impl(__k._M_data, __t, __f); }
+      { return _S_init(__select_impl(__k._M_data, __t, __f)); }
 
       template <__vectorizable _T0, same_as<_T0> _T1>
         requires (sizeof(_T0) == _Bytes)
         [[__gnu__::__always_inline__]]
         friend constexpr vec<_T0, _S_size>
         __select_impl(const basic_mask& __k, const _T0& __t, const _T1& __f) noexcept
-        { return __select_impl(__k, vec<_T0, _S_size>(__t), vec<_T0, _S_size>(__f)); }
+        {
+          using _Vp = vec<_T0, _S_size>;
+          return __select_impl(static_cast<typename _Vp::mask_type>(__k), _Vp(__t), _Vp(__f));
+        }
 
       // [simd.mask.reductions] implementation --------------------------------
       [[__gnu__::__always_inline__]]
@@ -673,9 +678,7 @@ namespace std::simd
         constexpr auto
         _M_chunk() const noexcept
         {
-          if constexpr (_Vp::abi_type::_S_is_cx_ctgus)
-            return resize_t<_S_size, _Vp>(*this).template _M_chunk<_Vp>();
-          else
+          if constexpr (_Vp::abi_type::_S_is_cx_ileav)
             {
               constexpr int __n = _S_size / _Vp::_S_size;
               constexpr int __rem = _S_size % _Vp::_S_size;
@@ -690,6 +693,8 @@ namespace std::simd
                                _Rest::_S_init(get<__n>(__chunked)));
                 }
             }
+          else
+            return resize_t<_S_size, _Vp>(*this).template _M_chunk<_Vp>();
         }
 
       [[__gnu__::__always_inline__]]
@@ -848,7 +853,7 @@ namespace std::simd
       template <__complex_like _Up, typename _UAbi>
         requires (__simd_size_v<_Up, _UAbi> == size.value)
           && __explicitly_convertible_to<_Up, value_type>
-          && _UAbi::_S_is_cx_ctgus
+          && (!_UAbi::_S_is_cx_ileav)
         [[__gnu__::__always_inline__]]
         constexpr
         explicit(!convertible_to<_Up, value_type>)
@@ -1101,9 +1106,423 @@ namespace std::simd
       { return _S_init(_M_data._M_complex_conj()); }
     };
 
+  template <size_t _Bytes, __abi_tag _Ap>
+    requires (__filter_abi_variant(_Ap::_S_variant, _AbiVariant::_CxCtgus) == _AbiVariant::_CxCtgus)
+    class basic_mask<_Bytes, _Ap>
+    {
+      template <size_t, typename>
+        friend class basic_mask;
+
+      template <typename, typename>
+        friend class basic_vec;
+
+      static constexpr int _S_size = _Ap::_S_size;
+
+      using _DataType
+        = basic_mask<_Bytes / 2, _Abi_t<_S_size, _Ap::_S_nreg,
+                                        __filter_abi_variant(_Ap::_S_variant,
+                                                             _AbiVariant::_MaskVariants)>>;
+
+      static_assert(_DataType::abi_type::_S_nreg == _Ap::_S_nreg);
+
+      using _VecType = __similar_vec<__integer_from<_Bytes>, _S_size, _Ap>;
+
+      static constexpr bool _S_is_scalar = _DataType::_S_is_scalar;
+
+      static constexpr bool _S_use_bitmask = _DataType::_S_use_bitmask;
+
+      static constexpr int _S_full_size = _DataType::_S_full_size;
+
+      static constexpr bool _S_is_partial = _DataType::_S_is_partial;
+
+      static constexpr bool _S_has_bool_member = _DataType::_S_has_bool_member;
+
+      static constexpr size_t _S_padding_bytes = _DataType::_S_padding_bytes;
+
+      _DataType _M_data;
+
+    public:
+      using value_type = bool;
+
+      using abi_type = _Ap;
+
+      using iterator = __iterator<basic_mask>;
+
+      using const_iterator = __iterator<const basic_mask>;
+
+      constexpr iterator
+      begin() noexcept
+      { return {*this, 0}; }
+
+      constexpr const_iterator
+      begin() const noexcept
+      { return {*this, 0}; }
+
+      constexpr const_iterator
+      cbegin() const noexcept
+      { return {*this, 0}; }
+
+      constexpr default_sentinel_t
+      end() const noexcept
+      { return {}; }
+
+      constexpr default_sentinel_t
+      cend() const noexcept
+      { return {}; }
+
+      static constexpr auto size = __simd_size_c<_S_size>;
+
+      // internal but public API ----------------------------------------------
+      [[__gnu__::__always_inline__]]
+      static constexpr basic_mask
+      _S_init(const _DataType& __x)
+      {
+        basic_mask __r;
+        __r._M_data = __x;
+        return __r;
+      }
+
+      [[__gnu__::__always_inline__]]
+      constexpr const _DataType&
+      _M_get() const
+      { return _M_data; }
+
+      [[__gnu__::__always_inline__]]
+      constexpr auto
+      _M_concat_data() const
+      { return _M_data._M_concat_data(); }
+
+      template <_ArchTraits _Traits = {}>
+        [[__gnu__::__always_inline__]]
+        static constexpr basic_mask
+        _S_partial_mask_of_n(int __n)
+        { return _S_init(_DataType::_S_partial_mask_of_n(__n)); }
+
+      template <typename _Mp>
+        [[__gnu__::__always_inline__]]
+        constexpr auto
+        _M_chunk() const noexcept
+        {
+          if constexpr (_Mp::abi_type::_S_variant != _Ap::_S_variant)
+            {
+              using _M2 = resize_t<_S_size, _Mp>;
+              static_assert(!is_same_v<_M2, basic_mask>);
+              return static_cast<_M2>(*this).template _M_chunk<_Mp>();
+            }
+          else // _Mp is the same partial specialization
+            {
+              constexpr int __rem = _S_size % _Mp::_S_size;
+              const auto [...__xs, __last] = _M_data.template _M_chunk<typename _Mp::_DataType>();
+              if constexpr (__rem == 0)
+                return array{_Mp::_S_init(__xs)..., _Mp::_S_init(__last)};
+              else
+                return tuple(_Mp::_S_init(__xs)..., resize_t<__rem, _Mp>(__last));
+            }
+        }
+
+      [[__gnu__::__always_inline__]]
+      static constexpr const basic_mask&
+      _S_concat(const basic_mask& __x0) noexcept
+      { return __x0; }
+
+      template <typename _A0>
+        [[__gnu__::__always_inline__]]
+        static constexpr const auto&
+        _S_unwrap_cx_ctgus(const basic_mask<_Bytes, _A0>& __x) noexcept
+        {
+          static_assert(_A0::_S_is_cx_ctgus);
+          return __x._M_data;
+        }
+
+      [[__gnu__::__always_inline__]]
+      static constexpr basic_mask<_Bytes / 2, _ScalarAbi<1>>
+      _S_unwrap_cx_ctgus(const basic_mask<_Bytes, _ScalarAbi<1>>& __x) noexcept
+      { return basic_mask<_Bytes / 2, _ScalarAbi<1>>(__x._M_data); }
+
+      template <typename... _As>
+        requires (sizeof...(_As) > 1)
+        [[__gnu__::__always_inline__]]
+        static constexpr basic_mask
+        _S_concat(const basic_mask<_Bytes, _As>&... __xs) noexcept
+        { return basic_mask::_S_init(_DataType::_S_concat(_S_unwrap_cx_ctgus(__xs)...)); }
+
+      // [simd.mask.overview] default constructor -----------------------------
+      basic_mask() = default;
+
+      // [simd.mask.overview] conversion extensions ---------------------------
+      template <__vec_builtin _TV>
+        [[__gnu__::__always_inline__]]
+        constexpr
+        basic_mask(const _TV& __x) requires convertible_to<_TV, _DataType>
+        : _M_data(__x)
+        {}
+
+      template <__vec_builtin _TV>
+        [[__gnu__::__always_inline__]]
+        constexpr
+        operator _TV() requires convertible_to<_DataType, _TV>
+        { return _M_data; }
+
+      // [simd.mask.ctor] broadcast constructor -------------------------------
+      [[__gnu__::__always_inline__]]
+      constexpr explicit
+      basic_mask(same_as<bool> auto __x) noexcept // LWG 4382.
+      : _M_data(__x)
+      {}
+
+      // [simd.mask.ctor] conversion constructor ------------------------------
+      template <size_t _UBytes, typename _UAbi>
+        requires (_S_size == _UAbi::_S_size)
+        [[__gnu__::__always_inline__]]
+        constexpr explicit(__is_mask_conversion_explicit<_Ap, _UAbi>(_Bytes, _UBytes))
+        basic_mask(const basic_mask<_UBytes, _UAbi>& __x) noexcept
+        : _M_data(__x)
+        {}
+
+      // [simd.mask.ctor] generator constructor -------------------------------
+      template <__simd_generator_invokable<bool, _S_size> _Fp>
+        [[__gnu__::__always_inline__]]
+        constexpr explicit
+        basic_mask(_Fp&& __gen)
+        : _M_data(__gen)
+        {}
+
+      // [simd.mask.ctor] bitset constructor ----------------------------------
+      [[__gnu__::__always_inline__]]
+      constexpr
+      basic_mask(const same_as<bitset<_S_size>> auto& __b) noexcept // LWG 4382.
+      : _M_data(__b)
+      {}
+
+      // [simd.mask.ctor] uint constructor ------------------------------------
+      template <unsigned_integral _Tp>
+        requires (!same_as<_Tp, bool>) // LWG 4382.
+        [[__gnu__::__always_inline__]]
+        constexpr explicit
+        basic_mask(_Tp __val) noexcept
+        : _M_data(__val)
+        {}
+
+      // [simd.mask.subscr] ---------------------------------------------------
+      [[__gnu__::__always_inline__]]
+      constexpr value_type
+      operator[](__simd_size_type __i) const
+      { return _M_data[__i]; }
+
+      // [simd.mask.unary] ----------------------------------------------------
+      [[__gnu__::__always_inline__]]
+      constexpr basic_mask
+      operator!() const noexcept
+      { return _S_init(!_M_data); }
+
+      [[__gnu__::__always_inline__]]
+      constexpr _VecType
+      operator+() const noexcept requires destructible<_VecType>
+      { return static_cast<_VecType>(_M_data); }
+
+      constexpr _VecType
+      operator+() const noexcept = delete;
+
+      [[__gnu__::__always_inline__]]
+      constexpr _VecType
+      operator-() const noexcept requires destructible<_VecType>
+      {
+        using _Ip = typename _VecType::value_type;
+        if constexpr (_S_use_bitmask)
+          return __select_impl(*this, _Ip(-1), _Ip());
+        else
+          return -_M_data; // sign-extends
+      }
+
+      constexpr _VecType
+      operator-() const noexcept = delete;
+
+      [[__gnu__::__always_inline__]]
+      constexpr _VecType
+      operator~() const noexcept requires destructible<_VecType>
+      {
+        using _Ip = typename _VecType::value_type;
+        if constexpr (_S_use_bitmask)
+          return __select_impl(*this, _Ip(-2), _Ip(-1));
+        else
+          return ~_M_data; // sign-extends
+      }
+
+      constexpr _VecType
+      operator~() const noexcept = delete;
+
+      // [simd.mask.conv] -----------------------------------------------------
+      template <typename _Up, typename _UAbi>
+        requires (__simd_size_v<_Up, _UAbi> == _S_size)
+        [[__gnu__::__always_inline__]]
+        constexpr explicit(sizeof(_Up) != _Bytes)
+        operator basic_vec<_Up, _UAbi>() const noexcept
+        {
+          using _UV = basic_vec<_Up, _UAbi>;
+          using _Mp = typename _UV::mask_type;
+          return __select_impl(static_cast<_Mp>(_M_data), _UV(1), _UV(0));
+        }
+
+      // [simd.mask.namedconv] ------------------------------------------------
+      [[__gnu__::__always_inline__]]
+      constexpr bitset<_S_size>
+      to_bitset() const noexcept
+      { return _M_data.to_bitset(); }
+
+      template <int _Offset = 0, _ArchTraits _Traits = {}>
+        [[__gnu__::__always_inline__]]
+        constexpr auto
+        _M_to_uint() const
+        { return _M_data.template _M_to_uint<_Offset>(); }
+
+      [[__gnu__::__always_inline__]]
+      constexpr unsigned long long
+      to_ullong() const
+      { return _M_data.to_ullong(); }
+
+      // [simd.mask.binary] ---------------------------------------------------
+      [[__gnu__::__always_inline__]]
+      friend constexpr basic_mask
+      operator&&(const basic_mask& __x, const basic_mask& __y) noexcept
+      { return _S_init(__x._M_data & __y._M_data); }
+
+      [[__gnu__::__always_inline__]]
+      friend constexpr basic_mask
+      operator||(const basic_mask& __x, const basic_mask& __y) noexcept
+      { return _S_init(__x._M_data | __y._M_data); }
+
+      [[__gnu__::__always_inline__]]
+      friend constexpr basic_mask
+      operator&(const basic_mask& __x, const basic_mask& __y) noexcept
+      { return _S_init(__x._M_data & __y._M_data); }
+
+      [[__gnu__::__always_inline__]]
+      friend constexpr basic_mask
+      operator|(const basic_mask& __x, const basic_mask& __y) noexcept
+      { return _S_init(__x._M_data | __y._M_data); }
+
+      [[__gnu__::__always_inline__]]
+      friend constexpr basic_mask
+      operator^(const basic_mask& __x, const basic_mask& __y) noexcept
+      { return _S_init(__x._M_data ^ __y._M_data); }
+
+      // [simd.mask.cassign] --------------------------------------------------
+      [[__gnu__::__always_inline__]]
+      friend constexpr basic_mask&
+      operator&=(basic_mask& __x, const basic_mask& __y) noexcept
+      {
+        __x._M_data &= __y._M_data;
+        return __x;
+      }
+
+      [[__gnu__::__always_inline__]]
+      friend constexpr basic_mask&
+      operator|=(basic_mask& __x, const basic_mask& __y) noexcept
+      {
+        __x._M_data |= __y._M_data;
+        return __x;
+      }
+
+      [[__gnu__::__always_inline__]]
+      friend constexpr basic_mask&
+      operator^=(basic_mask& __x, const basic_mask& __y) noexcept
+      {
+        __x._M_data ^= __y._M_data;
+        return __x;
+      }
+
+      // [simd.mask.comparison] -----------------------------------------------
+      [[__gnu__::__always_inline__]]
+      friend constexpr basic_mask
+      operator==(const basic_mask& __x, const basic_mask& __y) noexcept
+      { return _S_init(__x._M_data == __y._M_data); }
+
+      [[__gnu__::__always_inline__]]
+      friend constexpr basic_mask
+      operator!=(const basic_mask& __x, const basic_mask& __y) noexcept
+      { return _S_init(__x._M_data != __y._M_data); }
+
+      [[__gnu__::__always_inline__]]
+      friend constexpr basic_mask
+      operator>=(const basic_mask& __x, const basic_mask& __y) noexcept
+      { return _S_init(__x._M_data >= __y._M_data); }
+
+      [[__gnu__::__always_inline__]]
+      friend constexpr basic_mask
+      operator<=(const basic_mask& __x, const basic_mask& __y) noexcept
+      { return _S_init(__x._M_data <= __y._M_data); }
+
+      [[__gnu__::__always_inline__]]
+      friend constexpr basic_mask
+      operator>(const basic_mask& __x, const basic_mask& __y) noexcept
+      { return _S_init(__x._M_data > __y._M_data); }
+
+      [[__gnu__::__always_inline__]]
+      friend constexpr basic_mask
+      operator<(const basic_mask& __x, const basic_mask& __y) noexcept
+      { return _S_init(__x._M_data < __y._M_data); }
+
+      // [simd.mask.cond] -----------------------------------------------------
+      [[__gnu__::__always_inline__]]
+      friend constexpr basic_mask
+      __select_impl(const basic_mask& __k, const basic_mask& __t, const basic_mask& __f) noexcept
+      { return __select_impl(__k._M_data, __t._M_data, __f._M_data); }
+
+      [[__gnu__::__always_inline__]]
+      friend constexpr basic_mask
+      __select_impl(const basic_mask& __k, same_as<bool> auto __t, same_as<bool> auto __f) noexcept
+      { return _S_init(__select_impl(__k._M_data, __t, __f)); }
+
+      template <__vectorizable _T0, same_as<_T0> _T1>
+        requires (sizeof(_T0) == _Bytes)
+        [[__gnu__::__always_inline__]]
+        friend constexpr vec<_T0, _S_size>
+        __select_impl(const basic_mask& __k, const _T0& __t, const _T1& __f) noexcept
+        {
+          using _Vp = vec<_T0, _S_size>;
+          return __select_impl(static_cast<typename _Vp::mask_type>(__k), _Vp(__t), _Vp(__f));
+        }
+
+      // [simd.mask.reductions] implementation --------------------------------
+      [[__gnu__::__always_inline__]]
+      constexpr bool
+      _M_all_of() const noexcept
+      { return _M_data._M_all_of(); }
+
+      [[__gnu__::__always_inline__]]
+      constexpr bool
+      _M_any_of() const noexcept
+      { return _M_data._M_any_of(); }
+
+      [[__gnu__::__always_inline__]]
+      constexpr bool
+      _M_none_of() const noexcept
+      { return _M_data._M_none_of(); }
+
+      [[__gnu__::__always_inline__]]
+      constexpr __simd_size_type
+      _M_reduce_count() const noexcept
+      { return _M_data._M_reduce_count(); }
+
+      [[__gnu__::__always_inline__]]
+      constexpr __simd_size_type
+      _M_reduce_min_index() const
+      { return _M_data._M_reduce_min_index(); }
+
+      [[__gnu__::__always_inline__]]
+      constexpr __simd_size_type
+      _M_reduce_max_index() const
+      { return _M_data._M_reduce_max_index(); }
+
+      [[__gnu__::__always_inline__]]
+      friend constexpr bool
+      __is_const_known(const basic_mask& __x)
+      { return __is_const_known(__x._M_data); }
+    };
+
   template <__vectorizable _Tp, __abi_tag _Ap>
     requires __complex_like<_Tp>
-      && _Ap::_S_is_cx_ctgus
+      && (_Ap::_S_is_cx_ctgus || __scalar_abi_tag<_Ap>)
     class basic_vec<_Tp, _Ap>
     : _BinaryOps<_Tp, _Ap>
     {
@@ -1384,24 +1803,24 @@ namespace std::simd
       template <__complex_like _Up, typename _UAbi>
         requires (__simd_size_v<_Up, _UAbi> == size.value)
           && __explicitly_convertible_to<_Up, value_type>
-          && _UAbi::_S_is_cx_ctgus
-        [[__gnu__::__always_inline__]]
-        constexpr
-        explicit(!convertible_to<_Up, value_type>)
-        basic_vec(const basic_vec<_Up, _UAbi>& __x) noexcept
-        : _M_real(__x._M_real), _M_imag(__x._M_imag) // using real() instead of _M_real is possible
-          // but potentially leads to memcpy because of oversized _M_real (likewise for imag)
-        {}
-
-      template <__complex_like _Up, typename _UAbi>
-        requires (__simd_size_v<_Up, _UAbi> == size.value)
-          && __explicitly_convertible_to<_Up, value_type>
           && _UAbi::_S_is_cx_ileav
         [[__gnu__::__always_inline__]]
         constexpr
         explicit(!convertible_to<_Up, value_type>)
         basic_vec(const basic_vec<_Up, _UAbi>& __x) noexcept
         : _M_real(__x.real()), _M_imag(__x.imag())
+        {}
+
+      template <__complex_like _Up, typename _UAbi>
+        requires (__simd_size_v<_Up, _UAbi> == size.value)
+          && __explicitly_convertible_to<_Up, value_type>
+          && (!_UAbi::_S_is_cx_ileav)
+        [[__gnu__::__always_inline__]]
+        constexpr
+        explicit(!convertible_to<_Up, value_type>)
+        basic_vec(const basic_vec<_Up, _UAbi>& __x) noexcept
+        : _M_real(__x._M_real), _M_imag(__x._M_imag) // using real() instead of _M_real is possible
+          // but potentially leads to memcpy because of oversized _M_real (likewise for imag)
         {}
 
       template <typename _Up, typename _UAbi> // _Up is not complex!
