@@ -553,9 +553,14 @@ namespace std::simd
           else if constexpr (_Traits.template _M_eval_as_f32<value_type>())
             {
               using _Vf = rebind_t<float, basic_vec>;
+#if VIR_EXTENSIONS
+              using _Cf = __rebind_complex_t<float, _Cx>;
+#else
+              using _Cf = complex<float>;
+#endif
               _Vf __re0f = __re0;
               _Vf __im0f = __im0;
-              _Vf::template _S_cxctgus_mul<_Cx>(__re0f, __im0f, __re1, __im1);
+              _Vf::template _S_cxctgus_mul<_Cf>(__re0f, __im0f, __re1, __im1);
               __re0 = basic_vec(__re0f);
               __im0 = basic_vec(__im0f);
             }
@@ -566,7 +571,7 @@ namespace std::simd
               const auto __nan = __re._M_isnan() && __im._M_isnan();
               if (any_of(__nan)) [[unlikely]]
                 __cxctgus_redo_mul<_Cx>(__re0._M_data, __im0._M_data, __re1._M_data, __im1._M_data,
-                                        __re._M_data, __im._M_data, __nan._M_data, _S_size);
+                                        __re._M_data, __im._M_data, __nan, _S_size);
               else
                 {
                   __re0 = __re;

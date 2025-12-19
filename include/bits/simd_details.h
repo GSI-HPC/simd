@@ -135,6 +135,16 @@ namespace std::simd
     struct _Arr2
     { _Tp _M_data[2]; };
 
+  template <typename _Tp, typename _Cx>
+    struct __rebind_complex;
+
+  template <typename _Tp, typename _Cx>
+    using __rebind_complex_t = typename __rebind_complex<_Tp, _Cx>::type;
+
+  template <typename _Tp, template <typename> class _Cx, typename _Up>
+    struct __rebind_complex<_Tp, _Cx<_Up>>
+    { using type = _Cx<_Tp>; };
+
 #endif
   template <typename _Tp>
     concept __complex_like_impl
@@ -163,6 +173,7 @@ namespace std::simd
         { conj(__x) } -> same_as<_Tp>;
         { proj(__x) } -> same_as<_Tp>;
       }
+          && is_same_v<__rebind_complex_t<typename _Tp::value_type, _Tp>, _Tp>
           && (__complex_object<_Tp, 1, 2> + _Tp {} == __complex_object<_Tp, 1, 2>)
           && (__complex_object<_Tp, -1, 5> - __complex_object<_Tp, -1, 5> == _Tp {})
           && (__complex_object<_Tp, 2, 3> * __complex_object<_Tp, 1, 1>
