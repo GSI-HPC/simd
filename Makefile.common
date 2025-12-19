@@ -179,6 +179,7 @@ check/$(1).$(2)/%: tests/$(1).cpp $(objdir)/$(2).hpp.gch tests/unittest*.h
 	@printf -- '$$(msg_build) $(if $(DIRECT),and link )$$(@:check/%=  $(objdir)/%.exe)\n'
 	@mkdir -p $$(dir $$(@:check/%=$(objdir)/%.exe)) $$(dir $$@)
 	@rm -f $$(@:check/%=$(objdir)/%.exe) $$@
+	@./wait_for_memory.sh
 	@$$(call call_compiler,$$(CXXFLAGS) -march=$(2) -D UNITTEST_TYPE="$$(call gettype,$$*)" -D UNITTEST_WIDTH=$$(call getwidth,$$*) -include $(objdir)/$(2).hpp $(if $(DIRECT),-o $$(@:check/%=$(objdir)/%.exe),-c -o $$(@:check/%=$(objdir)/%.o)) $$<)
 ifeq ($(DIRECT),)
 	@true || printf -- '$$(msg_link) $$@\n'
