@@ -939,7 +939,10 @@ namespace std::__detail
 #ifdef __SIZEOF_INT128__
                   else if constexpr (_S_size <= 128)
                     {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
                       using _Up = unsigned __int128;
+#pragma GCC diagnostic pop
                       const auto __bits = _S_size == 128 and __n == 128
                                             ? ~_Up() : (_Up(1) << __n) - 1;
                       __builtin_memcpy(&__ret, &__bits, sizeof(__ret));
