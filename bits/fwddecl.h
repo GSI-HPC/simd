@@ -229,14 +229,14 @@ namespace std::__detail
           and (sizeof(typename _T0::value_type) == sizeof(typename _T1::value_type));
 }
 
-namespace std::datapar
+namespace std::simd
 {
   template <typename _Tp, typename _Abi = __detail::_NativeAbi<_Tp>>
-    class basic_simd;
+    class basic_vec;
 
   template <size_t _Bytes,
             typename _Abi = __detail::_NativeAbi<__detail::__mask_integer_from<_Bytes>>>
-    class basic_simd_mask;
+    class basic_mask;
 
   template <typename... _Flags>
     struct flags;
@@ -264,36 +264,36 @@ namespace std::datapar
 
   template <typename _Tp,
             __detail::_SimdSizeType _Np = __detail::__simd_size_v<_Tp, __detail::_NativeAbi<_Tp>>>
-    using simd = basic_simd<_Tp, __detail::__deduce_t<_Tp, _Np>>;
+    using vec = basic_vec<_Tp, __detail::__deduce_t<_Tp, _Np>>;
 
   template <typename _Tp,
             __detail::_SimdSizeType _Np = __detail::__simd_size_v<_Tp, __detail::_NativeAbi<_Tp>>>
-    using simd_mask = basic_simd_mask<sizeof(_Tp), __detail::__deduce_t<_Tp, _Np>>;
+    using mask = basic_mask<sizeof(_Tp), __detail::__deduce_t<_Tp, _Np>>;
 
   // mask_reductions.h
   template <size_t _Bs, typename _Abi>
     _GLIBCXX_SIMD_ALWAYS_INLINE constexpr bool
-    all_of(const basic_simd_mask<_Bs, _Abi>& __k) noexcept;
+    all_of(const basic_mask<_Bs, _Abi>& __k) noexcept;
 
   template <size_t _Bs, typename _Abi>
     _GLIBCXX_SIMD_ALWAYS_INLINE constexpr bool
-    any_of(const basic_simd_mask<_Bs, _Abi>& __k) noexcept;
+    any_of(const basic_mask<_Bs, _Abi>& __k) noexcept;
 
   template <size_t _Bs, typename _Abi>
     _GLIBCXX_SIMD_ALWAYS_INLINE constexpr bool
-    none_of(const basic_simd_mask<_Bs, _Abi>& __k) noexcept;
+    none_of(const basic_mask<_Bs, _Abi>& __k) noexcept;
 
   template <size_t _Bs, typename _Abi>
     _GLIBCXX_SIMD_ALWAYS_INLINE constexpr __detail::_SimdSizeType
-    reduce_count(const basic_simd_mask<_Bs, _Abi>& __k) noexcept;
+    reduce_count(const basic_mask<_Bs, _Abi>& __k) noexcept;
 
   template <size_t _Bs, typename _Abi>
     _GLIBCXX_SIMD_ALWAYS_INLINE constexpr __detail::_SimdSizeType
-    reduce_min_index(const basic_simd_mask<_Bs, _Abi>& __k);
+    reduce_min_index(const basic_mask<_Bs, _Abi>& __k);
 
   template <size_t _Bs, typename _Abi>
     _GLIBCXX_SIMD_ALWAYS_INLINE constexpr __detail::_SimdSizeType
-    reduce_max_index(const basic_simd_mask<_Bs, _Abi>& __k);
+    reduce_max_index(const basic_mask<_Bs, _Abi>& __k);
 
   _GLIBCXX_SIMD_ALWAYS_INLINE constexpr bool
   all_of(same_as<bool> auto __x) noexcept;
@@ -315,37 +315,37 @@ namespace std::datapar
 
   template <typename _V, typename _Tp, typename _Abi>
     _GLIBCXX_SIMD_ALWAYS_INLINE constexpr auto
-    chunk(const basic_simd<_Tp, _Abi>& __x) noexcept;
+    chunk(const basic_vec<_Tp, _Abi>& __x) noexcept;
 
   template <typename _M, size_t _Bs, typename _Abi>
     _GLIBCXX_SIMD_ALWAYS_INLINE constexpr auto
-    chunk(const basic_simd_mask<_Bs, _Abi>& __x) noexcept;
+    chunk(const basic_mask<_Bs, _Abi>& __x) noexcept;
 
   template <size_t _Np, typename _Tp, typename _Abi>
     _GLIBCXX_SIMD_ALWAYS_INLINE constexpr auto
-    chunk(const basic_simd<_Tp, _Abi>& __x) noexcept;
+    chunk(const basic_vec<_Tp, _Abi>& __x) noexcept;
 
   template <size_t _Np, size_t _Bs, typename _Abi>
     _GLIBCXX_SIMD_ALWAYS_INLINE constexpr auto
-    chunk(const basic_simd_mask<_Bs, _Abi>& __x) noexcept;
+    chunk(const basic_mask<_Bs, _Abi>& __x) noexcept;
 
   template <typename _Tp, typename... _Abis>
     _GLIBCXX_SIMD_ALWAYS_INLINE constexpr
-    simd<_Tp, (__detail::__simd_size_v<_Tp, _Abis> + ...)>
-    cat(const basic_simd<_Tp, _Abis>&... __xs) noexcept;
+    vec<_Tp, (__detail::__simd_size_v<_Tp, _Abis> + ...)>
+    cat(const basic_vec<_Tp, _Abis>&... __xs) noexcept;
 
   template <size_t _Bs, typename... _Abis>
     _GLIBCXX_SIMD_ALWAYS_INLINE constexpr
-    simd_mask<__detail::__mask_integer_from<_Bs>, (basic_simd_mask<_Bs, _Abis>::size.value + ...)>
-    cat(const basic_simd_mask<_Bs, _Abis>&... __xs) noexcept;
+    mask<__detail::__mask_integer_from<_Bs>, (basic_mask<_Bs, _Abis>::size.value + ...)>
+    cat(const basic_mask<_Bs, _Abis>&... __xs) noexcept;
 }
 
 namespace std::__detail
 {
   template <typename _BinaryOperation, typename _Tp>
     concept __binary_operation
-      = requires (_BinaryOperation __binary_op, std::datapar::simd<_Tp, 1> __v) {
-        { __binary_op(__v, __v) } -> same_as<std::datapar::simd<_Tp, 1>>;
+      = requires (_BinaryOperation __binary_op, std::simd::vec<_Tp, 1> __v) {
+        { __binary_op(__v, __v) } -> same_as<std::simd::vec<_Tp, 1>>;
       };
 
   template <typename _Tp, typename _BinaryOperation>
@@ -363,7 +363,7 @@ namespace std::__detail
     constexpr bool __is_simd_specialization = false;
 
   template <typename _Tp, typename _Abi>
-    constexpr bool __is_simd_specialization<std::datapar::basic_simd<_Tp, _Abi>> = true;
+    constexpr bool __is_simd_specialization<std::simd::basic_vec<_Tp, _Abi>> = true;
 
   template <typename _Tp>
     using __plus_result_t = decltype(declval<const _Tp&>() + declval<const _Tp&>());
@@ -393,12 +393,12 @@ namespace std::__detail
     using __math_common_simd_t = typename __math_common_simd<_Ts...>::type;
 }
 
-namespace std::datapar
+namespace std::simd
 {
   template <typename _Tp, typename _Abi,
             __detail::__binary_operation<_Tp> _BinaryOperation = plus<>>
     constexpr _Tp
-    reduce(const basic_simd<_Tp, _Abi>& __x, _BinaryOperation __binary_op = {});
+    reduce(const basic_vec<_Tp, _Abi>& __x, _BinaryOperation __binary_op = {});
 
   template <typename _Tp, typename _Abi,
             __detail::__binary_operation<_Tp> _BinaryOperation = plus<>>
@@ -408,7 +408,7 @@ namespace std::datapar
       or same_as<_BinaryOperation, bit_or<>>
       or same_as<_BinaryOperation, bit_xor<>>
     constexpr _Tp
-    reduce(const basic_simd<_Tp, _Abi>& __x, const typename basic_simd<_Tp, _Abi>::mask_type& __k,
+    reduce(const basic_vec<_Tp, _Abi>& __x, const typename basic_vec<_Tp, _Abi>::mask_type& __k,
            _BinaryOperation __binary_op = {})
     {
       return reduce(__x, __k, __binary_op,
@@ -417,26 +417,26 @@ namespace std::datapar
 
   template <typename _Tp, typename _Abi, __detail::__binary_operation<_Tp> _BinaryOperation>
     constexpr _Tp
-    reduce(const basic_simd<_Tp, _Abi>& __x, const typename basic_simd<_Tp, _Abi>::mask_type& __k,
+    reduce(const basic_vec<_Tp, _Abi>& __x, const typename basic_vec<_Tp, _Abi>::mask_type& __k,
            _BinaryOperation __binary_op, __type_identity_t<_Tp> __identity_element);
 
   template <std::totally_ordered _Tp, typename _Abi>
     constexpr _Tp
-    reduce_min(const basic_simd<_Tp, _Abi>& __x) noexcept;
+    reduce_min(const basic_vec<_Tp, _Abi>& __x) noexcept;
 
   template <std::totally_ordered _Tp, typename _Abi>
     constexpr _Tp
-    reduce_min(const basic_simd<_Tp, _Abi>& __x,
-               const typename basic_simd<_Tp, _Abi>::mask_type& __k) noexcept;
+    reduce_min(const basic_vec<_Tp, _Abi>& __x,
+               const typename basic_vec<_Tp, _Abi>::mask_type& __k) noexcept;
 
   template <std::totally_ordered _Tp, typename _Abi>
     constexpr _Tp
-    reduce_max(const basic_simd<_Tp, _Abi>& __x) noexcept;
+    reduce_max(const basic_vec<_Tp, _Abi>& __x) noexcept;
 
   template <std::totally_ordered _Tp, typename _Abi>
     constexpr _Tp
-    reduce_max(const basic_simd<_Tp, _Abi>& __x,
-               const typename basic_simd<_Tp, _Abi>::mask_type& __k) noexcept;
+    reduce_max(const basic_vec<_Tp, _Abi>& __x,
+               const typename basic_vec<_Tp, _Abi>::mask_type& __k) noexcept;
 
   // [simd.math]
   template <typename _V0>
@@ -449,21 +449,21 @@ namespace std::datapar
 
   // [simd.alg], Algorithms
   template <std::totally_ordered _Tp, typename _Abi>
-    constexpr basic_simd<_Tp, _Abi>
-    min(const basic_simd<_Tp, _Abi>& __a, const basic_simd<_Tp, _Abi>& __b) noexcept;
+    constexpr basic_vec<_Tp, _Abi>
+    min(const basic_vec<_Tp, _Abi>& __a, const basic_vec<_Tp, _Abi>& __b) noexcept;
 
   template <std::totally_ordered _Tp, typename _Abi>
-    constexpr basic_simd<_Tp, _Abi>
-    max(const basic_simd<_Tp, _Abi>& __a, const basic_simd<_Tp, _Abi>& __b) noexcept;
+    constexpr basic_vec<_Tp, _Abi>
+    max(const basic_vec<_Tp, _Abi>& __a, const basic_vec<_Tp, _Abi>& __b) noexcept;
 
   template <std::totally_ordered _Tp, typename _Abi>
-    constexpr pair<basic_simd<_Tp, _Abi>, basic_simd<_Tp, _Abi>>
-    minmax(const basic_simd<_Tp, _Abi>& __a, const basic_simd<_Tp, _Abi>& __b) noexcept;
+    constexpr pair<basic_vec<_Tp, _Abi>, basic_vec<_Tp, _Abi>>
+    minmax(const basic_vec<_Tp, _Abi>& __a, const basic_vec<_Tp, _Abi>& __b) noexcept;
 
   template <std::totally_ordered _Tp, typename _Abi>
-    constexpr basic_simd<_Tp, _Abi>
-    clamp(const basic_simd<_Tp, _Abi>& __v, const basic_simd<_Tp, _Abi>& __lo,
-          const basic_simd<_Tp, _Abi>& __hi);
+    constexpr basic_vec<_Tp, _Abi>
+    clamp(const basic_vec<_Tp, _Abi>& __v, const basic_vec<_Tp, _Abi>& __lo,
+          const basic_vec<_Tp, _Abi>& __hi);
 
   template <typename _Tp, typename _Up>
     constexpr auto
@@ -472,7 +472,7 @@ namespace std::datapar
 
   template <size_t _Bytes, typename _Abi, typename _Tp, typename _Up>
     constexpr auto
-    select(const basic_simd_mask<_Bytes, _Abi>& __k, const _Tp& __a, const _Up& __b) noexcept
+    select(const basic_mask<_Bytes, _Abi>& __k, const _Tp& __a, const _Up& __b) noexcept
     -> decltype(__select_impl(__k, __a, __b));
 
   // [simd.bit]
@@ -540,23 +540,23 @@ namespace std::datapar
 
 namespace std
 {
-  using datapar::min;
-  using datapar::max;
-  using datapar::minmax;
-  using datapar::clamp;
+  using simd::min;
+  using simd::max;
+  using simd::minmax;
+  using simd::clamp;
 
-  using datapar::byteswap;
-  using datapar::bit_ceil;
-  using datapar::bit_floor;
-  using datapar::has_single_bit;
-  using datapar::rotl;
-  using datapar::rotr;
-  using datapar::bit_width;
-  using datapar::countl_zero;
-  using datapar::countl_one;
-  using datapar::countr_zero;
-  using datapar::countr_one;
-  using datapar::popcount;
+  using simd::byteswap;
+  using simd::bit_ceil;
+  using simd::bit_floor;
+  using simd::has_single_bit;
+  using simd::rotl;
+  using simd::rotr;
+  using simd::bit_width;
+  using simd::countl_zero;
+  using simd::countl_one;
+  using simd::countr_zero;
+  using simd::countr_one;
+  using simd::popcount;
 }
 
 #endif  // PROTOTYPE_FWDDECL_H_

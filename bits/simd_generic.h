@@ -145,7 +145,7 @@ namespace std::simd_generic
 
   template <__detail::_SimdSizeType _Np, __detail::__vectorizable _Tp>
     struct resize<_Np, _Tp>
-    { using type = std::simd<_Tp, _Np>; };
+    { using type = std::vec<_Tp, _Np>; };
 
   template <__detail::__vectorizable _Tp>
     struct resize<1, _Tp>

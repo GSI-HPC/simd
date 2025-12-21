@@ -176,12 +176,12 @@ namespace std::__detail
   template <typename T>
     concept __boolean_reducable_impl = requires(T&& x)
       {
-        { datapar::all_of(x) } -> same_as<bool>;
-        { datapar::none_of(x) } -> same_as<bool>;
-        { datapar::any_of(x) } -> same_as<bool>;
-        { datapar::reduce_count(x) } -> signed_integral;
-        { datapar::reduce_min_index(x) } -> signed_integral;
-        { datapar::reduce_max_index(x) } -> signed_integral;
+        { simd::all_of(x) } -> same_as<bool>;
+        { simd::none_of(x) } -> same_as<bool>;
+        { simd::any_of(x) } -> same_as<bool>;
+        { simd::reduce_count(x) } -> signed_integral;
+        { simd::reduce_min_index(x) } -> signed_integral;
+        { simd::reduce_max_index(x) } -> signed_integral;
       };
 
   template <typename T>
@@ -215,15 +215,15 @@ namespace std::__detail
       };
 
   /* TODO
-   * Do we need the common_reference checks for simd? The interesting scenarios must be user-defined
-   * types that are convertible to simd, no? (operator simd() or derived from simd)
+   * Do we need the common_reference checks for vec? The interesting scenarios must be user-defined
+   * types that are convertible to vec, no? (operator vec() or derived from vec)
    */
   template <typename _Tp, typename _Up>
     concept __simd_comparison_common_type_with
       = common_reference_with<const remove_reference_t<_Tp>&, const remove_reference_t<_Up>&>;
 }
 
-namespace std::datapar
+namespace std::simd
 {
   template <typename _Tp>
     concept integral = __detail::__simd_integral<_Tp>;

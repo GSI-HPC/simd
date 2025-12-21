@@ -42,8 +42,8 @@ template <typename V>
     ADD_TEST(mask_reductions0) {
       std::tuple {test_iota<V>},
       [](auto& t, V x) {
-        t.verify_equal(std::datapar::reduce_min_index(x == x), 0);
-        t.verify_equal(std::datapar::reduce_max_index(x == x), V::size - 1);
+        t.verify_equal(std::simd::reduce_min_index(x == x), 0);
+        t.verify_equal(std::simd::reduce_max_index(x == x), V::size - 1);
       }
     };
 
@@ -74,20 +74,20 @@ template <typename V>
 
         t.verify_equal(k[i], true);
         t.verify_equal(std::as_const(k)[i], true);
-        t.verify_equal(std::datapar::reduce_min_index(k), i)(k);
-        t.verify_equal(std::datapar::reduce_max_index(k), maxk)(k);
-        t.verify_equal(std::datapar::reduce_min_index(k || k0), 0);
-        t.verify_equal(std::datapar::reduce_max_index(k || k0), maxkork0);
+        t.verify_equal(std::simd::reduce_min_index(k), i)(k);
+        t.verify_equal(std::simd::reduce_max_index(k), maxk)(k);
+        t.verify_equal(std::simd::reduce_min_index(k || k0), 0);
+        t.verify_equal(std::simd::reduce_max_index(k || k0), maxkork0);
         t.verify_equal(k, k);
         t.verify_not_equal(not k, k);
         t.verify_equal(k | k, k);
         t.verify_equal(k & k, k);
         t.verify(none_of(k ^ k));
-        t.verify_equal(std::datapar::reduce_count(k), nk);
-        t.verify_equal(-std::datapar::reduce(-k), nk)(k, -k);
-        t.verify_equal(std::datapar::reduce_count(not k), V::size - nk)(not k);
+        t.verify_equal(std::simd::reduce_count(k), nk);
+        t.verify_equal(-std::simd::reduce(-k), nk)(k, -k);
+        t.verify_equal(std::simd::reduce_count(not k), V::size - nk)(not k);
         if constexpr (V::size <= 128)
-          t.verify_equal(-std::datapar::reduce(-not k), V::size - nk)(-not k);
+          t.verify_equal(-std::simd::reduce(-not k), V::size - nk)(-not k);
         t.verify(any_of(k));
         t.verify(bool(any_of(k & k0) ^ (i != 0)));
         k = M([&](int i) { return i == 0 ? true : k[i]; });
@@ -95,8 +95,8 @@ template <typename V>
         t.verify_equal(std::as_const(k)[i], true);
         t.verify_equal(k[0], true);
         t.verify_equal(std::as_const(k)[0], true);
-        t.verify_equal(std::datapar::reduce_min_index(k), 0)(k);
-        t.verify_equal(std::datapar::reduce_max_index(k), maxk)(k);
+        t.verify_equal(std::simd::reduce_min_index(k), 0)(k);
+        t.verify_equal(std::simd::reduce_max_index(k), maxk)(k);
       }
     };
 

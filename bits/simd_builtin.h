@@ -241,7 +241,7 @@ namespace std::__detail
 
       template <__vec_builtin _TV>
         _GLIBCXX_SIMD_INTRINSIC static constexpr
-        std::datapar::basic_simd<__value_type_of<_TV>, _Abi>
+        std::simd::basic_vec<__value_type_of<_TV>, _Abi>
         _M_make_simd(_TV __x)
         { return __x; }
 
@@ -1060,7 +1060,7 @@ namespace std::__detail
 
       template <typename _Tp, size_t _Bs, typename _UAbi>
         _GLIBCXX_SIMD_INTRINSIC static constexpr auto
-        _S_convert(std::datapar::basic_simd_mask<_Bs, _UAbi> __x)
+        _S_convert(std::simd::basic_mask<_Bs, _UAbi> __x)
         { return _SuperImpl::template _S_convert_mask<_MaskMember<_Tp>>(__data(__x)); }
 
       template <__vec_builtin _TV>
@@ -1146,12 +1146,12 @@ namespace std::__detail
 
       template <size_t _Bs>
         _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdSizeType
-        _S_reduce_min_index(std::datapar::basic_simd_mask<_Bs, abi_type> __k)
+        _S_reduce_min_index(std::simd::basic_mask<_Bs, abi_type> __k)
         { return __lowest_bit(_SuperImpl::_S_to_bits(__data(__k))._M_to_bits()); }
 
       template <size_t _Bs>
         _GLIBCXX_SIMD_INTRINSIC static constexpr _SimdSizeType
-        _S_reduce_max_index(std::datapar::basic_simd_mask<_Bs, abi_type> __k)
+        _S_reduce_max_index(std::simd::basic_mask<_Bs, abi_type> __k)
         { return __highest_bit(_SuperImpl::_S_to_bits(__data(__k))._M_sanitized()._M_to_bits()); }
 
       template <__vectorizable_canon _Tp>
@@ -1180,9 +1180,9 @@ namespace std::__detail
           };
           constexpr auto __adj_idx = [](auto __i) {
             constexpr int __j = __i;
-            if constexpr (__j == datapar::zero_element)
+            if constexpr (__j == simd::zero_element)
               return __ic<_S_full_size>;
-            else if constexpr (__j == datapar::uninit_element)
+            else if constexpr (__j == simd::uninit_element)
               return __ic<-1>;
             else if constexpr (__i >= _S_size)
               return  __ic<(__j >= 0 and __j < _S_full_size ? __j : -1)>;

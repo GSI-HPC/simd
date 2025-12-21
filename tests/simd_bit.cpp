@@ -24,7 +24,7 @@ template <typename V>
             auto x = std::byteswap(a);
             for (int i = 0; i < V::size(); ++i)
               t.verify_equal(x[i], std::byteswap(a[i]));
-            auto y = std::datapar::byteswap(b);
+            auto y = std::simd::byteswap(b);
             for (int i = 0; i < V::size(); ++i)
               t.verify_equal(y[i], std::byteswap(b[i]));
           }
@@ -40,7 +40,7 @@ template <typename V>
         });
         t.verify_equal(bit_ceil(b), select(b == T(), T(1), b));
         t.verify_equal(std::bit_ceil(a), bit_ceil(a));
-        t.verify_equal(std::datapar::bit_ceil(a), bit_ceil(a));
+        t.verify_equal(std::simd::bit_ceil(a), bit_ceil(a));
         t.verify_equal(bit_ceil(a),
                        V([](T i) {
                          if (i > msb)
@@ -58,7 +58,7 @@ template <typename V>
         t.verify_equal(bit_floor(c), msb);
         t.verify_equal(bit_floor(b), b);
         t.verify_equal(std::bit_floor(a), bit_floor(a));
-        t.verify_equal(std::datapar::bit_floor(a), bit_floor(a));
+        t.verify_equal(std::simd::bit_floor(a), bit_floor(a));
         t.verify_equal(bit_floor(a),
                        V([](T i) -> T {
                          if (i == 0)
@@ -77,7 +77,7 @@ template <typename V>
         t.verify(all_of(has_single_bit(b)));
         t.verify(none_of(has_single_bit(c)));
         t.verify_equal(std::has_single_bit(a), has_single_bit(a));
-        t.verify_equal(std::datapar::has_single_bit(a), has_single_bit(a));
+        t.verify_equal(std::simd::has_single_bit(a), has_single_bit(a));
         t.verify_equal(has_single_bit(a), a != T() and a == bit_floor(a));
       }
     };
@@ -87,12 +87,12 @@ template <typename V>
       [](auto& t, const V a) {
         t.verify_equal(rotl(a, sizeof(T) * CHAR_BIT), a);
         t.verify_equal(std::rotl(a, sizeof(T) * CHAR_BIT), a);
-        t.verify_equal(std::datapar::rotl(a, sizeof(T) * CHAR_BIT), a);
+        t.verify_equal(std::simd::rotl(a, sizeof(T) * CHAR_BIT), a);
       }
     };
 
     using I = std::make_signed_t<T>;
-    using IV = std::datapar::rebind_t<I, V>;
+    using IV = std::simd::rebind_t<I, V>;
 
     ADD_TEST_N(RotateN, 128, std::__unsigned_integer<T>) {
       std::tuple {test_iota<V, 0, 0>},

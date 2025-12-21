@@ -183,7 +183,7 @@ namespace std::__detail
 
     template <typename _Tp, typename _BinaryOperation>
       _GLIBCXX_SIMD_INTRINSIC static constexpr _Tp
-      _S_reduce(const std::datapar::basic_simd<_Tp, _ScalarAbi>& __x, const _BinaryOperation&)
+      _S_reduce(const std::simd::basic_vec<_Tp, _ScalarAbi>& __x, const _BinaryOperation&)
       { return __x._M_data; }
 
     template <typename _Tp>
@@ -706,7 +706,7 @@ namespace std::__detail
           else
             return __idx_perm(0, 1);
         }();
-        if constexpr (__j == datapar::zero_element or __j == datapar::uninit_element)
+        if constexpr (__j == simd::zero_element or __j == simd::uninit_element)
           return _Tp();
         else
           static_assert(__j == 0);
@@ -737,7 +737,7 @@ namespace std::__detail
 
     template <typename, size_t _Bs, typename _UAbi>
       _GLIBCXX_SIMD_INTRINSIC static constexpr bool
-      _S_convert(std::datapar::basic_simd_mask<_Bs, _UAbi> __x)
+      _S_convert(std::simd::basic_mask<_Bs, _UAbi> __x)
       { return __x[0]; }
 
     _GLIBCXX_SIMD_INTRINSIC static constexpr bool
@@ -801,17 +801,17 @@ namespace std::__detail
 
     template <size_t _Bs>
       _GLIBCXX_SIMD_INTRINSIC static constexpr bool
-      _S_popcount(std::datapar::basic_simd_mask<_Bs, abi_type> __k)
+      _S_popcount(std::simd::basic_mask<_Bs, abi_type> __k)
       { return __data(__k); }
 
     template <size_t _Bs>
       _GLIBCXX_SIMD_INTRINSIC static constexpr int
-      _S_reduce_min_index(std::datapar::basic_simd_mask<_Bs, abi_type>)
+      _S_reduce_min_index(std::simd::basic_mask<_Bs, abi_type>)
       { return 0; }
 
     template <size_t _Bs>
       _GLIBCXX_SIMD_INTRINSIC static constexpr int
-      _S_reduce_max_index(std::datapar::basic_simd_mask<_Bs, abi_type>)
+      _S_reduce_max_index(std::simd::basic_mask<_Bs, abi_type>)
       { return 0; }
   };
 }

@@ -38,7 +38,7 @@ namespace std::__detail
 
   /**
    * @internal
-   * Tag used for private init constructor of simd and simd_mask
+   * Tag used for private init constructor of vec and mask
    */
   struct _PrivateInit
   {

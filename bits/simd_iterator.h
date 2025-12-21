@@ -10,7 +10,7 @@
 #include "fwddecl.h"
 
 #if SIMD_IS_A_RANGE
-namespace std::datapar
+namespace std::simd
 {
   template <typename _Vp>
     class __iterator

@@ -43,7 +43,7 @@ namespace std::__detail
 }
 
 #define _GLIBCXX_SIMD_MATH_1ARG(name)                                                              \
-namespace std::datapar                                                                             \
+namespace std::simd                                                                             \
 {                                                                                                  \
   template <__detail::__math_floating_point _Up>                                                   \
     _GLIBCXX_ALWAYS_INLINE constexpr __detail::__deduced_simd_t<_Up>                               \
@@ -79,7 +79,7 @@ namespace std::datapar                                                          
             }                                                                                      \
           else if constexpr (requires { typename _Vp::abi_type::_Abi0Type; })                      \
             {                                                                                      \
-              using _VPart = basic_simd<_Tp, typename _Vp::abi_type::_Abi0Type>;                   \
+              using _VPart = basic_vec<_Tp, typename _Vp::abi_type::_Abi0Type>;                   \
               _Vp __r;                                                                             \
               const auto& __arr0 = __x._M_data;                                                    \
               _GLIBCXX_SIMD_INT_PACK(__arr0.size(), _Is, {                                         \
@@ -104,11 +104,11 @@ namespace std::datapar                                                          
 }                                                                                                  \
 namespace std                                                                                      \
 {                                                                                                  \
-  using std::datapar::name;                                                                        \
+  using std::simd::name;                                                                        \
 }
 
 #define _GLIBCXX_SIMD_MATH_2ARG(name)                                                              \
-namespace std::datapar                                                                             \
+namespace std::simd                                                                             \
 {                                                                                                  \
   template <typename _V0, typename _V1>                                                            \
     _GLIBCXX_ALWAYS_INLINE constexpr __detail::__math_common_simd_t<_V0, _V1>                      \
@@ -146,7 +146,7 @@ namespace std::datapar                                                          
             }                                                                                      \
           else if constexpr (requires { typename _Vp::abi_type::_Abi0Type; })                      \
             {                                                                                      \
-              using _VPart = basic_simd<_Tp, typename _Vp::abi_type::_Abi0Type>;                   \
+              using _VPart = basic_vec<_Tp, typename _Vp::abi_type::_Abi0Type>;                   \
               _Vp __r;                                                                             \
               const auto& __arr0 = __x._M_data;                                                    \
               const auto& __arr1 = __y._M_data;                                                    \
@@ -172,11 +172,11 @@ namespace std::datapar                                                          
 }                                                                                                  \
 namespace std                                                                                      \
 {                                                                                                  \
-  using std::datapar::name;                                                                        \
+  using std::simd::name;                                                                        \
 }
 
 #define _GLIBCXX_SIMD_MATH_3ARG(name)                                                              \
-namespace std::datapar                                                                             \
+namespace std::simd                                                                             \
 {                                                                                                  \
   template <typename _V0, typename _V1, typename _V2>                                              \
     _GLIBCXX_ALWAYS_INLINE constexpr __detail::__math_common_simd_t<_V0, _V1, _V2>                 \
@@ -216,7 +216,7 @@ namespace std::datapar                                                          
             }                                                                                      \
           else if constexpr (requires { typename _Vp::abi_type::_Abi0Type; })                      \
             {                                                                                      \
-              using _VPart = basic_simd<_Tp, typename _Vp::abi_type::_Abi0Type>;                   \
+              using _VPart = basic_vec<_Tp, typename _Vp::abi_type::_Abi0Type>;                   \
               _Vp __r;                                                                             \
               const auto& __arr0 = __x._M_data;                                                    \
               const auto& __arr1 = __y._M_data;                                                    \
@@ -247,7 +247,7 @@ namespace std::datapar                                                          
 }                                                                                                  \
 namespace std                                                                                      \
 {                                                                                                  \
-  using std::datapar::name;                                                                        \
+  using std::simd::name;                                                                        \
 }
 
 _GLIBCXX_SIMD_MATH_1ARG(acos)
@@ -301,7 +301,7 @@ _GLIBCXX_SIMD_MATH_3ARG(lerp) // missing noexcept
 #undef _GLIBCXX_SIMD_MATH_3ARG
 
 #define _GLIBCXX_SIMD_MATH_CLASSIFICATION_1ARG(name)                                               \
-namespace std::datapar                                                                             \
+namespace std::simd                                                                             \
 {                                                                                                  \
   template <__detail::__math_floating_point _Up>                                                   \
     _GLIBCXX_ALWAYS_INLINE constexpr typename __detail::__deduced_simd_t<_Up>::mask_type           \
@@ -329,7 +329,7 @@ namespace std::datapar                                                          
 }                                                                                                  \
 namespace std                                                                                      \
 {                                                                                                  \
-  using std::datapar::name;                                                                        \
+  using std::simd::name;                                                                        \
 }
 
 _GLIBCXX_SIMD_MATH_CLASSIFICATION_1ARG(isinf)
@@ -339,7 +339,7 @@ _GLIBCXX_SIMD_MATH_CLASSIFICATION_1ARG(signbit)
 
 #undef _GLIBCXX_SIMD_MATH_CLASSIFICATION_1ARG
 
-namespace std::datapar
+namespace std::simd
 {
   template <typename _V0>
     _GLIBCXX_ALWAYS_INLINE constexpr typename __detail::__deduced_simd_t<_V0>::mask_type
@@ -371,10 +371,10 @@ namespace std::datapar
 frexp(const V& value, rebind_t<int, @\deducedsimd@<V>>* exp);
 constexpr rebind_t<int, @\deducedsimd@<V>> ilogb(const V& x);
 constexpr @\deducedsimd@<V> ldexp(const V& x, const rebind_t<int, @\deducedsimd@<V>>& exp);
-constexpr basic_simd<T, Abi> modf(const type_identity_t<basic_simd<T, Abi>>& value, basic_simd<T, Abi>* iptr);
+constexpr basic_vec<T, Abi> modf(const type_identity_t<basic_vec<T, Abi>>& value, basic_vec<T, Abi>* iptr);
 constexpr @\deducedsimd@<V> scalbn(const V& x, const rebind_t<int, @\deducedsimd@<V>>& n);
 constexpr @\deducedsimd@<V> scalbln(const V& x, const rebind_t<long int, @\deducedsimd@<V>>& n);
-template<signed_integral T, class Abi> constexpr basic_simd<T, Abi> abs(const basic_simd<T, Abi>& j);
+template<signed_integral T, class Abi> constexpr basic_vec<T, Abi> abs(const basic_vec<T, Abi>& j);
 
   template<@\mathfloatingpoint@ V> constexpr rebind_t<long int, @\deducedsimd@<V>> lround(const V& x);
   template<@\mathfloatingpoint@ V> constexpr rebind_t<long long int, @\deducedsimd@<V>> llround(const V& x);

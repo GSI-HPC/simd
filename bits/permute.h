@@ -12,7 +12,7 @@
 #include "simd.h"
 #include "iota.h"
 
-namespace std::datapar
+namespace std::simd
 {
   namespace permutations
   {

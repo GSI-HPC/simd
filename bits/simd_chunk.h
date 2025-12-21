@@ -28,11 +28,11 @@ namespace std::__detail
     }
 }
 
-namespace std::datapar
+namespace std::simd
 {
   template <typename _V, typename _Tp, typename _Abi>
     _GLIBCXX_SIMD_ALWAYS_INLINE constexpr auto
-    chunk(const basic_simd<_Tp, _Abi>& __x) noexcept
+    chunk(const basic_vec<_Tp, _Abi>& __x) noexcept
     {
       constexpr int __in = __detail::__simd_size_v<_Tp, _Abi>;
       constexpr int __out = _V::size();
@@ -61,9 +61,9 @@ namespace std::datapar
 
   template <typename _M, size_t _Bs, typename _Abi>
     _GLIBCXX_SIMD_ALWAYS_INLINE constexpr auto
-    chunk(const basic_simd_mask<_Bs, _Abi>& __x) noexcept
+    chunk(const basic_mask<_Bs, _Abi>& __x) noexcept
     {
-      constexpr int __in = basic_simd_mask<_Bs, _Abi>::size();
+      constexpr int __in = basic_mask<_Bs, _Abi>::size();
       constexpr int __out = _M::size();
       constexpr int __rem = __in % __out;
       if constexpr (__rem == 0)
@@ -90,13 +90,13 @@ namespace std::datapar
 
   template <size_t _Np, typename _Tp, typename _Abi>
     _GLIBCXX_SIMD_ALWAYS_INLINE constexpr auto
-    chunk(const basic_simd<_Tp, _Abi>& __x) noexcept
-    { return chunk<resize_t<_Np, basic_simd<_Tp, _Abi>>>(__x); }
+    chunk(const basic_vec<_Tp, _Abi>& __x) noexcept
+    { return chunk<resize_t<_Np, basic_vec<_Tp, _Abi>>>(__x); }
 
   template <size_t _Np, size_t _Bs, typename _Abi>
     _GLIBCXX_SIMD_ALWAYS_INLINE constexpr auto
-    chunk(const basic_simd_mask<_Bs, _Abi>& __x) noexcept
-    { return chunk<resize_t<_Np, basic_simd_mask<_Bs, _Abi>>>(__x); }
+    chunk(const basic_mask<_Bs, _Abi>& __x) noexcept
+    { return chunk<resize_t<_Np, basic_mask<_Bs, _Abi>>>(__x); }
 }
 
 namespace std::__detail
@@ -122,7 +122,7 @@ namespace std::__detail
     {
       using _Tp = typename _T0::value_type;
       constexpr int __size = _T0::size.value + _T1::size.value;
-      const std::datapar::resize_t<__size, _T0>
+      const std::simd::resize_t<__size, _T0>
         __x01{__private_init,
               [&]<_SimdSizeType... _Is, _SimdSizeType... _Js, _SimdSizeType... _Ks>
                 [[__gnu__::__always_inline__]]
@@ -152,20 +152,20 @@ namespace std::__detail
     }
 }
 
-namespace std::datapar
+namespace std::simd
 {
   template <typename _Tp, typename... _Abis>
     _GLIBCXX_SIMD_ALWAYS_INLINE constexpr
-    simd<_Tp, (__detail::__simd_size_v<_Tp, _Abis> + ...)>
-    cat(const basic_simd<_Tp, _Abis>&... __xs) noexcept
+    vec<_Tp, (__detail::__simd_size_v<_Tp, _Abis> + ...)>
+    cat(const basic_vec<_Tp, _Abis>&... __xs) noexcept
     {
       constexpr int __size = (__detail::__simd_size_v<_Tp, _Abis> + ...);
       if constexpr (sizeof...(_Abis) == 1)
-        return simd<_Tp, __size>(__xs...);
+        return vec<_Tp, __size>(__xs...);
       else if constexpr (__size <= __detail::__simd_size_v<_Tp, __detail::_NativeAbi<_Tp>>)
         return __detail::__cat_recursive(__xs...);
       else
-        return simd<_Tp, (__detail::__simd_size_v<_Tp, _Abis> + ...)>(
+        return vec<_Tp, (__detail::__simd_size_v<_Tp, _Abis> + ...)>(
                  [&] [[__gnu__::__always_inline__]] (auto __i) {
                    return __detail::__get_simd_element_from_pack(__i, __xs...);
                  });
@@ -173,11 +173,11 @@ namespace std::datapar
 
   template <size_t _Bs, typename... _Abis>
     _GLIBCXX_SIMD_ALWAYS_INLINE constexpr
-    simd_mask<__detail::__mask_integer_from<_Bs>, (basic_simd_mask<_Bs, _Abis>::size.value + ...)>
-    cat(const basic_simd_mask<_Bs, _Abis>&... __xs) noexcept
+    mask<__detail::__mask_integer_from<_Bs>, (basic_mask<_Bs, _Abis>::size.value + ...)>
+    cat(const basic_mask<_Bs, _Abis>&... __xs) noexcept
     {
-      return simd_mask<__detail::__mask_integer_from<_Bs>,
-                       (basic_simd_mask<_Bs, _Abis>::size.value + ...)>(
+      return mask<__detail::__mask_integer_from<_Bs>,
+                       (basic_mask<_Bs, _Abis>::size.value + ...)>(
                [&] [[__gnu__::__always_inline__]] (auto __i) {
                  return __detail::__get_simd_element_from_pack(__i, __xs...);
                });

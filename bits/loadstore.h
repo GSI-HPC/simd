@@ -20,11 +20,11 @@ namespace std::__detail
 
   template <typename _Tp>
     struct __simd_load_return<void, _Tp>
-    { using type = std::datapar::basic_simd<_Tp>; };
+    { using type = std::simd::basic_vec<_Tp>; };
 
   template <typename _Up, typename _Abi, typename _Tp>
-    struct __simd_load_return<std::datapar::basic_simd<_Up, _Abi>, _Tp>
-    { using type = std::datapar::basic_simd<_Up, _Abi>; };
+    struct __simd_load_return<std::simd::basic_vec<_Up, _Abi>, _Tp>
+    { using type = std::simd::basic_vec<_Up, _Abi>; };
 
   template <typename _Vp, typename _Tp>
     using __simd_load_return_t = typename __simd_load_return<_Vp, _Tp>::type;
@@ -37,7 +37,7 @@ namespace std::__detail
     using __load_mask_type_t = typename __simd_load_return_t<_Vp, _Tp>::mask_type;
 }
 
-namespace std::datapar
+namespace std::simd
 {
   template <class _Vp = void, ranges::range _Rg, typename... _Flags>
     requires (not __detail::__sized_contiguous_range<_Rg>)
@@ -334,10 +334,10 @@ namespace std::datapar
     requires indirectly_writable<ranges::iterator_t<_Rg>, _Tp>
     _GLIBCXX_SIMD_ALWAYS_INLINE
     constexpr void
-    unchecked_store(const basic_simd<_Tp, _Abi>& __v, _Rg&& __r,
+    unchecked_store(const basic_vec<_Tp, _Abi>& __v, _Rg&& __r,
                          flags<_Flags...> __f = {})
     {
-      using _TV = basic_simd<_Tp, _Abi>;
+      using _TV = basic_vec<_Tp, _Abi>;
       static_assert(destructible<_TV>);
       static_assert(__detail::__loadstore_convertible_to<
                       _Tp, ranges::range_value_t<_Rg>, _Flags...>,
@@ -397,7 +397,7 @@ namespace std::datapar
     requires indirectly_writable<_It, _Tp>
     _GLIBCXX_SIMD_ALWAYS_INLINE
     constexpr void
-    unchecked_store(const basic_simd<_Tp, _Abi>& __v, _It __first, iter_difference_t<_It> __n,
+    unchecked_store(const basic_vec<_Tp, _Abi>& __v, _It __first, iter_difference_t<_It> __n,
                          flags<_Flags...> __f = {})
     { unchecked_store(__v, std::span<iter_value_t<_It>>(__first, __n), __f); }
 
@@ -405,7 +405,7 @@ namespace std::datapar
             typename... _Flags>
     requires indirectly_writable<_It, _Tp>
     constexpr void
-    unchecked_store(const basic_simd<_Tp, _Abi>& __v, _It __first, _Sp __last,
+    unchecked_store(const basic_vec<_Tp, _Abi>& __v, _It __first, _Sp __last,
                          flags<_Flags...> __f = {})
     { unchecked_store(__v, std::span<iter_value_t<_It>>(__first, __last), __f); }
 
@@ -413,14 +413,14 @@ namespace std::datapar
     requires indirectly_writable<ranges::iterator_t<_Rg>, _Tp>
     _GLIBCXX_SIMD_ALWAYS_INLINE
     constexpr void
-    partial_store(const basic_simd<_Tp, _Abi>& __v, _Rg&& __r, flags<_Flags...> __f = {})
+    partial_store(const basic_vec<_Tp, _Abi>& __v, _Rg&& __r, flags<_Flags...> __f = {})
     { unchecked_store(__v, __r, __f | __allow_partial_loadstore); }
 
   template <typename _Tp, typename _Abi, contiguous_iterator _It, typename... _Flags>
     requires indirectly_writable<_It, _Tp>
     _GLIBCXX_SIMD_ALWAYS_INLINE
     constexpr void
-    partial_store(const basic_simd<_Tp, _Abi>& __v, _It __first, iter_difference_t<_It> __n,
+    partial_store(const basic_vec<_Tp, _Abi>& __v, _It __first, iter_difference_t<_It> __n,
                        flags<_Flags...> __f = {})
     { partial_store(__v, std::span<iter_value_t<_It>>(__first, __n), __f); }
 
@@ -428,7 +428,7 @@ namespace std::datapar
             typename... _Flags>
     requires indirectly_writable<_It, _Tp>
     constexpr void
-    partial_store(const basic_simd<_Tp, _Abi>& __v, _It __first, _Sp __last,
+    partial_store(const basic_vec<_Tp, _Abi>& __v, _It __first, _Sp __last,
                        flags<_Flags...> __f = {})
     { partial_store(__v, std::span<iter_value_t<_It>>(__first, __last), __f); }
 
@@ -438,11 +438,11 @@ namespace std::datapar
     requires indirectly_writable<ranges::iterator_t<_Rg>, _Tp>
     _GLIBCXX_SIMD_ALWAYS_INLINE
     constexpr void
-    unchecked_store(const basic_simd<_Tp, _Abi>& __v, _Rg&& __r,
-                         const typename basic_simd<_Tp, _Abi>::mask_type& __k,
+    unchecked_store(const basic_vec<_Tp, _Abi>& __v, _Rg&& __r,
+                         const typename basic_vec<_Tp, _Abi>::mask_type& __k,
                          flags<_Flags...> __f = {})
     {
-      using _TV = basic_simd<_Tp, _Abi>;
+      using _TV = basic_vec<_Tp, _Abi>;
       static_assert(__detail::__loadstore_convertible_to<
                       _Tp, ranges::range_value_t<_Rg>, _Flags...>,
                     "The converting store is not value-preserving. "
@@ -493,8 +493,8 @@ namespace std::datapar
     requires indirectly_writable<_It, _Tp>
     _GLIBCXX_SIMD_ALWAYS_INLINE
     constexpr void
-    unchecked_store(const basic_simd<_Tp, _Abi>& __v, _It __first, iter_difference_t<_It> __n,
-                         const typename basic_simd<_Tp, _Abi>::mask_type& __k,
+    unchecked_store(const basic_vec<_Tp, _Abi>& __v, _It __first, iter_difference_t<_It> __n,
+                         const typename basic_vec<_Tp, _Abi>::mask_type& __k,
                          flags<_Flags...> __f = {})
     { unchecked_store(__v, span(__first, __n), __k, __f); }
 
@@ -503,8 +503,8 @@ namespace std::datapar
     requires indirectly_writable<_It, _Tp>
     _GLIBCXX_SIMD_ALWAYS_INLINE
     constexpr void
-    unchecked_store(const basic_simd<_Tp, _Abi>& __v, _It __first, _Sp __last,
-                         const typename basic_simd<_Tp, _Abi>::mask_type& __k,
+    unchecked_store(const basic_vec<_Tp, _Abi>& __v, _It __first, _Sp __last,
+                         const typename basic_vec<_Tp, _Abi>::mask_type& __k,
                          flags<_Flags...> __f = {})
     { unchecked_store(__v, span(__first, __last), __k, __f); }
 
@@ -513,8 +513,8 @@ namespace std::datapar
     requires indirectly_writable<ranges::iterator_t<_Rg>, _Tp>
     _GLIBCXX_SIMD_ALWAYS_INLINE
     constexpr void
-    partial_store(const basic_simd<_Tp, _Abi>& __v, _Rg&& __r,
-                         const typename basic_simd<_Tp, _Abi>::mask_type& __k,
+    partial_store(const basic_vec<_Tp, _Abi>& __v, _Rg&& __r,
+                         const typename basic_vec<_Tp, _Abi>::mask_type& __k,
                          flags<_Flags...> __f = {})
     { return unchecked_store(__v, __r, __k, __f | __allow_partial_loadstore); }
 
@@ -522,8 +522,8 @@ namespace std::datapar
     requires indirectly_writable<_It, _Tp>
     _GLIBCXX_SIMD_ALWAYS_INLINE
     constexpr void
-    partial_store(const basic_simd<_Tp, _Abi>& __v, _It __first, iter_difference_t<_It> __n,
-                         const typename basic_simd<_Tp, _Abi>::mask_type& __k,
+    partial_store(const basic_vec<_Tp, _Abi>& __v, _It __first, iter_difference_t<_It> __n,
+                         const typename basic_vec<_Tp, _Abi>::mask_type& __k,
                        flags<_Flags...> __f = {})
     { partial_store(__v, span(__first, __n), __k, __f); }
 
@@ -532,8 +532,8 @@ namespace std::datapar
     requires indirectly_writable<_It, _Tp>
     _GLIBCXX_SIMD_ALWAYS_INLINE
     constexpr void
-    partial_store(const basic_simd<_Tp, _Abi>& __v, _It __first, _Sp __last,
-                         const typename basic_simd<_Tp, _Abi>::mask_type& __k,
+    partial_store(const basic_vec<_Tp, _Abi>& __v, _It __first, _Sp __last,
+                         const typename basic_vec<_Tp, _Abi>::mask_type& __k,
                        flags<_Flags...> __f = {})
     { partial_store(__v, span(__first, __last), __k, __f); }
 }

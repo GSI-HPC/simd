@@ -51,7 +51,7 @@ namespace std::__detail
         else
           {
             return static_cast<_Up*>(__builtin_assume_aligned(
-                                       __ptr, std::datapar::alignment_v<_Tp, _Up>));
+                                       __ptr, std::simd::alignment_v<_Tp, _Up>));
           }
       }
   };
@@ -111,7 +111,7 @@ namespace std::__detail
     concept __loadstore_tag = std::is_base_of_v<_LoadStoreTag, _Tp>;
 } // namespace __detail
 
-namespace std::datapar
+namespace std::simd
 {
 
   template <typename... _Flags>

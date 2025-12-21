@@ -43,7 +43,7 @@ static std::string_view test_name = "unknown";
 
 // ------------------------------------------------
 
-namespace dp = std::datapar;
+namespace dp = std::simd;
 
 template <typename T>
   consteval std::basic_string_view<char>
@@ -87,7 +87,7 @@ std::ostream& operator<<(std::ostream& s, std::byte b)
 { return s << std::hex << static_cast<unsigned>(b) << std::dec; }
 
 template <typename T, typename Abi>
-std::ostream& operator<<(std::ostream& s, std::datapar::basic_simd<T, Abi> const& v)
+std::ostream& operator<<(std::ostream& s, std::simd::basic_vec<T, Abi> const& v)
 {
   using U = std::conditional_t<
               sizeof(T) == 1, int, std::conditional_t<
@@ -100,7 +100,7 @@ std::ostream& operator<<(std::ostream& s, std::datapar::basic_simd<T, Abi> const
 }
 
 template <std::size_t B, typename Abi>
-std::ostream& operator<<(std::ostream& s, std::datapar::basic_simd_mask<B, Abi> const& v)
+std::ostream& operator<<(std::ostream& s, std::simd::basic_mask<B, Abi> const& v)
 {
   s << '<';
   for (int i = 0; i < v.size(); ++i)
@@ -111,7 +111,7 @@ std::ostream& operator<<(std::ostream& s, std::datapar::basic_simd_mask<B, Abi> 
 template <std::__detail::__vec_builtin V>
   std::ostream& operator<<(std::ostream& s, V v)
   {
-    return s << std::datapar::simd<std::__detail::__value_type_of<V>,
+    return s << std::simd::vec<std::__detail::__value_type_of<V>,
                                    std::__detail::__width_of<V>>(v);
   }
 
@@ -181,15 +181,15 @@ template <typename T>
   { using type = unsigned long long; };
 
 template <typename T, typename Abi>
-  struct as_unsigned<std::datapar::basic_simd<T, Abi>>
-  { using type = std::datapar::rebind_t<as_unsigned_t<T>, std::datapar::basic_simd<T, Abi>>; };
+  struct as_unsigned<std::simd::basic_vec<T, Abi>>
+  { using type = std::simd::rebind_t<as_unsigned_t<T>, std::simd::basic_vec<T, Abi>>; };
 
 template <typename T0, typename T1>
   constexpr T0
   ulp_distance_signed(T0 val0, const T1& ref1)
   {
     if constexpr (std::is_floating_point_v<T1>)
-      return ulp_distance_signed(val0, std::datapar::rebind_t<T1, T0>(ref1));
+      return ulp_distance_signed(val0, std::simd::rebind_t<T1, T0>(ref1));
     else if constexpr (std::is_floating_point_v<value_type_t<T0>>)
       {
         int fp_exceptions = 0;
@@ -268,14 +268,14 @@ struct constexpr_verifier
   constexpr ignore_the_rest
   verify(const auto& k) &
   {
-    okay = okay and std::datapar::all_of(k);
+    okay = okay and std::simd::all_of(k);
     return {};
   }
 
   constexpr ignore_the_rest
   verify_equal(const auto& v, const auto& ref) &
   {
-    okay = okay and std::datapar::all_of(v == ref);
+    okay = okay and std::simd::all_of(v == ref);
     return {};
   }
 
@@ -291,14 +291,14 @@ struct constexpr_verifier
   constexpr ignore_the_rest
   verify_not_equal(const auto& v, const auto& ref) &
   {
-    okay = okay and std::datapar::all_of(v != ref);
+    okay = okay and std::simd::all_of(v != ref);
     return {};
   }
 
   constexpr ignore_the_rest
   verify_equal_to_ulp(const auto& x, const auto& y, float allowed_distance) &
   {
-    okay = okay and std::datapar::all_of(ulp_distance(x, y) <= allowed_distance);
+    okay = okay and std::simd::all_of(ulp_distance(x, y) <= allowed_distance);
     return {};
   }
 
@@ -421,7 +421,7 @@ struct runtime_verifier
   verify(auto&& k, std::source_location loc = std::source_location::current())
   {
     const auto ip = determine_ip();
-    if (std::datapar::all_of(k))
+    if (std::simd::all_of(k))
       {
         ++passed_tests;
         return {};
@@ -438,9 +438,9 @@ struct runtime_verifier
     const auto ip = determine_ip();
     bool ok;
     if constexpr (pair_specialization<decltype(x)> and pair_specialization<decltype(y)>)
-      ok = std::datapar::all_of(x.first == y.first) and std::datapar::all_of(x.second == y.second);
+      ok = std::simd::all_of(x.first == y.first) and std::simd::all_of(x.second == y.second);
     else
-      ok = std::datapar::all_of(x == y);
+      ok = std::simd::all_of(x == y);
     if (ok)
       {
         ++passed_tests;
@@ -456,7 +456,7 @@ struct runtime_verifier
                    std::source_location loc = std::source_location::current())
   {
     const auto ip = determine_ip();
-    if (std::datapar::all_of(x != y))
+    if (std::simd::all_of(x != y))
       {
         ++passed_tests;
         return {};
@@ -472,7 +472,7 @@ struct runtime_verifier
                       std::source_location loc = std::source_location::current())
   {
     const auto ip = determine_ip();
-    const bool success = std::datapar::all_of(ulp_distance(x, y) <= allowed_distance);
+    const bool success = std::simd::all_of(ulp_distance(x, y) <= allowed_distance);
     if (success)
       {
         ++passed_tests;
@@ -500,12 +500,12 @@ template <typename T>
 
 template <typename T, typename Abi>
   [[gnu::always_inline]] inline bool
-  is_constprop(const std::datapar::basic_simd<T, Abi>& x)
+  is_constprop(const std::simd::basic_vec<T, Abi>& x)
   { return x._M_is_constprop(); }
 
 template <std::size_t B, typename Abi>
   [[gnu::always_inline]] inline bool
-  is_constprop(const std::datapar::basic_simd_mask<B, Abi>& x)
+  is_constprop(const std::simd::basic_mask<B, Abi>& x)
   { return x._M_is_constprop(); }
 
 template <typename T, std::size_t N>
@@ -646,8 +646,8 @@ template <typename V, int Init = 0, int Max = V::size() + Init - 1>
 
 template <typename T, typename Abi, int Init, int Max>
   requires std::is_enum_v<T>
-  constexpr T test_iota_max<dp::basic_simd<T, Abi>, Init, Max>
-    = static_cast<T>(test_iota_max<dp::basic_simd<std::underlying_type_t<T>, Abi>, Init, Max>);
+  constexpr T test_iota_max<dp::basic_vec<T, Abi>, Init, Max>
+    = static_cast<T>(test_iota_max<dp::basic_vec<std::underlying_type_t<T>, Abi>, Init, Max>);
 
 /**
  * Starts iota sequence at Init.

@@ -11,13 +11,13 @@
 #include "simd_reductions.h"
 #include "x86_detail.h"
 
-namespace std::datapar
+namespace std::simd
 {
   template <size_t _Bs, typename _Abi>
     _GLIBCXX_SIMD_ALWAYS_INLINE constexpr bool
-    all_of(const basic_simd_mask<_Bs, _Abi>& __k) noexcept
+    all_of(const basic_mask<_Bs, _Abi>& __k) noexcept
     {
-      using _Kp = basic_simd_mask<_Bs, _Abi>;
+      using _Kp = basic_mask<_Bs, _Abi>;
       constexpr __detail::_SimdSizeType __size = _Kp::size.value;
       if constexpr (__size == 1)
         return __data(__k);
@@ -58,9 +58,9 @@ namespace std::datapar
 
   template <size_t _Bs, typename _Abi>
     _GLIBCXX_SIMD_ALWAYS_INLINE constexpr bool
-    any_of(const basic_simd_mask<_Bs, _Abi>& __k) noexcept
+    any_of(const basic_mask<_Bs, _Abi>& __k) noexcept
     {
-      using _Kp = basic_simd_mask<_Bs, _Abi>;
+      using _Kp = basic_mask<_Bs, _Abi>;
       constexpr __detail::_SimdSizeType __size = _Kp::size.value;
       if constexpr (__size == 1)
         return __data(__k);
@@ -90,9 +90,9 @@ namespace std::datapar
 
   template <size_t _Bs, typename _Abi>
     _GLIBCXX_SIMD_ALWAYS_INLINE constexpr bool
-    none_of(const basic_simd_mask<_Bs, _Abi>& __k) noexcept
+    none_of(const basic_mask<_Bs, _Abi>& __k) noexcept
     {
-      using _Kp = basic_simd_mask<_Bs, _Abi>;
+      using _Kp = basic_mask<_Bs, _Abi>;
       constexpr __detail::_SimdSizeType __size = _Kp::size.value;
       if constexpr (__size == 1)
         return !__data(__k);
@@ -123,9 +123,9 @@ namespace std::datapar
 
   template <size_t _Bs, typename _Abi>
     _GLIBCXX_SIMD_ALWAYS_INLINE constexpr __detail::_SimdSizeType
-    reduce_count(const basic_simd_mask<_Bs, _Abi>& __k) noexcept
+    reduce_count(const basic_mask<_Bs, _Abi>& __k) noexcept
     {
-      using _Kp = basic_simd_mask<_Bs, _Abi>;
+      using _Kp = basic_mask<_Bs, _Abi>;
       constexpr __detail::_SimdSizeType __size = _Kp::size.value;
       if constexpr (__size == 1)
         return +__data(__k);
@@ -152,11 +152,11 @@ namespace std::datapar
    */
   template <size_t _Bs, typename _Abi>
     _GLIBCXX_SIMD_ALWAYS_INLINE constexpr __detail::_SimdSizeType
-    reduce_min_index(const basic_simd_mask<_Bs, _Abi>& __k)
+    reduce_min_index(const basic_mask<_Bs, _Abi>& __k)
     {
       __glibcxx_simd_precondition(any_of(__k), "any_of(k) must be true");
 
-      constexpr int __size = basic_simd_mask<_Bs, _Abi>::size.value;
+      constexpr int __size = basic_mask<_Bs, _Abi>::size.value;
       if constexpr (__size == 1)
         return 0;
 
@@ -188,11 +188,11 @@ namespace std::datapar
    */
   template <size_t _Bs, typename _Abi>
     _GLIBCXX_SIMD_ALWAYS_INLINE constexpr __detail::_SimdSizeType
-    reduce_max_index(const basic_simd_mask<_Bs, _Abi>& __k)
+    reduce_max_index(const basic_mask<_Bs, _Abi>& __k)
     {
       __glibcxx_simd_precondition(any_of(__k), "any_of(k) must be true");
 
-      constexpr int __size = basic_simd_mask<_Bs, _Abi>::size.value;
+      constexpr int __size = basic_mask<_Bs, _Abi>::size.value;
       if constexpr (__size == 1)
         return 0;
 

@@ -12,31 +12,31 @@
 #include "simd.h"
 #include "simd_mask.h"
 
-namespace std::datapar
+namespace std::simd
 {
   template<std::totally_ordered _Tp, typename _Abi>
-    constexpr basic_simd<_Tp, _Abi>
-    min(const basic_simd<_Tp, _Abi>& __a, const basic_simd<_Tp, _Abi>& __b) noexcept
+    constexpr basic_vec<_Tp, _Abi>
+    min(const basic_vec<_Tp, _Abi>& __a, const basic_vec<_Tp, _Abi>& __b) noexcept
     { return {__detail::__private_init, _Abi::_SimdImpl::_S_min(__a._M_data, __b._M_data)}; }
 
   template<std::totally_ordered _Tp, typename _Abi>
-    constexpr basic_simd<_Tp, _Abi>
-    max(const basic_simd<_Tp, _Abi>& __a, const basic_simd<_Tp, _Abi>& __b) noexcept
+    constexpr basic_vec<_Tp, _Abi>
+    max(const basic_vec<_Tp, _Abi>& __a, const basic_vec<_Tp, _Abi>& __b) noexcept
     { return {__detail::__private_init, _Abi::_SimdImpl::_S_max(__a._M_data, __b._M_data)}; }
 
   template<std::totally_ordered _Tp, typename _Abi>
-    constexpr pair<basic_simd<_Tp, _Abi>, basic_simd<_Tp, _Abi>>
-    minmax(const basic_simd<_Tp, _Abi>& __a, const basic_simd<_Tp, _Abi>& __b) noexcept
+    constexpr pair<basic_vec<_Tp, _Abi>, basic_vec<_Tp, _Abi>>
+    minmax(const basic_vec<_Tp, _Abi>& __a, const basic_vec<_Tp, _Abi>& __b) noexcept
     {
-      pair<basic_simd<_Tp, _Abi>, basic_simd<_Tp, _Abi>> __r = {__a, __b};
+      pair<basic_vec<_Tp, _Abi>, basic_vec<_Tp, _Abi>> __r = {__a, __b};
       _Abi::_SimdImpl::_S_minmax(__r.first._M_data, __r.second._M_data);
       return __r;
     }
 
   template<std::totally_ordered _Tp, typename _Abi>
-    constexpr basic_simd<_Tp, _Abi>
-    clamp(const basic_simd<_Tp, _Abi>& __v, const basic_simd<_Tp, _Abi>& __lo,
-          const basic_simd<_Tp, _Abi>& __hi)
+    constexpr basic_vec<_Tp, _Abi>
+    clamp(const basic_vec<_Tp, _Abi>& __v, const basic_vec<_Tp, _Abi>& __lo,
+          const basic_vec<_Tp, _Abi>& __hi)
     {
       __glibcxx_simd_precondition(none_of(__lo > __hi), "lower bound is larger than upper bound");
       return {__detail::__private_init,
@@ -51,7 +51,7 @@ namespace std::datapar
 
   template <size_t _Bytes, typename _Abi, typename _Tp, typename _Up>
     _GLIBCXX_SIMD_ALWAYS_INLINE constexpr auto
-    select(const basic_simd_mask<_Bytes, _Abi>& __k, const _Tp& __a, const _Up& __b) noexcept
+    select(const basic_mask<_Bytes, _Abi>& __k, const _Tp& __a, const _Up& __b) noexcept
     -> decltype(__select_impl(__k, __a, __b))
     { return __select_impl(__k, __a, __b); }
 }

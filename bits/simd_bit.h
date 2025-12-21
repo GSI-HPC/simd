@@ -9,7 +9,7 @@
 
 #include <bit>
 
-namespace std::datapar
+namespace std::simd
 {
   template<__detail::__simd_integral _Vp>
     constexpr _Vp
