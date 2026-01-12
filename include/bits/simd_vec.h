@@ -780,6 +780,8 @@ namespace std::simd
         constexpr value_type
         _M_reduce(_BinaryOp __binary_op) const
         {
+          constexpr bool __have_id_elem
+            = requires { __default_identity_element<__canon_value_type, _BinaryOp>(); };
           if constexpr (_S_size == 1)
             return operator[](0);
           else if constexpr (_Traits.template _M_eval_as_f32<value_type>()
@@ -872,8 +874,6 @@ namespace std::simd
               if constexpr (tuple_size_v<_Cp> == 4)
                 {
                   const auto& [__a, __b, __c, __rest] = __chunked;
-                  constexpr bool __have_id_elem
-                    = requires { __default_identity_element<__canon_value_type, _BinaryOp>(); };
                   constexpr bool __amd_cpu = _Traits._M_have_sse4a();
                   if constexpr (__have_id_elem && __rest._S_size > 1 && __amd_cpu)
                     { // do one 256-bit op -> one 128-bit op
@@ -913,7 +913,7 @@ namespace std::simd
               else
                 static_assert(false);
             }
-          else if constexpr (requires { __default_identity_element<__canon_value_type, _BinaryOp>(); })
+          else if constexpr (__have_id_elem)
             {
               constexpr __canon_value_type __id
                 = __default_identity_element<__canon_value_type, _BinaryOp>();
