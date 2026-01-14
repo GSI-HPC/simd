@@ -1329,6 +1329,17 @@ namespace std::simd
 #endif
 
       // [simd.ctor] broadcast constructor ------------------------------------
+      /**
+       * @brief Broadcast constructor from scalar value.
+       *
+       * Constructs a vector where all elements are initialized to the same scalar value.
+       * The scalar value is converted to the vector's element type.
+       *
+       * @param __x Scalar value to broadcast to all vector elements.
+       * @tparam _Up Type of scalar value (must be explicitly convertible to value_type).
+       *
+       * @note The constructor is implicit if the conversion (if any) is value-preserving.
+       */
       template <__explicitly_convertible_to<value_type> _Up>
         [[__gnu__::__always_inline__]]
         constexpr explicit(!__broadcast_constructible<_Up, value_type>)
@@ -1498,6 +1509,11 @@ namespace std::simd
         }
 
       // [simd.subscr] --------------------------------------------------------
+      /**
+       * @brief Return the value of the element at index @p __i.
+       *
+       * @pre __i >= 0 && __i < size().
+       */
       [[__gnu__::__always_inline__]]
       constexpr value_type
       operator[](__simd_size_type __i) const
@@ -1545,16 +1561,31 @@ namespace std::simd
       operator!() const noexcept requires requires(value_type __a) { !__a; }
       { return *this == value_type(); }
 
+      /**
+       * @brief Unary plus operator (no-op).
+       *
+       * Returns an unchanged copy of the object.
+       */
       [[__gnu__::__always_inline__]]
       constexpr basic_vec
       operator+() const noexcept requires requires(value_type __a) { +__a; }
       { return *this; }
 
+      /**
+       * @brief Unary negation operator.
+       *
+       * Returns a new SIMD vector after element-wise negation.
+       */
       [[__gnu__::__always_inline__]]
       constexpr basic_vec
       operator-() const noexcept requires requires(value_type __a) { -__a; }
       { return _S_init(-_M_data); }
 
+      /**
+       * @brief Bitwise NOT / complement operator.
+       *
+       * Returns a new SIMD vector after element-wise complement.
+       */
       [[__gnu__::__always_inline__]]
       constexpr basic_vec
       operator~() const noexcept requires requires(value_type __a) { ~__a; }
