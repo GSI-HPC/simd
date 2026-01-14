@@ -206,6 +206,20 @@ void test_runner()
               for (auto f : run_functions)
                 f();
             }
+          using Abi = typename simd::vec<T, N>::abi_type;
+          if constexpr (!simd::__scalar_abi_tag<Abi>)
+            {
+              if constexpr (complex_like<T>)
+                {
+                  using V = simd::resize_t<N, simd::basic_vec<T, simd::_Abi<
+                              2, 1, unsigned(Abi::_S_variant)
+                                      ^ unsigned(simd::_AbiVariant::_CxVariants)>>>;
+                  std::cout << "Testing " << type_to_string<V>() << ':' << std::endl;
+                  run_functions.clear();
+                  [[maybe_unused]] Tests<V> t0 = {};
+                  for (auto f : run_functions)
+                    f();
+                }
         }
       else
         {
