@@ -6,7 +6,8 @@
 #include "unittest_pch.h"
 
 template <typename V>
-  struct Tests
+  requires (V::size() * sizeof(typename V::value_type) <= 70 * 4) // avoid exploding RAM usage
+  struct Tests<V>
   {
     using T = typename V::value_type;
     using M = typename V::mask_type;
@@ -53,5 +54,9 @@ template <typename V>
       }
     };
   };
+
+template <typename V>
+  struct Tests
+  {};
 
 #include "unittest.h"

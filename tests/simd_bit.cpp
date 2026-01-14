@@ -10,6 +10,7 @@
 #if VIR_NEXT_PATCH
 template <typename V>
   requires std::integral<typename V::value_type>
+    && (V::size() * sizeof(typename V::value_type) <= 70 * 4) // avoid exploding RAM usage
   struct Tests<V>
   {
     using T = typename V::value_type;
