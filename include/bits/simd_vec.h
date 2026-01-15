@@ -1882,8 +1882,10 @@ namespace std::simd
                 else
                   static_assert(false);
               };
-              return mask_type::_S_init(((__cmp_op(__vec_get(_M_data, __is), __vec_get(__y, __is))
-                                            ? (1ULL << __is) : 0) | ...));
+              const _Bitmask<_S_size> __bits
+                = ((__cmp_op(__vec_get(_M_data, __is), __vec_get(__y, __is))
+                      ? (1ULL << __is) : 0) | ...);
+              return mask_type::_S_init(__bits);
             }
           else
             return mask_type::_S_init(__x86_bitmask_cmp<_Cmp>(_M_data, __y));
