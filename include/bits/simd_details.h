@@ -195,10 +195,12 @@ namespace std::simd
     concept __complex_like = __complex_like_impl<remove_cvref_t<_Tp>>;
 #endif
 
-  // FIXME: needs to exclude bfloat16_t
   template <typename _Tp>
     concept __vectorizable_scalar
       = same_as<remove_cv_t<_Tp>, _Tp>
+#ifdef __STDCPP_BFLOAT16_T__
+          && !same_as<_Tp, __gnu_cxx::__bfloat16_t>
+#endif
           && ((integral<_Tp> && sizeof(_Tp) <= sizeof(0ULL) && !same_as<_Tp, bool>)
                  || (floating_point<_Tp> && sizeof(_Tp) <= sizeof(double)));
 

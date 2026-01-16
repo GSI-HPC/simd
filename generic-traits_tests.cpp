@@ -38,6 +38,7 @@ void test()
 
   static_assert(!__vectorizable<const float>);
   static_assert(!__vectorizable<float&>);
+  static_assert(!__vectorizable<std::bfloat16_t>);
 
   template for (constexpr int N : {1, 2, 4, 8})
     {
