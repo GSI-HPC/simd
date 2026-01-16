@@ -197,6 +197,7 @@ void test_runner()
               for (auto f : run_functions)
                 f();
             }
+#if __SSSE3__ // ICE without PABS instructions (PR123575) TODO: remove ASAP
           if constexpr (!std::is_same_v<typename simd::vec<T, N>::abi_type, simd::_ScalarAbi<N>>)
             {
               using V = simd::basic_vec<T, simd::_ScalarAbi<N>>;
@@ -206,6 +207,7 @@ void test_runner()
               for (auto f : run_functions)
                 f();
             }
+#endif
           using Abi = typename simd::vec<T, N>::abi_type;
           if constexpr (!simd::__scalar_abi_tag<Abi>)
             {
