@@ -1060,14 +1060,12 @@ namespace std::simd
                   _U0 __uint;
 #if VIR_NEXT_PATCH
                   if constexpr (_Use_2_for_1)
-                    {
-                      static_assert(_Bytes * 2 != 2); // because of missing movmskw
-                      __uint = __x86_movmsk(__vec_bit_cast<__integer_from<_Bytes * 2>>(_M_data));
-                    }
-                  else if constexpr (_Bytes != 2) // movmskb would duplicate each bit
+                    __uint = __x86_cvt_vecmask_to_bitmask<_Traits>(
+                             __vec_bit_cast<__integer_from<_Bytes * 2>>(_M_data));
+                  else
+                    __uint = __x86_cvt_vecmask_to_bitmask<_Traits>( _M_data);
 #else
                   if constexpr (_Bytes != 2) // movmskb would duplicate each bit
-#endif
                     __uint = _U0(__x86_movmsk(_M_data));
                   else if constexpr (_Bytes == 2 && _Traits._M_have_bmi2())
                     __uint = __bit_extract_even<__nbits>(__x86_movmsk(_M_data));
@@ -1075,13 +1073,14 @@ namespace std::simd
                     return __similar_mask<char, __nbits, _Ap>(*this).template _M_to_uint<_Offset>();
                   else
                     static_assert(false);
-                  if constexpr (_S_is_partial)
-                    __uint &= (_U0(1) << _S_size) - 1;
-                  return _Ur(__uint) << _Offset;
                   // TODO: with AVX512 use __builtin_ia32_cvt[bwdq]2mask(128|256|512)
                   // TODO: Ask for compiler builtin to do the best of the above. This should also
                   // combine with a preceding vector-mask compare to produce a bit-mask compare (on
                   // AVX512)
+#endif
+                  if constexpr (_S_is_partial)
+                    __uint &= (_U0(1) << _S_size) - 1;
+                  return _Ur(__uint) << _Offset;
                 }
 #endif
 #if VIR_NEXT_PATCH
