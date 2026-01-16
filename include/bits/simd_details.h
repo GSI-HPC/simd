@@ -38,10 +38,6 @@
 #define _GLIBCXX_CLANG __clang__
 #endif
 
-#if defined __x86_64__ && !__SSE2__
-#error "Use of SSE2 is required on x86-64"
-#endif
-
 #endif
 #if defined __x86_64__ || defined __i386__
 #define _GLIBCXX_X86 1
@@ -1041,6 +1037,7 @@ namespace std::simd
       else if constexpr (_Traits._M_have_sse() && is_floating_point_v<_Tp>
                            && sizeof(_Tp) == sizeof(float))
         return _Abi_t<16 / __adj_sizeof, 1>();
+      // no MMX: we can't emit EMMS where it would be necessary
       else
         return _ScalarAbi<1>();
     }
@@ -1048,7 +1045,6 @@ namespace std::simd
 #else
 
   // scalar fallback
-  // TODO: add more targets
   struct _ArchTraits
   {
     __UINT64_TYPE__ _M_flags = 0;
