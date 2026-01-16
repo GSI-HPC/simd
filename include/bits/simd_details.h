@@ -31,6 +31,7 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpsabi"
 
+#if VIR_EXTENSIONS
 // TODO: remove the following for libstdc++
 // Work around _GLIBCXX_CLANG not being defined with older libstdc++ when compiling with Clang
 #if __GLIBCXX__ < 20250922 && defined __clang__ && __GNUC_MINOR__ == 2 && !defined _GLIBCXX_CLANG
@@ -41,16 +42,19 @@
 #error "Use of SSE2 is required on x86-64"
 #endif
 
+#endif
 #if defined __x86_64__ || defined __i386__
 #define _GLIBCXX_X86 1
 #else
 #define _GLIBCXX_X86 0
 #endif
 
+#if VIR_EXTENSIONS
 #if !_GLIBCXX_X86
 #error "Not implemented yet. Only supported on x86 for now."
 #endif
 
+#endif
 #ifndef _GLIBCXX_SIMD_NOEXCEPT
 /** @internal
  * For unit-testing preconditions, use this macro to remove noexcept.
@@ -96,8 +100,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
 _GLIBCXX_END_NAMESPACE_VERSION
 }
-#endif
 
+#endif
 namespace std::simd
 {
 #if VIR_EXTENSIONS
@@ -119,8 +123,8 @@ namespace std::simd
       __builtin_unreachable();
 #endif
     }
-#endif
 
+#endif
   template <typename _Tp>
     inline constexpr _Tp
     __iota = [] { static_assert(false, "invalid __iota specialization"); }();
