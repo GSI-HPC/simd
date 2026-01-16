@@ -242,6 +242,8 @@ codegen_files ::= $(wildcard codegen/*.c++)
 codegen_names ::= $(patsubst codegen/%.c++,%,$(codegen_files))
 codegen_targets ::= $(patsubst %,check-codegen-%,$(codegen_names))
 
+check-codegen: $(codegen_targets)
+
 $(objdir)/codegen.depend: $(objdir) $(codegen_files)
 	@echo "Update codegen dependencies ..."
 	$(file >$@)
