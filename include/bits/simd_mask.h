@@ -1421,6 +1421,9 @@ namespace std::simd
 
       using _Mask0 = basic_mask<_Bytes, _Abi0>;
 
+      // the implementation (and users) depend on elements being contiguous in memory
+      static_assert(_Mask0::_S_padding_bytes == 0 && !_Mask0::_S_is_partial);
+
       using _Mask1 = basic_mask<_Bytes, _Abi1>;
 
       static constexpr bool _S_is_partial = _Mask1::_S_is_partial;
@@ -1441,8 +1444,13 @@ namespace std::simd
 
       static constexpr bool _S_has_bool_member = _Mask1::_S_has_bool_member;
 
+      // by construction _N0 >= _N1
+      // => sizeof(_Mask0) >= sizeof(_Mask1)
+      //    and __alignof__(_Mask0) >= __alignof__(_Mask1)
       static constexpr size_t _S_padding_bytes
-        = __alignof__(_Mask0) - sizeof(_Mask1) + _Mask1::_S_padding_bytes;
+        = (__alignof__(_Mask0) == __alignof__(_Mask1)
+             ? 0 : __alignof__(_Mask0) - (sizeof(_Mask1) % __alignof__(_Mask0)))
+            + _Mask1::_S_padding_bytes;
 
     public:
       using value_type = bool;

@@ -2030,6 +2030,9 @@ namespace std::simd
 
       using _DataType0 = __similar_resized_vec<_Tp, _N0, _Ap>;
 
+      // the implementation (and users) depend on elements being contiguous in memory
+      static_assert(_N0 * sizeof(_Tp) == sizeof(_DataType0));
+
       using _DataType1 = __similar_resized_vec<_Tp, _N1, _Ap>;
 
       static_assert(_DataType0::abi_type::_S_nreg + _DataType1::abi_type::_S_nreg == _Ap::_S_nreg);
