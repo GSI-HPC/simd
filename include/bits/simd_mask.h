@@ -73,6 +73,9 @@ namespace std::simd
         }
     }
 
+  static_assert(__bitset_split<64>(bitset<128>(1))._M_lo == bitset<64>(1));
+  static_assert(__bitset_split<64>(bitset<128>(1))._M_hi == bitset<64>(0));
+
   // [simd.traits]
   // --- rebind ---
   template <typename _Tp, typename _Vp, _ArchTraits _Traits = {}>
