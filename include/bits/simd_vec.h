@@ -1493,8 +1493,9 @@ namespace std::simd
             }
         }
 
-      template <__static_sized_range<size.value> _Rg, typename... _Flags>
-        requires __vectorizable<ranges::range_value_t<_Rg>>
+      template <ranges::contiguous_range _Rg, typename... _Flags>
+        requires __static_sized_range<_Rg, size.value>
+          && __vectorizable<ranges::range_value_t<_Rg>>
           && __explicitly_convertible_to<ranges::range_value_t<_Rg>, value_type>
         [[__gnu__::__always_inline__]]
         constexpr
@@ -2422,8 +2423,9 @@ namespace std::simd
             _M_data1(_LoadCtorTag(), __ptr + _N0)
         {}
 
-      template <__static_sized_range<size.value> _Rg, typename... _Flags>
-        requires __vectorizable<ranges::range_value_t<_Rg>>
+      template <ranges::contiguous_range _Rg, typename... _Flags>
+        requires __static_sized_range<_Rg, size.value>
+          && __vectorizable<ranges::range_value_t<_Rg>>
           && __explicitly_convertible_to<ranges::range_value_t<_Rg>, value_type>
         constexpr
         basic_vec(_Rg&& __range, flags<_Flags...> __flags = {})
@@ -2594,7 +2596,8 @@ namespace std::simd
     };
 
   // [simd.overview] deduction guide ------------------------------------------
-  template <__static_sized_range _Rg, typename... _Ts>
+  template <ranges::contiguous_range _Rg, typename... _Ts>
+    requires __static_sized_range<_Rg>
     basic_vec(_Rg&& __r, _Ts...)
     -> basic_vec<ranges::range_value_t<_Rg>,
                  __deduce_abi_t<ranges::range_value_t<_Rg>,

@@ -1333,11 +1333,10 @@ namespace std::simd
   // [simd.ctor] load constructor constraints
   template <typename _Tp, size_t _Np = -1uz>
     concept __static_sized_range
-      = ranges::contiguous_range<_Tp> && ranges::sized_range<_Tp>
-          && requires(_Tp&& __r) {
-            typename integral_constant<size_t, ranges::size(__r)>;
-            requires (_Np == -1uz || ranges::size(__r) == _Np);
-          };
+      = ranges::sized_range<_Tp> && requires(_Tp&& __r) {
+        typename integral_constant<size_t, ranges::size(__r)>;
+        requires (_Np == -1uz || ranges::size(__r) == _Np);
+      };
 
   template <typename _Rg>
     consteval size_t
