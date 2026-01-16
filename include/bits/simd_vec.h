@@ -755,8 +755,7 @@ namespace std::simd
             }
           else if constexpr (_Rest::_S_size == 1)
             return __binary_op(_Rest(_M_reduce(__binary_op)), __rest)[0];
-#if 1 // TODO: benchmark the difference this branch makes
-          else if constexpr (sizeof(_M_data) <= 16 // less work that way
+          else if constexpr (sizeof(_M_data) <= 16
                                && requires { __default_identity_element<__canon_value_type, _BinaryOp>(); })
             { // extend __rest with identity element for more parallelism
               constexpr __canon_value_type __id
@@ -764,7 +763,6 @@ namespace std::simd
               return __binary_op(_M_data, __rest.template _M_pad_to_T_with_value<basic_vec, __id>())
                        ._M_reduce(__binary_op);
             }
-#endif
           else
             return _M_reduce_1(__binary_op)._M_reduce_tail(__rest, __binary_op);
         }
