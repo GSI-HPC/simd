@@ -24,6 +24,7 @@ template class simd::basic_vec<complex<double>, typename simd::vec<complex<doubl
 
 // LWG4420 ///////////////////////////////////////
 
+#ifdef __STDCPP_FLOAT16_T__
 namespace LWG4420
 {
   using std::convertible_to;
@@ -58,6 +59,7 @@ namespace LWG4420
     return all_of(vh2f == vh2f_b) && all_of(vf2h == vf2h_b);
   }());
 }
+#endif
 
 namespace test01
 {
@@ -138,7 +140,7 @@ static_assert(alignof(simd::mask<double, 8>) == 32);
 static_assert(std::same_as<decltype(+simd::mask<float, 8>()), simd::vec<int, 8>>);
 #endif
 
-#if defined __SSE__ && !defined __F16C__
+#if defined __SSE__ && !defined __F16C__ && defined __STDCPP_FLOAT16_T__
 static_assert(simd::vec<std::float16_t>::size() == 1);
 static_assert(simd::mask<std::float16_t>::size() == 1);
 #if VIR_NEXT_PATCH
@@ -531,8 +533,10 @@ namespace mask_conversion_tests
           check<do_test<int>(!k)>();
           check<do_test<double>(    k)>();
           check<do_test<double>(!k)>();
+#ifdef __STDCPP_FLOAT16_T__
           check<do_test<std::float16_t>(    k)>();
           check<do_test<std::float16_t>(!k)>();
+#endif
 #if VIR_NEXT_PATCH
           check<do_test<complex<float>>(    k)>();
           check<do_test<complex<float>>(!k)>();
@@ -566,7 +570,9 @@ namespace mask_conversion_tests
   static_assert(test<short>());
   static_assert(test<float>());
   static_assert(test<double>());
+#ifdef __STDCPP_FLOAT16_T__
   static_assert(test<std::float16_t>());
+#endif
 #if VIR_NEXT_PATCH
   static_assert(test<complex<float>>());
   static_assert(test<complex<double>>());
