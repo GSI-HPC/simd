@@ -220,6 +220,20 @@ void test_runner()
                   for (auto f : run_functions)
                     f();
                 }
+#if 0 // TODO: This needs more implementation work. Vec-masks are only implemented up to 256 bits.
+              if constexpr (Abi::_S_is_bitmask)
+                {
+                  using V = simd::basic_vec<T, simd::_Abi_t<
+                              N, Abi::_S_nreg, __filter_abi_variant(
+                                                 Abi::_S_variant, simd::_AbiVariant::_CxVariants)>>;
+                  std::cout << "Testing " << type_to_string<V>() << ':' << std::endl;
+                  run_functions.clear();
+                  [[maybe_unused]] Tests<V> t0 = {};
+                  for (auto f : run_functions)
+                    f();
+                }
+#endif
+            }
         }
       else
         {
