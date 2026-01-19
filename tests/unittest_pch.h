@@ -34,7 +34,7 @@ namespace test
 #include "../include/simd"
 
 #include <source_location>
-#include <iostream>
+#include <print>
 #include <concepts>
 #include <cfenv>
 #include <meta>
@@ -55,106 +55,142 @@ static std::string_view test_name = "unknown";
 
 namespace simd = std::simd;
 
-template <typename T>
-  struct is_character_type
-  : std::bool_constant<false>
-  {};
+template <typename _Tp>
+  struct canonical_vec_type
+  { using type = _Tp; };
 
-template <typename T>
-  inline constexpr bool is_character_type_v = is_character_type<T>::value;
+template <typename _Tp>
+  using canonical_vec_type_t = typename canonical_vec_type<_Tp>::type;
 
-template <typename T>
-  struct is_character_type<const T>
-  : is_character_type<T>
-  {};
+template <std::same_as<long> _Tp>
+  requires (sizeof(_Tp) == sizeof(int))
+  struct canonical_vec_type<_Tp>
+  { using type = int; };
 
-template <typename T>
-  struct is_character_type<T&>
-  : is_character_type<T>
-  {};
+template <std::same_as<long> _Tp>
+  requires (sizeof(_Tp) == sizeof(long long))
+  struct canonical_vec_type<_Tp>
+  { using type = long long; };
 
-template <> struct is_character_type<char> : std::bool_constant<true> {};
-template <> struct is_character_type<wchar_t> : std::bool_constant<true> {};
-template <> struct is_character_type<char8_t> : std::bool_constant<true> {};
-template <> struct is_character_type<char16_t> : std::bool_constant<true> {};
-template <> struct is_character_type<char32_t> : std::bool_constant<true> {};
+template <std::same_as<unsigned long> _Tp>
+  requires (sizeof(_Tp) == sizeof(unsigned int))
+  struct canonical_vec_type<_Tp>
+  { using type = unsigned int; };
 
-std::ostream& operator<<(std::ostream& s, std::byte b)
-{ return s << std::hex << static_cast<unsigned>(b) << std::dec; }
+template <std::same_as<unsigned long> _Tp>
+  requires (sizeof(_Tp) == sizeof(unsigned long long))
+  struct canonical_vec_type<_Tp>
+  { using type = unsigned long long; };
 
-template <typename T, typename Abi>
-std::ostream& operator<<(std::ostream& s, std::simd::basic_vec<T, Abi> const& v)
-{
-  if constexpr (std::is_arithmetic_v<T>)
-    {
-      using U = std::conditional_t<
-                  sizeof(T) == 1, int, std::conditional_t<
-                                         is_character_type_v<T>,
-                                         std::simd::_UInt<sizeof(T)>, T>>;
-      s << '[' << U(v[0]);
-      for (int i = 1; i < v.size(); ++i)
-        s << ", " << U(v[i]);
-    }
-  else
-    {
-      s << '[' << v[0];
-      for (int i = 1; i < v.size(); ++i)
-        s << ", " << v[i];
-    }
-  return s << ']';
-}
+/* Not yet
+template <typename _Tp>
+  requires std::is_enum_v<_Tp>
+  struct canonical_vec_type<_Tp>
+  { using type = canonical_vec_type<std::underlying_type_t<_Tp>>::type; };
+ */
 
-template <std::size_t B, typename Abi>
-std::ostream& operator<<(std::ostream& s, std::simd::basic_mask<B, Abi> const& v)
-{
-  s << '<';
-  for (int i = 0; i < v.size(); ++i)
-    s << int(v[i]);
-  return s << '>';
-}
+template <>
+  struct canonical_vec_type<char>
+  { using type = std::conditional_t<std::is_signed_v<char>, signed char, unsigned char>; };
 
-template <std::simd::__vec_builtin V>
-  std::ostream& operator<<(std::ostream& s, V v)
-  { return s << std::simd::vec<std::simd::__vec_value_type<V>, std::simd::__width_of<V>>(v); }
+template <>
+  struct canonical_vec_type<char8_t>
+  { using type = unsigned char; };
 
-template <typename T, typename U>
-  std::ostream& operator<<(std::ostream& s, const std::pair<T, U>& x)
-  { return s << '{' << x.first << ", " << x.second << '}'; }
+template <>
+  struct canonical_vec_type<char16_t>
+  { using type = uint_least16_t; };
 
-template <typename T>
-  concept is_string_type
-    = is_character_type_v<std::ranges::range_value_t<T>>
-        && (std::is_pointer_v<std::decay_t<T>> || display_string_of(^^T).contains("string"));
+template <>
+  struct canonical_vec_type<char32_t>
+  { using type = uint_least32_t; };
 
-template <std::ranges::range R>
-  requires (!is_string_type<R>)
-  std::ostream& operator<<(std::ostream& s, R&& x)
+template <>
+  struct canonical_vec_type<wchar_t>
   {
-    s << '[';
-    auto it = std::ranges::begin(x);
-    if (it != std::ranges::end(x))
-      {
-        s << *it;
-        while (++it != std::ranges::end(x))
-          s << ',' << *it;
-      }
-    return s << ']';
-  }
+    using type = std::conditional_t<std::is_signed_v<wchar_t>,
+                                    simd::__integer_from<sizeof(wchar_t)>,
+                                    simd::_UInt<sizeof(wchar_t)>>;
+  };
+
+template <>
+  struct canonical_vec_type<_Float64>
+  { using type = double; };
+
+template <>
+  struct canonical_vec_type<_Float32>
+  { using type = float; };
+
+template <std::size_t N, typename CharT>
+  struct std::formatter<std::bitset<N>, CharT>
+  {
+    constexpr typename std::basic_format_parse_context<CharT>::iterator
+    parse(std::basic_format_parse_context<CharT>& ctx)
+    { return ctx.begin(); }
+
+    template <typename Out>
+      typename std::basic_format_context<Out, CharT>::iterator
+      format(const std::bitset<N>& bs, std::basic_format_context<Out, CharT>& ctx) const
+      { return std::format_to(ctx.out(), "[{}]", bs.to_string()); }
+  };
+
+#if VIR_NEXT_PATCH
+template <typename T>
+  concept complex_like = std::simd::__complex_like<T>;
+
+template <complex_like T, typename CharT>
+  struct std::formatter<T, CharT>
+  {
+    constexpr typename std::basic_format_parse_context<CharT>::iterator
+    parse(std::basic_format_parse_context<CharT>& ctx)
+    { return ctx.begin(); }
+
+    template <typename Out>
+      typename std::basic_format_context<Out, CharT>::iterator
+      format(const T& x, std::basic_format_context<Out, CharT>& ctx) const
+      { return std::format_to(ctx.out(), "({}+{}i)", x.real(), x.imag()); }
+  };
+#endif
+
+template <typename T>
+  requires std::is_same_v<T, wchar_t>
+    || std::is_same_v<T, char8_t>
+    || std::is_same_v<T, char16_t>
+    || std::is_same_v<T, char32_t>
+  struct std::formatter<T, char>
+  {
+    constexpr std::basic_format_parse_context<char>::iterator
+    parse(std::basic_format_parse_context<char>& ctx)
+    { return f_.parse(ctx); }
+
+    template <typename Out>
+      typename std::basic_format_context<Out, char>::iterator
+      format(T x, std::basic_format_context<Out, char>& ctx) const
+      { return f_.format(U(x), ctx); }
+
+  private:
+    using U = std::make_unsigned_t<T>;
+
+    std::formatter<U, char> f_;
+  };
 
 struct additional_info
 {
   const bool failed = false;
 
-  additional_info
-  operator()(auto const& value0, auto const&... more)
+  template <typename... Args>
+    constexpr void
+    operator()(std::string_view fmt, const Args&... args)
+    {
+      if (failed)
+        std::println(std::runtime_format(fmt), args...);
+    }
+
+  constexpr void
+  operator()(const auto& value)
   {
     if (failed)
-      [&] {
-        std::cout << "  " << value0;
-        ((std::cout << ' ' << more), ...);
-        std::cout << std::endl;
-      }();
-    return *this;
+      std::println("{}", value);
   }
 };
 
@@ -254,11 +290,6 @@ template <typename T0, typename T1>
         return fabs(ulp);
       }
   }
-
-#if VIR_NEXT_PATCH
-template <typename T>
-  concept complex_like = std::simd::__complex_like<T>;
-#endif
 
 template <typename T>
   constexpr bool
@@ -502,33 +533,41 @@ struct runtime_verifier
 {
   const std::string_view test_kind;
 
+  template <typename T>
+    constexpr void
+    print_value(const char* what, const T& val)
+    {
+      if constexpr (std::is_same_v<T, log_novalue>)
+        ;
+      else if constexpr (std::is_floating_point_v<T>)
+        std::println(std::runtime_format("- {:8}: {:a}"), what, val);
+      else if constexpr (std::is_integral_v<T>)
+        std::println(std::runtime_format("- {:8}: {:d}"), what, val);
+      else if constexpr (std::ranges::range<T>)
+        {
+          if constexpr (std::is_floating_point_v<std::ranges::range_value_t<T>>)
+            std::println(std::runtime_format("- {:8}: {::a}"), what, val);
+          else if constexpr (display_string_of(^^T).contains("string"))
+            std::println(std::runtime_format("- {:8}: {}"), what, val);
+          else if constexpr (std::is_integral_v<std::ranges::range_value_t<T>>)
+            std::println(std::runtime_format("- {:8}: {::d}"), what, val);
+          else
+            std::println(std::runtime_format("- {:8}: {}"), what, val);
+        }
+      else
+        std::println(std::runtime_format("- {:8}: {}"), what, val);
+    }
+
   template <typename X, typename Y>
     additional_info
     log_failure(const X& x, const Y& y, std::source_location loc, std::size_t ip,
                 std::string_view s)
     {
       ++failed_tests;
-      std::cout << loc.file_name() << ':' << loc.line() << ':' << loc.column() << ": ("
-                << std::hex << ip << std::dec << ") in "
-                << test_kind << " test of '" << test_name
-                << "' " << s << " failed";
-      if constexpr (!std::is_same_v<X, log_novalue>)
-        {
-          std::cout << ":\n   result: " << std::boolalpha;
-          if constexpr (is_character_type_v<X>)
-            std::cout << int(x);
-          else
-            std::cout << x;
-          if constexpr (!std::is_same_v<decltype(y), const log_novalue&>)
-            {
-              std::cout << "\n expected: ";
-              if constexpr (is_character_type_v<Y>)
-                std::cout << int(y);
-              else
-                std::cout << y;
-            }
-        }
-      std::cout << std::endl;
+      std::println(std::runtime_format("{}:{}:{}: ({:x}) in {} test of '{}' {} failed"),
+                   loc.file_name(), loc.line(), loc.column(), ip, test_kind, test_name, s);
+      print_value("result", x);
+      print_value("expected", y);
       return additional_info {true};
     }
 
@@ -830,7 +869,7 @@ check_cpu_support()
 int run_check_cpu_support = [] {
   if (!check_cpu_support())
     {
-      std::cerr << "Incompatible CPU.\n";
+      std::fputs("Incompatible CPU.", stderr);
       std::exit(EXIT_SUCCESS);
     }
   return 0;
@@ -928,7 +967,7 @@ template <auto test_ref, int... is, std::size_t... arg_idx>
     else
       {
         ++failed_tests;
-        std::cout << "=> constexpr test of '" << test_name << "' failed.\n";
+        std::println(std::runtime_format("=> constexpr test of '{}' failed."), test_name);
       }
   }
 
@@ -945,14 +984,15 @@ template <auto test_ref, int... is>
           {
             std::string tmp_name = std::string(name) + '|' + std::to_string(I);
             test_name = tmp_name;
-            ((std::cout << "Testing '" << test_name) << ... << (' ' + std::to_string(is)))
-              << ' ' << args[I] << "'\n";
+            std::println(std::runtime_format("Testing '{}'{} {}"), test_name,
+                         (std::string() + ... + (' ' + std::to_string(is))), args[I]);
             invoke_test_impl<test_ref, is...>(std::index_sequence<I>());
           }
       }
     else
       {
-        ((std::cout << "Testing '" << test_name) << ... << (' ' + std::to_string(is))) << "'\n";
+        std::println(std::runtime_format("Testing '{}'{}"),
+                     (std::string() + ... + (' ' + std::to_string(is))), test_name);
         invoke_test_impl<test_ref, is...>(std::make_index_sequence<std::tuple_size_v<A>>());
       }
   }
@@ -1005,11 +1045,12 @@ int main()
     }
   catch(const test::precondition_failure& fail)
     {
-      std::cout << fail.file << ':' << fail.line << ": Error: precondition '" << fail.expr
-                << "' does not hold: " << fail.msg << '\n';
+      std::println(std::runtime_format("{}:{}: Error: precondition '{}' does not hold: {}"),
+                   fail.file, fail.line, fail.expr, fail.msg);
       return EXIT_FAILURE;
     }
-  std::cout << "Passed tests: " << passed_tests << "\nFailed tests: " << failed_tests << '\n';
+  std::println(std::runtime_format("Passed tests: {}\nFailed tests: {}"),
+               passed_tests, failed_tests);
   return failed_tests != 0 ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 

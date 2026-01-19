@@ -23,23 +23,23 @@ template <typename V>
 
         V ref([&](int i) -> T { return x[i] >> shift; });
         V refx([&](int i) -> T { return x[i] >> (shift ^ (i & 1)); });
-        t.verify_equal(x >> shift, ref)(x, ">>", shift);
-        t.verify_equal(x >> vshift, ref)(x, ">>", vshift);
-        t.verify_equal(x >> vshiftx, refx)(x, ">>", vshiftx);
+        t.verify_equal(x >> shift, ref)("{:d} >> {:d}", x, shift);
+        t.verify_equal(x >> vshift, ref)("{:d} >> {:d}", x, vshift);
+        t.verify_equal(x >> vshiftx, refx)("{:d} >> {:d}", x, vshiftx);
 
         const V y = ~x;
         ref = V([&](int i) -> T { return T(~x[i]) >> shift; });
         refx = V([&](int i) -> T { return T(~x[i]) >> (shift ^ (i & 1)); });
-        t.verify_equal(y >> shift, ref)(y, ">>", shift);
-        t.verify_equal(y >> vshift, ref)(y, ">>", vshift);
-        t.verify_equal(y >> vshiftx, refx)(y, ">>", vshiftx);
+        t.verify_equal(y >> shift, ref)("{:d} >> {:d}", y, shift);
+        t.verify_equal(y >> vshift, ref)("{:d} >> {:d}", y, vshift);
+        t.verify_equal(y >> vshiftx, refx)("{:d} >> {:d}", y, vshiftx);
 
         const V z = tmax - x;
         ref = V([&](int i) -> T { return T(tmax - x[i]) >> shift; });
         refx = V([&](int i) -> T { return T(tmax - x[i]) >> (shift ^ (i & 1)); });
-        t.verify_equal(z >> shift, ref)(z, ">>", shift);
-        t.verify_equal(z >> vshift, ref)(z, ">>", vshift);
-        t.verify_equal(z >> vshiftx, refx)(z, ">>", vshiftx);
+        t.verify_equal(z >> shift, ref)("{:d} >> {:d}", z, shift);
+        t.verify_equal(z >> vshift, ref)("{:d} >> {:d}", z, vshift);
+        t.verify_equal(z >> vshiftx, refx)("{:d} >> {:d}", z, vshiftx);
       }
     };
 
@@ -56,23 +56,23 @@ template <typename V>
 
             V ref([&](int i) -> T { return x[i] >> shift; });
             V refx([&](int i) -> T { return x[i] >> (shift ^ (i & 1)); });
-            t.verify_equal(x >> shift, ref)(x, ">>", shift);
-            t.verify_equal(x >> vshift, ref)(x, ">>", vshift);
-            t.verify_equal(x >> vshiftx, refx)(x, ">>", vshiftx);
+            t.verify_equal(x >> shift, ref)("{:d} >> {:d}", x, shift);
+            t.verify_equal(x >> vshift, ref)("{:d} >> {:d}", x, vshift);
+            t.verify_equal(x >> vshiftx, refx)("{:d} >> {:d}", x, vshiftx);
 
             const V y = ~x;
             ref = V([&](int i) -> T { return T(~x[i]) >> shift; });
             refx = V([&](int i) -> T { return T(~x[i]) >> (shift ^ (i & 1)); });
-            t.verify_equal(y >> shift, ref)(y, ">>", shift);
-            t.verify_equal(y >> vshift, ref)(y, ">>", vshift);
-            t.verify_equal(y >> vshiftx, refx)(y, ">>", vshiftx);
+            t.verify_equal(y >> shift, ref)("{:d} >> {:d}", y, shift);
+            t.verify_equal(y >> vshift, ref)("{:d} >> {:d}", y, vshift);
+            t.verify_equal(y >> vshiftx, refx)("{:d} >> {:d}", y, vshiftx);
 
             const V z = tmax - x;
             ref = V([&](int i) -> T { return T(tmax - x[i]) >> shift; });
             refx = V([&](int i) -> T { return T(tmax - x[i]) >> (shift ^ (i & 1)); });
-            t.verify_equal(z >> shift, ref)(z, ">>", shift);
-            t.verify_equal(z >> vshift, ref)(z, ">>", vshift);
-            t.verify_equal(z >> vshiftx, refx)(z, ">>", vshiftx);
+            t.verify_equal(z >> shift, ref)("{:d} >> {:d}", z, shift);
+            t.verify_equal(z >> vshift, ref)("{:d} >> {:d}", z, vshift);
+            t.verify_equal(z >> vshiftx, refx)("{:d} >> {:d}", z, vshiftx);
           }
       }
     };

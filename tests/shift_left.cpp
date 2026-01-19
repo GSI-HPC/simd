@@ -21,15 +21,15 @@ template <typename V>
         const V vshiftx = vshift ^ (x & std::cw<1>);
         V ref([](T i) -> T { return i << shift; });
         V refx([](T i) -> T { return i << (shift ^ (i & 1)); });
-        t.verify_equal(x << shift, ref)(x, "<<", shift);
-        t.verify_equal(x << vshift, ref)(x, "<<", vshift);
-        t.verify_equal(x << vshiftx, refx)(x, "<<", vshiftx);
+        t.verify_equal(x << shift, ref)("{:d} << {:d}", x, shift);
+        t.verify_equal(x << vshift, ref)("{:d} << {:d}", x, vshift);
+        t.verify_equal(x << vshiftx, refx)("{:d} << {:d}", x, vshiftx);
         const auto y = ~x;
         ref = V([](T i) -> T { return T(~i) << shift; });
         refx = V([](T i) -> T { return T(~i) << (shift ^ (i & 1)); });
-        t.verify_equal(y << shift, ref)(y, "<<", shift);
-        t.verify_equal(y << vshift, ref)(y, "<<", vshift);
-        t.verify_equal(y << vshiftx, refx)(y, "<<", vshiftx);
+        t.verify_equal(y << shift, ref)("{:d} << {:d}", y, shift);
+        t.verify_equal(y << vshift, ref)("{:d} << {:d}", y, vshift);
+        t.verify_equal(y << vshiftx, refx)("{:d} << {:d}", y, vshiftx);
       }
     };
 
@@ -44,11 +44,11 @@ template <typename V>
               shift = make_value_unknown(shift);
               const V vshift = T(shift);
               V ref([=](T i) -> T { return i << shift; });
-              t.verify_equal(x << shift, ref)(y, "<<", shift);
-              t.verify_equal(x << vshift, ref)(y, "<<", vshift);
+              t.verify_equal(x << shift, ref)("{:d} << {:d}", y, shift);
+              t.verify_equal(x << vshift, ref)("{:d} << {:d}", y, vshift);
               ref = V([=](T i) -> T { return T(~i) << shift; });
-              t.verify_equal(y << shift, ref)(y, "<<", shift);
-              t.verify_equal(y << vshift, ref)(y, "<<", vshift);
+              t.verify_equal(y << shift, ref)("{:d} << {:d}", y, shift);
+              t.verify_equal(y << vshift, ref)("{:d} << {:d}", y, vshift);
             }
         }
       }

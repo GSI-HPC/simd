@@ -86,18 +86,18 @@ template <typename V>
         if constexpr (V::size() <= 64)
           {
             constexpr unsigned long long full = -1ull >> (64 - V::size());
-            t.verify_equal(tr.to_ullong(), full)(std::hex, tr.to_ullong(), '^', full, "->",
+            t.verify_equal(tr.to_ullong(), full)("{:x} ^ {:x} -> {:x}", tr.to_ullong(), full,
                                                  tr.to_ullong() ^ full);
             t.verify_equal(tr.to_bitset(), full);
 
             constexpr unsigned long long alternating = 0xaaaa'aaaa'aaaa'aaaaULL & full;
-            t.verify_equal(k.to_ullong(), alternating)(std::hex, k.to_ullong(), '^', alternating,
-                                                       "->", k.to_ullong() ^ alternating);
+            t.verify_equal(k.to_ullong(), alternating)("{:x} ^ {:x} -> {:x}", k.to_ullong(),
+                                                       alternating, k.to_ullong() ^ alternating);
             t.verify_equal(k.to_bitset(), alternating);
 
             // 0, 7, 13, 14, 21, 26, 28, 35, 39, 42, 49, 52, 56, 63, 65, ...
             constexpr unsigned long long bits7_13 = 0x8112'0488'1420'6081ULL & full;
-            t.verify_equal(k2.to_ullong(), bits7_13)(std::hex, k2.to_ullong());
+            t.verify_equal(k2.to_ullong(), bits7_13)("{:x}", k2.to_ullong());
           }
         else
           {
