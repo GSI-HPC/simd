@@ -98,7 +98,7 @@ void test_runner()
           static_assert(std::destructible<typename simd::vec<T, N>::mask_type>);
           static_assert(simd::vec<T, N>::size() == N);
           static_assert(simd::mask<T, N>::size() == N);
-          std::cout << "Testing " << type_to_string<simd::vec<T, N>>()
+          std::cout << "Testing " << display_string_of(^^simd::vec<T, N>)
                     << ':' << std::endl;
           run_functions.clear();
           [[maybe_unused]] Tests<simd::vec<T, N>> t = {};
@@ -109,7 +109,7 @@ void test_runner()
 
           if constexpr (std::is_same_v<canonical_vec_type_t<std::byte>, T>)
             {
-              std::cout << "Testing " << type_to_string<simd::vec<std::byte, N>>()
+              std::cout << "Testing " << display_string_of(^^simd::vec<std::byte, N>)
                         << ':' << std::endl;
               run_functions.clear();
               [[maybe_unused]] Tests<simd::vec<std::byte, N>> t0 = {};
@@ -118,7 +118,7 @@ void test_runner()
             }
           if constexpr (std::is_same_v<canonical_vec_type_t<long>, T>)
             {
-              std::cout << "Testing " << type_to_string<simd::vec<long, N>>()
+              std::cout << "Testing " << display_string_of(^^simd::vec<long, N>)
                         << ':' << std::endl;
               run_functions.clear();
               [[maybe_unused]] Tests<simd::vec<long, N>> t0 = {};
@@ -127,7 +127,7 @@ void test_runner()
             }
           if constexpr (std::is_same_v<canonical_vec_type_t<unsigned long>, T>)
             {
-              std::cout << "Testing " << type_to_string<simd::vec<unsigned long, N>>()
+              std::cout << "Testing " << display_string_of(^^simd::vec<unsigned long, N>)
                         << ':' << std::endl;
               run_functions.clear();
               [[maybe_unused]] Tests<simd::vec<unsigned long, N>> t0 = {};
@@ -136,7 +136,7 @@ void test_runner()
             }
           if constexpr (std::is_same_v<canonical_vec_type_t<char>, T>)
             {
-              std::cout << "Testing " << type_to_string<simd::vec<char, N>>()
+              std::cout << "Testing " << display_string_of(^^simd::vec<char, N>)
                         << ':' << std::endl;
               run_functions.clear();
               [[maybe_unused]] Tests<simd::vec<char, N>> t0 = {};
@@ -145,7 +145,7 @@ void test_runner()
             }
           if constexpr (std::is_same_v<canonical_vec_type_t<char8_t>, T>)
             {
-              std::cout << "Testing " << type_to_string<simd::vec<char8_t, N>>()
+              std::cout << "Testing " << display_string_of(^^simd::vec<char8_t, N>)
                         << ':' << std::endl;
               run_functions.clear();
               [[maybe_unused]] Tests<simd::vec<char8_t, N>> t0 = {};
@@ -154,7 +154,7 @@ void test_runner()
             }
           if constexpr (std::is_same_v<canonical_vec_type_t<char16_t>, T>)
             {
-              std::cout << "Testing " << type_to_string<simd::vec<char16_t, N>>()
+              std::cout << "Testing " << display_string_of(^^simd::vec<char16_t, N>)
                         << ':' << std::endl;
               run_functions.clear();
               [[maybe_unused]] Tests<simd::vec<char16_t, N>> t0 = {};
@@ -163,7 +163,7 @@ void test_runner()
             }
           if constexpr (std::is_same_v<canonical_vec_type_t<char32_t>, T>)
             {
-              std::cout << "Testing " << type_to_string<simd::vec<char32_t, N>>()
+              std::cout << "Testing " << display_string_of(^^simd::vec<char32_t, N>)
                         << ':' << std::endl;
               run_functions.clear();
               [[maybe_unused]] Tests<simd::vec<char32_t, N>> t0 = {};
@@ -172,7 +172,7 @@ void test_runner()
             }
           if constexpr (std::is_same_v<canonical_vec_type_t<wchar_t>, T>)
             {
-              std::cout << "Testing " << type_to_string<simd::vec<wchar_t, N>>()
+              std::cout << "Testing " << display_string_of(^^simd::vec<wchar_t, N>)
                         << ':' << std::endl;
               run_functions.clear();
               [[maybe_unused]] Tests<simd::vec<wchar_t, N>> t0 = {};
@@ -181,7 +181,7 @@ void test_runner()
             }
           if constexpr (std::is_same_v<canonical_vec_type_t<_Float64>, T>)
             {
-              std::cout << "Testing " << type_to_string<simd::vec<_Float64, N>>()
+              std::cout << "Testing " << display_string_of(^^simd::vec<_Float64, N>)
                         << ':' << std::endl;
               run_functions.clear();
               [[maybe_unused]] Tests<simd::vec<_Float64, N>> t0 = {};
@@ -190,7 +190,7 @@ void test_runner()
             }
           if constexpr (std::is_same_v<canonical_vec_type_t<_Float32>, T>)
             {
-              std::cout << "Testing " << type_to_string<simd::vec<_Float32, N>>()
+              std::cout << "Testing " << display_string_of(^^simd::vec<_Float32, N>)
                         << ':' << std::endl;
               run_functions.clear();
               [[maybe_unused]] Tests<simd::vec<_Float32, N>> t0 = {};
@@ -201,7 +201,7 @@ void test_runner()
           if constexpr (!std::is_same_v<typename simd::vec<T, N>::abi_type, simd::_ScalarAbi<N>>)
             {
               using V = simd::basic_vec<T, simd::_ScalarAbi<N>>;
-              std::cout << "Testing " << type_to_string<V>() << ':' << std::endl;
+              std::cout << "Testing " << display_string_of(^^V) << ':' << std::endl;
               run_functions.clear();
               [[maybe_unused]] Tests<V> t0 = {};
               for (auto f : run_functions)
@@ -216,7 +216,7 @@ void test_runner()
                   using V = simd::resize_t<N, simd::basic_vec<T, simd::_Abi<
                               2, 1, unsigned(Abi::_S_variant)
                                       ^ unsigned(simd::_AbiVariant::_CxVariants)>>>;
-                  std::cout << "Testing " << type_to_string<V>() << ':' << std::endl;
+                  std::cout << "Testing " << display_string_of(^^V) << ':' << std::endl;
                   run_functions.clear();
                   [[maybe_unused]] Tests<V> t0 = {};
                   for (auto f : run_functions)
@@ -228,7 +228,7 @@ void test_runner()
                   using V = simd::basic_vec<T, simd::_Abi_t<
                               N, Abi::_S_nreg, __filter_abi_variant(
                                                  Abi::_S_variant, simd::_AbiVariant::_CxVariants)>>;
-                  std::cout << "Testing " << type_to_string<V>() << ':' << std::endl;
+                  std::cout << "Testing " << display_string_of(^^V) << ':' << std::endl;
                   run_functions.clear();
                   [[maybe_unused]] Tests<V> t0 = {};
                   for (auto f : run_functions)

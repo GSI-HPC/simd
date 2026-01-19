@@ -6,7 +6,7 @@ objdir = obj
 
 CXXFLAGS+=-std=c++26 -Wall -Wextra -Werror -O2 -g0 -Wno-attributes -fno-operator-names -D_GLIBCXX_ASSERTIONS=1 -D_GLIBCXX_SIMD_COND_EXPLICIT_MASK_CONVERSION $(FLAGS)
 CXXFLAGS_clang := -Wno-unknown-pragmas -ferror-limit=3
-CXXFLAGS_gcc := -fconcepts-diagnostics-depth=2 -fconstexpr-ops-limit=67108864 -fmax-errors=2 -Wno-psabi
+CXXFLAGS_gcc := -fconcepts-diagnostics-depth=2 -fconstexpr-ops-limit=67108864 -fmax-errors=6 -freflection -Wno-psabi
 
 cxx_version := $(shell $(CXX) --version | head -n1)
 

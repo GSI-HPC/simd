@@ -37,6 +37,7 @@ namespace test
 #include <iostream>
 #include <concepts>
 #include <cfenv>
+#include <meta>
 #include <vector>
 
 using run_function = void(*)();
@@ -53,20 +54,6 @@ static std::string_view test_name = "unknown";
 // ------------------------------------------------
 
 namespace simd = std::simd;
-
-template <typename T>
-  consteval std::basic_string_view<char>
-  type_to_string(T* = nullptr)
-  {
-    std::string_view fun = std::source_location::current().function_name();
-    const auto offset = fun.find("with T = ");
-    if (offset != std::string_view::npos)
-      {
-        fun = fun.substr(offset + 9);
-        return fun.substr(0, fun.size() - 1);
-      }
-    return fun;
-  }
 
 template <typename T>
   struct is_character_type
@@ -137,8 +124,7 @@ template <typename T, typename U>
 template <typename T>
   concept is_string_type
     = is_character_type_v<std::ranges::range_value_t<T>>
-        && (std::is_pointer_v<std::decay_t<T>>
-              || type_to_string<std::remove_cvref_t<T>>().contains("string"));
+        && (std::is_pointer_v<std::decay_t<T>> || display_string_of(^^T).contains("string"));
 
 template <std::ranges::range R>
   requires (!is_string_type<R>)
@@ -743,7 +729,7 @@ template <int... is>
 #ifndef __clang__
     t.verify((is_const_known(args) && ...))
       ("=> The following argument(s) failed to constant-propagate:",
-       (is_const_known(args) ? "" : type_to_string<decltype(args)>())...);//, args...);
+       (is_const_known(args) ? "" : display_string_of(^^decltype(args)))...);//, args...);
 #endif
     fun.template operator()<is...>(t, args...);
   }
