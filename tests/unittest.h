@@ -16,16 +16,6 @@
 #define UNITTEST_WIDTH 8
 #endif
 
-template <typename V>
-  void test_runner_1()
-  {
-    std::println(std::runtime_format("Testing {}:"), display_string_of(^^V));
-    run_functions.clear();
-    [[maybe_unused]] Tests<V> t = {};
-    for (auto f : run_functions)
-      f();
-  }
-
 template <typename U>
 void test_runner()
 {
@@ -41,32 +31,32 @@ void test_runner()
           static_assert(std::destructible<typename simd::vec<T, N>::mask_type>);
           static_assert(simd::vec<T, N>::size() == N);
           static_assert(simd::mask<T, N>::size() == N);
-          test_runner_1<simd::vec<T, N>>();
+          invoke_test_members<simd::vec<T, N>>();
           static_assert(std::is_same_v<canonical_vec_type_t<T>, T>);
 
           if constexpr (std::is_same_v<canonical_vec_type_t<std::byte>, T>)
-            test_runner_1<simd::vec<std::byte, N>>();
+            invoke_test_members<simd::vec<std::byte, N>>();
           if constexpr (std::is_same_v<canonical_vec_type_t<long>, T>)
-            test_runner_1<simd::vec<long, N>>();
+            invoke_test_members<simd::vec<long, N>>();
           if constexpr (std::is_same_v<canonical_vec_type_t<unsigned long>, T>)
-            test_runner_1<simd::vec<unsigned long, N>>();
+            invoke_test_members<simd::vec<unsigned long, N>>();
           if constexpr (std::is_same_v<canonical_vec_type_t<char>, T>)
-            test_runner_1<simd::vec<char, N>>();
+            invoke_test_members<simd::vec<char, N>>();
           if constexpr (std::is_same_v<canonical_vec_type_t<char8_t>, T>)
-            test_runner_1<simd::vec<char8_t, N>>();
+            invoke_test_members<simd::vec<char8_t, N>>();
           if constexpr (std::is_same_v<canonical_vec_type_t<char16_t>, T>)
-            test_runner_1<simd::vec<char16_t, N>>();
+            invoke_test_members<simd::vec<char16_t, N>>();
           if constexpr (std::is_same_v<canonical_vec_type_t<char32_t>, T>)
-            test_runner_1<simd::vec<char32_t, N>>();
+            invoke_test_members<simd::vec<char32_t, N>>();
           if constexpr (std::is_same_v<canonical_vec_type_t<wchar_t>, T>)
-            test_runner_1<simd::vec<wchar_t, N>>();
+            invoke_test_members<simd::vec<wchar_t, N>>();
           if constexpr (std::is_same_v<canonical_vec_type_t<_Float64>, T>)
-            test_runner_1<simd::vec<_Float64, N>>();
+            invoke_test_members<simd::vec<_Float64, N>>();
           if constexpr (std::is_same_v<canonical_vec_type_t<_Float32>, T>)
-            test_runner_1<simd::vec<_Float32, N>>();
+            invoke_test_members<simd::vec<_Float32, N>>();
 #if __SSSE3__ // ICE without PABS instructions (PR123575) TODO: remove ASAP
           if constexpr (!std::is_same_v<typename simd::vec<T, N>::abi_type, simd::_ScalarAbi<N>>)
-            test_runner_1<simd::basic_vec<T, simd::_ScalarAbi<N>>>();
+            invoke_test_members<simd::basic_vec<T, simd::_ScalarAbi<N>>>();
 #endif
           using Abi = typename simd::vec<T, N>::abi_type;
           if constexpr (!simd::__scalar_abi_tag<Abi>)
@@ -76,7 +66,7 @@ void test_runner()
                   using V = simd::resize_t<N, simd::basic_vec<T, simd::_Abi<
                               2, 1, unsigned(Abi::_S_variant)
                                       ^ unsigned(simd::_AbiVariant::_CxVariants)>>>;
-                  test_runner_1<V>();
+                  invoke_test_members<V>();
                 }
 #if 0 // TODO: This needs more implementation work. Vec-masks are only implemented up to 256 bits.
               if constexpr (Abi::_S_is_bitmask)
@@ -84,7 +74,7 @@ void test_runner()
                   using V = simd::basic_vec<T, simd::_Abi_t<
                               N, Abi::_S_nreg, __filter_abi_variant(
                                                  Abi::_S_variant, simd::_AbiVariant::_CxVariants)>>;
-                  test_runner_1<V>();
+                  invoke_test_members<V>();
                 }
 #endif
             }

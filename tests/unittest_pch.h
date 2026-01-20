@@ -38,18 +38,14 @@ namespace test
 #include <concepts>
 #include <cfenv>
 #include <meta>
-#include <vector>
+#include <ranges>
 
 using run_function = void(*)();
 
 // global objects
-static std::vector<run_function> run_functions = {};
-
 static std::int64_t passed_tests = 0;
 
 static std::int64_t failed_tests = 0;
-
-static std::string_view test_name = "unknown";
 
 // ------------------------------------------------
 
@@ -564,8 +560,8 @@ struct runtime_verifier
                 std::string_view s)
     {
       ++failed_tests;
-      std::println(std::runtime_format("{}:{}:{}: ({:x}) in {} test of '{}' {} failed"),
-                   loc.file_name(), loc.line(), loc.column(), ip, test_kind, test_name, s);
+      std::println(std::runtime_format("{}:{}:{}: ({:x}) in {} test: {} failed"),
+                   loc.file_name(), loc.line(), loc.column(), ip, test_kind, s);
       print_value("result", x);
       print_value("expected", y);
       return additional_info {true};
@@ -940,11 +936,24 @@ template <typename T>
       std::tuple_size<T>::value;
     } && std::same_as<T, std::array<typename T::value_type, std::tuple_size_v<T>>>;
 
-template <typename Args = void, typename Fun = void>
+template <int MaxN = -1, typename Args = void, typename Fun = void>
   struct add_test
   {
     alignas(std::bit_floor(sizeof(Args))) Args args;
     Fun fun;
+    static constexpr int max_n = MaxN;
+  };
+
+template <int MaxN = -1>
+  struct repeat_n_times
+  {
+    template <typename Args = void, typename Fun = void>
+      struct add_test
+      {
+        alignas(std::bit_floor(sizeof(Args))) Args args;
+        Fun fun;
+        static constexpr int max_n = MaxN;
+      };
   };
 
 struct dummy_test
@@ -967,72 +976,131 @@ template <auto test_ref, int... is, std::size_t... arg_idx>
     else
       {
         ++failed_tests;
-        std::println(std::runtime_format("=> constexpr test of '{}' failed."), test_name);
-      }
-  }
-
-template <auto test_ref, int... is>
-  void
-  invoke_test(std::string_view name)
-  {
-    test_name = name;
-    constexpr auto args = test_ref->args;
-    using A = std::remove_const_t<decltype(args)>;
-    if constexpr (array_specialization<A>)
-      { // call for each element
-        template for (constexpr std::size_t I : std::_IotaArray<args.size()>)
-          {
-            std::string tmp_name = std::string(name) + '|' + std::to_string(I);
-            test_name = tmp_name;
-            std::println(std::runtime_format("Testing '{}'{} {}"), test_name,
-                         (std::string() + ... + (' ' + std::to_string(is))), args[I]);
-            invoke_test_impl<test_ref, is...>(std::index_sequence<I>());
-          }
-      }
-    else
-      {
-        std::println(std::runtime_format("Testing '{}'{}"),
-                     (std::string() + ... + (' ' + std::to_string(is))), test_name);
-        invoke_test_impl<test_ref, is...>(std::make_index_sequence<std::tuple_size_v<A>>());
+        std::println(std::runtime_format("=> constexpr test failed."));
       }
   }
 
 #define ADD_TEST(name, ...)                                                                        \
     template <int>                                                                                 \
-      static constexpr auto name##_tmpl = dummy_test {};                                           \
-                                                                                                   \
-    static void                                                                                    \
-    name()                                                                                         \
-    { invoke_test<&name##_tmpl<0>>(#name); }                                                       \
-                                                                                                   \
-    const int init_##name = [] {                                                                   \
-      run_functions.push_back(name);                                                               \
-      return 0;                                                                                    \
-    }();                                                                                           \
+      static constexpr dummy_test test_obj_##name = {};                                            \
                                                                                                    \
     template <int Tmp>                                                                             \
       requires (Tmp == 0) __VA_OPT__(&& (__VA_ARGS__))                                             \
-      static constexpr auto name##_tmpl<Tmp> = add_test
+      static constexpr add_test test_obj_##name<Tmp> =
 
 #define ADD_TEST_N(name, N, ...)                                                                   \
     template <int>                                                                                 \
-      static constexpr auto name##_tmpl = dummy_test {};                                           \
-                                                                                                   \
-    static void                                                                                    \
-    name()                                                                                         \
-    {                                                                                              \
-      template for (constexpr int i : std::_IotaArray<N, int>)                                     \
-        invoke_test<&name##_tmpl<0>, i>(#name);                                                    \
-    }                                                                                              \
-                                                                                                   \
-    const int init_##name = [] {                                                                   \
-      run_functions.push_back(name);                                                               \
-      return 0;                                                                                    \
-    }();                                                                                           \
+      static constexpr dummy_test test_n_obj_##name = {};                                          \
                                                                                                    \
     template <int Tmp>                                                                             \
       requires (Tmp == 0) __VA_OPT__(&& (__VA_ARGS__))                                             \
-      static constexpr auto name##_tmpl<Tmp> = add_test
+      static constexpr repeat_n_times<N>::add_test test_n_obj_##name<Tmp> =
+
+template <typename T, int N = 256>
+  struct trivial_vector
+  {
+    int size_ = 0;
+
+    T data_[N];
+
+    consteval void
+    push_back(const T& x)
+    { data_[size_++] = x; }
+
+    constexpr decltype(auto)
+    operator[](this auto&& t, int i)
+    { return t.data_[i]; }
+
+    using iterator = T*;
+
+    using const_iterator = const T*;
+
+    constexpr decltype(auto)
+    begin(this auto&& t)
+    { return &t.data_[0]; }
+
+    constexpr decltype(auto)
+    end(this auto&& t)
+    { return &t.data_[t.size_]; }
+
+    constexpr int
+    size() const
+    { return size_; }
+  };
+
+struct test_info
+{
+  std::meta::info obj;
+  std::string_view name;
+};
+
+template <typename T>
+  consteval auto
+  list_test_members()
+  {
+    trivial_vector<test_info> r = {};
+    auto ctx = std::meta::access_context::current();
+    for (std::meta::info ifo : members_of(^^T, ctx))
+      {
+        if (is_variable_template(ifo) && has_identifier(ifo)
+              && identifier_of(ifo).starts_with("test_"))
+        {
+          std::meta::info obj = substitute(ifo, {std::meta::reflect_constant(0)});
+          const int off = identifier_of(ifo).starts_with("test_n_obj_") ? 11 : 9;
+          if (is_same_type(remove_const(type_of(obj)), ^^dummy_test))
+            obj = std::meta::info();
+          r.push_back(test_info {obj, identifier_of(ifo).substr(off)});
+        }
+      }
+    return r;
+  }
+
+template <typename V>
+  void
+  invoke_test_members()
+  {
+    using std::operator""sv;
+    std::string type_name = std::views::split(display_string_of(^^V), "std::simd::"sv)
+                              | std::views::join
+                              | std::ranges::to<std::string>();
+    constexpr auto m = list_test_members<::Tests<V>>();
+    template for (constexpr int i : std::_IotaArray<m.size()>)
+      {
+        constexpr std::string_view test_name = m[i].name;
+        constexpr std::meta::info ifo = m[i].obj;
+        if constexpr (ifo == std::meta::info())
+          std::println("- (not applicable) {:>50} | {:15}", type_name, test_name);
+        else
+          {
+            constexpr auto test_ref = &[:ifo:];
+            constexpr auto args = test_ref->args;
+            using A = std::remove_const_t<decltype(args)>;
+            if constexpr (test_ref->max_n >= 0)
+              {
+                static_assert(!array_specialization<A>, "this would be too expensive to compile");
+                template for (constexpr int n : std::_IotaArray<test_ref->max_n>)
+                  {
+                    std::println(std::runtime_format("- {:>50} | {:15} | {}"), type_name, test_name, n);
+                    invoke_test_impl<test_ref, n>(std::make_index_sequence<std::tuple_size_v<A>>());
+                  }
+              }
+            else if constexpr (array_specialization<A>)
+              { // call for each element
+                template for (constexpr std::size_t I : std::_IotaArray<args.size()>)
+                  {
+                    std::println(std::runtime_format("- {:>50} | {:15} ({}: {})"),
+                                 type_name, test_name, I, args[I]);
+                    invoke_test_impl<test_ref>(std::index_sequence<I>());
+                  }
+              }
+            else
+              {
+                std::println(std::runtime_format("- {:>50} | {:15}"), type_name, test_name);
+                invoke_test_impl<test_ref>(std::make_index_sequence<std::tuple_size_v<A>>());
+              }
+          }
+      }
+  }
 
 template <typename = void>
 void test_runner();
