@@ -47,6 +47,7 @@ static std::int64_t passed_tests = 0;
 
 static std::int64_t failed_tests = 0;
 
+static bool first_fail = true;
 // ------------------------------------------------
 
 namespace simd = std::simd;
@@ -179,14 +180,15 @@ struct additional_info
     operator()(std::string_view fmt, const Args&... args)
     {
       if (failed)
-        std::println(std::runtime_format(fmt), args...);
+        std::println("| {}", std::format(std::runtime_format(fmt), args...));
     }
 
-  constexpr void
+  constexpr additional_info
   operator()(const auto& value)
   {
     if (failed)
-      std::println("{}", value);
+      std::println("|{:>9} | {}", "", value);
+    return *this;
   }
 };
 
@@ -536,22 +538,22 @@ struct runtime_verifier
       if constexpr (std::is_same_v<T, log_novalue>)
         ;
       else if constexpr (std::is_floating_point_v<T>)
-        std::println(std::runtime_format("- {:8}: {:a}"), what, val);
+        std::println(std::runtime_format("|{:>9} | {:a}"), what, val);
       else if constexpr (std::is_integral_v<T>)
-        std::println(std::runtime_format("- {:8}: {:d}"), what, val);
+        std::println(std::runtime_format("|{:>9} | {:d}"), what, val);
       else if constexpr (std::ranges::range<T>)
         {
           if constexpr (std::is_floating_point_v<std::ranges::range_value_t<T>>)
-            std::println(std::runtime_format("- {:8}: {::a}"), what, val);
+            std::println(std::runtime_format("|{:>9} | {::a}"), what, val);
           else if constexpr (display_string_of(^^T).contains("string"))
-            std::println(std::runtime_format("- {:8}: {}"), what, val);
+            std::println(std::runtime_format("|{:>9} | {}"), what, val);
           else if constexpr (std::is_integral_v<std::ranges::range_value_t<T>>)
-            std::println(std::runtime_format("- {:8}: {::d}"), what, val);
+            std::println(std::runtime_format("|{:>9} | {::d}"), what, val);
           else
-            std::println(std::runtime_format("- {:8}: {}"), what, val);
+            std::println(std::runtime_format("|{:>9} | {}"), what, val);
         }
       else
-        std::println(std::runtime_format("- {:8}: {}"), what, val);
+        std::println(std::runtime_format("|{:>9} | {}"), what, val);
     }
 
   template <typename X, typename Y>
@@ -559,6 +561,11 @@ struct runtime_verifier
     log_failure(const X& x, const Y& y, std::source_location loc, std::size_t ip,
                 std::string_view s)
     {
+      if (first_fail)
+        {
+          first_fail = false;
+          std::println("{}", " ❌ FAIL");
+        }
       ++failed_tests;
       std::println(std::runtime_format("{}:{}:{}: ({:x}) in {} test: {} failed"),
                    loc.file_name(), loc.line(), loc.column(), ip, test_kind, s);
@@ -966,6 +973,8 @@ template <auto test_ref, int... is, std::size_t... arg_idx>
   void
   invoke_test_impl(std::index_sequence<arg_idx...>)
   {
+    first_fail = true;
+    const auto before = failed_tests;
     constexpr auto fun = test_ref->fun;
     [[maybe_unused]] constexpr auto args = test_ref->args;
     constprop_test<is...>(fun, std::get<arg_idx>(args)...);
@@ -976,8 +985,12 @@ template <auto test_ref, int... is, std::size_t... arg_idx>
     else
       {
         ++failed_tests;
-        std::println(std::runtime_format("=> constexpr test failed."));
+        if (first_fail)
+          std::println("{}", " ❌ FAIL");
+        std::println("{}", "=> constexpr test failed.");
       }
+    if (before == failed_tests)
+      std::println("{}", " ✅ PASS");
   }
 
 #define ADD_TEST(name, ...)                                                                        \
@@ -1064,12 +1077,13 @@ template <typename V>
                               | std::views::join
                               | std::ranges::to<std::string>();
     constexpr auto m = list_test_members<::Tests<V>>();
+    std::println("+{:-^78}+", type_name);
     template for (constexpr int i : std::_IotaArray<m.size()>)
       {
         constexpr std::string_view test_name = m[i].name;
         constexpr std::meta::info ifo = m[i].obj;
         if constexpr (ifo == std::meta::info())
-          std::println("- (not applicable) {:>50} | {:15}", type_name, test_name);
+          std::println("|{:>15} |  - |{}", test_name, " 🟡 not applicable");
         else
           {
             constexpr auto test_ref = &[:ifo:];
@@ -1080,7 +1094,7 @@ template <typename V>
                 static_assert(!array_specialization<A>, "this would be too expensive to compile");
                 template for (constexpr int n : std::_IotaArray<test_ref->max_n>)
                   {
-                    std::println(std::runtime_format("- {:>50} | {:15} | {}"), type_name, test_name, n);
+                    std::print("|{:>15} |{:>3} |", test_name, n);
                     invoke_test_impl<test_ref, n>(std::make_index_sequence<std::tuple_size_v<A>>());
                   }
               }
@@ -1088,14 +1102,13 @@ template <typename V>
               { // call for each element
                 template for (constexpr std::size_t I : std::_IotaArray<args.size()>)
                   {
-                    std::println(std::runtime_format("- {:>50} | {:15} ({}: {})"),
-                                 type_name, test_name, I, args[I]);
+                    std::print("|{:>15} |{:>3}: {} |", test_name, I, args[I]);
                     invoke_test_impl<test_ref>(std::index_sequence<I>());
                   }
               }
             else
               {
-                std::println(std::runtime_format("- {:>50} | {:15}"), type_name, test_name);
+                std::print("|{:>15} |  - |", test_name);
                 invoke_test_impl<test_ref>(std::make_index_sequence<std::tuple_size_v<A>>());
               }
           }
