@@ -389,8 +389,8 @@ namespace std::simd
       static constexpr bool _S_is_cx_ileav = false;
 
       static constexpr bool _S_is_cx_ctgus = false;
-#endif
 
+#endif
       static constexpr bool _S_is_vecmask = false;
 
       // in principle a bool is a 1-bit bitmask, but this is asking for an AVX512 bitmask
@@ -427,8 +427,10 @@ namespace std::simd
       /** @internal
        * The number of registers needed to represent one basic_vec for the element type that was
        * used on ABI deduction.
+#if VIR_NEXT_PATCH
        *
        * For _CxCtgus the value applies twice, once per reals and once per imags.
+#endif
        *
        * Examples:
        * - '_Abi< 8, 2>' for 'int' is 2x 128-bit
@@ -436,9 +438,11 @@ namespace std::simd
        * - '_Abi<10, 3>' for 'int' is 2x 128-bit and 1x 64-bit
        * - '_Abi<10, 1>' for 'int' is 1x 512-bit
        * - '_Abi<10, 2>' for 'int' is 1x 256-bit and 1x 64-bit
+#if VIR_NEXT_PATCH
        * - '_Abi< 8, 2, _CxIleav>' for 'complex<float>' is 2x 256-bit
        * - '_Abi< 9, 2, _CxIleav>' for 'complex<float>' is 1x 512-bit and 1x 64-bit
        * - '_Abi< 8, 1, _CxCtgus>' for 'complex<float>' is 2x 256-bit
+#endif
        */
       static constexpr int _S_nreg = _Nreg;
 

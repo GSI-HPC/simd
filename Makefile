@@ -15,6 +15,9 @@ install:
 	install -m 644 -t $(includedir) simd
 	install -m 644 -t $(includedir)/bits bits/*.h
 
+deploy:
+	./deploy.sh
+
 sysincludedir = $(dir $(shell echo "#include <vector>"|"$(CXX)" -std=c++17 -x c++ -E -o- -|grep '^# 1 "/.*/vector"'|cut -d'"' -f2))
 
 install-system:

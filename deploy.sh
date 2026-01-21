@@ -11,7 +11,6 @@ set -e
 # Source and destination directories
 SRC_DIR="include/bits"
 DEST_DIR="/home/mkretz/src/gcc-simd/libstdc++-v3/include/bits"
-#DEST_DIR="bits"
 
 # Create destination directory if it doesn't exist
 mkdir -p "$DEST_DIR"
@@ -21,10 +20,15 @@ awk '
 BEGIN {
   skip = 0
   in_negated_if = 0
+  drop_next_endif = 0
 }
 /^#if '$1'\>/ {
   if (skip != 0) {
     print "Error: Nested '$1' at line " NR ": " $0 > "/dev/stderr"
+    exit 1
+  }
+  if (drop_next_endif != 0) {
+    print "Error at line " NR ": " $0 > "/dev/stderr"
     exit 1
   }
   skip = 1
@@ -33,6 +37,10 @@ BEGIN {
 /^#elif '$1'\>/ {
   if (skip > 1) {
     print "Error: Nested '$1' at line " NR ": " $0 > "/dev/stderr"
+    exit 1
+  }
+  if (drop_next_endif != 0) {
+    print "Error at line " NR ": " $0 > "/dev/stderr"
     exit 1
   }
   skip = 1
@@ -50,13 +58,18 @@ BEGIN {
   in_negated_if = 1
   next
 }
-/^#else$/ && in_negated_if {
-  in_negated_if = 0
-  if (skip != 0) {
-    print "Error: Nested '$1' at line " NR ": " $0 > "/dev/stderr"
-    exit 1
+/^#else$/ && (in_negated_if == 1 || skip == 1) {
+  if (in_negated_if == 1) {
+    in_negated_if = 0
+    if (skip != 0) {
+      print "Error: Nested '$1' at line " NR ": " $0 > "/dev/stderr"
+      exit 1
+    }
+    skip = 1
+  } else {
+    drop_next_endif = 1
+    skip = 0
   }
-  skip = 1
   next
 }
 /^#endif$/ && skip > 0 {
@@ -69,6 +82,10 @@ BEGIN {
     print "Error: #if !'$1' expects #else" > "/dev/stderr"
     exit 1
   }
+}
+/^#endif$/ && drop_next_endif == 1 {
+  drop_next_endif = 0
+  next
 }
 skip == 0 {
   print
