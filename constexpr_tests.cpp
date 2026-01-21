@@ -94,8 +94,11 @@ namespace test02
     using expected_abi
 #ifdef __AVX512F__
       = _Abi_t<N, 1, _AbiVariant::_BitMask, _AbiVariant::_CxIleav>;
-#else
+#elif defined __SSE2__
       = _Abi_t<N, 1, _AbiVariant::_CxIleav>;
+#else
+      // FIXME: With SSE the answer depends on T
+      = _ScalarAbi<N>;
 #endif
 
   static_assert(same_as<simd::vec<complex<float>, 1>::abi_type, expected_abi<1>>);
