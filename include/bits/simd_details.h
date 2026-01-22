@@ -14,6 +14,7 @@
 
 #include <bit>
 #include <bits/c++config.h> // _GLIBCXX_FLOAT_IS_IEEE_BINARY32
+#include <bits/stl_function.h> // plus, minus, multiplies, ...
 #include <bits/utility.h> // integer_sequence, etc.
 #include <cmath> // for math_errhandling :(
 #include <concepts>
@@ -254,7 +255,15 @@ namespace std::simd
    */
   template <size_t _Bytes>
     using __integer_from
-      = decltype([] {
+#if __clang__
+      = conditional_t<sizeof(signed char) == _Bytes, signed char,
+                      conditional_t<sizeof(signed short) == _Bytes, signed short,
+                                    conditional_t<sizeof(signed int) == _Bytes, signed int,
+                                                  conditional_t<sizeof(signed long long) == _Bytes,
+                                                                signed long long,
+                                                                _InvalidInteger>>>>;
+#else
+      = decltype([] consteval {
           if constexpr (sizeof(signed char) == _Bytes)
             return static_cast<signed char>(0);
           else if constexpr (sizeof(signed short) == _Bytes)
@@ -266,6 +275,7 @@ namespace std::simd
           else
             return _InvalidInteger();
         }());
+#endif
 
   /** @internal
    * Alias for an unsigned integer type T such that sizeof(T) equals _Bytes.
@@ -287,7 +297,7 @@ namespace std::simd
    * Alias for an unsigned integer type that can store at least @p _NBits bits.
    */
   template <int _NBits>
-    requires (_NBits > 0 && _NBits <= 64)
+    requires (_NBits > 0 && _NBits <= sizeof(0ll) * __CHAR_BIT__)
     using _Bitmask = _UInt<__div_ceil(__bit_ceil(unsigned(_NBits)), unsigned(__CHAR_BIT__))>;
 
   /** @internal
@@ -1346,7 +1356,7 @@ namespace std::simd
 
   template <typename _Rg>
     consteval size_t
-    __static_range_size(_Rg&& __r)
+    __static_range_size(_Rg& __r)
     {
       if constexpr (requires { typename integral_constant<size_t, ranges::size(__r)>; })
         return ranges::size(__r);
@@ -1756,15 +1766,11 @@ namespace std::simd
     consteval _Tp
     __default_identity_element()
     {
-      if constexpr (same_as<_BinaryOperation, plus<>>)
-        return _Tp(0);
-      else if constexpr (same_as<_BinaryOperation, multiplies<>>)
+      if constexpr (same_as<_BinaryOperation, multiplies<>>)
         return _Tp(1);
       else if constexpr (same_as<_BinaryOperation, bit_and<>>)
         return _Tp(~_Tp());
-      else if constexpr (same_as<_BinaryOperation, bit_or<>>)
-        return _Tp(0);
-      else if constexpr (same_as<_BinaryOperation, bit_xor<>>)
+      else
         return _Tp(0);
     }
 }

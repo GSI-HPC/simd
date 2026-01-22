@@ -8,6 +8,7 @@
 
 #include "../include/bits/simd_details.h"
 #include <string_view>
+#include <climits>
 
 namespace test
 {
@@ -168,7 +169,7 @@ template <typename T>
   private:
     using U = std::make_unsigned_t<T>;
 
-    std::formatter<U, char> f_;
+    std::formatter<U, char> f_ = {};
   };
 
 struct additional_info
@@ -294,7 +295,7 @@ template <typename T>
   bit_equal(const T& a, const T& b)
   {
     using std::simd::_UInt;
-    if constexpr (sizeof(T) <= 8)
+    if constexpr (sizeof(T) <= sizeof(0ull))
       return std::bit_cast<_UInt<sizeof(T)>>(a) == std::bit_cast<_UInt<sizeof(T)>>(b);
     else if constexpr (std::simd::__simd_vec_or_mask_type<T>)
       {
@@ -869,10 +870,10 @@ check_cpu_support()
     return true;
 }
 
-int run_check_cpu_support = [] {
+const int run_check_cpu_support = [] {
   if (!check_cpu_support())
     {
-      std::fputs("Incompatible CPU.", stderr);
+      (void)std::fputs("Incompatible CPU.", stderr);
       std::exit(EXIT_SUCCESS);
     }
   return 0;
@@ -1009,7 +1010,7 @@ template <auto test_ref, int... is, std::size_t... arg_idx>
       requires (Tmp == 0) __VA_OPT__(&& (__VA_ARGS__))                                             \
       static constexpr repeat_n_times<N>::add_test test_n_obj_##name<Tmp> =
 
-template <typename T, int N = 256>
+template <typename T, int N = sizeof(0ll) * CHAR_BIT * 4>
   struct trivial_vector
   {
     int size_ = 0;
@@ -1036,6 +1037,7 @@ template <typename T, int N = 256>
     end(this auto&& t)
     { return &t.data_[t.size_]; }
 
+    [[nodiscard]]
     constexpr int
     size() const
     { return size_; }
