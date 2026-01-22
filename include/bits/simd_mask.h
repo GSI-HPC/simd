@@ -131,7 +131,7 @@ namespace std::simd
     using resize_t = typename resize<_Np, _Vp>::type;
 
   // [simd.syn]
-  static constexpr __simd_size_type zero_element   = -1 << (sizeof(int) * __CHAR_BIT__ - 1);
+  static constexpr __simd_size_type zero_element   = -1 << (__INT_WIDTH__ - 1);
 
   static constexpr __simd_size_type uninit_element = zero_element + 1;
 
@@ -744,19 +744,19 @@ namespace std::simd
                       __builtin_memcpy(&__tmp, &__x, sizeof(__x) - _UV::_S_padding_bytes);
                       return __tmp;
                     }
-                  else if constexpr (_UBytes / _Bytes == 16) // ughh
-                    {
+                  else if constexpr (_UBytes / _Bytes > sizeof(0ll))
+                    { // from mask<complex<double>> to mask<char> is expensive. deal with it
                       constexpr auto [...__is] = _IotaArray<_S_size>;
                       return _DataType{__vec_value_type<_DataType>(-__x[__is])...};
                     }
-                  else if constexpr (_Bytes > 1)
+                  else if constexpr (_Bytes >= 2)
                     {
                       return reinterpret_cast<_DataType>(
                                __vec_mask_cast<__vec_builtin_type_bytes<
                                                  __integer_from<_Bytes / 2>, sizeof(_M_data)>>(
                                  __x._M_data._M_concat_data()));
                     }
-                  else if constexpr (_UBytes <= 8)
+                  else if constexpr (_UBytes <= sizeof(0ll))
                     {
                       const auto __xv = __x._M_data._M_concat_data();
                       return __vec_mask_cast<_DataType>(
@@ -825,7 +825,8 @@ namespace std::simd
       basic_mask(const same_as<bitset<size()>> auto& __b) noexcept // LWG 4382.
       : basic_mask(static_cast<_Bitmask<_S_size>>(__b.to_ullong()))
       {
-        static_assert(_S_size <= 64); // more than 64 elements in one register? not yet.
+        // more than 64 elements in one register? not yet.
+        static_assert(_S_size <= __GLIBCXX_LLONG_WIDTH);
       }
 
       // [simd.mask.ctor] uint constructor ------------------------------------
@@ -985,7 +986,8 @@ namespace std::simd
       constexpr bitset<_S_size>
       to_bitset() const noexcept
       {
-        static_assert(_S_size <= 64); // more than 64 elements in one register? not yet.
+        // more than 64 elements in one register? not yet.
+        static_assert(_S_size <= __GLIBCXX_LLONG_WIDTH);
         return to_ullong();
       }
 
@@ -1012,7 +1014,7 @@ namespace std::simd
 #else
           constexpr int __nbits = _S_size;
 #endif
-          static_assert(__nbits + _Offset <= 64);
+          static_assert(__nbits + _Offset <= __GLIBCXX_LLONG_WIDTH);
 #if VIR_NEXT_PATCH
           static_assert(!(_S_is_scalar && _Use_2_for_1));
 #endif
@@ -1032,7 +1034,7 @@ namespace std::simd
               return _Ur(__bits) << _Offset;
             }
 #if VIR_NEXT_PATCH
-          else if constexpr (_Bytes == 8 && _Use_2_for_1)
+          else if constexpr (_Bytes == sizeof(0ll) && _Use_2_for_1)
             {
               const auto __u32 = __vec_bit_cast<unsigned>(_M_data);
               if constexpr (sizeof(_M_data) == 16)
@@ -1354,7 +1356,7 @@ namespace std::simd
       {
         if constexpr (_S_is_scalar)
           return int(_M_data);
-        else if constexpr (_S_size <= sizeof(int) * __CHAR_BIT__)
+        else if constexpr (_S_size <= __INT_WIDTH__)
           return __builtin_popcount(_M_to_uint());
         else
           return __builtin_popcountll(to_ullong());
@@ -1548,7 +1550,7 @@ namespace std::simd
       {
         if constexpr (_S_use_bitmask)
           {
-            static_assert(_S_size <= sizeof(0ull) * __CHAR_BIT__, "cannot concat more than 64 bits");
+            static_assert(_S_size <= __GLIBCXX_LLONG_WIDTH, "cannot concat more than 64 bits");
             using _Up = _Bitmask<_S_size>;
             return _Up(_M_data0._M_concat_data(true) | (_Up(_M_data1._M_concat_data(__do_sanitize)) << _N0));
           }
@@ -1809,11 +1811,11 @@ namespace std::simd
       constexpr bitset<_S_size>
       to_bitset() const noexcept
       {
-        if constexpr (_S_size <= 64)
+        if constexpr (_S_size <= __GLIBCXX_LLONG_WIDTH)
           return to_ullong();
         else
           {
-            static_assert(_N0 % 64 == 0);
+            static_assert(_N0 % __GLIBCXX_LLONG_WIDTH == 0);
             struct _Tmp
             {
               bitset<_N0> _M_lo;
@@ -1837,7 +1839,7 @@ namespace std::simd
 #else
           constexpr int _N0x = _N0;
 #endif
-          if constexpr (_N0x >= 64)
+          if constexpr (_N0x >= __GLIBCXX_LLONG_WIDTH)
             {
               static_assert(_Offset == 0);
               return __trivial_pair {
@@ -1876,13 +1878,13 @@ namespace std::simd
       constexpr unsigned long long
       to_ullong() const
       {
-        if constexpr (_S_size <= 64)
+        if constexpr (_S_size <= __GLIBCXX_LLONG_WIDTH)
           return _M_to_uint();
         else
           {
             __glibcxx_simd_precondition(_M_data1.to_ullong() == 0,
                                         "to_ullong called on mask with 'true' elements at indices"
-                                        "higher than 64");
+                                        "higher than representable in a ullong");
             return _M_data0.to_ullong();
           }
       }
@@ -2047,7 +2049,7 @@ namespace std::simd
       constexpr __simd_size_type
       _M_reduce_min_index() const
       {
-        if constexpr (_S_size <= 64)
+        if constexpr (_S_size <= __GLIBCXX_LLONG_WIDTH)
           {
             const auto __bits = _M_to_uint();
             __glibcxx_simd_precondition(__bits, "An empty mask does not have a min_index.");
@@ -2066,7 +2068,7 @@ namespace std::simd
       constexpr __simd_size_type
       _M_reduce_max_index() const
       {
-        if constexpr (_S_size <= 64)
+        if constexpr (_S_size <= __GLIBCXX_LLONG_WIDTH)
           {
             const auto __bits = _M_to_uint();
             __glibcxx_simd_precondition(__bits, "An empty mask does not have a max_index.");

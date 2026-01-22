@@ -40,6 +40,14 @@
 #endif
 
 #endif
+#ifdef __LONG_LONG_WIDTH__
+#define __GLIBCXX_LLONG_WIDTH __LONG_LONG_WIDTH__
+#elif defined __LLONG_WIDTH__
+#define __GLIBCXX_LLONG_WIDTH __LLONG_WIDTH__
+#else
+#define __GLIBCXX_LLONG_WIDTH (sizeof(0ll) * __CHAR_BIT__)
+#endif
+
 #if defined __x86_64__ || defined __i386__
 #define _GLIBCXX_X86 1
 #else
