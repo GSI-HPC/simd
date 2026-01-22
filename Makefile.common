@@ -14,6 +14,7 @@ ifneq ($(findstring clang,$(cxx_version)),)
 compiler:=clang
 else ifneq ($(findstring g++,$(cxx_version))$(findstring GCC,$(cxx_version)),)
 compiler:=gcc
+CXXFLAGS_clang += --gcc-toolchain=$(abspath $(shell $(CXX) -print-prog-name=cc1plus | sed 's,/libexec/gcc/.*/cc1plus$$,,'))
 else
 compiler:=unknown
 endif

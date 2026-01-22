@@ -110,7 +110,7 @@ metrics:
 
 .PHONY: tidy
 tidy: $(objdir)/compile_commands.json
-	@clang-tidy -p $(objdir) constexpr_tests.cpp
+	@clang-tidy --config-file=.clang-tidy -p $(objdir) constexpr_tests.cpp
 
 .PHONY: debug
 debug:
