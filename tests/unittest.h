@@ -54,10 +54,8 @@ void test_runner()
             invoke_test_members<simd::vec<_Float64, N>>();
           if constexpr (std::is_same_v<canonical_vec_type_t<_Float32>, T>)
             invoke_test_members<simd::vec<_Float32, N>>();
-#if __SSSE3__ // ICE without PABS instructions (PR123575) TODO: remove ASAP
           if constexpr (!std::is_same_v<typename simd::vec<T, N>::abi_type, simd::_ScalarAbi<N>>)
             invoke_test_members<simd::basic_vec<T, simd::_ScalarAbi<N>>>();
-#endif
           using Abi = typename simd::vec<T, N>::abi_type;
           if constexpr (!simd::__scalar_abi_tag<Abi>)
             {
