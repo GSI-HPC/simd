@@ -53,6 +53,13 @@ info: $(check_targets)
 	@echo "Compile and run tests via 'make check'."
 	@echo "For all possible check targets call 'make help'."
 
+checkpoint:
+	@if [ -z "$(filename)" ]; \
+		then echo "ERROR: Pass 'filename=<path to tarball>' to 'make checkpoint'.";\
+		exit 1;\
+	fi
+	@tar -cz -f $(filename) check/* obj/*.hpp obj/*.depend
+
 lib_srcs ::= $(patsubst lib/%.cpp,%,$(wildcard lib/*.cpp))
 
 libarchs ::= v1 v2 v3a v3b v4
