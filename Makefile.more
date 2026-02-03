@@ -21,13 +21,15 @@ debug:
 	@echo total10: $(total10)
 
 ifneq ($(MAKE_TERMOUT),)
-init_progress := $(words $(wildcard check/*.*/*.*))
-start_time := $(shell date +%s)
-$(file > $(objdir)/.progress,$(init_progress))
+setup_progress: clean-outdated
+	$(eval export init_progress := $(words $(foreach t,$(tests),$(foreach a,$(testarchs),$(wildcard check/$t.$a/*.*)))))
+	$(eval export start_time := $(shell date +%s))
+	$(file > $(objdir)/.progress,$(init_progress))
+
 print_progress := flock $(objdir)/.progress ./increment.sh $(objdir)/.progress | \
 		  { read p && \
 		    remain=$$(($(totaltests)-p)) && \
-		    rate=$$((60 * (p - $(init_progress)) / ($$(date +%s) - $(start_time)))) && \
+		    rate=$$((60 * (p - $$init_progress) / ($$(date +%s) - $$start_time))) && \
 		    done=$$(((1000 * p / $(totaltests)))) && \
 		    timeremain=$$((remain/rate)) && \
 		    printf "[%2d.%d%% %2d%%/day %dh%02d remain]" \

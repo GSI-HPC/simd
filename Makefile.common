@@ -144,6 +144,9 @@ endef
 
 print_progress := true
 
+.PHONY: setup_progress
+setup_progress:
+
 $(objdir)/%.fast-math.hpp: $(objdir)/%.hpp
 	@cp $< $@
 
@@ -176,7 +179,7 @@ no_fast_math = $(shell head -n10 tests/$(1).cpp | grep -q no-fast-math && echo 1
 #	@driver.sh $(1) $(2) $$* "$(DIRECT)" "$$(CXX)" "$$(LINK_CXX)" $$(CXXFLAGS)
 # arguments: test, arch
 define exe_template
-check/$(1).$(2)/%: tests/$(1).cpp $(objdir)/$(2).hpp.gch tests/unittest*.h
+check/$(1).$(2)/%: tests/$(1).cpp $(objdir)/$(2).hpp.gch tests/unittest*.h | setup_progress
 	@printf -- '$$(msg_build) $(if $(DIRECT),and link )$$(@:check/%=  $(objdir)/%.exe)\n'
 	@mkdir -p $$(dir $$(@:check/%=$(objdir)/%.exe)) $$(dir $$@)
 	@rm -f $$(@:check/%=$(objdir)/%.exe) $$@
@@ -199,7 +202,7 @@ endif
 		false; \
 	}
 
-check/fast-math/$(1).$(2)/%: tests/$(1).cpp $(objdir)/$(2).fast-math.hpp.gch tests/unittest*.h
+check/fast-math/$(1).$(2)/%: tests/$(1).cpp $(objdir)/$(2).fast-math.hpp.gch tests/unittest*.h | setup_progress
 ifeq ($(call no_fast_math,$(1)),1)
 	@mkdir -p $$(dir $$@)
 	@touch $$@
@@ -278,3 +281,19 @@ $(objdir)/codegen.%.s: codegen/%.c++ $(objdir)
 	@cat $@ | grep -v '^\s*\.' | c++filt > $@.tmp
 	@mv $@.tmp $@
 
+clean-outdated-%:
+	@name="$(firstword $(subst ., ,$*))"; \
+	arch="$(lastword $(subst ., ,$*))"; \
+	for f in check/$$name.$$arch/*.*; do \
+		if [ $$f -ot tests/$*.cpp ] || \
+			[ $$f -ot $(objdir)/$$arch.hpp ] || \
+			[ $$f -ot $(objdir)/$$arch.hpp.gch ] || \
+			[ $$f -ot tests/unittest.h ]; then \
+			echo "Remove $$f"; \
+			rm $$f; \
+		fi; \
+	done
+
+.PHONY: clean-outdated
+clean-outdated: $(foreach t,$(tests),$(foreach a,$(testarchs),clean-outdated-$(t).$(a)))
+	@echo "No outdated check/*.*/*.* files are left."
