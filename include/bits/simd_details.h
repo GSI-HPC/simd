@@ -305,7 +305,7 @@ namespace std::simd
    * Alias for an unsigned integer type that can store at least @p _NBits bits.
    */
   template <int _NBits>
-    requires (_NBits > 0 && _NBits <= sizeof(0ll) * __CHAR_BIT__)
+    requires (_NBits > 0 && _NBits <= __GLIBCXX_LLONG_WIDTH)
     using _Bitmask = _UInt<__div_ceil(__bit_ceil(unsigned(_NBits)), unsigned(__CHAR_BIT__))>;
 
   /** @internal
