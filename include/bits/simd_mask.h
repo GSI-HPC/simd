@@ -131,7 +131,7 @@ namespace std::simd
     using resize_t = typename resize<_Np, _Vp>::type;
 
   // [simd.syn]
-  static constexpr __simd_size_type zero_element   = -1 << (__INT_WIDTH__ - 1);
+  static constexpr __simd_size_type zero_element   = numeric_limits<int>::min();
 
   static constexpr __simd_size_type uninit_element = zero_element + 1;
 
@@ -826,7 +826,7 @@ namespace std::simd
       : basic_mask(static_cast<_Bitmask<_S_size>>(__b.to_ullong()))
       {
         // more than 64 elements in one register? not yet.
-        static_assert(_S_size <= __GLIBCXX_LLONG_WIDTH);
+        static_assert(_S_size <= numeric_limits<unsigned long long>::digits);
       }
 
       // [simd.mask.ctor] uint constructor ------------------------------------
@@ -987,7 +987,7 @@ namespace std::simd
       to_bitset() const noexcept
       {
         // more than 64 elements in one register? not yet.
-        static_assert(_S_size <= __GLIBCXX_LLONG_WIDTH);
+        static_assert(_S_size <= numeric_limits<unsigned long long>::digits);
         return to_ullong();
       }
 
@@ -1014,7 +1014,7 @@ namespace std::simd
 #else
           constexpr int __nbits = _S_size;
 #endif
-          static_assert(__nbits + _Offset <= __GLIBCXX_LLONG_WIDTH);
+          static_assert(__nbits + _Offset <= numeric_limits<unsigned long long>::digits);
 #if VIR_NEXT_PATCH
           static_assert(!(_S_is_scalar && _Use_2_for_1));
 #endif
@@ -1356,7 +1356,7 @@ namespace std::simd
       {
         if constexpr (_S_is_scalar)
           return int(_M_data);
-        else if constexpr (_S_size <= __INT_WIDTH__)
+        else if constexpr (_S_size <= numeric_limits<unsigned>::digits)
           return __builtin_popcount(_M_to_uint());
         else
           return __builtin_popcountll(to_ullong());
@@ -1550,7 +1550,8 @@ namespace std::simd
       {
         if constexpr (_S_use_bitmask)
           {
-            static_assert(_S_size <= __GLIBCXX_LLONG_WIDTH, "cannot concat more than 64 bits");
+            static_assert(_S_size <= numeric_limits<unsigned long long>::digits,
+                          "cannot concat more than 64 bits");
             using _Up = _Bitmask<_S_size>;
             return _Up(_M_data0._M_concat_data(true) | (_Up(_M_data1._M_concat_data(__do_sanitize)) << _N0));
           }
@@ -1811,11 +1812,11 @@ namespace std::simd
       constexpr bitset<_S_size>
       to_bitset() const noexcept
       {
-        if constexpr (_S_size <= __GLIBCXX_LLONG_WIDTH)
+        if constexpr (_S_size <= numeric_limits<unsigned long long>::digits)
           return to_ullong();
         else
           {
-            static_assert(_N0 % __GLIBCXX_LLONG_WIDTH == 0);
+            static_assert(_N0 % numeric_limits<unsigned long long>::digits == 0);
             struct _Tmp
             {
               bitset<_N0> _M_lo;
@@ -1839,7 +1840,7 @@ namespace std::simd
 #else
           constexpr int _N0x = _N0;
 #endif
-          if constexpr (_N0x >= __GLIBCXX_LLONG_WIDTH)
+          if constexpr (_N0x >= numeric_limits<unsigned long long>::digits)
             {
               static_assert(_Offset == 0);
               return __trivial_pair {
@@ -1878,7 +1879,7 @@ namespace std::simd
       constexpr unsigned long long
       to_ullong() const
       {
-        if constexpr (_S_size <= __GLIBCXX_LLONG_WIDTH)
+        if constexpr (_S_size <= numeric_limits<unsigned long long>::digits)
           return _M_to_uint();
         else
           {
@@ -2049,7 +2050,7 @@ namespace std::simd
       constexpr __simd_size_type
       _M_reduce_min_index() const
       {
-        if constexpr (_S_size <= __GLIBCXX_LLONG_WIDTH)
+        if constexpr (_S_size <= numeric_limits<unsigned long long>::digits)
           {
             const auto __bits = _M_to_uint();
             __glibcxx_simd_precondition(__bits, "An empty mask does not have a min_index.");
@@ -2068,7 +2069,7 @@ namespace std::simd
       constexpr __simd_size_type
       _M_reduce_max_index() const
       {
-        if constexpr (_S_size <= __GLIBCXX_LLONG_WIDTH)
+        if constexpr (_S_size <= numeric_limits<unsigned long long>::digits)
           {
             const auto __bits = _M_to_uint();
             __glibcxx_simd_precondition(__bits, "An empty mask does not have a max_index.");

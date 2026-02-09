@@ -40,14 +40,6 @@
 #endif
 
 #endif
-#ifdef __LONG_LONG_WIDTH__
-#define __GLIBCXX_LLONG_WIDTH __LONG_LONG_WIDTH__
-#elif defined __LLONG_WIDTH__
-#define __GLIBCXX_LLONG_WIDTH __LLONG_WIDTH__
-#else
-#define __GLIBCXX_LLONG_WIDTH (sizeof(0ll) * __CHAR_BIT__)
-#endif
-
 #if defined __x86_64__ || defined __i386__
 #define _GLIBCXX_X86 1
 #else
@@ -305,7 +297,7 @@ namespace std::simd
    * Alias for an unsigned integer type that can store at least @p _NBits bits.
    */
   template <int _NBits>
-    requires (_NBits > 0 && _NBits <= __GLIBCXX_LLONG_WIDTH)
+    requires (_NBits > 0 && _NBits <= numeric_limits<unsigned long long>::digits)
     using _Bitmask = _UInt<__div_ceil(__bit_ceil(unsigned(_NBits)), unsigned(__CHAR_BIT__))>;
 
   /** @internal
