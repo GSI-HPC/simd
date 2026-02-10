@@ -197,11 +197,11 @@ namespace std::simd
 
   // implementation helper for chunk and cat
   consteval int
-  __packs_to_skip_at_front(int _Offset, auto... _Sizes)
+  __packs_to_skip_at_front(int _Offset, initializer_list<int> __sizes)
   {
     int __i = 0;
     int __n = 0;
-    for (int __s : {_Sizes...})
+    for (int __s : __sizes)
       {
         __n += __s;
         if (__n > _Offset)
@@ -212,16 +212,16 @@ namespace std::simd
   }
 
   consteval int
-  __packs_to_skip_at_back(int _Offset, int _Max, auto... _Sizes)
+  __packs_to_skip_at_back(int _Offset, int _Max, initializer_list<int> __sizes)
   {
     int __i = 0;
     int __n = -_Offset;
-    for (int __s : {_Sizes...})
+    for (int __s : __sizes)
       {
         ++__i;
         __n += __s;
         if (__n >= _Max)
-          return int(sizeof...(_Sizes)) - __i;
+          return int(__sizes.size()) - __i;
       }
     return 0;
   }
@@ -269,9 +269,10 @@ namespace std::simd
           if constexpr (_Offset.value >= _A0::_S_size
                           || __ninputs - _Offset.value - _Alast::_S_size >= _Ap::_S_size)
             { // can drop inputs at the front and/or back of the pack
-              constexpr int __skip_front = __packs_to_skip_at_front(_Offset.value, _Vs::size.value...);
+              constexpr int __skip_front = __packs_to_skip_at_front(_Offset.value,
+                                                                    {_Vs::size.value...});
               constexpr int __skip_back = __packs_to_skip_at_back(_Offset.value, _Ap::_S_size,
-                                                                  _Vs::size.value...);
+                                                                  {_Vs::size.value...});
               static_assert(__skip_front > 0 || __skip_back > 0);
               constexpr auto [...__skip] = _IotaArray<__skip_front>;
               constexpr auto [...__is] = _IotaArray<__nargs - __skip_front - __skip_back>;
