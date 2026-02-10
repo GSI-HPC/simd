@@ -737,7 +737,7 @@ namespace std::simd
 
       [[__gnu__::__always_inline__]]
       constexpr auto
-      _M_reduce_1(auto __binary_op) const
+      _M_reduce_to_half(auto __binary_op) const
       {
         static_assert(__has_single_bit(unsigned(_S_size)));
         auto [__a, __b] = chunk<_S_size / 2>(*this);
@@ -769,7 +769,7 @@ namespace std::simd
                        ._M_reduce(__binary_op);
             }
           else
-            return _M_reduce_1(__binary_op)._M_reduce_tail(__rest, __binary_op);
+            return _M_reduce_to_half(__binary_op)._M_reduce_tail(__rest, __binary_op);
         }
 
       /** @internal
@@ -824,9 +824,9 @@ namespace std::simd
           else if constexpr (__has_single_bit(unsigned(_S_size)))
             {
               if constexpr (sizeof(_M_data) > 16)
-                return _M_reduce_1(__binary_op)._M_reduce(__binary_op);
+                return _M_reduce_to_half(__binary_op)._M_reduce(__binary_op);
               else if constexpr (_S_size == 2)
-                return _M_reduce_1(__binary_op)[0];
+                return _M_reduce_to_half(__binary_op)[0];
               else
                 {
                   static_assert(_S_size <= 16);
@@ -2218,7 +2218,7 @@ namespace std::simd
 
       [[__gnu__::__always_inline__]]
       constexpr auto
-      _M_reduce_1(auto __binary_op) const requires (_N0 == _N1)
+      _M_reduce_to_half(auto __binary_op) const requires (_N0 == _N1)
       { return __binary_op(_M_data0, _M_data1); }
 
       [[__gnu__::__always_inline__]]
@@ -2233,7 +2233,7 @@ namespace std::simd
         else if constexpr (__rest.size() == _S_size)
           return __binary_op(*this, __rest)._M_reduce(__binary_op);
         else
-          return _M_reduce_1(__binary_op)._M_reduce_tail(__rest, __binary_op);
+          return _M_reduce_to_half(__binary_op)._M_reduce_tail(__rest, __binary_op);
       }
 
       template <typename _BinaryOp, _TargetTraits _Traits = {}>
