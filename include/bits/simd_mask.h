@@ -197,14 +197,14 @@ namespace std::simd
 
   // implementation helper for chunk and cat
   consteval int
-  __packs_to_skip_at_front(int _Offset, initializer_list<int> __sizes)
+  __packs_to_skip_at_front(int __offset, initializer_list<int> __sizes)
   {
     int __i = 0;
     int __n = 0;
     for (int __s : __sizes)
       {
         __n += __s;
-        if (__n > _Offset)
+        if (__n > __offset)
           return __i;
         ++__i;
       }
@@ -212,15 +212,15 @@ namespace std::simd
   }
 
   consteval int
-  __packs_to_skip_at_back(int _Offset, int _Max, initializer_list<int> __sizes)
+  __packs_to_skip_at_back(int __offset, int __max, initializer_list<int> __sizes)
   {
     int __i = 0;
-    int __n = -_Offset;
+    int __n = -__offset;
     for (int __s : __sizes)
       {
         ++__i;
         __n += __s;
-        if (__n >= _Max)
+        if (__n >= __max)
           return int(__sizes.size()) - __i;
       }
     return 0;
