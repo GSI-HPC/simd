@@ -1052,7 +1052,7 @@ namespace std::simd
 #if _GLIBCXX_X86 // TODO: where else is this "safe"?
               // allow out-of-bounds read when it cannot lead to a #GP
               else if (__is_const_known_equal_to(
-                         __ptr_is_aligned_to(__mem, sizeof(_Up) * _S_full_size), true))
+                         is_sufficiently_aligned<sizeof(_Up) * _S_full_size>(__mem), true))
                 return __select_impl(mask_type::_S_partial_mask_of_n(int(__n)),
                                      basic_vec(_LoadCtorTag(), __mem), basic_vec());
 #endif

@@ -1751,14 +1751,6 @@ namespace std::simd
         __builtin_memcpy(__dst, __src, 1);
     }
 
-  [[__gnu__::__always_inline__]]
-  inline bool
-  __ptr_is_aligned_to(const void* __ptr, size_t __align)
-  {
-    const auto __addr = __builtin_bit_cast(__UINTPTR_TYPE__, __ptr);
-    return (__addr % __align) == 0;
-  }
-
   // [simd.reductions] identity_element = *see below*
   template <typename _Tp, typename _BinaryOperation>
     requires __is_one_of<_BinaryOperation,
