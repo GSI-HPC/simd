@@ -928,7 +928,7 @@ template <typename V, int Init = 0, int MaxArg = int(test_iota_max<V, Init>)>
  * A data-parallel object initialized with {values..., values..., ...}
  */
 template <typename V, auto... values>
-  constexpr V vec = [] {
+  constexpr V init_vec = [] {
     using T = typename V::value_type;
     constexpr std::array<T, sizeof...(values)> arr = {T(values)...};
     return V([&](size_t i) { return arr[i % arr.size()]; });

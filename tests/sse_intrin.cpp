@@ -19,7 +19,7 @@ template <typename V>
     using M = typename V::mask_type;
 
     ADD_TEST(misc, !simd::__scalar_abi_tag<typename V::abi_type>) {
-      std::tuple{vec<V, 0, 100, 2, 54, 3>},
+      std::tuple{init_vec<V, 0, 100, 2, 54, 3>},
       [](auto& t, V x) {
         t.verify_equal(x, x);
         if !consteval

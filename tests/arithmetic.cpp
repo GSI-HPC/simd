@@ -34,7 +34,7 @@ template <typename V>
     static constexpr T inf = std::numeric_limits<Real>::infinity();
 
     ADD_TEST(plus_minus) {
-      std::tuple {V(), vec<V, C(1, 1), C(2, 2), C(3, 3)>},
+      std::tuple {V(), init_vec<V, C(1, 1), C(2, 2), C(3, 3)>},
       [](auto& t, V x, V y) {
         t.verify_equal(x + x, x);
         t.verify_equal(x - x, x);
@@ -44,8 +44,8 @@ template <typename V>
         t.verify_equal(y - x, y);
         t.verify_equal(x += T(1, -2), T(1, -2));
         t.verify_equal(x = x + x, T(2, -4));
-        t.verify_equal(x = x - y, vec<V, C(1, -5), C(0, -6), C(-1, -7)>);
-        t.verify_equal(x, vec<V, C(1, -5), C(0, -6), C(-1, -7)>);
+        t.verify_equal(x = x - y, init_vec<V, C(1, -5), C(0, -6), C(-1, -7)>);
+        t.verify_equal(x, init_vec<V, C(1, -5), C(0, -6), C(-1, -7)>);
       }
     };
 
@@ -90,7 +90,7 @@ template <typename V>
     };
 
     ADD_TEST(multiplication) {
-      std::tuple {V(), V(RealV(1), RealV()), V(RealV(), RealV(1)), vec<V, C(0, 2), C(2, 0), C(-1, 2)>},
+      std::tuple {V(), V(RealV(1), RealV()), V(RealV(), RealV(1)), init_vec<V, C(0, 2), C(2, 0), C(-1, 2)>},
       [](auto& t, V x, V one, V I, V z) {
         t.verify_equal(x * x, x);
         t.verify_equal(x * z, x);
@@ -129,7 +129,7 @@ template <typename V>
 
         t.verify_bit_equal(I * one, I);
         t.verify_bit_equal(I * I, T(-1, 0));
-        t.verify_bit_equal(z * I, vec<V, C(-2, 0), C(0., 2.), C(-2, -1)>);
+        t.verify_bit_equal(z * I, init_vec<V, C(-2, 0), C(0., 2.), C(-2, -1)>);
         t.verify_bit_equal(std::complex{-0., 0.} * std::complex{0., 1.}, std::complex{-0., 0.});
         t.verify_bit_equal(std::complex{-0., -1.} * std::complex{0., 0.}, std::complex{0., -0.});
         t.verify_bit_equal(0. + -0., 0.);
@@ -149,15 +149,15 @@ template <typename V>
     static constexpr T max = std::numeric_limits<T>::max();
 
     ADD_TEST(plus0, requires(T x) { x + x; }) {
-      std::tuple{V(), vec<V, 1, 2, 3, 4, 5, 6, 7>},
+      std::tuple{V(), init_vec<V, 1, 2, 3, 4, 5, 6, 7>},
       [](auto& t, V x, V y) {
         t.verify_equal(x + x, x);
         t.verify_equal(x = x + T(1), T(1));
         t.verify_equal(x + x, T(2));
-        t.verify_equal(x = x + y, vec<V, 2, 3, 4, 5, 6, 7, 8>);
+        t.verify_equal(x = x + y, init_vec<V, 2, 3, 4, 5, 6, 7, 8>);
         t.verify_equal(x = x + -y, T(1));
-        t.verify_equal(x += y, vec<V, 2, 3, 4, 5, 6, 7, 8>);
-        t.verify_equal(x, vec<V, 2, 3, 4, 5, 6, 7, 8>);
+        t.verify_equal(x += y, init_vec<V, 2, 3, 4, 5, 6, 7, 8>);
+        t.verify_equal(x, init_vec<V, 2, 3, 4, 5, 6, 7, 8>);
         t.verify_equal(x += -y, T(1));
         t.verify_equal(x, T(1));
       }
@@ -176,16 +176,16 @@ template <typename V>
     };
 
     ADD_TEST(minus0, requires(T x) { x - x; }) {
-      std::tuple{T(1), T(0), vec<V, 1, 2, 3, 4, 5, 6, 7>},
+      std::tuple{T(1), T(0), init_vec<V, 1, 2, 3, 4, 5, 6, 7>},
       [](auto& t, V x, V y, V z) {
         t.verify_equal(x - y, x);
         t.verify_equal(x - T(1), y);
         t.verify_equal(y, x - T(1));
         t.verify_equal(x - x, y);
-        t.verify_equal(x = z - x, vec<V, 0, 1, 2, 3, 4, 5, 6>);
+        t.verify_equal(x = z - x, init_vec<V, 0, 1, 2, 3, 4, 5, 6>);
         t.verify_equal(x = z - x, V(1));
-        t.verify_equal(z -= x, vec<V, 0, 1, 2, 3, 4, 5, 6>);
-        t.verify_equal(z, vec<V, 0, 1, 2, 3, 4, 5, 6>);
+        t.verify_equal(z -= x, init_vec<V, 0, 1, 2, 3, 4, 5, 6>);
+        t.verify_equal(z, init_vec<V, 0, 1, 2, 3, 4, 5, 6>);
         t.verify_equal(z -= z, V(0));
         t.verify_equal(z, V(0));
       }
@@ -210,8 +210,8 @@ template <typename V>
         t.verify_equal(x * y, y);
         t.verify_equal(x = x * T(2), T(2));
         t.verify_equal(x * x, T(4));
-        y = vec<V, 1, 2, 3, 4, 5, 6, 7>;
-        t.verify_equal(x = x * y, vec<V, 2, 4, 6, 8, 10, 12, 14>);
+        y = init_vec<V, 1, 2, 3, 4, 5, 6, 7>;
+        t.verify_equal(x = x * y, init_vec<V, 2, 4, 6, 8, 10, 12, 14>);
         y = v2;
         // don't test norm_min/2*2 in the following. There's no guarantee, in
         // general, that the result isn't flushed to zero (e.g. NEON without
@@ -239,8 +239,8 @@ template <typename V>
               }
           }
         x = v2;
-        t.verify_equal(x *= vec<V, 1, 2, 3>, vec<V, 2, 4, 6>);
-        t.verify_equal(x, vec<V, 2, 4, 6>);
+        t.verify_equal(x *= init_vec<V, 1, 2, 3>, init_vec<V, 2, 4, 6>);
+        t.verify_equal(x, init_vec<V, 2, 4, 6>);
       }
     };
 
@@ -259,12 +259,12 @@ template <typename V>
 
     // avoid testing subnormals and expect minor deltas for non-IEC559 float
     ADD_TEST(divide0, std::is_floating_point_v<T> && !is_iec559) {
-      std::tuple{T(2), vec<V, 1, 2, 3, 4, 5, 6, 7>},
+      std::tuple{T(2), init_vec<V, 1, 2, 3, 4, 5, 6, 7>},
       [](auto& t, V x, V y) {
         t.verify_equal_to_ulp(x / x, V(T(1)), 1);
         t.verify_equal_to_ulp(T(3) / x, V(T(3) / T(2)), 1);
         t.verify_equal_to_ulp(x / T(3), V(T(2) / T(3)), 1);
-        t.verify_equal_to_ulp(y / x, vec<V, .5, 1, 1.5, 2, 2.5, 3, 3.5>, 1);
+        t.verify_equal_to_ulp(y / x, init_vec<V, .5, 1, 1.5, 2, 2.5, 3, 3.5>, 1);
       }
     };
 
@@ -290,19 +290,19 @@ template <typename V>
     };
 
     ADD_TEST(divide2, (is_iec559 || !std::is_floating_point_v<T>) && requires(T x) { x / x; }) {
-      std::tuple{T(2), vec<V, 1, 2, 3, 4, 5, 6, 7>, vec<V, T(max), T(norm_min)>,
-                 vec<V, T(norm_min), T(max)>, vec<V, T(max), T(norm_min) + 1>},
+      std::tuple{T(2), init_vec<V, 1, 2, 3, 4, 5, 6, 7>, init_vec<V, T(max), T(norm_min)>,
+                 init_vec<V, T(norm_min), T(max)>, init_vec<V, T(max), T(norm_min) + 1>},
       [](auto& t, V x, V y, V z, V a, V b) {
         t.verify_equal(x / x, V(1));
         t.verify_equal(T(3) / x, V(T(3) / T(2)));
         t.verify_equal(x / T(3), V(T(2) / T(3)));
-        t.verify_equal(y / x, vec<V, .5, 1, 1.5, 2, 2.5, 3, 3.5>);
-        V ref = vec<V, T(max / 2), T(norm_min / 2)>;
+        t.verify_equal(y / x, init_vec<V, .5, 1, 1.5, 2, 2.5, 3, 3.5>);
+        V ref = init_vec<V, T(max / 2), T(norm_min / 2)>;
         t.verify_equal(z / x, ref);
-        ref = vec<V, T(norm_min / 2), T(max / 2)>;
+        ref = init_vec<V, T(norm_min / 2), T(max / 2)>;
         t.verify_equal(a / x, ref);
         t.verify_equal(b / b, V(1));
-        ref = vec<V, T(2 / max), T(2 / (norm_min + 1))>;
+        ref = init_vec<V, T(2 / max), T(2 / (norm_min + 1))>;
         t.verify_equal(x / b, ref);
         t.verify_equal(x /= b, ref);
         t.verify_equal(x, ref);
