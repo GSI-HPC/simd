@@ -677,6 +677,9 @@ namespace std::simd
 
       /** @internal
        * @brief Set padding elements to @p __id; add more padding elements if necessary.
+       *
+       * @note This function can rearrange the element order since the result is only used for
+       * reductions.
        */
       template <typename _Vp, __canon_value_type __id>
         [[__gnu__::__always_inline__]]
@@ -693,11 +696,13 @@ namespace std::simd
             }
           else
             {
-              static_assert(sizeof(_Vp) <= 16);
+              static_assert(sizeof(_Vp) <= 16); // => max. 7 Bytes need to be zeroed
               static_assert(sizeof(_M_data) <= sizeof(_Vp));
               _Vp __v1 = __vec_zero_pad_to<sizeof(_Vp)>(_M_data);
               if constexpr (__id == 0 && _S_is_partial)
                 // cheapest solution: shift values to the back while shifting in zeros
+                // This is valid because we shift out padding elements and use all elements in a
+                // subsequent reduction.
                 __v1 = __v1.template _M_elements_shifted_to_front<-(_Vp::_S_size - _S_size)>();
               else if constexpr (_Vp::_S_size - _S_size == 1)
                 // if a single element needs to be changed, use an insert instruction
