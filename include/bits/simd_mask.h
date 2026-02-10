@@ -226,6 +226,8 @@ namespace std::simd
     return 0;
   }
 
+  // in principle, this overload allows conversions to _Dst - and it wouldn't be wrong - but the
+  // general overload below is still a better candidate in overload resolution
   template <typename _Dst>
     [[__gnu__::__always_inline__]]
     constexpr _Dst
