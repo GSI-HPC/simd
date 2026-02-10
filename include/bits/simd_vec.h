@@ -669,7 +669,7 @@ namespace std::simd
                 }
             }
 #endif
-          return _S_static_permute(*this, [](int __i) {
+          return _S_static_permute(*this, [](int __i) consteval {
                    int __off = __i + _Shift;
                    return __off >= _S_size || __off < 0 ? zero_element : __off;
                  });
