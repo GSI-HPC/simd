@@ -247,8 +247,8 @@ namespace std::simd
     constexpr _Dst
     __extract_simd_at(auto _Offset, const _Vs&... __xs)
     {
-      using _Ap = typename _Dst::abi_type;
-      if constexpr (_Ap::_S_nreg >= 2)
+      using _Adst = typename _Dst::abi_type;
+      if constexpr (_Adst::_S_nreg >= 2)
         {
           using _Dst0 = remove_cvref_t<decltype(declval<_Dst>()._M_get_low())>;
           using _Dst1 = remove_cvref_t<decltype(declval<_Dst>()._M_get_high())>;
@@ -258,20 +258,20 @@ namespace std::simd
       else
         {
           using _Ret = remove_cvref_t<decltype(declval<_Dst>()._M_get())>;
-          constexpr bool __use_bitmask = __simd_mask_type<_Dst> && _Ap::_S_is_bitmask;
-          constexpr int __dst_full_size = __bit_ceil(unsigned(_Ap::_S_size));
+          constexpr bool __use_bitmask = __simd_mask_type<_Dst> && _Adst::_S_is_bitmask;
+          constexpr int __dst_full_size = __bit_ceil(unsigned(_Adst::_S_size));
           constexpr int __nargs = sizeof...(__xs);
-          using _A0 = typename _Vs...[0]::abi_type;
+          using _Afirst = typename _Vs...[0]::abi_type;
           using _Alast = typename _Vs...[__nargs - 1]::abi_type;
           const auto& __x0 = __xs...[0];
           const auto& __xlast = __xs...[__nargs - 1];
           constexpr int __ninputs = (_Vs::size.value + ...);
-          if constexpr (_Offset.value >= _A0::_S_size
-                          || __ninputs - _Offset.value - _Alast::_S_size >= _Ap::_S_size)
+          if constexpr (_Offset.value >= _Afirst::_S_size
+                          || __ninputs - _Offset.value - _Alast::_S_size >= _Adst::_S_size)
             { // can drop inputs at the front and/or back of the pack
               constexpr int __skip_front = __packs_to_skip_at_front(_Offset.value,
                                                                     {_Vs::size.value...});
-              constexpr int __skip_back = __packs_to_skip_at_back(_Offset.value, _Ap::_S_size,
+              constexpr int __skip_back = __packs_to_skip_at_back(_Offset.value, _Adst::_S_size,
                                                                   {_Vs::size.value...});
               static_assert(__skip_front > 0 || __skip_back > 0);
               constexpr auto [...__skip] = _IotaArray<__skip_front>;
@@ -279,13 +279,13 @@ namespace std::simd
               constexpr int __new_offset = _Offset.value - (0 + ... + _Vs...[__skip]::size.value);
               return __extract_simd_at<_Dst>(cw<__new_offset>, __xs...[__is + __skip_front]...);
             }
-          else if constexpr (__scalar_abi_tag<_Ap>)
+          else if constexpr (__scalar_abi_tag<_Adst>)
             { // trivial conversion to one value_type
               return _Dst(__x0[_Offset.value]);
             }
-          else if constexpr (_A0::_S_nreg >= 2 || _Alast::_S_nreg >= 2)
+          else if constexpr (_Afirst::_S_nreg >= 2 || _Alast::_S_nreg >= 2)
             { // flatten first and/or last multi-register argument
-              constexpr bool __flatten_first = _A0::_S_nreg >= 2;
+              constexpr bool __flatten_first = _Afirst::_S_nreg >= 2;
               constexpr bool __flatten_last = __nargs > 1 && _Alast::_S_nreg >= 2;
               constexpr auto [...__is] = _IotaArray<__nargs - __flatten_first - __flatten_last>;
               if constexpr (__flatten_first && __flatten_last)
@@ -300,7 +300,7 @@ namespace std::simd
                          _Offset, __xs...[__is]..., __xlast._M_get_low(), __xlast._M_get_high());
             }
           else if constexpr (__simd_mask_type<_Dst>
-                               && ((_Ap::_S_variant != _Vs::abi_type::_S_variant
+                               && ((_Adst::_S_variant != _Vs::abi_type::_S_variant
                                       && !__scalar_abi_tag<typename _Vs::abi_type>) || ...))
             { // convert ABI tag if incompatible
               return __extract_simd_at<_Dst>(
@@ -318,25 +318,25 @@ namespace std::simd
             }
           else if constexpr (__use_bitmask)
             { // fairly simple and optimal bit shifting solution
-              static_assert(_A0::_S_nreg == 1);
-              static_assert(_Offset.value < _A0::_S_size);
+              static_assert(_Afirst::_S_nreg == 1);
+              static_assert(_Offset.value < _Afirst::_S_size);
               int __offset = -_Offset.value;
               _Ret __r;
               template for (const auto& __x : {__xs...})
                 {
                   if (__offset <= 0)
                     __r = _Ret(__x._M_to_uint() >> -__offset);
-                  else if (__offset < _Ap::_S_size)
+                  else if (__offset < _Adst::_S_size)
                     __r |= _Ret(_Ret(__x._M_to_uint()) << __offset);
                   __offset += __x.size.value;
                 }
               return _Dst(__r);
             }
-          else if constexpr (__nargs == 2 && _Offset == 0 && _Ap::_S_nreg == 1
-                               && _A0::_S_size >= _Alast::_S_size
-                               && __has_single_bit(unsigned(_A0::_S_size)))
+          else if constexpr (__nargs == 2 && _Offset == 0 && _Adst::_S_nreg == 1
+                               && _Afirst::_S_size >= _Alast::_S_size
+                               && __has_single_bit(unsigned(_Afirst::_S_size)))
             { // simple __vec_concat
-              if constexpr (_A0::_S_size == 1)
+              if constexpr (_Afirst::_S_size == 1)
                 // even simpler init from two values
                 return _Ret{__x0._M_concat_data()[0], __xlast._M_concat_data()[0]};
               else
@@ -346,51 +346,51 @@ namespace std::simd
                   return __vec_concat(__v0, __v1);
                 }
             }
-          else if constexpr (__nargs == 2 && _Ap::_S_nreg == 1 && _Offset == 0
-                               && _A0::_S_nreg == 1 && _Alast::_S_size == 1)
+          else if constexpr (__nargs == 2 && _Adst::_S_nreg == 1 && _Offset == 0
+                               && _Afirst::_S_nreg == 1 && _Alast::_S_size == 1)
             { // optimize insertion of one element at the end
               _Ret __r = __vec_zero_pad_to<sizeof(_Ret)>(__x0._M_get());
-              __vec_set(__r, _A0::_S_size, __xlast._M_concat_data()[0]);
+              __vec_set(__r, _Afirst::_S_size, __xlast._M_concat_data()[0]);
               return __r;
             }
-          else if constexpr (__nargs == 2 && _Ap::_S_nreg == 1 && _Offset == 0
-                               && _A0::_S_nreg == 1 && _Alast::_S_size == 2)
+          else if constexpr (__nargs == 2 && _Adst::_S_nreg == 1 && _Offset == 0
+                               && _Afirst::_S_nreg == 1 && _Alast::_S_size == 2)
             { // optimize insertion of two elements at the end
               _Ret __r = __vec_zero_pad_to<sizeof(_Ret)>(__x0._M_concat_data());
               const auto __x1 = __xlast._M_concat_data();
-              if constexpr (sizeof(__x1) <= sizeof(double) && (_A0::_S_size & 1) == 0)
+              if constexpr (sizeof(__x1) <= sizeof(double) && (_Afirst::_S_size & 1) == 0)
                 { // can use a single insert instruction
                   using _Up = conditional_t<
                                 is_floating_point_v<__vec_value_type<_Ret>>,
                                 conditional_t<sizeof(__x1) == sizeof(double), double, float>,
                                 __integer_from<sizeof(__x1)>>;
                   auto __r2 = __vec_bit_cast<_Up>(__r);
-                  __vec_set(__r2, _A0::_S_size / 2, __vec_bit_cast<_Up>(__x1)[0]);
+                  __vec_set(__r2, _Afirst::_S_size / 2, __vec_bit_cast<_Up>(__x1)[0]);
                   __r = reinterpret_cast<_Ret>(__r2);
                 }
               else
                 {
-                  __vec_set(__r, _A0::_S_size, __x1[0]);
-                  __vec_set(__r, _A0::_S_size + 1, __x1[1]);
+                  __vec_set(__r, _Afirst::_S_size, __x1[0]);
+                  __vec_set(__r, _Afirst::_S_size + 1, __x1[1]);
                 }
               return __r;
             }
-          else if constexpr (__nargs == 2 && _A0::_S_nreg == 1 && _Alast::_S_nreg == 1)
+          else if constexpr (__nargs == 2 && _Afirst::_S_nreg == 1 && _Alast::_S_nreg == 1)
             { // optimize concat of two input vectors (e.g. using palignr)
               constexpr auto [...__is] = _IotaArray<__dst_full_size>;
               constexpr int __v2_offset = __width_of<decltype(__x0._M_concat_data())>;
               return __builtin_shufflevector(
                        __x0._M_concat_data(), __xlast._M_concat_data(), [](int __i) consteval {
-                       if (__i < _A0::_S_size)
+                       if (__i < _Afirst::_S_size)
                          return __i;
-                       __i -= _A0::_S_size;
+                       __i -= _Afirst::_S_size;
                        if (__i < _Alast::_S_size)
                          return __i + __v2_offset;
                        else
                          return -1;
                      }(__is + _Offset.value)...);
             }
-          else if (__is_const_known(__xs...) || __ninputs == _Ap::_S_size)
+          else if (__is_const_known(__xs...) || __ninputs == _Adst::_S_size)
             { // hard to optimize for the compiler, but necessary in constant expressions
               return _VecOps<_Ret>::_S_extract(
                        __vec_concat_sized<__xs.size.value...>(__xs._M_concat_data(false)...),
