@@ -113,21 +113,26 @@ namespace std::simd
           "Input range is too small. Did you mean to use 'partial_load'?");
 
       const size_t __rg_size = ranges::size(__r);
-      if (__builtin_is_constant_evaluated())
-        return _RV([&](size_t __i) {
-                 return __i < __rg_size && __mask[int(__i)] ? __r[__i] : _Rp();
-               });
-      else if constexpr (!__allow_out_of_bounds
-                           || (__static_size != dynamic_extent
-                                 && __static_size >= size_t(_RV::size.value)))
-        return _RV::_S_masked_load(__ptr, __mask);
-      else if (__rg_size >= size_t(_RV::size()))
-        return _RV::_S_masked_load(__ptr, __mask);
-      else if (__rg_size > 0)
-        return _RV::_S_masked_load(
-                 __ptr, __mask && _RV::mask_type::_S_partial_mask_of_n(int(__rg_size)));
+      if consteval
+        {
+          return _RV([&](size_t __i) {
+                   return __i < __rg_size && __mask[int(__i)] ? __r[__i] : _Rp();
+                 });
+        }
       else
-        return _RV();
+        {
+          if constexpr (!__allow_out_of_bounds
+                          || (__static_size != dynamic_extent
+                                && __static_size >= size_t(_RV::size.value)))
+            return _RV::_S_masked_load(__ptr, __mask);
+          else if (__rg_size >= size_t(_RV::size()))
+            return _RV::_S_masked_load(__ptr, __mask);
+          else if (__rg_size > 0)
+            return _RV::_S_masked_load(
+                     __ptr, __mask && _RV::mask_type::_S_partial_mask_of_n(int(__rg_size)));
+          else
+            return _RV();
+        }
     }
 
   template <typename _Vp = void, contiguous_iterator _It, typename... _Flags>
@@ -226,15 +231,18 @@ namespace std::simd
           ranges::size(__r) >= _TV::size(),
           "output range is too small. Did you mean to use 'partial_store'?");
 
-      if (__builtin_is_constant_evaluated())
+      if consteval
         {
           for (unsigned __i = 0; __i < __rg_size && __i < _TV::size(); ++__i)
             __ptr[__i] = static_cast<ranges::range_value_t<_Rg>>(__v[__i]);
         }
-      else if constexpr (!__allow_out_of_bounds)
-        __v._M_store(__ptr);
       else
-        _TV::_S_partial_store(__v, __ptr, __rg_size);
+        {
+          if constexpr (!__allow_out_of_bounds)
+            __v._M_store(__ptr);
+          else
+            _TV::_S_partial_store(__v, __ptr, __rg_size);
+        }
     }
 
   template <typename _Tp, typename _Ap, __sized_contiguous_range _Rg, typename... _Flags>
@@ -261,7 +269,7 @@ namespace std::simd
           "output range is too small. Did you mean to use 'partial_store'?");
 
       const size_t __rg_size = ranges::size(__r);
-      if (__builtin_is_constant_evaluated())
+      if consteval
         {
           for (int __i = 0; __i < _TV::size(); ++__i)
             {
@@ -269,11 +277,14 @@ namespace std::simd
                 __ptr[__i] = static_cast<ranges::range_value_t<_Rg>>(__v[__i]);
             }
         }
-      else if (__allow_out_of_bounds && __rg_size < size_t(_TV::size()))
-        _TV::_S_masked_store(__v, __ptr,
-                             __mask && _TV::mask_type::_S_partial_mask_of_n(int(__rg_size)));
       else
-        _TV::_S_masked_store(__v, __ptr, __mask);
+        {
+          if (__allow_out_of_bounds && __rg_size < size_t(_TV::size()))
+            _TV::_S_masked_store(__v, __ptr,
+                                 __mask && _TV::mask_type::_S_partial_mask_of_n(int(__rg_size)));
+          else
+            _TV::_S_masked_store(__v, __ptr, __mask);
+        }
     }
 
   template <typename _Tp, typename _Ap, contiguous_iterator _It, typename... _Flags>

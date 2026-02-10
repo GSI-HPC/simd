@@ -1482,19 +1482,22 @@ namespace std::simd
         {
           if constexpr (_S_is_scalar)
             _M_data = static_cast<value_type>(__ptr[0]);
-          else if (__builtin_is_constant_evaluated())
+          else if consteval
             {
               constexpr auto [...__is] = _IotaArray<_S_size>;
               _M_data = _DataType{static_cast<value_type>(__ptr[__is])...};
             }
-          else if constexpr (__converts_trivially<_Up, value_type>)
-            // This assumes std::floatN_t to be bitwise equal to float/double
-            __builtin_memcpy(&_M_data, __ptr, sizeof(value_type) * _S_size);
           else
             {
-              __vec_builtin_type<_Up, _S_full_size> __tmp = {};
-              __builtin_memcpy(&__tmp, __ptr, sizeof(_Up) * _S_size);
-              _M_data = __vec_cast<_DataType>(__tmp);
+              if constexpr (__converts_trivially<_Up, value_type>)
+                // This assumes std::floatN_t to be bitwise equal to float/double
+                __builtin_memcpy(&_M_data, __ptr, sizeof(value_type) * _S_size);
+              else
+                {
+                  __vec_builtin_type<_Up, _S_full_size> __tmp = {};
+                  __builtin_memcpy(&__tmp, __ptr, sizeof(_Up) * _S_size);
+                  _M_data = __vec_cast<_DataType>(__tmp);
+                }
             }
         }
 
@@ -1973,8 +1976,10 @@ namespace std::simd
               static_assert(false, "TODO");
 #endif
             }
-          else if (__builtin_is_constant_evaluated())
-            return __k._M_data ? __t._M_data : __f._M_data;
+          else if consteval
+            {
+              return __k._M_data ? __t._M_data : __f._M_data;
+            }
           else
             {
               constexpr bool __uses_simd_register = sizeof(_M_data) >= 8;

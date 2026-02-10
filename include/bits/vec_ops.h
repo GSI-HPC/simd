@@ -111,11 +111,15 @@ namespace std::simd
     __vec_get(_TV __v, int __i)
     {
 #ifdef _GLIBCXX_CLANG
-      if (__builtin_is_constant_evaluated())
-        return __builtin_bit_cast(array<__vec_value_type<_TV>, __width_of<_TV>>, __v)[__i];
+      if consteval
+        {
+          return __builtin_bit_cast(array<__vec_value_type<_TV>, __width_of<_TV>>, __v)[__i];
+        }
       else
 #endif
-        return __v[__i];
+        {
+          return __v[__i];
+        }
     }
 
   /**
@@ -127,7 +131,7 @@ namespace std::simd
     constexpr void
     __vec_set(_TV& __v, int __i, __vec_value_type<_TV> __x)
     {
-      if (__builtin_is_constant_evaluated())
+      if consteval
         {
 #ifdef _GLIBCXX_CLANG
           auto __arr = __builtin_bit_cast(array<__vec_value_type<_TV>, __width_of<_TV>>, __v);
@@ -139,7 +143,9 @@ namespace std::simd
 #endif
         }
       else
-        __v[__i] = __x;
+        {
+          __v[__i] = __x;
+        }
     }
 
   /** @internal
