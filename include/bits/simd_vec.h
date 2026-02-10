@@ -1599,37 +1599,47 @@ namespace std::simd
       { return _S_init(~_M_data); }
 
       // [simd.cassign] binary operators
-#define _GLIBCXX_SIMD_DEFINE_OP(sym)                                 \
-      [[__gnu__::__always_inline__]]                                 \
-      friend constexpr basic_vec&                                    \
-      operator sym##=(basic_vec& __x, const basic_vec& __y) noexcept \
-      requires requires(value_type __a) { __a sym __a; }             \
-      {                                                              \
-        __x._M_data sym##= __y._M_data;                              \
-        return __x;                                                  \
-      }
-
       /**
        * @brief Bitwise AND operator.
        *
        * Returns a new SIMD vector after element-wise AND.
        */
-      _GLIBCXX_SIMD_DEFINE_OP(&)
+      [[__gnu__::__always_inline__]]
+      friend constexpr basic_vec&
+      operator&=(basic_vec& __x, const basic_vec& __y) noexcept
+      requires requires(value_type __a) { __a & __a; }
+      {
+        __x._M_data &= __y._M_data;
+        return __x;
+      }
 
       /**
        * @brief Bitwise OR operator.
        *
        * Returns a new SIMD vector after element-wise OR.
        */
-      _GLIBCXX_SIMD_DEFINE_OP(|)
+      [[__gnu__::__always_inline__]]
+      friend constexpr basic_vec&
+      operator|=(basic_vec& __x, const basic_vec& __y) noexcept
+      requires requires(value_type __a) { __a | __a; }
+      {
+        __x._M_data |= __y._M_data;
+        return __x;
+      }
+
       /**
        * @brief Bitwise XOR operator.
        *
        * Returns a new SIMD vector after element-wise XOR.
        */
-      _GLIBCXX_SIMD_DEFINE_OP(^)
-
-#undef _GLIBCXX_SIMD_DEFINE_OP
+      [[__gnu__::__always_inline__]]
+      friend constexpr basic_vec&
+      operator^=(basic_vec& __x, const basic_vec& __y) noexcept
+      requires requires(value_type __a) { __a ^ __a; }
+      {
+        __x._M_data ^= __y._M_data;
+        return __x;
+      }
 
       /**
        * @brief Applies the compound assignment operator element-wise.
