@@ -1474,15 +1474,15 @@ namespace std::simd
     };
 
   template <typename _Fp>
-    concept __index_permutation_function_nosize = requires(_Fp const& __f)
+    concept __index_permutation_function_sized = requires(_Fp const& __f)
       {
-        { __f(0) } -> std::integral;
+        { __f(0, 0) } -> std::integral;
       };
 
   template <typename _Fp, typename _Simd>
     concept __index_permutation_function
-      = __index_permutation_function_nosize<_Fp> || requires(_Fp const& __f) {
-        { __f(0, 0) } -> std::integral;
+      = __index_permutation_function_sized<_Fp> || requires(_Fp const& __f) {
+        { __f(0) } -> std::integral;
       };
 
   /** @internal

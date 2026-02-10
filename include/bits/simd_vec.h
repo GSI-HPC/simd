@@ -360,10 +360,10 @@ namespace std::simd
           if constexpr (_S_is_scalar)
             {
               constexpr __simd_size_type __j = [&] consteval {
-                if constexpr (__index_permutation_function_nosize<_Fp>)
-                  return __idxmap(_Offset);
-                else
+                if constexpr (__index_permutation_function_sized<_Fp>)
                   return __idxmap(_Offset, _Size);
+                else
+                  return __idxmap(_Offset);
               }();
               if constexpr (__j == simd::zero_element || __j == simd::uninit_element)
                 return basic_vec();
@@ -376,10 +376,10 @@ namespace std::simd
               auto __idxmap2 = [=](auto __i) consteval {
                 if constexpr (int(__i + _Offset) >= _Size) // _S_full_size > _Size
                   return __simd_size_c<simd::uninit_element>;
-                else if constexpr (__index_permutation_function_nosize<_Fp>)
-                  return __simd_size_c<__idxmap(__i + _Offset)>;
-                else
+                else if constexpr (__index_permutation_function_sized<_Fp>)
                   return __simd_size_c<__idxmap(__i + _Offset, _Size)>;
+                else
+                  return __simd_size_c<__idxmap(__i + _Offset)>;
               };
               constexpr auto __adj_idx = [](auto __i) {
                 constexpr int __j = __i;
