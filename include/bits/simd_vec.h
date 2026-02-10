@@ -708,7 +708,7 @@ namespace std::simd
                 // if a single element needs to be changed, use an insert instruction
                 __vec_set(__v1._M_data, _Vp::_S_size - 1, __id);
               else if constexpr (__has_single_bit(unsigned(_Vp::_S_size - _S_size)))
-                { // if a single element needs to be changed, use an insert instruction
+                { // if 2^n elements need to be changed, use a single insert instruction
                   constexpr int __n = _Vp::_S_size - _S_size;
                   using _Ip = __integer_from<__n * sizeof(__canon_value_type)>;
                   constexpr auto [...__is] = _IotaArray<__n>;
