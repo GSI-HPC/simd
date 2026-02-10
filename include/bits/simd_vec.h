@@ -1658,6 +1658,18 @@ namespace std::simd
         if constexpr (_S_is_partial && is_integral_v<value_type> && is_signed_v<value_type>)
           { // avoid spurious UB on signed integer overflow of the padding element(s). But don't
             // remove UB of the active elements (so that UBsan can still do its job).
+            //
+            // This check is essentially free (at runtime) because DCE removes everything except
+            // the final change to _M_data. The overflow check is only emitted if UBsan is active.
+            //
+            // The alternative would be to always zero padding elements after operations that can
+            // produce non-zero values. However, right now:
+            // - auto f(simd::mask<int, 3> k) { return +k; } is a single VPABSD and would have to
+            //   sanitize
+            // - bit_cast to basic_vec with non-zero padding elements is fine
+            // - conversion from intrinsics can create non-zero padding elements
+            // - shuffles are allowed to put whatever they want into padding elements for
+            //   optimization purposes (e.g. for better instruction selection)
             using _UV = typename _Ap::template _DataType<make_unsigned_t<value_type>>;
             const _DataType __result
               = reinterpret_cast<_DataType>(reinterpret_cast<_UV>(__x._M_data)
@@ -1683,8 +1695,7 @@ namespace std::simd
       requires requires(value_type __a) { __a - __a; }
       {
         if constexpr (_S_is_partial && is_integral_v<value_type> && is_signed_v<value_type>)
-          { // avoid spurious UB on signed integer overflow of the padding element(s). But don't
-            // remove UB of the active elements (so that UBsan can still do its job).
+          { // see comment on operator+=
             using _UV = typename _Ap::template _DataType<make_unsigned_t<value_type>>;
             const _DataType __result
               = reinterpret_cast<_DataType>(reinterpret_cast<_UV>(__x._M_data)
@@ -1710,8 +1721,7 @@ namespace std::simd
       requires requires(value_type __a) { __a * __a; }
       {
         if constexpr (_S_is_partial && is_integral_v<value_type> && is_signed_v<value_type>)
-          { // avoid spurious UB on signed integer overflow of the padding element(s). But don't
-            // remove UB of the active elements (so that UBsan can still do its job).
+          { // see comment on operator+=
             for (int __i = 0; __i < _S_size; ++__i)
               {
                 if (__builtin_mul_overflow_p(__x._M_data[__i], __y._M_data[__i], value_type()))
