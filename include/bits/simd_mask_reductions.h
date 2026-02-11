@@ -46,7 +46,11 @@ namespace std::simd
     {
       if constexpr (_Ap::_S_size == 1)
 	return +__k[0];
+#if VIR_NEXT_PATCH
+      else if constexpr (_Ap::_S_is_vecmask && _Bytes <= sizeof(0ll))
+#else
       else if constexpr (_Ap::_S_is_vecmask)
+#endif
 	return -reduce(-__k);
       else
 	return __k._M_reduce_count();
