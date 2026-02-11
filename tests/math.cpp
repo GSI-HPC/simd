@@ -40,31 +40,31 @@ template <typename V>
 
     ADD_TEST(Roundings) {
       make_packed_array<V>(+0., -0., 0.5, -0.5, 1, 1.5, -1.5, 2, 2.5, -2.5, 3, -3, 9, -9,
-                           before_one, -before_one, after_one, -after_one,
-                           2 * before_one, -2 * before_one, 2 * after_one, -2 * after_one,
-                           inf, -inf, nan, denorm_min, norm_min / 3, norm_min, max,
-                           0x1.fffffffffffffp52, -0x1.fffffffffffffp52,
-                           0x1.ffffffffffffep52, -0x1.ffffffffffffep52,
-                           0x1.ffffffffffffdp52, -0x1.ffffffffffffdp52,
-                           0x1.fffffep21, -0x1.fffffep21,
-                           0x1.fffffcp21, -0x1.fffffcp21,
-                           0x1.fffffep22, -0x1.fffffep22,
-                           0x1.fffffcp22, -0x1.fffffcp22,
-                           0x1.fffffep23, -0x1.fffffep23,
-                           0x1.fffffcp23, -0x1.fffffcp23,
-                           0x1.8p23, -0x1.8p23),
+			   before_one, -before_one, after_one, -after_one,
+			   2 * before_one, -2 * before_one, 2 * after_one, -2 * after_one,
+			   inf, -inf, nan, denorm_min, norm_min / 3, norm_min, max,
+			   0x1.fffffffffffffp52, -0x1.fffffffffffffp52,
+			   0x1.ffffffffffffep52, -0x1.ffffffffffffep52,
+			   0x1.ffffffffffffdp52, -0x1.ffffffffffffdp52,
+			   0x1.fffffep21, -0x1.fffffep21,
+			   0x1.fffffcp21, -0x1.fffffcp21,
+			   0x1.fffffep22, -0x1.fffffep22,
+			   0x1.fffffcp22, -0x1.fffffcp22,
+			   0x1.fffffep23, -0x1.fffffep23,
+			   0x1.fffffcp23, -0x1.fffffcp23,
+			   0x1.8p23, -0x1.8p23),
       [](auto& t, V x) {
-        t.verify_equal(fabs(x), V([&](int i) { return std::fabs(x[i]); }));
-        t.verify_equal(copysign(x, x), x);
-        t.verify_equal(copysign(-x, x), x);
-        t.verify_equal(copysign(fabs(x), x), x);
-        t.verify_equal(trunc(x), V([&](int i) { return std::trunc(x[i]); }));
-        t.verify_equal(ceil(x), V([&](int i) { return std::ceil(x[i]); }));
-        t.verify_equal(floor(x), V([&](int i) { return std::floor(x[i]); }));
-        if !consteval
-        {
-          t.verify_equal(nearbyint(x), V([&](int i) { return std::nearbyint(x[i]); }));
-        }
+	t.verify_equal(fabs(x), V([&](int i) { return std::fabs(x[i]); }));
+	t.verify_equal(copysign(x, x), x);
+	t.verify_equal(copysign(-x, x), x);
+	t.verify_equal(copysign(fabs(x), x), x);
+	t.verify_equal(trunc(x), V([&](int i) { return std::trunc(x[i]); }));
+	t.verify_equal(ceil(x), V([&](int i) { return std::ceil(x[i]); }));
+	t.verify_equal(floor(x), V([&](int i) { return std::floor(x[i]); }));
+	if !consteval
+	{
+	  t.verify_equal(nearbyint(x), V([&](int i) { return std::nearbyint(x[i]); }));
+	}
       }
     };
   };

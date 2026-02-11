@@ -172,11 +172,11 @@ static_assert(std::is_same_v<decltype(flag_default | flag_default), flags<>>);
 static_assert(std::is_same_v<decltype(flag_convert | flag_default), flags<__convert_flag>>);
 static_assert(std::is_same_v<decltype(flag_convert | flag_convert), flags<__convert_flag>>);
 static_assert(std::is_same_v<decltype(flag_aligned | flag_convert),
-                             flags<__aligned_flag, __convert_flag>>);
+			     flags<__aligned_flag, __convert_flag>>);
 static_assert(std::is_same_v<decltype(flag_aligned | flag_convert | flag_aligned),
-                             flags<__aligned_flag, __convert_flag>>);
+			     flags<__aligned_flag, __convert_flag>>);
 static_assert(std::is_same_v<decltype(flag_aligned | (flag_convert | flag_aligned)),
-                             flags<__aligned_flag, __convert_flag>>);
+			     flags<__aligned_flag, __convert_flag>>);
 
 static_assert(!flag_default._S_test(flag_convert));
 static_assert(flag_convert._S_test(flag_convert));

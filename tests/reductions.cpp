@@ -28,62 +28,62 @@ template <typename V>
     poisoned(T x)
     {
       if constexpr (sizeof(V) == sizeof(T) * V::size())
-        return V(x);
+	return V(x);
       else
-        {
-          using P = simd::resize_t<sizeof(V) / sizeof(T), V>;
-          static_assert(P::size() > V::size());
-          constexpr auto [...is] = std::_IotaArray<P::size()>;
-          const T arr[P::size()] = {(is < V::size() ? x : T(7))...};
-          return std::bit_cast<V>(P(arr));
-        }
+	{
+	  using P = simd::resize_t<sizeof(V) / sizeof(T), V>;
+	  static_assert(P::size() > V::size());
+	  constexpr auto [...is] = std::_IotaArray<P::size()>;
+	  const T arr[P::size()] = {(is < V::size() ? x : T(7))...};
+	  return std::bit_cast<V>(P(arr));
+	}
     }
 
     ADD_TEST(Sum) {
       std::tuple {poisoned(0), poisoned(1)},
       [](auto& t, V v0, V v1) {
-        t.verify_equal(simd::reduce(v0), T(0));
-        t.verify_equal(simd::reduce(v1), T(V::size()));
+	t.verify_equal(simd::reduce(v0), T(0));
+	t.verify_equal(simd::reduce(v1), T(V::size()));
       }
     };
 
     ADD_TEST(Product) {
       std::tuple {poisoned(0), poisoned(1)},
       [](auto& t, V v0, V v1) {
-        t.verify_equal(simd::reduce(v0, mul), T(0));
-        t.verify_equal(simd::reduce(v1, mul), T(1));
+	t.verify_equal(simd::reduce(v0, mul), T(0));
+	t.verify_equal(simd::reduce(v1, mul), T(1));
       }
     };
 
     ADD_TEST(UnknownSum) {
       std::tuple {poisoned(0), poisoned(1)},
       [](auto& t, V v0, V v1) {
-        t.verify_equal(simd::reduce(v0, my_add), T(0));
-        t.verify_equal(simd::reduce(v1, my_add), T(V::size()));
+	t.verify_equal(simd::reduce(v0, my_add), T(0));
+	t.verify_equal(simd::reduce(v1, my_add), T(V::size()));
       }
     };
 
     ADD_TEST(And, std::is_integral_v<T>) {
       std::tuple {poisoned(0), poisoned(1)},
       [](auto& t, V v0, V v1) {
-        t.verify_equal(simd::reduce(v0, bit_and), T(0));
-        t.verify_equal(simd::reduce(v1, bit_and), T(1));
+	t.verify_equal(simd::reduce(v0, bit_and), T(0));
+	t.verify_equal(simd::reduce(v1, bit_and), T(1));
       }
     };
 
     ADD_TEST(Or, std::is_integral_v<T>) {
       std::tuple {poisoned(0), poisoned(1)},
       [](auto& t, V v0, V v1) {
-        t.verify_equal(simd::reduce(v0, bit_or), T(0));
-        t.verify_equal(simd::reduce(v1, bit_or), T(1));
+	t.verify_equal(simd::reduce(v0, bit_or), T(0));
+	t.verify_equal(simd::reduce(v1, bit_or), T(1));
       }
     };
 
     ADD_TEST(Xor, std::is_integral_v<T>) {
       std::tuple {poisoned(0), poisoned(1)},
       [](auto& t, V v0, V v1) {
-        t.verify_equal(simd::reduce(v0, bit_xor), T(0));
-        t.verify_equal(simd::reduce(v1, bit_xor), T(V::size() & 1));
+	t.verify_equal(simd::reduce(v0, bit_xor), T(0));
+	t.verify_equal(simd::reduce(v1, bit_xor), T(V::size() & 1));
       }
     };
   };

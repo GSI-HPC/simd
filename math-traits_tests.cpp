@@ -39,8 +39,8 @@ namespace math_tests
       { return value; }
 
       template <typename U>
-        requires (!std::same_as<T, U>) && Strict
-        operator U() const = delete;
+	requires (!std::same_as<T, U>) && Strict
+	operator U() const = delete;
     };
 
   // The next always has a common_type because the UDT is convertible_to<float> and is not an
@@ -79,7 +79,7 @@ namespace math_tests
   template <typename T0, typename... T1>
     concept not_hypot_invocable
       = !requires(T1... y) { simd::hypot(T0(), y...); }
-          && !requires(T1... y) { simd::hypot(y..., T0()); };
+	  && !requires(T1... y) { simd::hypot(y..., T0()); };
 
   template <typename R, typename T0, typename... T1>
     concept hypot_invocable_r = requires(T1... y) {
@@ -124,8 +124,8 @@ namespace math_tests
   static_assert(not_hypot_invocable<double, simd::vec<float, 1>, simd::vec<float, 1>>);
 
   static_assert(hypot_invocable_r<simd::vec<float, 1>, holder<float>,
-                                  std::constant_wrapper<2>, simd::vec<float, 1>>);
+				  std::constant_wrapper<2>, simd::vec<float, 1>>);
   static_assert(hypot_invocable_r<simd::vec<float, 1>, holder<short>,
-                                  simd::vec<float, 1>, float>);
+				  simd::vec<float, 1>, float>);
 #endif
 }

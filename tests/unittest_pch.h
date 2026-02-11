@@ -107,8 +107,8 @@ template <>
   struct canonical_vec_type<wchar_t>
   {
     using type = std::conditional_t<std::is_signed_v<wchar_t>,
-                                    simd::__integer_from<sizeof(wchar_t)>,
-                                    simd::_UInt<sizeof(wchar_t)>>;
+				    simd::__integer_from<sizeof(wchar_t)>,
+				    simd::_UInt<sizeof(wchar_t)>>;
   };
 
 template <>
@@ -181,7 +181,7 @@ struct additional_info
     operator()(std::string_view fmt, const Args&... args)
     {
       if (failed)
-        std::println("| {}", std::format(std::runtime_format(fmt), args...));
+	std::println("| {}", std::format(std::runtime_format(fmt), args...));
     }
 
   constexpr additional_info
@@ -245,31 +245,31 @@ template <typename T0, typename T1>
       return ulp_distance_signed(val0, std::simd::rebind_t<T1, T0>(ref1));
     else if constexpr (std::is_floating_point_v<value_type_t<T0>>)
       {
-        int fp_exceptions = 0;
-        if !consteval
-          {
-            fp_exceptions = std::fetestexcept(FE_ALL_EXCEPT);
-          }
-        using std::isnan;
-        using std::abs;
-        using T = value_type_t<T0>;
-        using L = std::numeric_limits<T>;
-        constexpr T0 signexp_mask = -L::infinity();
-        T0 ref0(ref1);
-        T1 val1(val0);
-        const auto subnormal = fabs(ref1) < L::min();
-        using I = as_unsigned_t<T1>;
-        const T1 eps1 = select(subnormal, L::denorm_min(),
-                               L::epsilon() * std::bit_cast<T0>(
-                                                std::bit_cast<I>(ref1)
-                                                  & std::bit_cast<I>(signexp_mask)));
-        const T0 ulp = select(val0 == ref0 || (isnan(val0) && isnan(ref0)),
-                              T0(), T0((ref1 - val1) / eps1));
-        if !consteval
-          {
-            std::feclearexcept(FE_ALL_EXCEPT ^ fp_exceptions);
-          }
-        return ulp;
+	int fp_exceptions = 0;
+	if !consteval
+	  {
+	    fp_exceptions = std::fetestexcept(FE_ALL_EXCEPT);
+	  }
+	using std::isnan;
+	using std::abs;
+	using T = value_type_t<T0>;
+	using L = std::numeric_limits<T>;
+	constexpr T0 signexp_mask = -L::infinity();
+	T0 ref0(ref1);
+	T1 val1(val0);
+	const auto subnormal = fabs(ref1) < L::min();
+	using I = as_unsigned_t<T1>;
+	const T1 eps1 = select(subnormal, L::denorm_min(),
+			       L::epsilon() * std::bit_cast<T0>(
+						std::bit_cast<I>(ref1)
+						  & std::bit_cast<I>(signexp_mask)));
+	const T0 ulp = select(val0 == ref0 || (isnan(val0) && isnan(ref0)),
+			      T0(), T0((ref1 - val1) / eps1));
+	if !consteval
+	  {
+	    std::feclearexcept(FE_ALL_EXCEPT ^ fp_exceptions);
+	  }
+	return ulp;
       }
     else
       return ref1 - val0;
@@ -285,8 +285,8 @@ template <typename T0, typename T1>
       return ulp;
     else
       {
-        using std::abs;
-        return fabs(ulp);
+	using std::abs;
+	return fabs(ulp);
       }
   }
 
@@ -299,34 +299,34 @@ template <typename T>
       return std::bit_cast<_UInt<sizeof(T)>>(a) == std::bit_cast<_UInt<sizeof(T)>>(b);
     else if constexpr (std::simd::__simd_vec_or_mask_type<T>)
       {
-        using TT = typename T::value_type;
-        if constexpr (std::is_integral_v<TT>)
-          return all_of(a == b);
-        else if constexpr (T::abi_type::_S_nreg > 1)
-          {
-            return bit_equal(a._M_get_low(), b._M_get_low())
-                     && bit_equal(a._M_get_high(), b._M_get_high());
-          }
-        else
-          {
-            // float, 4 -> unsigned, 4 (uint_size = 4)
-            // double, 4 -> ullong, 4 (uint_size = 8)
-            // complex<double>, 4 -> ullong, 8 (uint_size = 8)
-            constexpr size_t uint_size = std::min(size_t(8), sizeof(TT));
-            struct B
-            {
-              alignas(T) simd::rebind_t<_UInt<uint_size>,
-                                        simd::resize_t<T::size() * sizeof(TT) / uint_size, T>> data;
-            };
-            if constexpr (sizeof(B) == sizeof(a))
-              return all_of(std::bit_cast<B>(a).data == std::bit_cast<B>(b).data);
-            else
-              {
-                auto [a0, a1] = chunk<std::bit_ceil(unsigned(T::size())) / 2>(a);
-                auto [b0, b1] = chunk<std::bit_ceil(unsigned(T::size())) / 2>(b);
-                return bit_equal(a0, b0) && bit_equal(a1, b1);
-              }
-          }
+	using TT = typename T::value_type;
+	if constexpr (std::is_integral_v<TT>)
+	  return all_of(a == b);
+	else if constexpr (T::abi_type::_S_nreg > 1)
+	  {
+	    return bit_equal(a._M_get_low(), b._M_get_low())
+		     && bit_equal(a._M_get_high(), b._M_get_high());
+	  }
+	else
+	  {
+	    // float, 4 -> unsigned, 4 (uint_size = 4)
+	    // double, 4 -> ullong, 4 (uint_size = 8)
+	    // complex<double>, 4 -> ullong, 8 (uint_size = 8)
+	    constexpr size_t uint_size = std::min(size_t(8), sizeof(TT));
+	    struct B
+	    {
+	      alignas(T) simd::rebind_t<_UInt<uint_size>,
+					simd::resize_t<T::size() * sizeof(TT) / uint_size, T>> data;
+	    };
+	    if constexpr (sizeof(B) == sizeof(a))
+	      return all_of(std::bit_cast<B>(a).data == std::bit_cast<B>(b).data);
+	    else
+	      {
+		auto [a0, a1] = chunk<std::bit_ceil(unsigned(T::size())) / 2>(a);
+		auto [b0, b1] = chunk<std::bit_ceil(unsigned(T::size())) / 2>(b);
+		return bit_equal(a0, b0) && bit_equal(a1, b1);
+	      }
+	  }
       }
 #if VIR_NEXT_PATCH
     else if constexpr (complex_like<T>)
@@ -361,35 +361,35 @@ template <typename V>
       return true;
     else if constexpr (std::simd::__simd_vec_type<V>)
       {
-        using T = typename V::value_type;
+	using T = typename V::value_type;
 #if VIR_NEXT_PATCH
-        using M = typename V::mask_type;
-        if constexpr (complex_like<T>)
-          { // fix up nan == nan and (inf,nan) == (inf,?)
-            eq |= M(isnan(a.real()) && isnan(a.imag()) && isnan(b.real()) && isnan(a.imag()))
+	using M = typename V::mask_type;
+	if constexpr (complex_like<T>)
+	  { // fix up nan == nan and (inf,nan) == (inf,?)
+	    eq |= M(isnan(a.real()) && isnan(a.imag()) && isnan(b.real()) && isnan(a.imag()))
 #if 0
-                    || (isinf(a.real()) && isunordered(a.imag(), b.imag())
-                            && a.real() == b.real())
-                    || (isinf(a.imag()) && isunordered(a.real(), b.real())
-                            && a.imag() == b.imag()));
+		    || (isinf(a.real()) && isunordered(a.imag(), b.imag())
+			    && a.real() == b.real())
+		    || (isinf(a.imag()) && isunordered(a.real(), b.real())
+			    && a.imag() == b.imag()));
 #else
-                  // a and b are "an infinity" according to C23 Annex G.3
-                    || (my_isinf(a) && my_isinf(b));
+		  // a and b are "an infinity" according to C23 Annex G.3
+		    || (my_isinf(a) && my_isinf(b));
 #endif
-          }
-        else
+	  }
+	else
 #endif
-        if constexpr (std::is_floating_point_v<T>)
-          { // fix up nan == nan results
+	if constexpr (std::is_floating_point_v<T>)
+	  { // fix up nan == nan results
 #if VIR_NEXT_PATCH
-            eq |= isnan(a) && isnan(b);
+	    eq |= isnan(a) && isnan(b);
 #else
-            eq |= a._M_isnan() && b._M_isnan();
+	    eq |= a._M_isnan() && b._M_isnan();
 #endif
-          }
-        else
-          return false;
-        return std::simd::all_of(eq);
+	  }
+	else
+	  return false;
+	return std::simd::all_of(eq);
       }
     else if constexpr (std::is_floating_point_v<V>)
       return std::isnan(a) && std::isnan(b);
@@ -413,16 +413,16 @@ struct constexpr_verifier
   {
     try
       {
-        f();
-        okay = false;
+	f();
+	okay = false;
       }
     catch (const test::precondition_failure& failure)
       {
-        okay = okay && failure.msg == expected_msg;
+	okay = okay && failure.msg == expected_msg;
       }
     catch (...)
       {
-        okay = false;
+	okay = false;
       }
     return {};
   }
@@ -439,15 +439,15 @@ struct constexpr_verifier
     verify_equal(const V& v, const Ref& ref) &
     {
       if constexpr (std::is_convertible_v<V, Ref> && std::is_convertible_v<Ref, V>)
-        {
-          okay = okay && equal_with_nan_and_inf_fixup<V>(v, ref)
-                   && equal_with_nan_and_inf_fixup<Ref>(v, ref);
-        }
+	{
+	  okay = okay && equal_with_nan_and_inf_fixup<V>(v, ref)
+		   && equal_with_nan_and_inf_fixup<Ref>(v, ref);
+	}
       else
-        {
-          using Common = decltype(std::simd::select(v == ref, v, ref));
-          okay = okay && equal_with_nan_and_inf_fixup<Common>(v, ref);
-        }
+	{
+	  using Common = decltype(std::simd::select(v == ref, v, ref));
+	  okay = okay && equal_with_nan_and_inf_fixup<Common>(v, ref);
+	}
       return {};
     }
 
@@ -456,14 +456,14 @@ struct constexpr_verifier
     verify_bit_equal(const V& v, const Ref& ref) &
     {
       if constexpr (std::is_convertible_v<V, Ref> && std::is_convertible_v<Ref, V>)
-        {
-          okay = okay && bit_equal<V>(v, ref) && bit_equal<Ref>(v, ref);
-        }
+	{
+	  okay = okay && bit_equal<V>(v, ref) && bit_equal<Ref>(v, ref);
+	}
       else
-        {
-          using Common = decltype(std::simd::select(v == ref, v, ref));
-          okay = okay && bit_equal<Common>(v, ref);
-        }
+	{
+	  using Common = decltype(std::simd::select(v == ref, v, ref));
+	  okay = okay && bit_equal<Common>(v, ref);
+	}
       return {};
     }
 
@@ -505,11 +505,11 @@ template <int... is>
     constexpr_verifier t;
     try
       {
-        fun.template operator()<is...>(t, args...);
+	fun.template operator()<is...>(t, args...);
       }
     catch(const test::precondition_failure& fail)
       {
-        return false;
+	return false;
       }
     return t.okay;
   }
@@ -526,7 +526,7 @@ template <typename T>
 template <typename T>
   concept pair_specialization
     = std::same_as<std::remove_cvref_t<T>, std::pair<typename std::remove_cvref_t<T>::first_type,
-                                                     typename std::remove_cvref_t<T>::second_type>>;
+						     typename std::remove_cvref_t<T>::second_type>>;
 
 struct runtime_verifier
 {
@@ -537,39 +537,39 @@ struct runtime_verifier
     print_value(const char* what, const T& val)
     {
       if constexpr (std::is_same_v<T, log_novalue>)
-        ;
+	;
       else if constexpr (std::is_floating_point_v<T>)
-        std::println(std::runtime_format("|{:>9} | {:a}"), what, val);
+	std::println(std::runtime_format("|{:>9} | {:a}"), what, val);
       else if constexpr (std::is_integral_v<T>)
-        std::println(std::runtime_format("|{:>9} | {:d}"), what, val);
+	std::println(std::runtime_format("|{:>9} | {:d}"), what, val);
       else if constexpr (std::ranges::range<T>)
-        {
-          if constexpr (std::is_floating_point_v<std::ranges::range_value_t<T>>)
-            std::println(std::runtime_format("|{:>9} | {::a}"), what, val);
-          else if constexpr (display_string_of(^^T).contains("string"))
-            std::println(std::runtime_format("|{:>9} | {}"), what, val);
-          else if constexpr (std::is_integral_v<std::ranges::range_value_t<T>>)
-            std::println(std::runtime_format("|{:>9} | {::d}"), what, val);
-          else
-            std::println(std::runtime_format("|{:>9} | {}"), what, val);
-        }
+	{
+	  if constexpr (std::is_floating_point_v<std::ranges::range_value_t<T>>)
+	    std::println(std::runtime_format("|{:>9} | {::a}"), what, val);
+	  else if constexpr (display_string_of(^^T).contains("string"))
+	    std::println(std::runtime_format("|{:>9} | {}"), what, val);
+	  else if constexpr (std::is_integral_v<std::ranges::range_value_t<T>>)
+	    std::println(std::runtime_format("|{:>9} | {::d}"), what, val);
+	  else
+	    std::println(std::runtime_format("|{:>9} | {}"), what, val);
+	}
       else
-        std::println(std::runtime_format("|{:>9} | {}"), what, val);
+	std::println(std::runtime_format("|{:>9} | {}"), what, val);
     }
 
   template <typename X, typename Y>
     additional_info
     log_failure(const X& x, const Y& y, std::source_location loc, std::size_t ip,
-                std::string_view s)
+		std::string_view s)
     {
       if (first_fail)
-        {
-          first_fail = false;
-          std::println("{}", " ❌ FAIL");
-        }
+	{
+	  first_fail = false;
+	  std::println("{}", " ❌ FAIL");
+	}
       ++failed_tests;
       std::println(std::runtime_format("{}:{}:{}: ({:x}) in {} test: {} failed"),
-                   loc.file_name(), loc.line(), loc.column(), ip, test_kind, s);
+		   loc.file_name(), loc.line(), loc.column(), ip, test_kind, s);
       print_value("result", x);
       print_value("expected", y);
       return additional_info {true};
@@ -595,33 +595,33 @@ struct runtime_verifier
   [[gnu::always_inline]]
   additional_info
   verify_precondition_failure(std::string_view expected_msg, auto&& f,
-                              std::source_location loc = std::source_location::current()) &
+			      std::source_location loc = std::source_location::current()) &
   {
     const auto ip = determine_ip();
     try
       {
-        f();
-        ++failed_tests;
-        return log_failure(log_novalue(), log_novalue(), loc, ip,
-                           "precondition failure not detected");
+	f();
+	++failed_tests;
+	return log_failure(log_novalue(), log_novalue(), loc, ip,
+			   "precondition failure not detected");
       }
     catch (const test::precondition_failure& failure)
       {
-        if (failure.msg != expected_msg)
-          {
-            ++failed_tests;
-            return log_failure(failure.msg, expected_msg, loc, ip, "unexpected exception");
-          }
-        else
-          {
-            ++passed_tests;
-            return {};
-          }
+	if (failure.msg != expected_msg)
+	  {
+	    ++failed_tests;
+	    return log_failure(failure.msg, expected_msg, loc, ip, "unexpected exception");
+	  }
+	else
+	  {
+	    ++passed_tests;
+	    return {};
+	  }
       }
     catch (...)
       {
-        ++failed_tests;
-        return log_failure(log_novalue(), log_novalue(), loc, ip, "unexpected exception");
+	++failed_tests;
+	return log_failure(log_novalue(), log_novalue(), loc, ip, "unexpected exception");
       }
   }
 
@@ -632,8 +632,8 @@ struct runtime_verifier
     const auto ip = determine_ip();
     if (std::simd::all_of(k))
       {
-        ++passed_tests;
-        return {};
+	++passed_tests;
+	return {};
       }
     else
       return log_failure(log_novalue(), log_novalue(), loc, ip, "verify");
@@ -643,56 +643,56 @@ struct runtime_verifier
     [[gnu::always_inline]]
     additional_info
     verify_equal(const V& v, const Ref& ref,
-                 std::source_location loc = std::source_location::current())
+		 std::source_location loc = std::source_location::current())
     {
       const auto ip = determine_ip();
       bool ok;
       if constexpr (pair_specialization<V> && pair_specialization<Ref>)
-        ok = std::simd::all_of(v.first == ref.first) && std::simd::all_of(v.second == ref.second);
+	ok = std::simd::all_of(v.first == ref.first) && std::simd::all_of(v.second == ref.second);
       else if constexpr (std::is_convertible_v<V, Ref> && std::is_convertible_v<Ref, V>)
-        ok = equal_with_nan_and_inf_fixup<V>(v, ref) && equal_with_nan_and_inf_fixup<Ref>(v, ref);
+	ok = equal_with_nan_and_inf_fixup<V>(v, ref) && equal_with_nan_and_inf_fixup<Ref>(v, ref);
       else
-        ok = equal_with_nan_and_inf_fixup<decltype(std::simd::select(v == ref, v, ref))>(v, ref);
+	ok = equal_with_nan_and_inf_fixup<decltype(std::simd::select(v == ref, v, ref))>(v, ref);
       if (ok)
-        {
-          ++passed_tests;
-          return {};
-        }
+	{
+	  ++passed_tests;
+	  return {};
+	}
       else
-        return log_failure(v, ref, loc, ip, "verify_equal");
+	return log_failure(v, ref, loc, ip, "verify_equal");
     }
 
   template <typename V, typename Ref>
     [[gnu::always_inline]]
     additional_info
     verify_bit_equal(const V& v, const Ref& ref,
-                     std::source_location loc = std::source_location::current())
+		     std::source_location loc = std::source_location::current())
     {
       const auto ip = determine_ip();
       bool ok = false;
       if constexpr (std::is_convertible_v<V, Ref> && std::is_convertible_v<Ref, V>)
-        ok = bit_equal<V>(v, ref) && bit_equal<Ref>(v, ref);
+	ok = bit_equal<V>(v, ref) && bit_equal<Ref>(v, ref);
       else
-        ok = bit_equal<decltype(std::simd::select(v == ref, v, ref))>(v, ref);
+	ok = bit_equal<decltype(std::simd::select(v == ref, v, ref))>(v, ref);
       if (ok)
-        {
-          ++passed_tests;
-          return {};
-        }
+	{
+	  ++passed_tests;
+	  return {};
+	}
       else
-        return log_failure(v, ref, loc, ip, "verify_bit_equal");
+	return log_failure(v, ref, loc, ip, "verify_bit_equal");
     }
 
   [[gnu::always_inline]]
   additional_info
   verify_not_equal(auto&& x, auto&& y,
-                   std::source_location loc = std::source_location::current())
+		   std::source_location loc = std::source_location::current())
   {
     const auto ip = determine_ip();
     if (std::simd::all_of(x != y))
       {
-        ++passed_tests;
-        return {};
+	++passed_tests;
+	return {};
       }
     else
       return log_failure(x, y, loc, ip, "verify_not_equal");
@@ -702,19 +702,19 @@ struct runtime_verifier
   [[gnu::always_inline]]
   additional_info
   verify_equal_to_ulp(auto&& x, auto&& y, float allowed_distance,
-                      std::source_location loc = std::source_location::current())
+		      std::source_location loc = std::source_location::current())
   {
     const auto ip = determine_ip();
     const bool success = std::simd::all_of(ulp_distance(x, y) <= allowed_distance);
     if (success)
       {
-        ++passed_tests;
-        return {};
+	++passed_tests;
+	return {};
       }
     else
       return log_failure(x, y, loc, ip, "verify_equal_to_ulp")
-               ("distance:", ulp_distance_signed(x, y),
-                "\n allowed:", allowed_distance);
+	       ("distance:", ulp_distance_signed(x, y),
+		"\n allowed:", allowed_distance);
   }
 };
 
@@ -885,11 +885,11 @@ const int run_check_cpu_support = [] {
 template <typename V, int Init = 0, int Max = V::size() + Init - 1>
   constexpr value_type_t<V> test_iota_max
     = sizeof(value_type_t<V>) < sizeof(int)
-        ? std::min(int(std::numeric_limits<value_type_t<V>>::max()),
-                   Max < 0 ? std::min(V::size() + Init - 1,
-                                      int(std::numeric_limits<value_type_t<V>>::max()) + Max)
-                           : Max)
-        : V::size() + Init - 1;
+	? std::min(int(std::numeric_limits<value_type_t<V>>::max()),
+		   Max < 0 ? std::min(V::size() + Init - 1,
+				      int(std::numeric_limits<value_type_t<V>>::max()) + Max)
+			   : Max)
+	: V::size() + Init - 1;
 
 template <typename T, typename Abi, int Init, int Max>
   requires std::is_enum_v<T>
@@ -907,22 +907,22 @@ template <typename T, typename Abi, int Init, int Max>
  */
 template <typename V, int Init = 0, int MaxArg = int(test_iota_max<V, Init>)>
   constexpr V test_iota = V([](int i) {
-              constexpr int Max = MaxArg < 0 ? int(test_iota_max<V, Init, MaxArg>) : MaxArg;
-              static_assert(Max == 0 || Max > Init || V::size() == 1);
-              i += Init;
-              if constexpr (Max > Init)
-                {
-                  while (i > Max)
-                    i -= Max - Init + 1;
-                }
-              using T = value_type_t<V>;
+	      constexpr int Max = MaxArg < 0 ? int(test_iota_max<V, Init, MaxArg>) : MaxArg;
+	      static_assert(Max == 0 || Max > Init || V::size() == 1);
+	      i += Init;
+	      if constexpr (Max > Init)
+		{
+		  while (i > Max)
+		    i -= Max - Init + 1;
+		}
+	      using T = value_type_t<V>;
 #if VIR_NEXT_PATCH
-              if constexpr (std::simd::__simd_complex<V>)
-                return std::complex<T>(T(i), T());
-              else
+	      if constexpr (std::simd::__simd_complex<V>)
+		return std::complex<T>(T(i), T());
+	      else
 #endif
-                return static_cast<T>(i);
-            });
+		return static_cast<T>(i);
+	    });
 
 /**
  * A data-parallel object initialized with {values..., values..., ...}
@@ -958,9 +958,9 @@ template <int MaxN = -1>
     template <typename Args = void, typename Fun = void>
       struct add_test
       {
-        alignas(std::bit_floor(sizeof(Args))) Args args;
-        Fun fun;
-        static constexpr int max_n = MaxN;
+	alignas(std::bit_floor(sizeof(Args))) Args args;
+	Fun fun;
+	static constexpr int max_n = MaxN;
       };
   };
 
@@ -985,10 +985,10 @@ template <auto test_ref, int... is, std::size_t... arg_idx>
       ++passed_tests;
     else
       {
-        ++failed_tests;
-        if (first_fail)
-          std::println("{}", " ❌ FAIL");
-        std::println("{}", "=> constexpr test failed.");
+	++failed_tests;
+	if (first_fail)
+	  std::println("{}", " ❌ FAIL");
+	std::println("{}", "=> constexpr test failed.");
       }
     if (before == failed_tests)
       std::println("{}", " ✅ PASS");
@@ -997,7 +997,7 @@ template <auto test_ref, int... is, std::size_t... arg_idx>
 #define ADD_TEST(name, ...)                                                                        \
     template <int>                                                                                 \
       static constexpr dummy_test test_obj_##name = {};                                            \
-                                                                                                   \
+												   \
     template <int Tmp>                                                                             \
       requires (Tmp == 0) __VA_OPT__(&& (__VA_ARGS__))                                             \
       static constexpr add_test test_obj_##name<Tmp> =
@@ -1005,7 +1005,7 @@ template <auto test_ref, int... is, std::size_t... arg_idx>
 #define ADD_TEST_N(name, N, ...)                                                                   \
     template <int>                                                                                 \
       static constexpr dummy_test test_n_obj_##name = {};                                          \
-                                                                                                   \
+												   \
     template <int Tmp>                                                                             \
       requires (Tmp == 0) __VA_OPT__(&& (__VA_ARGS__))                                             \
       static constexpr repeat_n_times<N>::add_test test_n_obj_##name<Tmp> =
@@ -1057,15 +1057,15 @@ template <typename T>
     auto ctx = std::meta::access_context::current();
     for (std::meta::info ifo : members_of(^^T, ctx))
       {
-        if (is_variable_template(ifo) && has_identifier(ifo)
-              && identifier_of(ifo).starts_with("test_"))
-        {
-          std::meta::info obj = substitute(ifo, {std::meta::reflect_constant(0)});
-          const int off = identifier_of(ifo).starts_with("test_n_obj_") ? 11 : 9;
-          if (is_same_type(remove_const(type_of(obj)), ^^dummy_test))
-            obj = std::meta::info();
-          r.push_back(test_info {obj, identifier_of(ifo).substr(off)});
-        }
+	if (is_variable_template(ifo) && has_identifier(ifo)
+	      && identifier_of(ifo).starts_with("test_"))
+	{
+	  std::meta::info obj = substitute(ifo, {std::meta::reflect_constant(0)});
+	  const int off = identifier_of(ifo).starts_with("test_n_obj_") ? 11 : 9;
+	  if (is_same_type(remove_const(type_of(obj)), ^^dummy_test))
+	    obj = std::meta::info();
+	  r.push_back(test_info {obj, identifier_of(ifo).substr(off)});
+	}
       }
     return r;
   }
@@ -1076,44 +1076,44 @@ template <typename V>
   {
     using std::operator""sv;
     std::string type_name = std::views::split(display_string_of(^^V), "std::simd::"sv)
-                              | std::views::join
-                              | std::ranges::to<std::string>();
+			      | std::views::join
+			      | std::ranges::to<std::string>();
     constexpr auto m = list_test_members<::Tests<V>>();
     std::println("+{:-^78}+", type_name);
     template for (constexpr int i : std::_IotaArray<m.size()>)
       {
-        constexpr std::string_view test_name = m[i].name;
-        constexpr std::meta::info ifo = m[i].obj;
-        if constexpr (ifo == std::meta::info())
-          std::println("|{:>15} |  - |{}", test_name, " 🟡 not applicable");
-        else
-          {
-            constexpr auto test_ref = &[:ifo:];
-            constexpr auto args = test_ref->args;
-            using A = std::remove_const_t<decltype(args)>;
-            if constexpr (test_ref->max_n >= 0)
-              {
-                static_assert(!array_specialization<A>, "this would be too expensive to compile");
-                template for (constexpr int n : std::_IotaArray<test_ref->max_n>)
-                  {
-                    std::print("|{:>15} |{:>3} |", test_name, n);
-                    invoke_test_impl<test_ref, n>(std::make_index_sequence<std::tuple_size_v<A>>());
-                  }
-              }
-            else if constexpr (array_specialization<A>)
-              { // call for each element
-                template for (constexpr std::size_t I : std::_IotaArray<args.size()>)
-                  {
-                    std::print("|{:>15} |{:>3}: {} |", test_name, I, args[I]);
-                    invoke_test_impl<test_ref>(std::index_sequence<I>());
-                  }
-              }
-            else
-              {
-                std::print("|{:>15} |  - |", test_name);
-                invoke_test_impl<test_ref>(std::make_index_sequence<std::tuple_size_v<A>>());
-              }
-          }
+	constexpr std::string_view test_name = m[i].name;
+	constexpr std::meta::info ifo = m[i].obj;
+	if constexpr (ifo == std::meta::info())
+	  std::println("|{:>15} |  - |{}", test_name, " 🟡 not applicable");
+	else
+	  {
+	    constexpr auto test_ref = &[:ifo:];
+	    constexpr auto args = test_ref->args;
+	    using A = std::remove_const_t<decltype(args)>;
+	    if constexpr (test_ref->max_n >= 0)
+	      {
+		static_assert(!array_specialization<A>, "this would be too expensive to compile");
+		template for (constexpr int n : std::_IotaArray<test_ref->max_n>)
+		  {
+		    std::print("|{:>15} |{:>3} |", test_name, n);
+		    invoke_test_impl<test_ref, n>(std::make_index_sequence<std::tuple_size_v<A>>());
+		  }
+	      }
+	    else if constexpr (array_specialization<A>)
+	      { // call for each element
+		template for (constexpr std::size_t I : std::_IotaArray<args.size()>)
+		  {
+		    std::print("|{:>15} |{:>3}: {} |", test_name, I, args[I]);
+		    invoke_test_impl<test_ref>(std::index_sequence<I>());
+		  }
+	      }
+	    else
+	      {
+		std::print("|{:>15} |  - |", test_name);
+		invoke_test_impl<test_ref>(std::make_index_sequence<std::tuple_size_v<A>>());
+	      }
+	  }
       }
   }
 
@@ -1129,11 +1129,11 @@ int main()
   catch(const test::precondition_failure& fail)
     {
       std::println(std::runtime_format("{}:{}: Error: precondition '{}' does not hold: {}"),
-                   fail.file, fail.line, fail.expr, fail.msg);
+		   fail.file, fail.line, fail.expr, fail.msg);
       return EXIT_FAILURE;
     }
   std::println(std::runtime_format("Passed tests: {}\nFailed tests: {}"),
-               passed_tests, failed_tests);
+	       passed_tests, failed_tests);
   return failed_tests != 0 ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
@@ -1146,17 +1146,17 @@ template <typename V, typename... Ts>
     std::array<V, simd::__div_ceil(int(sizeof...(Ts)), V::size())> r = {};
     if constexpr (r.size() == 1)
       {
-        constexpr int ndups = simd::__div_ceil(V::size(), int(sizeof...(Ts)));
-        simd::basic_vec tmp = inputs;
-        constexpr auto [...is] = std::_IotaArray<ndups>;
-        r[0] = std::get<0>(simd::chunk<V>(simd::cat(((void)is, tmp)...)));
+	constexpr int ndups = simd::__div_ceil(V::size(), int(sizeof...(Ts)));
+	simd::basic_vec tmp = inputs;
+	constexpr auto [...is] = std::_IotaArray<ndups>;
+	r[0] = std::get<0>(simd::chunk<V>(simd::cat(((void)is, tmp)...)));
       }
     else
       {
-        auto it = inputs.begin();
-        for (std::size_t i = 0; i < r.size() - 1; ++i, it += V::size())
-          r[i] = simd::unchecked_load<V>(it, inputs.end());
-        r.back() = simd::partial_load<V>(it, inputs.end());
+	auto it = inputs.begin();
+	for (std::size_t i = 0; i < r.size() - 1; ++i, it += V::size())
+	  r[i] = simd::unchecked_load<V>(it, inputs.end());
+	r.back() = simd::partial_load<V>(it, inputs.end());
       }
     return r;
   }
