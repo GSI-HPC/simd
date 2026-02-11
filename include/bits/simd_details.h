@@ -255,7 +255,7 @@ namespace std::simd
    */
   template <size_t _Bytes>
     using __integer_from
-#if __clang__
+#if VIR_EXTENSIONS && __clang__
       = conditional_t<sizeof(signed char) == _Bytes, signed char,
                       conditional_t<sizeof(signed short) == _Bytes, signed short,
                                     conditional_t<sizeof(signed int) == _Bytes, signed int,
