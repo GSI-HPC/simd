@@ -27,7 +27,10 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpsabi"
 
-namespace std::simd
+namespace std _GLIBCXX_VISIBILITY(default)
+{
+_GLIBCXX_BEGIN_NAMESPACE_VERSION
+namespace simd
 {
   static constexpr size_t __x86_max_general_register_size
 #ifdef __x86_64__
@@ -1430,7 +1433,9 @@ namespace std::simd
 	    static_assert(false);
 	}
     }
-}
+} // namespace simd
+_GLIBCXX_END_NAMESPACE_VERSION
+} // namespace std
 
 #pragma GCC diagnostic pop
 #endif // C++26

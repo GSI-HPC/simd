@@ -19,7 +19,10 @@
 #pragma GCC diagnostic ignored "-Wpsabi"
 
 // [simd.mask.reductions] -----------------------------------------------------
-namespace std::simd
+namespace std _GLIBCXX_VISIBILITY(default)
+{
+_GLIBCXX_BEGIN_NAMESPACE_VERSION
+namespace simd
 {
   template <size_t _Bytes, typename _Ap>
     [[__gnu__::__always_inline__]]
@@ -91,7 +94,9 @@ namespace std::simd
   constexpr __simd_size_type
   reduce_max_index(same_as<bool> auto __x)
   { return 0; }
-}
+} // namespace simd
+_GLIBCXX_END_NAMESPACE_VERSION
+} // namespace std
 
 #pragma GCC diagnostic pop
 #endif // C++26

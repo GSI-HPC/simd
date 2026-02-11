@@ -23,7 +23,10 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpsabi"
 
-namespace std::simd
+namespace std _GLIBCXX_VISIBILITY(default)
+{
+_GLIBCXX_BEGIN_NAMESPACE_VERSION
+namespace simd
 {
   // disabled basic_vec
   template <typename _Tp, typename _Ap>
@@ -2656,7 +2659,9 @@ namespace std::simd
 		    "iota object would overflow");
       return __i;
     });
-}
+} // namespace simd
+_GLIBCXX_END_NAMESPACE_VERSION
+} // namespace std
 
 #pragma GCC diagnostic pop
 #endif // C++26

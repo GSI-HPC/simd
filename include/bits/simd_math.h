@@ -20,7 +20,10 @@
 #pragma GCC diagnostic ignored "-Wpsabi"
 
 // [simd.math] ----------------------------------------------------------------
-namespace std::simd
+namespace std _GLIBCXX_VISIBILITY(default)
+{
+_GLIBCXX_BEGIN_NAMESPACE_VERSION
+namespace simd
 {
   template <typename _TV>
     concept __simd_clonable = __vec_builtin<_TV> && sizeof(_TV) >= 16
@@ -1151,7 +1154,7 @@ namespace std::simd
     constexpr basic_vec<T, Abi>
     modf(const type_identity_t<basic_vec<T, Abi>>& __value, basic_vec<T, Abi>* __iptr)
     { static_assert(false, "TODO"); }
-}
+} // namespace simd
 
 // clean up internal macros
 #undef _GLIBCXX_SIMD_HAS_SIMD_CLONE
@@ -1161,8 +1164,6 @@ namespace std::simd
 #undef _GLIBCXX_SIMD_MATH_CALL
 #undef _GLIBCXX_SIMD_MATH_CALL2
 
-namespace std
-{
   using simd::acos;
   using simd::asin;
   using simd::atan;
@@ -1254,10 +1255,9 @@ namespace std
   using simd::sph_bessel;
   using simd::sph_legendre;
   using simd::sph_neumann;
-}
 
 // [simd.complex.math] --------------------------------------------------------
-namespace std::simd
+namespace simd
 {
   template <__simd_complex _Vp>
     [[__gnu__::__always_inline__]]
@@ -1410,10 +1410,8 @@ namespace std::simd
     constexpr _Vp
     pow(const _Vp& __x, const _Vp& __y)
     { static_assert(false, "TODO"); }
-}
+} // namespace simd
 
-namespace std
-{
   using simd::real;
   using simd::imag;
   using simd::arg;
@@ -1421,7 +1419,9 @@ namespace std
   using simd::conj;
   using simd::proj;
   using simd::polar;
-}
+
+_GLIBCXX_END_NAMESPACE_VERSION
+} // namespace std
 
 #pragma GCC diagnostic pop
 #endif // C++26

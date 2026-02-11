@@ -14,7 +14,10 @@
 
 #include "simd_details.h"
 
-namespace std::simd
+namespace std _GLIBCXX_VISIBILITY(default)
+{
+_GLIBCXX_BEGIN_NAMESPACE_VERSION
+namespace simd
 {
   /** @internal
    * Iterator type for basic_vec and basic_mask.
@@ -147,7 +150,9 @@ namespace std::simd
       operator-(std::default_sentinel_t, __iterator __it) noexcept
       { return difference_type(_Vp::size.value) - __it._M_offset; }
     };
-}
+} // namespace simd
+_GLIBCXX_END_NAMESPACE_VERSION
+} // namespace std
 
 #endif // C++26
 #endif // _GLIBCXX_SIMD_ITERATOR_H

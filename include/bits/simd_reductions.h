@@ -19,7 +19,10 @@
 #pragma GCC diagnostic ignored "-Wpsabi"
 
 // [simd.reductions] ----------------------------------------------------------
-namespace std::simd
+namespace std _GLIBCXX_VISIBILITY(default)
+{
+_GLIBCXX_BEGIN_NAMESPACE_VERSION
+namespace simd
 {
   template <typename _Tp, typename _Ap, __reduction_binary_operation<_Tp> _BinaryOperation = plus<>>
     [[__gnu__::__always_inline__]]
@@ -78,7 +81,9 @@ namespace std::simd
 		      return __select_impl(__a < __b, __b, __a);
 		    });
     }
-}
+} // namespace simd
+_GLIBCXX_END_NAMESPACE_VERSION
+} // namespace std
 
 #pragma GCC diagnostic pop
 #endif // C++26

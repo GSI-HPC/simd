@@ -87,19 +87,16 @@
   } while(false)
 #endif
 
-#if VIR_NEXT_PATCH
 namespace std _GLIBCXX_VISIBILITY(default)
 {
 _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
+#if VIR_NEXT_PATCH
   // Forward declarations.
   template<typename> class complex;
 
-_GLIBCXX_END_NAMESPACE_VERSION
-}
-
 #endif
-namespace std::simd
+namespace simd
 {
 #if VIR_EXTENSIONS
   template <typename... _Args>
@@ -1765,7 +1762,9 @@ namespace std::simd
       else
 	return _Tp(0);
     }
-}
+} // namespace simd
+_GLIBCXX_END_NAMESPACE_VERSION
+} // namespace std
 
 #pragma GCC diagnostic pop
 #endif // C++26

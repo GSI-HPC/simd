@@ -20,7 +20,10 @@
 #pragma GCC diagnostic ignored "-Wpsabi"
 
 // [simd.bit] -----------------------------------------------------------------
-namespace std::simd
+namespace std _GLIBCXX_VISIBILITY(default)
+{
+_GLIBCXX_BEGIN_NAMESPACE_VERSION
+namespace simd
 {
   template<__simd_vec_type _Vp>
     [[__gnu__::__always_inline__]]
@@ -134,10 +137,8 @@ namespace std::simd
 	       return std::popcount(__v[__i]);
 	     });
     }
-}
+} // namespace simd
 
-namespace std
-{
   using simd::byteswap;
   using simd::bit_ceil;
   using simd::bit_floor;
@@ -150,7 +151,8 @@ namespace std
   using simd::countr_zero;
   using simd::countr_one;
   using simd::popcount;
-}
+_GLIBCXX_END_NAMESPACE_VERSION
+} // namespace std
 
 #pragma GCC diagnostic pop
 #endif // C++26

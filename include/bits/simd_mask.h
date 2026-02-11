@@ -25,7 +25,10 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpsabi"
 
-namespace std::simd
+namespace std _GLIBCXX_VISIBILITY(default)
+{
+_GLIBCXX_BEGIN_NAMESPACE_VERSION
+namespace simd
 {
   template <unsigned _Np>
     struct _SwapNeighbors
@@ -2109,7 +2112,9 @@ namespace std::simd
       __is_const_known(const basic_mask& __x)
       { return __is_const_known(__x._M_data0) && __is_const_known(__x._M_data1); }
     };
-}
+} // namespace simd
+_GLIBCXX_END_NAMESPACE_VERSION
+} // namespace std
 
 #pragma GCC diagnostic pop
 #endif // C++26

@@ -15,7 +15,10 @@
 #include "simd_details.h"
 #include <bits/align.h> // assume_aligned
 
-namespace std::simd
+namespace std _GLIBCXX_VISIBILITY(default)
+{
+_GLIBCXX_BEGIN_NAMESPACE_VERSION
+namespace simd
 {
   // [simd.traits]
   // --- alignment ---
@@ -202,7 +205,9 @@ namespace std::simd
   template <int _L1, int _L2>
     inline constexpr flags<__prefetch_flag<_L1, _L2>> __flag_prefetch {};
 #endif
-}
+} // namespace simd
+_GLIBCXX_END_NAMESPACE_VERSION
+} // namespace std
 
 #endif // C++26
 #endif // _GLIBCXX_SIMD_FLAGS_H

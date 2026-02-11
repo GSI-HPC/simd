@@ -19,7 +19,10 @@
 #pragma GCC diagnostic ignored "-Wpsabi"
 
 // [simd.reductions] ----------------------------------------------------------
-namespace std::simd
+namespace std _GLIBCXX_VISIBILITY(default)
+{
+_GLIBCXX_BEGIN_NAMESPACE_VERSION
+namespace simd
 {
   template <typename _Vp, typename _Tp>
     struct __vec_load_return
@@ -372,7 +375,9 @@ namespace std::simd
     partial_store(const basic_vec<_Tp, _Ap>& __v, _It __first, _Sp __last,
 		  const typename basic_vec<_Tp, _Ap>::mask_type& __mask, flags<_Flags...> __f = {})
     { partial_store(__v, span(__first, __last), __mask, __f); }
-}
+} // namespace simd
+_GLIBCXX_END_NAMESPACE_VERSION
+} // namespace std
 
 #pragma GCC diagnostic pop
 #endif // C++26

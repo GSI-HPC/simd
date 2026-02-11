@@ -19,7 +19,10 @@
 #pragma GCC diagnostic ignored "-Wpsabi"
 
 // [simd.alg] -----------------------------------------------------------------
-namespace std::simd
+namespace std _GLIBCXX_VISIBILITY(default)
+{
+_GLIBCXX_BEGIN_NAMESPACE_VERSION
+namespace simd
 {
   template<typename _Tp, typename _Ap>
     [[__gnu__::__always_inline__]]
@@ -61,15 +64,15 @@ namespace std::simd
     select(const basic_mask<_Bytes, _Ap>& __c, const _Tp& __a, const _Up& __b)
     noexcept -> decltype(__select_impl(__c, __a, __b))
     { return __select_impl(__c, __a, __b); }
-}
+} // namespace simd
 
-namespace std
-{
   using simd::min;
   using simd::max;
   using simd::minmax;
   using simd::clamp;
-}
+
+_GLIBCXX_END_NAMESPACE_VERSION
+} // namespace std
 
 #pragma GCC diagnostic pop
 #endif // C++26
