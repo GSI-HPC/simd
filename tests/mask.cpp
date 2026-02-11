@@ -115,7 +115,7 @@ template <typename V>
 
     // TODO: test mask conversions
 
-    ADD_TEST(mask_reductions0) {
+    ADD_TEST(mask_reductions_sanity) {
       std::tuple {M(true)},
       [](auto& t, M x) {
         t.verify_equal(std::simd::reduce_min_index(x), 0);
@@ -129,11 +129,9 @@ template <typename V>
       }
     };
 
-#if 0 // TODO
     ADD_TEST_N(mask_reductions, int(test_iota_max<V>) + 1, requires(T x) { x + x; }) {
       std::tuple{test_iota<V>, test_iota<V> == T(0)},
-      [](auto& t, auto ii, V v, M k0) {
-        constexpr int i = ii;
+      []<int i>(auto& t, V v, M k0) {
         M k = v == T(i);
 
         // Caveat:
@@ -170,11 +168,11 @@ template <typename V>
         if constexpr (sizeof(T) <= sizeof(0ULL))
           t.verify_equal(-std::simd::reduce(-k), nk)(k, -k);
         t.verify_equal(std::simd::reduce_count(!k), V::size - nk)(!k);
-        if constexpr (V::size <= 128 and sizeof(T) <= sizeof(0ULL))
+        if constexpr (V::size <= 128 && sizeof(T) <= sizeof(0ULL))
           t.verify_equal(-std::simd::reduce(-!k), V::size - nk)(-!k);
         t.verify(any_of(k));
         t.verify(bool(any_of(k & k0) ^ (i != 0)));
-        k = M([&](int i) { return i == 0 ? true : k[i]; });
+        k = M([&](int j) { return j == 0 ? true : k[j]; });
         t.verify_equal(k[i], true);
         t.verify_equal(std::as_const(k)[i], true);
         t.verify_equal(k[0], true);
@@ -183,7 +181,6 @@ template <typename V>
         t.verify_equal(std::simd::reduce_max_index(k), maxk)(k);
       }
     };
-#endif
   };
 
 #include "unittest.h"

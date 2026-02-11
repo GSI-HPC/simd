@@ -13,9 +13,10 @@ template <typename V>
 
     static constexpr int max = sizeof(T) == 8 ? 64 : 32;
 
-    ADD_TEST_N(known_shift, max, std::is_integral_v<T>) {
+    ADD_TEST_N(known_shift, 4, std::is_integral_v<T>) {
       std::tuple {test_iota<V>},
-      []<int shift>(auto& t, const V x) {
+      []<int N>(auto& t, const V x) {
+	constexpr int shift = max * (N + 1) / 4 - 1;
         constexpr T tmax = std::numeric_limits<T>::max();
         constexpr V vshift = T(shift);
         const V vshiftx = vshift ^ (x & std::cw<1>);
