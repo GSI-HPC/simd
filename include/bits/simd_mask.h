@@ -2049,6 +2049,23 @@ namespace std::simd
 	    return _M_data0._M_none_of() && _M_data1._M_none_of();
 	}
 
+#if VIR_NEXT_PATCH
+      [[__gnu__::__always_inline__]]
+      constexpr __simd_size_type
+      _M_reduce_count() const noexcept
+      {
+	if constexpr (_S_is_scalar)
+	  // SWAR could help. I don't think we care at the moment.
+	  return _M_data0._M_reduce_count() + _M_data1._M_reduce_count();
+	else if constexpr (_S_size <= numeric_limits<unsigned>::digits)
+	  return __builtin_popcount(_M_to_uint());
+	else if constexpr (_S_size <= numeric_limits<unsigned long long>::digits)
+	  return __builtin_popcountll(to_ullong());
+	else
+	  return _M_data0._M_reduce_count() + _M_data1._M_reduce_count();
+      }
+
+#endif
       [[__gnu__::__always_inline__]]
       constexpr __simd_size_type
       _M_reduce_min_index() const
