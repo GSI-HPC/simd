@@ -73,10 +73,10 @@ namespace std::simd
       static_assert(__has_single_bit(_Np));
 
       template <typename, typename _Up>
-        [[__gnu__::__always_inline__]]
-        static constexpr _Up*
-        _S_adjust_pointer(_Up* __ptr)
-        { return assume_aligned<_Np>(__ptr); }
+	[[__gnu__::__always_inline__]]
+	static constexpr _Up*
+	_S_adjust_pointer(_Up* __ptr)
+	{ return assume_aligned<_Np>(__ptr); }
     };
 
   struct __partial_loadstore_flag
@@ -97,26 +97,26 @@ namespace std::simd
     : _LoadStoreTag
     {
       template <typename, typename _Up>
-        [[__gnu__::__always_inline__]]
-        static _Up*
-        _S_adjust_pointer(_Up* __ptr)
-        {
-          // one read: 0, 0
-          // L1: 0, 1
-          // L2: 0, 2
-          // L3: 0, 3
-          // (exclusive cache line) for writing: 1, 0 / 1, 1
-          /*          constexpr int __write = 1;
-                      constexpr int __level = 0-3;
-          __builtin_prefetch(__ptr, __write, __level)
-          _mm_prefetch(reinterpret_cast<char const*>(__ptr), _MM_HINT_T0);
-          _mm_prefetch(reinterpret_cast<char const*>(__ptr), _MM_HINT_T1);
-          _mm_prefetch(reinterpret_cast<char const*>(__ptr), _MM_HINT_T2);
-          _mm_prefetch(reinterpret_cast<char const*>(__ptr), _MM_HINT_ET0);
-          _mm_prefetch(reinterpret_cast<char const*>(__ptr), _MM_HINT_ET1);
-          _mm_prefetch(reinterpret_cast<char const*>(__ptr), _MM_HINT_NTA);*/
-          return __ptr;
-        }
+	[[__gnu__::__always_inline__]]
+	static _Up*
+	_S_adjust_pointer(_Up* __ptr)
+	{
+	  // one read: 0, 0
+	  // L1: 0, 1
+	  // L2: 0, 2
+	  // L3: 0, 3
+	  // (exclusive cache line) for writing: 1, 0 / 1, 1
+	  /*          constexpr int __write = 1;
+		      constexpr int __level = 0-3;
+	  __builtin_prefetch(__ptr, __write, __level)
+	  _mm_prefetch(reinterpret_cast<char const*>(__ptr), _MM_HINT_T0);
+	  _mm_prefetch(reinterpret_cast<char const*>(__ptr), _MM_HINT_T1);
+	  _mm_prefetch(reinterpret_cast<char const*>(__ptr), _MM_HINT_T2);
+	  _mm_prefetch(reinterpret_cast<char const*>(__ptr), _MM_HINT_ET0);
+	  _mm_prefetch(reinterpret_cast<char const*>(__ptr), _MM_HINT_ET1);
+	  _mm_prefetch(reinterpret_cast<char const*>(__ptr), _MM_HINT_NTA);*/
+	  return __ptr;
+	}
     };
 #endif
 
@@ -135,23 +135,23 @@ namespace std::simd
        * false.
        */
       template <typename _F0>
-        static consteval bool
-        _S_test(flags<_F0>)
-        { return (is_same_v<_Flags, _F0> || ...); }
+	static consteval bool
+	_S_test(flags<_F0>)
+	{ return (is_same_v<_Flags, _F0> || ...); }
 
       friend consteval flags
       operator|(flags, flags<>)
       { return flags{}; }
 
       template <typename _T0, typename... _More>
-        friend consteval auto
-        operator|(flags, flags<_T0, _More...>)
-        {
-          if constexpr ((same_as<_Flags, _T0> || ...))
-            return flags<_Flags...>{} | flags<_More...>{};
-          else
-            return flags<_Flags..., _T0>{} | flags<_More...>{};
-        }
+	friend consteval auto
+	operator|(flags, flags<_T0, _More...>)
+	{
+	  if constexpr ((same_as<_Flags, _T0> || ...))
+	    return flags<_Flags...>{} | flags<_More...>{};
+	  else
+	    return flags<_Flags..., _T0>{} | flags<_More...>{};
+	}
 
       /** @internal
        * Adjusts a pointer according to the alignment requirements of the flags.
@@ -166,16 +166,16 @@ namespace std::simd
        * @return The adjusted pointer
        */
       template <typename _Tp, typename _Up>
-        static constexpr _Up*
-        _S_adjust_pointer(_Up* __ptr)
-        {
-          template for ([[maybe_unused]] constexpr auto __f : {_Flags()...})
-            {
-              if constexpr (requires {__f.template _S_adjust_pointer<_Tp>(__ptr); })
-                __ptr = __f.template _S_adjust_pointer<_Tp>(__ptr);
-            }
-          return __ptr;
-        }
+	static constexpr _Up*
+	_S_adjust_pointer(_Up* __ptr)
+	{
+	  template for ([[maybe_unused]] constexpr auto __f : {_Flags()...})
+	    {
+	      if constexpr (requires {__f.template _S_adjust_pointer<_Tp>(__ptr); })
+		__ptr = __f.template _S_adjust_pointer<_Tp>(__ptr);
+	    }
+	  return __ptr;
+	}
     };
 
   inline constexpr flags<> flag_default {};

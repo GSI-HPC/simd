@@ -78,12 +78,12 @@
     const bool __precondition_result = !bool(expr);                                                \
     if (__builtin_constant_p(__precondition_result) && __precondition_result)                      \
       []() __attribute__((__noipa__, __warning__(                                                  \
-        "precondition failure. \n" _GLIBCXX_SIMD_LOC "note: " msg " (precondition '" #expr         \
-        "' does not hold)"))) {}();                                                                \
+	"precondition failure. \n" _GLIBCXX_SIMD_LOC "note: " msg " (precondition '" #expr         \
+	"' does not hold)"))) {}();                                                                \
     if (__builtin_expect(__precondition_result, false))                                            \
       std::simd::__invoke_ub(                                                                      \
-        _GLIBCXX_SIMD_LOC "precondition failure in '%s':\n" msg " ('" #expr "' does not hold)",    \
-        __PRETTY_FUNCTION__ __VA_OPT__(,) __VA_ARGS__);                                            \
+	_GLIBCXX_SIMD_LOC "precondition failure in '%s':\n" msg " ('" #expr "' does not hold)",    \
+	__PRETTY_FUNCTION__ __VA_OPT__(,) __VA_ARGS__);                                            \
   } while(false)
 #endif
 
@@ -153,40 +153,40 @@ namespace std::simd
       = same_as<_Tp, complex<typename _Tp::value_type>>;
 #else
       = requires(_Tp __x) {
-        typename _Tp::value_type;
-        { __x.real() } -> same_as<typename _Tp::value_type>;
-        { __x.imag() } -> same_as<typename _Tp::value_type>;
-        { real(__x) } -> same_as<typename _Tp::value_type>;
-        { imag(__x) } -> same_as<typename _Tp::value_type>;
-        { +__x } -> same_as<_Tp>;
-        { -__x } -> same_as<_Tp>;
-        { __x + __x } -> same_as<_Tp>;
-        { __x - __x } -> same_as<_Tp>;
-        { __x * __x } -> same_as<_Tp>;
-        { __x / __x } -> same_as<_Tp>;
-        { __x += __x } -> same_as<_Tp&>;
-        { __x -= __x } -> same_as<_Tp&>;
-        { __x *= __x } -> same_as<_Tp&>;
-        { __x /= __x } -> same_as<_Tp&>;
-        { abs(__x) } -> same_as<typename _Tp::value_type>;
-        { arg(__x) } -> same_as<typename _Tp::value_type>;
-        { norm(__x) } -> same_as<typename _Tp::value_type>;
-        { conj(__x) } -> same_as<_Tp>;
-        { proj(__x) } -> same_as<_Tp>;
+	typename _Tp::value_type;
+	{ __x.real() } -> same_as<typename _Tp::value_type>;
+	{ __x.imag() } -> same_as<typename _Tp::value_type>;
+	{ real(__x) } -> same_as<typename _Tp::value_type>;
+	{ imag(__x) } -> same_as<typename _Tp::value_type>;
+	{ +__x } -> same_as<_Tp>;
+	{ -__x } -> same_as<_Tp>;
+	{ __x + __x } -> same_as<_Tp>;
+	{ __x - __x } -> same_as<_Tp>;
+	{ __x * __x } -> same_as<_Tp>;
+	{ __x / __x } -> same_as<_Tp>;
+	{ __x += __x } -> same_as<_Tp&>;
+	{ __x -= __x } -> same_as<_Tp&>;
+	{ __x *= __x } -> same_as<_Tp&>;
+	{ __x /= __x } -> same_as<_Tp&>;
+	{ abs(__x) } -> same_as<typename _Tp::value_type>;
+	{ arg(__x) } -> same_as<typename _Tp::value_type>;
+	{ norm(__x) } -> same_as<typename _Tp::value_type>;
+	{ conj(__x) } -> same_as<_Tp>;
+	{ proj(__x) } -> same_as<_Tp>;
       }
-          && is_same_v<__rebind_complex_t<typename _Tp::value_type, _Tp>, _Tp>
-          && (__complex_object<_Tp, 1, 2> + _Tp {} == __complex_object<_Tp, 1, 2>)
-          && (__complex_object<_Tp, -1, 5> - __complex_object<_Tp, -1, 5> == _Tp {})
-          && (__complex_object<_Tp, 2, 3> * __complex_object<_Tp, 1, 1>
-                 == __complex_object<_Tp, -1, 5>)
-          && (__complex_object<_Tp, 5, 5> / __complex_object<_Tp, 1, 2>
-                 == __complex_object<_Tp, 3, -1>)
-          && (conj(__complex_object<_Tp, 5, 3>) == __complex_object<_Tp, 5, -3>)
-          // not constexpr: && (abs(__complex_object<_Tp, 3, 4>) == typename _Tp::value_type(5))
-          && (norm(__complex_object<_Tp, 5, 5>) == typename _Tp::value_type(50))
-          && (2 * sizeof(typename _Tp::value_type) == sizeof(_Tp))
-          && (__builtin_bit_cast(_Arr2<typename _Tp::value_type>, __complex_object<_Tp, 1, 2>)
-                 ._M_data[0] == 1);
+	  && is_same_v<__rebind_complex_t<typename _Tp::value_type, _Tp>, _Tp>
+	  && (__complex_object<_Tp, 1, 2> + _Tp {} == __complex_object<_Tp, 1, 2>)
+	  && (__complex_object<_Tp, -1, 5> - __complex_object<_Tp, -1, 5> == _Tp {})
+	  && (__complex_object<_Tp, 2, 3> * __complex_object<_Tp, 1, 1>
+		 == __complex_object<_Tp, -1, 5>)
+	  && (__complex_object<_Tp, 5, 5> / __complex_object<_Tp, 1, 2>
+		 == __complex_object<_Tp, 3, -1>)
+	  && (conj(__complex_object<_Tp, 5, 3>) == __complex_object<_Tp, 5, -3>)
+	  // not constexpr: && (abs(__complex_object<_Tp, 3, 4>) == typename _Tp::value_type(5))
+	  && (norm(__complex_object<_Tp, 5, 5>) == typename _Tp::value_type(50))
+	  && (2 * sizeof(typename _Tp::value_type) == sizeof(_Tp))
+	  && (__builtin_bit_cast(_Arr2<typename _Tp::value_type>, __complex_object<_Tp, 1, 2>)
+		 ._M_data[0] == 1);
 #endif
 
   /** @internal
@@ -200,18 +200,18 @@ namespace std::simd
     concept __vectorizable_scalar
       = same_as<remove_cv_t<_Tp>, _Tp>
 #ifdef __STDCPP_BFLOAT16_T__
-          && !same_as<_Tp, __gnu_cxx::__bfloat16_t>
+	  && !same_as<_Tp, __gnu_cxx::__bfloat16_t>
 #endif
-          && ((integral<_Tp> && sizeof(_Tp) <= sizeof(0ULL) && !same_as<_Tp, bool>)
-                 || (floating_point<_Tp> && sizeof(_Tp) <= sizeof(double)));
+	  && ((integral<_Tp> && sizeof(_Tp) <= sizeof(0ULL) && !same_as<_Tp, bool>)
+		 || (floating_point<_Tp> && sizeof(_Tp) <= sizeof(double)));
 
   // [simd.general] p2
   template <typename _Tp>
 #if VIR_NEXT_PATCH
     concept __vectorizable
       = __vectorizable_scalar<_Tp>
-          || (__complex_like_impl<_Tp> && __vectorizable_scalar<typename _Tp::value_type>
-                && floating_point<typename _Tp::value_type>);
+	  || (__complex_like_impl<_Tp> && __vectorizable_scalar<typename _Tp::value_type>
+		&& floating_point<typename _Tp::value_type>);
 #else
     concept __vectorizable = __vectorizable_scalar<_Tp>;
 #endif
@@ -225,9 +225,9 @@ namespace std::simd
     _MaskVariants = 0x0f, // vector masks if bits [0:3] are 0
 #if VIR_NEXT_PATCH
     _CxIleav      = 0x10, // store complex components interleaved (ririri...)
-                          // mask elements are stored for both    (001122...)
+			  // mask elements are stored for both    (001122...)
     _CxCtgus      = 0x20, // ... or store complex components contiguously (rrrr iiii)
-                          // mask elements are store for one component    (0123)
+			  // mask elements are store for one component    (0123)
     _CxVariants   = _CxIleav | _CxCtgus,
 #endif
   };
@@ -257,24 +257,24 @@ namespace std::simd
     using __integer_from
 #if VIR_EXTENSIONS && __clang__
       = conditional_t<sizeof(signed char) == _Bytes, signed char,
-                      conditional_t<sizeof(signed short) == _Bytes, signed short,
-                                    conditional_t<sizeof(signed int) == _Bytes, signed int,
-                                                  conditional_t<sizeof(signed long long) == _Bytes,
-                                                                signed long long,
-                                                                _InvalidInteger>>>>;
+		      conditional_t<sizeof(signed short) == _Bytes, signed short,
+				    conditional_t<sizeof(signed int) == _Bytes, signed int,
+						  conditional_t<sizeof(signed long long) == _Bytes,
+								signed long long,
+								_InvalidInteger>>>>;
 #else
       = decltype([] consteval {
-          if constexpr (sizeof(signed char) == _Bytes)
-            return static_cast<signed char>(0);
-          else if constexpr (sizeof(signed short) == _Bytes)
-            return static_cast<signed short>(0);
-          else if constexpr (sizeof(signed int) == _Bytes)
-            return static_cast<signed int>(0);
-          else if constexpr (sizeof(signed long long) == _Bytes)
-            return static_cast<signed long long>(0);
-          else
-            return _InvalidInteger();
-        }());
+	  if constexpr (sizeof(signed char) == _Bytes)
+	    return static_cast<signed char>(0);
+	  else if constexpr (sizeof(signed short) == _Bytes)
+	    return static_cast<signed short>(0);
+	  else if constexpr (sizeof(signed int) == _Bytes)
+	    return static_cast<signed int>(0);
+	  else if constexpr (sizeof(signed long long) == _Bytes)
+	    return static_cast<signed long long>(0);
+	  else
+	    return _InvalidInteger();
+	}());
 #endif
 
   /** @internal
@@ -360,8 +360,8 @@ namespace std::simd
     struct __canonical_vec_type<wchar_t>
     {
       using type = std::conditional_t<std::is_signed_v<wchar_t>,
-                                      simd::__integer_from<sizeof(wchar_t)>,
-                                      simd::_UInt<sizeof(wchar_t)>>;
+				      simd::__integer_from<sizeof(wchar_t)>,
+				      simd::_UInt<sizeof(wchar_t)>>;
     };
 
 #if defined(__FLT64_DIG__) && defined(_GLIBCXX_DOUBLE_IS_IEEE_BINARY64)
@@ -393,7 +393,7 @@ namespace std::simd
       static constexpr _AbiVariant _S_variant = {};
 
       template <typename _Tp>
-        using _DataType = __canonical_vec_type_t<_Tp>;
+	using _DataType = __canonical_vec_type_t<_Tp>;
 
 #if VIR_NEXT_PATCH
       static constexpr bool _S_is_cx_ileav = false;
@@ -407,15 +407,15 @@ namespace std::simd
       static constexpr bool _S_is_bitmask = false;
 
       template <size_t>
-        using _MaskDataType = bool;
+	using _MaskDataType = bool;
 
       template <int _N2, int _Nreg2 = _N2>
-        consteval _ScalarAbi<_N2>
-        _M_resize() const
-        {
-          static_assert(_N2 == _Nreg2);
-          return {};
-        }
+	consteval _ScalarAbi<_N2>
+	_M_resize() const
+	{
+	  static_assert(_N2 == _Nreg2);
+	  return {};
+	}
     };
 
   /** @internal
@@ -463,64 +463,64 @@ namespace std::simd
 
 #if VIR_NEXT_PATCH
       static constexpr bool _S_is_cx_ileav
-        = __filter_abi_variant(_S_variant, _AbiVariant::_CxIleav) == _AbiVariant::_CxIleav;
+	= __filter_abi_variant(_S_variant, _AbiVariant::_CxIleav) == _AbiVariant::_CxIleav;
 
       static constexpr bool _S_is_cx_ctgus
-        = __filter_abi_variant(_S_variant, _AbiVariant::_CxCtgus) == _AbiVariant::_CxCtgus;
+	= __filter_abi_variant(_S_variant, _AbiVariant::_CxCtgus) == _AbiVariant::_CxCtgus;
 
       static_assert(!(_S_is_cx_ileav && _S_is_cx_ctgus)); // can't be both
 
       static_assert(_S_size > _S_nreg || (_S_is_cx_ileav && _S_size * 2 > _S_nreg)); // when equal use _ScalarAbi
 #endif
       static constexpr bool _S_is_bitmask
-        = __filter_abi_variant(_S_variant, _AbiVariant::_BitMask) == _AbiVariant::_BitMask;
+	= __filter_abi_variant(_S_variant, _AbiVariant::_BitMask) == _AbiVariant::_BitMask;
 
       static constexpr bool _S_is_vecmask = !_S_is_bitmask;
 
       template <typename _Tp>
-        using _DataType = decltype([] {
-                            static_assert(_S_nreg == 1);
+	using _DataType = decltype([] {
+			    static_assert(_S_nreg == 1);
 #if VIR_NEXT_PATCH
-                            static_assert(!_S_is_cx_ileav);
-                            static_assert(!_S_is_cx_ctgus);
+			    static_assert(!_S_is_cx_ileav);
+			    static_assert(!_S_is_cx_ctgus);
 #endif
-                            constexpr int __n = __bit_ceil(unsigned(_S_size));
-                            using _Vp [[__gnu__::__vector_size__(sizeof(_Tp) * __n)]]
-                              = __canonical_vec_type_t<_Tp>;
-                            return _Vp();
-                          }());
+			    constexpr int __n = __bit_ceil(unsigned(_S_size));
+			    using _Vp [[__gnu__::__vector_size__(sizeof(_Tp) * __n)]]
+			      = __canonical_vec_type_t<_Tp>;
+			    return _Vp();
+			  }());
 
       template <size_t _Bytes>
-        using _MaskDataType
-          = decltype([] {
+	using _MaskDataType
+	  = decltype([] {
 #if VIR_NEXT_PATCH
-              static_assert(!_S_is_cx_ileav);
+	      static_assert(!_S_is_cx_ileav);
 #endif
-              if constexpr (_S_is_vecmask)
-                {
-                  constexpr unsigned __vbytes = _Bytes * __bit_ceil(unsigned(_S_size));
-                  using _Vp [[__gnu__::__vector_size__(__vbytes)]] = __integer_from<_Bytes>;
-                  return _Vp();
-                }
-              else if constexpr (_Nreg > 1)
-                return _InvalidInteger();
-              else
-                return _Bitmask<_S_size>();
-            }());
+	      if constexpr (_S_is_vecmask)
+		{
+		  constexpr unsigned __vbytes = _Bytes * __bit_ceil(unsigned(_S_size));
+		  using _Vp [[__gnu__::__vector_size__(__vbytes)]] = __integer_from<_Bytes>;
+		  return _Vp();
+		}
+	      else if constexpr (_Nreg > 1)
+		return _InvalidInteger();
+	      else
+		return _Bitmask<_S_size>();
+	    }());
 
       template <int _N2, int _Nreg2 = __div_ceil(_N2, _S_size)>
-        consteval auto
-        _M_resize() const
-        {
+	consteval auto
+	_M_resize() const
+	{
 #if VIR_NEXT_PATCH
-          if constexpr (_N2 == 1 && !_S_is_cx_ileav)
+	  if constexpr (_N2 == 1 && !_S_is_cx_ileav)
 #else
-          if constexpr (_N2 == 1)
+	  if constexpr (_N2 == 1)
 #endif
-            return _ScalarAbi<1>();
-          else
-            return _Abi<_N2, _Nreg2, _Var>();
-        }
+	    return _ScalarAbi<1>();
+	  else
+	    return _Abi<_N2, _Nreg2, _Var>();
+	}
     };
 
   /** @internal
@@ -551,10 +551,10 @@ namespace std::simd
   template <typename _Tp>
     concept __abi_tag
       = same_as<decltype(_Tp::_S_variant), const _AbiVariant>
-          && (_Tp::_S_size >= _Tp::_S_nreg) && (_Tp::_S_nreg >= 1)
-          && requires(_Tp __x) {
-            { __x.template _M_resize<_Tp::_S_size, _Tp::_S_nreg>() } -> same_as<_Tp>;
-          };
+	  && (_Tp::_S_size >= _Tp::_S_nreg) && (_Tp::_S_nreg >= 1)
+	  && requires(_Tp __x) {
+	    { __x.template _M_resize<_Tp::_S_size, _Tp::_S_nreg>() } -> same_as<_Tp>;
+	  };
 
   template <typename _Tp>
     concept __scalar_abi_tag
@@ -644,46 +644,46 @@ namespace std::simd
     __UINT64_TYPE__ _M_build_flags
       = 0
 #if !__NO_TRAPPING_MATH__
-          + (1 << 0)
+	  + (1 << 0)
 #endif
-          + (__handle_fpexcept_impl(0) << 12)
+	  + (__handle_fpexcept_impl(0) << 12)
 #if __FAST_MATH__
-          + (1 << 1)
+	  + (1 << 1)
 #endif
 #if __FINITE_MATH_ONLY__
-          + (1 << 2)
+	  + (1 << 2)
 #endif
 #if __NO_SIGNED_ZEROS__
-          + (1 << 3)
+	  + (1 << 3)
 #endif
 #if __RECIPROCAL_MATH__
-          + (1 << 4)
+	  + (1 << 4)
 #endif
 #if __NO_MATH_ERRNO__
-          + (1 << 5)
+	  + (1 << 5)
 #endif
 #if __ASSOCIATIVE_MATH__
-          + (1 << 6)
+	  + (1 << 6)
 #endif
-        // bits 7, 8, and 9 reserved for __FLT_EVAL_METHOD__
+	// bits 7, 8, and 9 reserved for __FLT_EVAL_METHOD__
 #if __FLT_EVAL_METHOD__ == 1
-          + (1 << 7)
+	  + (1 << 7)
 #elif __FLT_EVAL_METHOD__ == 2
-          + (2 << 7)
+	  + (2 << 7)
 #elif __FLT_EVAL_METHOD__ != 0
-          + (3 << 7)
+	  + (3 << 7)
 #endif
 
-        // C Annex G defines the behavior of complex<T> where T is IEC60559 floating-point. If
-        // __STDC_IEC_60559_COMPLEX__ is defined then Annex G is implemented - and simd<complex>
-        // will do so as well. However, Clang never defines the macro.
+	// C Annex G defines the behavior of complex<T> where T is IEC60559 floating-point. If
+	// __STDC_IEC_60559_COMPLEX__ is defined then Annex G is implemented - and simd<complex>
+	// will do so as well. However, Clang never defines the macro.
 #if defined __STDC_IEC_60559_COMPLEX__ || defined __STDC_IEC_559_COMPLEX__ || defined _GLIBCXX_CLANG
-          + (1 << 10)
+	  + (1 << 10)
 #endif
 #if __SUPPORT_SNAN__
-          + (1 << 11)
+	  + (1 << 11)
 #endif
-        ;
+	;
   };
 
   /** @internal
@@ -840,15 +840,15 @@ namespace std::simd
       constexpr __UINT64_TYPE__ __v4_mask  = 0b1111111111'1111111110; // Xeon / Xen4–5
       // the FP16 flag is implied by passing float16_t vectors
       if ((_M_flags & __v4_mask) == __v4_mask)
-        return _ArchTraits{__v4_mask};
+	return _ArchTraits{__v4_mask};
       if ((_M_flags & __v3b_mask) == __v3b_mask)
-        return _ArchTraits{__v3b_mask};
+	return _ArchTraits{__v3b_mask};
       if ((_M_flags & __v3a_mask) == __v3a_mask)
-        return _ArchTraits{__v3a_mask};
+	return _ArchTraits{__v3a_mask};
       if ((_M_flags & __v2_mask) == __v2_mask)
-        return _ArchTraits{__v2_mask};
+	return _ArchTraits{__v2_mask};
       if ((_M_flags & __v1_mask) == __v1_mask)
-        return _ArchTraits{__v1_mask};
+	return _ArchTraits{__v1_mask};
     }
 
 #endif
@@ -1024,36 +1024,36 @@ namespace std::simd
     {
       constexpr int __adj_sizeof = sizeof(_Tp) * (1 + is_same_v<_Tp, _Float16>);
       if constexpr (!__vectorizable<_Tp>)
-        return _InvalidAbi();
+	return _InvalidAbi();
 #if VIR_NEXT_PATCH
       else if constexpr (__complex_like<_Tp>)
-        {
-          constexpr auto __underlying = std::simd::__native_abi<typename _Tp::value_type>();
-          if constexpr (__underlying._S_size == 1)
-            return _ScalarAbi<1>();
-          else
-            return _Abi_t<__underlying._S_size / 2, 1,
-                          __underlying._S_variant, _AbiVariant::_CxIleav>();
-        }
+	{
+	  constexpr auto __underlying = std::simd::__native_abi<typename _Tp::value_type>();
+	  if constexpr (__underlying._S_size == 1)
+	    return _ScalarAbi<1>();
+	  else
+	    return _Abi_t<__underlying._S_size / 2, 1,
+			  __underlying._S_variant, _AbiVariant::_CxIleav>();
+	}
 #endif
       else if constexpr (_Traits._M_have_avx512fp16())
-        return _Abi_t<64 / sizeof(_Tp), 1, _AbiVariant::_BitMask>();
+	return _Abi_t<64 / sizeof(_Tp), 1, _AbiVariant::_BitMask>();
       else if constexpr (_Traits._M_have_avx512f())
-        return _Abi_t<64 / __adj_sizeof, 1, _AbiVariant::_BitMask>();
+	return _Abi_t<64 / __adj_sizeof, 1, _AbiVariant::_BitMask>();
       else if constexpr (is_same_v<_Tp, _Float16> && !_Traits._M_have_f16c())
-        return _ScalarAbi<1>();
+	return _ScalarAbi<1>();
       else if constexpr (_Traits._M_have_avx2())
-        return _Abi_t<32 / __adj_sizeof, 1>();
+	return _Abi_t<32 / __adj_sizeof, 1>();
       else if constexpr (_Traits._M_have_avx() && is_floating_point_v<_Tp>)
-        return _Abi_t<32 / __adj_sizeof, 1>();
+	return _Abi_t<32 / __adj_sizeof, 1>();
       else if constexpr (_Traits._M_have_sse2())
-        return _Abi_t<16 / __adj_sizeof, 1>();
+	return _Abi_t<16 / __adj_sizeof, 1>();
       else if constexpr (_Traits._M_have_sse() && is_floating_point_v<_Tp>
-                           && sizeof(_Tp) == sizeof(float))
-        return _Abi_t<16 / __adj_sizeof, 1>();
+			   && sizeof(_Tp) == sizeof(float))
+	return _Abi_t<16 / __adj_sizeof, 1>();
       // no MMX: we can't emit EMMS where it would be necessary
       else
-        return _ScalarAbi<1>();
+	return _ScalarAbi<1>();
     }
 
 #else
@@ -1073,9 +1073,9 @@ namespace std::simd
     __native_abi()
     {
       if constexpr (!__vectorizable<_Tp>)
-        return _InvalidAbi();
+	return _InvalidAbi();
       else
-        return _ScalarAbi<1>();
+	return _ScalarAbi<1>();
     }
 
 #endif
@@ -1113,11 +1113,11 @@ namespace std::simd
     {
       constexpr auto __native = std::simd::__native_abi<_Tp>();
       if constexpr (0 == __native._S_size || _Np <= 0)
-        return _InvalidAbi();
+	return _InvalidAbi();
       else if constexpr (_Np == __native._S_size)
-        return __native;
+	return __native;
       else
-        return __native.template _M_resize<_Np>();
+	return __native.template _M_resize<_Np>();
     }
 
   /** @internal
@@ -1137,42 +1137,42 @@ namespace std::simd
     __abi_rebind()
     {
       if constexpr (_Np <= 0 || !__vectorizable<_Tp>)
-        return _InvalidAbi();
+	return _InvalidAbi();
       else
-        {
-          using _Native = remove_const_t<decltype(std::simd::__native_abi<_Tp>())>;
-          static_assert(0 != _Native::_S_size);
-          constexpr int __nreg = __div_ceil(_Np, _Native::_S_size);
+	{
+	  using _Native = remove_const_t<decltype(std::simd::__native_abi<_Tp>())>;
+	  static_assert(0 != _Native::_S_size);
+	  constexpr int __nreg = __div_ceil(_Np, _Native::_S_size);
 
-          if constexpr (__scalar_abi_tag<_A0>)
-            return std::simd::__deduce_abi<_Tp, _Np>();
+	  if constexpr (__scalar_abi_tag<_A0>)
+	    return std::simd::__deduce_abi<_Tp, _Np>();
 
 #if VIR_NEXT_PATCH
-          else if constexpr (__scalar_abi_tag<_Native> || (_A0::_S_is_cx_ctgus && _Np == 1))
-            return _ScalarAbi<_Np>();
+	  else if constexpr (__scalar_abi_tag<_Native> || (_A0::_S_is_cx_ctgus && _Np == 1))
+	    return _ScalarAbi<_Np>();
 
-          else if constexpr (__complex_like<_Tp> && _A0::_S_is_cx_ctgus && _Native::_S_is_cx_ileav)
-            // we need half the number of registers since the number applies twice, to reals and
-            // imaginaries.
-            return _Abi_t<_Np, __div_ceil(__nreg, 2), _A0::_S_variant>();
+	  else if constexpr (__complex_like<_Tp> && _A0::_S_is_cx_ctgus && _Native::_S_is_cx_ileav)
+	    // we need half the number of registers since the number applies twice, to reals and
+	    // imaginaries.
+	    return _Abi_t<_Np, __div_ceil(__nreg, 2), _A0::_S_variant>();
 
-          else if constexpr (__complex_like<_Tp> && _A0::_S_is_cx_ileav && _Native::_S_is_cx_ctgus)
-            return _Abi_t<_Np, __nreg * 2, _A0::_S_variant>();
+	  else if constexpr (__complex_like<_Tp> && _A0::_S_is_cx_ileav && _Native::_S_is_cx_ctgus)
+	    return _Abi_t<_Np, __nreg * 2, _A0::_S_variant>();
 
-          else if constexpr (__complex_like<_Tp> && (_A0::_S_is_cx_ctgus || _A0::_S_is_cx_ileav))
-            return _Abi_t<_Np, __nreg, _A0::_S_variant>();
+	  else if constexpr (__complex_like<_Tp> && (_A0::_S_is_cx_ctgus || _A0::_S_is_cx_ileav))
+	    return _Abi_t<_Np, __nreg, _A0::_S_variant>();
 
-          else if constexpr (__complex_like<_Tp>)
-            return _Abi_t<_Np, __nreg, _A0::_S_variant, _AbiVariant::_CxIleav>();
+	  else if constexpr (__complex_like<_Tp>)
+	    return _Abi_t<_Np, __nreg, _A0::_S_variant, _AbiVariant::_CxIleav>();
 
 #endif
-          else if constexpr (_Np == __nreg)
-            return _ScalarAbi<_Np>();
+	  else if constexpr (_Np == __nreg)
+	    return _ScalarAbi<_Np>();
 
-          else
-            return _Abi_t<_Np, __nreg, __filter_abi_variant(_A0::_S_variant,
-                                                            _AbiVariant::_MaskVariants)>();
-        }
+	  else
+	    return _Abi_t<_Np, __nreg, __filter_abi_variant(_A0::_S_variant,
+							    _AbiVariant::_MaskVariants)>();
+	}
     }
 
   /** @internal
@@ -1194,33 +1194,33 @@ namespace std::simd
 
 #endif
       if constexpr (_Bytes == 0 || _Np <= 0)
-        return _InvalidAbi();
+	return _InvalidAbi();
 
       else if constexpr (__scalar_abi_tag<_A0>)
-        {
-          if constexpr (_IsOnlyResize)
-            // stick to _ScalarAbi (e.g. _Float16 without hardware support)
-            return _ScalarAbi<_Np>();
+	{
+	  if constexpr (_IsOnlyResize)
+	    // stick to _ScalarAbi (e.g. _Float16 without hardware support)
+	    return _ScalarAbi<_Np>();
 #if VIR_NEXT_PATCH
-          else if constexpr (_Bytes == sizeof(double) * 2)
-            // we can be certain it's a mask<complex<double>, _Np>.
-            return __abi_rebind<complex<double>, _Np, _A0>();
+	  else if constexpr (_Bytes == sizeof(double) * 2)
+	    // we can be certain it's a mask<complex<double>, _Np>.
+	    return __abi_rebind<complex<double>, _Np, _A0>();
 #endif
-          else
-            // otherwise, fresh start via __deduce_abi_t using __integer_from
-            return std::simd::__deduce_abi<__integer_from<_Bytes>, _Np>();
-        }
+	  else
+	    // otherwise, fresh start via __deduce_abi_t using __integer_from
+	    return std::simd::__deduce_abi<__integer_from<_Bytes>, _Np>();
+	}
 
 #if VIR_NEXT_PATCH
       // If the source ABI is complex, _Bytes == sizeof(complex<float>) or
       // sizeof(complex<float16_t>), and _IsOnlyResize is true, then it's a mask<complex<float>,
       // _Np>
       else if constexpr (__from_cx && _IsOnlyResize && _Bytes == 2 * sizeof(double))
-        return __abi_rebind<complex<double>, _Np, _A0>();
+	return __abi_rebind<complex<double>, _Np, _A0>();
       else if constexpr (__from_cx && _IsOnlyResize && _Bytes == 2 * sizeof(float))
-        return __abi_rebind<complex<float>, _Np, _A0>();
+	return __abi_rebind<complex<float>, _Np, _A0>();
       else if constexpr (__from_cx && _IsOnlyResize && _Bytes == 2 * sizeof(_Float16))
-        return __abi_rebind<complex<_Float16>, _Np, _A0>();
+	return __abi_rebind<complex<_Float16>, _Np, _A0>();
 
 #endif
 #if _GLIBCXX_X86
@@ -1229,23 +1229,23 @@ namespace std::simd
       // We determine whether _A0 identifies an AVX vector by looking at the size of a native
       // register. If it's 32, it's a YMM register, otherwise it's 16 or less.
       else if constexpr (_IsOnlyResize
-                           && _Traits._M_have_avx() && !_Traits._M_have_avx2()
-                           && __bit_ceil(__div_ceil<unsigned>(
-                                            _A0::_S_size, _A0::_S_nreg)) * _Bytes == 32)
-        {
-          if constexpr (_Bytes == sizeof(double))
-            return __abi_rebind<double, _Np, _A0>();
-          else if constexpr (_Bytes == sizeof(float))
-            return __abi_rebind<float, _Np, _A0>();
-          else if constexpr (_Traits._M_have_f16c() && _Bytes == sizeof(_Float16))
-            return __abi_rebind<_Float16, _Np, _A0>();
-          else // impossible
-            static_assert(false);
-        }
+			   && _Traits._M_have_avx() && !_Traits._M_have_avx2()
+			   && __bit_ceil(__div_ceil<unsigned>(
+					    _A0::_S_size, _A0::_S_nreg)) * _Bytes == 32)
+	{
+	  if constexpr (_Bytes == sizeof(double))
+	    return __abi_rebind<double, _Np, _A0>();
+	  else if constexpr (_Bytes == sizeof(float))
+	    return __abi_rebind<float, _Np, _A0>();
+	  else if constexpr (_Traits._M_have_f16c() && _Bytes == sizeof(_Float16))
+	    return __abi_rebind<_Float16, _Np, _A0>();
+	  else // impossible
+	    static_assert(false);
+	}
 #endif
 
       else
-        return __abi_rebind<__integer_from<_Bytes>, _Np, _A0>();
+	return __abi_rebind<__integer_from<_Bytes>, _Np, _A0>();
     }
 
   /** @internal
@@ -1272,38 +1272,38 @@ namespace std::simd
       return true;
 #else
       if (__b0 != __b1)
-        return true;
+	return true;
 
       // everything is better than _ScalarAbi, except when converting to a single bool
       if constexpr (__scalar_abi_tag<_To>)
-        return __n > 1;
+	return __n > 1;
       else if constexpr (__scalar_abi_tag<_From>)
-        return true;
+	return true;
 
       // converting to a bit-mask is better
       else if constexpr (_To::_S_is_vecmask != _From::_S_is_vecmask)
-        return _To::_S_is_vecmask; // to vector-mask is explicit
+	return _To::_S_is_vecmask; // to vector-mask is explicit
 
       // with vec-masks, fewer registers is better
       else if constexpr (_From::_S_nreg != _To::_S_nreg)
-        return _From::_S_nreg < _To::_S_nreg;
+	return _From::_S_nreg < _To::_S_nreg;
 
 #if VIR_NEXT_PATCH
       // differ only on _Cx flags
       // interleaved complex is worse
       else if constexpr (_To::_S_is_cx_ileav)
-        return true;
+	return true;
       else if constexpr (_From::_S_is_cx_ileav)
-        return false;
+	return false;
 
       // prefer non-_Cx over _CxCtgus
       else if constexpr (_To::_S_is_cx_ctgus)
-        return true;
+	return true;
       else if constexpr (_From::_S_is_cx_ctgus)
-        return false;
+	return false;
 #endif
       else
-        __builtin_unreachable();
+	__builtin_unreachable();
 #endif
     }
 
@@ -1350,8 +1350,8 @@ namespace std::simd
   template <typename _Tp, size_t _Np = -1uz>
     concept __static_sized_range
       = ranges::sized_range<_Tp> && requires(_Tp&& __r) {
-        typename integral_constant<size_t, ranges::size(__r)>;
-        requires (_Np == -1uz || ranges::size(__r) == _Np);
+	typename integral_constant<size_t, ranges::size(__r)>;
+	requires (_Np == -1uz || ranges::size(__r) == _Np);
       };
 
   template <typename _Rg>
@@ -1359,19 +1359,19 @@ namespace std::simd
     __static_range_size(_Rg& __r)
     {
       if constexpr (requires { typename integral_constant<size_t, ranges::size(__r)>; })
-        return ranges::size(__r);
+	return ranges::size(__r);
       else
-        return dynamic_extent;
+	return dynamic_extent;
     }
 
   // [simd.general] value-reserving
   template <typename _From, typename _To>
     concept __arithmetic_only_value_preserving_convertible_to
       = convertible_to<_From, _To> && is_arithmetic_v<_From> && is_arithmetic_v<_To>
-          && !(is_signed_v<_From> && is_unsigned_v<_To>)
-          && numeric_limits<_From>::digits <= numeric_limits<_To>::digits
-          && numeric_limits<_From>::max() <= numeric_limits<_To>::max()
-          && numeric_limits<_From>::lowest() >= numeric_limits<_To>::lowest();
+	  && !(is_signed_v<_From> && is_unsigned_v<_To>)
+	  && numeric_limits<_From>::digits <= numeric_limits<_To>::digits
+	  && numeric_limits<_From>::max() <= numeric_limits<_To>::max()
+	  && numeric_limits<_From>::lowest() >= numeric_limits<_To>::lowest();
 
   /** @internal
    * Satisfied if the conversion from @p _From to @p _To is a value-preserving conversion.
@@ -1382,8 +1382,8 @@ namespace std::simd
     concept __value_preserving_convertible_to
 #if VIR_NEXT_PATCH
       = __arithmetic_only_value_preserving_convertible_to<_From, _To>
-          || (__complex_like<_To> && __arithmetic_only_value_preserving_convertible_to<
-                                        _From, typename _To::value_type>);
+	  || (__complex_like<_To> && __arithmetic_only_value_preserving_convertible_to<
+					_From, typename _To::value_type>);
 #else
       = __arithmetic_only_value_preserving_convertible_to<_From, _To>;
 #endif
@@ -1400,29 +1400,29 @@ namespace std::simd
   template<typename _Tp>
     concept __constexpr_wrapper_like
       = convertible_to<_Tp, decltype(_Tp::value)>
-          && equality_comparable_with<_Tp, decltype(_Tp::value)>
-          && bool_constant<_Tp() == _Tp::value>::value
-          && bool_constant<static_cast<decltype(_Tp::value)>(_Tp()) == _Tp::value>::value;
+	  && equality_comparable_with<_Tp, decltype(_Tp::value)>
+	  && bool_constant<_Tp() == _Tp::value>::value
+	  && bool_constant<static_cast<decltype(_Tp::value)>(_Tp()) == _Tp::value>::value;
 
   // [simd.ctor] explicit(...) of broadcast ctor
   template <auto _From, typename _To>
     concept __non_narrowing_constexpr_conversion
       = is_arithmetic_v<decltype(_From)>
-          && static_cast<decltype(_From)>(static_cast<_To>(_From)) == _From
-          && !(unsigned_integral<_To> && _From < decltype(_From)())
-          && _From <= std::numeric_limits<_To>::max()
-          && _From >= std::numeric_limits<_To>::lowest();
+	  && static_cast<decltype(_From)>(static_cast<_To>(_From)) == _From
+	  && !(unsigned_integral<_To> && _From < decltype(_From)())
+	  && _From <= std::numeric_limits<_To>::max()
+	  && _From >= std::numeric_limits<_To>::lowest();
 
   // [simd.ctor] p4
   // This implements LWG4436 (submitted on 2025-10-28)
   template <typename _From, typename _To>
     concept __broadcast_constructible
       = ((convertible_to<_From, _To> && !is_arithmetic_v<remove_cvref_t<_From>>
-            && !__constexpr_wrapper_like<remove_cvref_t<_From>>) // 4.1
-           || __value_preserving_convertible_to<remove_cvref_t<_From>, _To> // 4.2
-           || (__constexpr_wrapper_like<remove_cvref_t<_From>> // 4.3
-                 && __non_narrowing_constexpr_conversion<auto(remove_cvref_t<_From>::value),
-                                                         _To>));
+	    && !__constexpr_wrapper_like<remove_cvref_t<_From>>) // 4.1
+	   || __value_preserving_convertible_to<remove_cvref_t<_From>, _To> // 4.2
+	   || (__constexpr_wrapper_like<remove_cvref_t<_From>> // 4.3
+		 && __non_narrowing_constexpr_conversion<auto(remove_cvref_t<_From>::value),
+							 _To>));
 
   // __higher_floating_point_rank_than<_Tp, U> (_Tp has higher or equal floating point rank than U)
   template <typename _From, typename _To>
@@ -1430,7 +1430,7 @@ namespace std::simd
     __higher_floating_point_rank_than()
     {
       return floating_point<_From> && floating_point<_To>
-               && is_same_v<common_type_t<_From, _To>, _From> && !is_same_v<_From, _To>;
+	       && is_same_v<common_type_t<_From, _To>, _From> && !is_same_v<_From, _To>;
     }
 
   // __higher_integer_rank_than<_Tp, U> (_Tp has higher or equal integer rank than U)
@@ -1439,8 +1439,8 @@ namespace std::simd
     __higher_integer_rank_than()
     {
       return integral<_From> && integral<_To>
-               && (sizeof(_From) > sizeof(_To) || is_same_v<common_type_t<_From, _To>, _From>)
-               && !is_same_v<_From, _To>;
+	       && (sizeof(_From) > sizeof(_To) || is_same_v<common_type_t<_From, _To>, _From>)
+	       && !is_same_v<_From, _To>;
     }
 
   template <typename _From, typename _To>
@@ -1452,19 +1452,19 @@ namespace std::simd
   template <typename _From, typename _To, typename... _Flags>
     concept __loadstore_convertible_to
       = same_as<_From, _To>
-          || (__vectorizable<_From> && __vectorizable<_To>
-                && (__value_preserving_convertible_to<_From, _To>
-                       || (__explicitly_convertible_to<_From, _To>
-                             && (std::is_same_v<_Flags, __convert_flag> || ...))));
+	  || (__vectorizable<_From> && __vectorizable<_To>
+		&& (__value_preserving_convertible_to<_From, _To>
+		       || (__explicitly_convertible_to<_From, _To>
+			     && (std::is_same_v<_Flags, __convert_flag> || ...))));
 
   template <typename _From, typename _To>
     concept __simd_generator_convertible_to
       = std::convertible_to<_From, _To>
-          && (!is_arithmetic_v<_From> || __value_preserving_convertible_to<_From, _To>);
+	  && (!is_arithmetic_v<_From> || __value_preserving_convertible_to<_From, _To>);
 
   template <typename _Fp, typename _Tp, __simd_size_type... _Is>
     requires (__simd_generator_convertible_to<
-                decltype(declval<_Fp>()(__simd_size_c<_Is>)), _Tp> && ...)
+		decltype(declval<_Fp>()(__simd_size_c<_Is>)), _Tp> && ...)
     constexpr void
     __simd_generator_invokable_impl(integer_sequence<__simd_size_type, _Is...>);
 
@@ -1476,13 +1476,13 @@ namespace std::simd
   template <typename _Fp>
     concept __index_permutation_function_sized = requires(_Fp const& __f)
       {
-        { __f(0, 0) } -> std::integral;
+	{ __f(0, 0) } -> std::integral;
       };
 
   template <typename _Fp, typename _Simd>
     concept __index_permutation_function
       = __index_permutation_function_sized<_Fp> || requires(_Fp const& __f) {
-        { __f(0) } -> std::integral;
+	{ __f(0) } -> std::integral;
       };
 
   /** @internal
@@ -1500,12 +1500,12 @@ namespace std::simd
   template <typename _Vp>
     concept __simd_vec_type
       = same_as<_Vp, basic_vec<typename _Vp::value_type, typename _Vp::abi_type>>
-          && is_default_constructible_v<_Vp>;
+	  && is_default_constructible_v<_Vp>;
 
   template <typename _Vp>
     concept __simd_mask_type
       = same_as<_Vp, basic_mask<__mask_element_size<_Vp>, typename _Vp::abi_type>>
-        && is_default_constructible_v<_Vp>;
+	&& is_default_constructible_v<_Vp>;
 
   /** @internal
    * Satisfied if @p _Tp is a data-parallel type.
@@ -1540,11 +1540,11 @@ namespace std::simd
   template <typename _Vp, typename _Tp>
     using __make_compatible_simd_t
       = decltype([] {
-          using _Up = decltype(declval<const _Tp&>() + declval<const _Tp&>());
-          if constexpr (__simd_vec_type<_Up>)
-            return _Up();
-          else
-            return vec<_Up, _Vp::size()>();
+	  using _Up = decltype(declval<const _Tp&>() + declval<const _Tp&>());
+	  if constexpr (__simd_vec_type<_Up>)
+	    return _Up();
+	  else
+	    return vec<_Up, _Vp::size()>();
       }());
 
   template <typename _Tp>
@@ -1553,7 +1553,7 @@ namespace std::simd
   template <typename _BinaryOperation, typename _Tp>
     concept __reduction_binary_operation
       = requires (const _BinaryOperation __binary_op, const vec<_Tp, 1> __v) {
-        { __binary_op(__v, __v) } -> same_as<vec<_Tp, 1>>;
+	{ __binary_op(__v, __v) } -> same_as<vec<_Tp, 1>>;
       };
 
   /** @internal
@@ -1577,7 +1577,7 @@ namespace std::simd
 
   template <typename _Tp, __simd_size_type _Np, __abi_tag _Ap>
     using __similar_resized_vec = conditional_t<__scalar_abi_tag<_Ap>, basic_vec<_Tp, _ScalarAbi<_Np>>,
-                                                basic_vec<_Tp, decltype(__abi_rebind<_Tp, _Np, _Ap>())>>;
+						basic_vec<_Tp, decltype(__abi_rebind<_Tp, _Np, _Ap>())>>;
 
   // LWG4470 [simd.expos]
   template <size_t _Bytes, typename _Ap>
@@ -1603,32 +1603,32 @@ namespace std::simd
     {
       static_assert(is_arithmetic_v<_From>);
       if constexpr (!__value_preserving_convertible_to<_From, _To>)
-        {
-          using _Up = typename __make_unsigned<_From>::__type;
-          if (static_cast<_Up>(static_cast<_To>(__x)) != static_cast<_Up>(__x))
-            __glibcxx_on_bad_value_preserving_cast();
-          else if constexpr (is_signed_v<_From> && is_unsigned_v<_To>)
-            {
-              if (__x < _From())
-                __glibcxx_on_bad_value_preserving_cast();
-            }
-          else if constexpr (unsigned_integral<_From> && signed_integral<_To>)
-            {
-              if (__x > numeric_limits<_To>::max())
-                __glibcxx_on_bad_value_preserving_cast();
-            }
-        }
+	{
+	  using _Up = typename __make_unsigned<_From>::__type;
+	  if (static_cast<_Up>(static_cast<_To>(__x)) != static_cast<_Up>(__x))
+	    __glibcxx_on_bad_value_preserving_cast();
+	  else if constexpr (is_signed_v<_From> && is_unsigned_v<_To>)
+	    {
+	      if (__x < _From())
+		__glibcxx_on_bad_value_preserving_cast();
+	    }
+	  else if constexpr (unsigned_integral<_From> && signed_integral<_To>)
+	    {
+	      if (__x > numeric_limits<_To>::max())
+		__glibcxx_on_bad_value_preserving_cast();
+	    }
+	}
       return static_cast<_To>(__x);
     }
 
   template <typename _From, typename _To>
     concept __simd_vec_bcast_consteval
       = __explicitly_convertible_to<_From, _To>
-          && is_arithmetic_v<remove_cvref_t<_From>> && convertible_to<_From, _To>
-          && !__value_preserving_convertible_to<remove_cvref_t<_From>, _To>
-          && (is_same_v<common_type_t<_From, _To>, _To>
-                || (is_same_v<remove_cvref_t<_From>, int> && is_integral_v<_To>)
-                || (is_same_v<remove_cvref_t<_From>, unsigned> && unsigned_integral<_To>));
+	  && is_arithmetic_v<remove_cvref_t<_From>> && convertible_to<_From, _To>
+	  && !__value_preserving_convertible_to<remove_cvref_t<_From>, _To>
+	  && (is_same_v<common_type_t<_From, _To>, _To>
+		|| (is_same_v<remove_cvref_t<_From>, int> && is_integral_v<_To>)
+		|| (is_same_v<remove_cvref_t<_From>, unsigned> && unsigned_integral<_To>));
 
   /** @internal
    * std::pair is not trivially copyable, this one is
@@ -1642,9 +1642,9 @@ namespace std::simd
 
   template <typename _From, typename _To>
     concept __converts_trivially = convertible_to<_From, _To>
-                                     && sizeof(_From) == sizeof(_To)
-                                     && is_integral_v<_From> == is_integral_v<_To>
-                                     && is_floating_point_v<_From> == is_floating_point_v<_To>;
+				     && sizeof(_From) == sizeof(_To)
+				     && is_integral_v<_From> == is_integral_v<_To>
+				     && is_floating_point_v<_From> == is_floating_point_v<_To>;
 
   [[__gnu__::__always_inline__]]
   constexpr void
@@ -1653,8 +1653,8 @@ namespace std::simd
     static_assert(sizeof(__bits) >= sizeof(int)); // avoid promotion to int
     while (__bits)
       {
-        __fun(__countr_zero(__bits));
-        __bits &= (__bits - 1);
+	__fun(__countr_zero(__bits));
+	__bits &= (__bits - 1);
       }
   }
 
@@ -1675,95 +1675,95 @@ namespace std::simd
   template <size_t _Chunk, size_t _Max>
     inline void
     __memcpy_chunks(byte* __restrict__ __dst, const byte* __restrict__ __src,
-                    size_t __n)
+		    size_t __n)
     {
       static_assert(_Max <= 64);
       static_assert(__has_single_bit(_Chunk) && _Chunk <= 8);
       size_t __bytes = _Chunk * __n;
       if (__builtin_constant_p(__bytes))
-        { // If __n is known via constant propagation use a single memcpy call. Since this is still
-          // a fixed-size memcpy to the compiler, this leaves more room for optimization.
-          __builtin_memcpy(__dst, __src, __bytes);
-        }
+	{ // If __n is known via constant propagation use a single memcpy call. Since this is still
+	  // a fixed-size memcpy to the compiler, this leaves more room for optimization.
+	  __builtin_memcpy(__dst, __src, __bytes);
+	}
       else if (__bytes > 32 && _Max > 32)
-        {
-          __builtin_memcpy(__dst, __src, 32);
-          __bytes -= 32;
-          __builtin_memcpy(__dst + __bytes, __src + __bytes, 32);
-        }
+	{
+	  __builtin_memcpy(__dst, __src, 32);
+	  __bytes -= 32;
+	  __builtin_memcpy(__dst + __bytes, __src + __bytes, 32);
+	}
       else if (__bytes > 16 && _Max > 16)
-        {
-          __builtin_memcpy(__dst, __src, 16);
-          if constexpr (_Chunk == 8)
-            {
-              __bytes -= 8;
-              __builtin_memcpy(__dst + __bytes, __src + __bytes, 8);
-            }
-          else
-            {
-              __bytes -= 16;
-              __builtin_memcpy(__dst + __bytes, __src + __bytes, 16);
-            }
-        }
+	{
+	  __builtin_memcpy(__dst, __src, 16);
+	  if constexpr (_Chunk == 8)
+	    {
+	      __bytes -= 8;
+	      __builtin_memcpy(__dst + __bytes, __src + __bytes, 8);
+	    }
+	  else
+	    {
+	      __bytes -= 16;
+	      __builtin_memcpy(__dst + __bytes, __src + __bytes, 16);
+	    }
+	}
       else if (__bytes > 8 && _Max > 8)
-        {
-          __builtin_memcpy(__dst, __src, 8);
-          if constexpr (_Chunk == 4)
-            {
-              __bytes -= 4;
-              __builtin_memcpy(__dst + __bytes, __src + __bytes, 4);
-            }
-          else if constexpr (_Chunk < 4)
-            {
-              __bytes -= 8;
-              __builtin_memcpy(__dst + __bytes, __src + __bytes, 8);
-            }
-        }
+	{
+	  __builtin_memcpy(__dst, __src, 8);
+	  if constexpr (_Chunk == 4)
+	    {
+	      __bytes -= 4;
+	      __builtin_memcpy(__dst + __bytes, __src + __bytes, 4);
+	    }
+	  else if constexpr (_Chunk < 4)
+	    {
+	      __bytes -= 8;
+	      __builtin_memcpy(__dst + __bytes, __src + __bytes, 8);
+	    }
+	}
       else if (__bytes > 4 && _Max > 4)
-        {
-          __builtin_memcpy(__dst, __src, 4);
-          if constexpr (_Chunk == 2)
-            {
-              __bytes -= 2;
-              __builtin_memcpy(__dst + __bytes, __src + __bytes, 2);
-            }
-          else if constexpr (_Chunk == 1)
-            {
-              __bytes -= 4;
-              __builtin_memcpy(__dst + __bytes, __src + __bytes, 4);
-            }
-        }
+	{
+	  __builtin_memcpy(__dst, __src, 4);
+	  if constexpr (_Chunk == 2)
+	    {
+	      __bytes -= 2;
+	      __builtin_memcpy(__dst + __bytes, __src + __bytes, 2);
+	    }
+	  else if constexpr (_Chunk == 1)
+	    {
+	      __bytes -= 4;
+	      __builtin_memcpy(__dst + __bytes, __src + __bytes, 4);
+	    }
+	}
       else if (__bytes >= 2)
-        {
-          __builtin_memcpy(__dst, __src, 2);
-          if constexpr (_Chunk == 2)
-            {
-              __bytes -= 2;
-              __builtin_memcpy(__dst + __bytes, __src + __bytes, 2);
-            }
-          else if constexpr (_Chunk == 1)
-            {
-              __bytes -= 1;
-              __builtin_memcpy(__dst + __bytes, __src + __bytes, 1);
-            }
-        }
+	{
+	  __builtin_memcpy(__dst, __src, 2);
+	  if constexpr (_Chunk == 2)
+	    {
+	      __bytes -= 2;
+	      __builtin_memcpy(__dst + __bytes, __src + __bytes, 2);
+	    }
+	  else if constexpr (_Chunk == 1)
+	    {
+	      __bytes -= 1;
+	      __builtin_memcpy(__dst + __bytes, __src + __bytes, 1);
+	    }
+	}
       else if (__bytes == 1)
-        __builtin_memcpy(__dst, __src, 1);
+	__builtin_memcpy(__dst, __src, 1);
     }
 
   // [simd.reductions] identity_element = *see below*
   template <typename _Tp, typename _BinaryOperation>
     requires __is_one_of<_BinaryOperation,
-                         plus<>, multiplies<>, bit_and<>, bit_or<>, bit_xor<>>::value
+			 plus<>, multiplies<>, bit_and<>, bit_or<>, bit_xor<>>::value
     consteval _Tp
     __default_identity_element()
     {
       if constexpr (same_as<_BinaryOperation, multiplies<>>)
-        return _Tp(1);
+	return _Tp(1);
       else if constexpr (same_as<_BinaryOperation, bit_and<>>)
-        return _Tp(~_Tp());
+	return _Tp(~_Tp());
       else
-        return _Tp(0);
+	return _Tp(0);
     }
 }
 

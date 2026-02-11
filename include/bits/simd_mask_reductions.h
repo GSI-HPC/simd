@@ -45,11 +45,11 @@ namespace std::simd
     reduce_count(const basic_mask<_Bytes, _Ap>& __k) noexcept
     {
       if constexpr (_Ap::_S_size == 1)
-        return +__k[0];
+	return +__k[0];
       else if constexpr (_Ap::_S_is_vecmask)
-        return -reduce(-__k);
+	return -reduce(-__k);
       else
-        return __k._M_reduce_count();
+	return __k._M_reduce_count();
     }
 
   template <size_t _Bytes, typename _Ap>

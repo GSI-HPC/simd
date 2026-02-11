@@ -46,13 +46,13 @@ namespace std::simd
    * Constrain to any vector builtin with given value type and optional width.
    */
   template <typename _Tp, typename _ValueType,
-            __simd_size_type _Width = sizeof(_Tp) / sizeof(_ValueType)>
+	    __simd_size_type _Width = sizeof(_Tp) / sizeof(_ValueType)>
     concept __vec_builtin_of
       = !is_class_v<_Tp> && !is_pointer_v<_Tp> && !is_arithmetic_v<_Tp>
-          && __vectorizable<_ValueType>
-          && _Width >= 1 && sizeof(_Tp) / sizeof(_ValueType) == _Width
-          && same_as<__vec_builtin_type_bytes<_ValueType, sizeof(_Tp)>, _Tp>
-          && requires(_Tp& __v, _ValueType __x) { __v[0] = __x; };
+	  && __vectorizable<_ValueType>
+	  && _Width >= 1 && sizeof(_Tp) / sizeof(_ValueType) == _Width
+	  && same_as<__vec_builtin_type_bytes<_ValueType, sizeof(_Tp)>, _Tp>
+	  && requires(_Tp& __v, _ValueType __x) { __v[0] = __x; };
 
   /**
    * Constrain to any vector builtin.
@@ -112,14 +112,14 @@ namespace std::simd
     {
 #ifdef _GLIBCXX_CLANG
       if consteval
-        {
-          return __builtin_bit_cast(array<__vec_value_type<_TV>, __width_of<_TV>>, __v)[__i];
-        }
+	{
+	  return __builtin_bit_cast(array<__vec_value_type<_TV>, __width_of<_TV>>, __v)[__i];
+	}
       else
 #endif
-        {
-          return __v[__i];
-        }
+	{
+	  return __v[__i];
+	}
     }
 
   /**
@@ -132,20 +132,20 @@ namespace std::simd
     __vec_set(_TV& __v, int __i, __vec_value_type<_TV> __x)
     {
       if consteval
-        {
+	{
 #ifdef _GLIBCXX_CLANG
-          auto __arr = __builtin_bit_cast(array<__vec_value_type<_TV>, __width_of<_TV>>, __v);
-          __arr[__i] = __x;
-          __v = __builtin_bit_cast(_TV, __arr);
+	  auto __arr = __builtin_bit_cast(array<__vec_value_type<_TV>, __width_of<_TV>>, __v);
+	  __arr[__i] = __x;
+	  __v = __builtin_bit_cast(_TV, __arr);
 #else
-          constexpr auto [...__j] = _IotaArray<__width_of<_TV>>;
-          __v = _TV{(__i == __j ? __x : __v[__j])...};
+	  constexpr auto [...__j] = _IotaArray<__width_of<_TV>>;
+	  __v = _TV{(__i == __j ? __x : __v[__j])...};
 #endif
-        }
+	}
       else
-        {
-          __v[__i] = __x;
-        }
+	{
+	  __v[__i] = __x;
+	}
     }
 
   /** @internal
@@ -167,26 +167,26 @@ namespace std::simd
    * @pre _N0 <= __width_of<_TV0> && _N1 <= __width_of<_TV1> && _Ns <= __width_of<_TVs> && ...
    */
   template <int _N0, int _N1, int... _Ns, __vec_builtin _TV0, __vec_builtin _TV1,
-           __vec_builtin... _TVs>
+	   __vec_builtin... _TVs>
     [[__gnu__::__always_inline__]]
     constexpr __vec_builtin_type<__vec_value_type<_TV0>,
-                                 __bit_ceil(unsigned(_N0 + (_N1 + ... + _Ns)))>
+				 __bit_ceil(unsigned(_N0 + (_N1 + ... + _Ns)))>
     __vec_concat_sized(const _TV0& __a, const _TV1& __b, const _TVs&... __rest)
     {
       // __is is rounded up because we need to generate a power-of-2 vector:
       constexpr auto [...__is] = _IotaArray<__bit_ceil(unsigned(_N0 + _N1)), int>;
       const auto __ab = __builtin_shufflevector(__a, __b, [](int __i) consteval {
-                          if (__i < _N0) // copy from __a
-                            return __i;
-                          else if (__i < _N0 + _N1) // copy from __b
-                            return __i - _N0 + __width_of<_TV0>; // _N0 <= __width_of<_TV0>
-                          else // can't index into __rest
-                            return -1; // don't care
-                        }(__is)...);
+			  if (__i < _N0) // copy from __a
+			    return __i;
+			  else if (__i < _N0 + _N1) // copy from __b
+			    return __i - _N0 + __width_of<_TV0>; // _N0 <= __width_of<_TV0>
+			  else // can't index into __rest
+			    return -1; // don't care
+			}(__is)...);
       if constexpr (sizeof...(__rest) == 0)
-        return __ab;
+	return __ab;
       else
-        return __vec_concat_sized<_N0 + _N1, _Ns...>(__ab, __rest...);
+	return __vec_concat_sized<_N0 + _N1, _Ns...>(__ab, __rest...);
     }
 
   template <__vec_builtin _TV>
@@ -220,17 +220,17 @@ namespace std::simd
     __vec_zero_pad_to(_TV __x)
     {
       if constexpr (sizeof(_TV) == _Bytes)
-        return __x;
+	return __x;
       else if constexpr (sizeof(_TV) <= sizeof(0ull))
-        {
-          using _Up = _UInt<sizeof(_TV)>;
-          __vec_builtin_type_bytes<_Up, _Bytes> __tmp = {__builtin_bit_cast(_Up, __x)};
-          return __builtin_bit_cast(__vec_builtin_type_bytes<__vec_value_type<_TV>, _Bytes>, __tmp);
-        }
+	{
+	  using _Up = _UInt<sizeof(_TV)>;
+	  __vec_builtin_type_bytes<_Up, _Bytes> __tmp = {__builtin_bit_cast(_Up, __x)};
+	  return __builtin_bit_cast(__vec_builtin_type_bytes<__vec_value_type<_TV>, _Bytes>, __tmp);
+	}
       else if constexpr (sizeof(_TV) < _Bytes)
-        return __vec_zero_pad_to<_Bytes>(__vec_concat(__x, _TV()));
+	return __vec_zero_pad_to<_Bytes>(__vec_concat(__x, _TV()));
       else
-        static_assert(false);
+	static_assert(false);
     }
 
   /** @internal
@@ -256,10 +256,10 @@ namespace std::simd
     {
 #if VIR_NEXT_PATCH
       if constexpr (__complex_like<_Tp>)
-        return __is_const_known(__x.real()) && __is_const_known(__x.imag());
+	return __is_const_known(__x.real()) && __is_const_known(__x.imag());
       else
 #endif
-        return __builtin_constant_p(__x);
+	return __builtin_constant_p(__x);
     }
 
   [[__gnu__::__always_inline__]]
@@ -268,11 +268,11 @@ namespace std::simd
   {
     if consteval
       {
-        return true;
+	return true;
       }
     else
       {
-        return (__is_const_known(__xs) && ...);
+	return (__is_const_known(__xs) && ...);
       }
   }
 
@@ -295,8 +295,8 @@ namespace std::simd
     {
       constexpr int __n = __width_of<_TV>;
       auto __rotr = [](int __i) consteval {
-        int __b = __i & 1;
-        return (__i >> 1) | (__b * __n);
+	int __b = __i & 1;
+	return (__i >> 1) | (__b * __n);
       };
       constexpr auto [...__is] = _IotaArray<__n>;
       return __builtin_shufflevector(__x, __y, __rotr(__is)...);
@@ -309,8 +309,8 @@ namespace std::simd
     {
       constexpr int __n = __width_of<_TV>;
       auto __rotr = [](int __i) consteval {
-        int __b = __i & 1;
-        return (__i >> 1) | (__b * __n);
+	int __b = __i & 1;
+	return (__i >> 1) | (__b * __n);
       };
       constexpr auto [...__is] = _IotaArray<__n>;
       return __builtin_shufflevector(__x, __y, __n / 2 + __rotr(__is)...);
@@ -334,63 +334,63 @@ namespace std::simd
       constexpr bool __to_f16 = is_same_v<_Up, _Float16>;
       constexpr bool __from_f16 = is_same_v<_Tp, _Float16>;
       constexpr bool __needs_f16c = _Traits._M_have_f16c() && !_Traits._M_have_avx512fp16()
-                                      && (__to_f16 || __from_f16);
+				      && (__to_f16 || __from_f16);
       if (__needs_f16c && !__is_const_known(__v))
-        { // Work around PR121688
-          if constexpr (__needs_f16c)
-            return __x86_cvt_f16c<_UV>(__v);
-        }
+	{ // Work around PR121688
+	  if constexpr (__needs_f16c)
+	    return __x86_cvt_f16c<_UV>(__v);
+	}
       if constexpr (is_floating_point_v<_Tp> && is_integral_v<_Up>
-                      && sizeof(_UV) < sizeof(_TV) && sizeof(_Up) < sizeof(int))
-        {
-          using _Ip = __integer_from<std::min(sizeof(int), sizeof(_Tp))>;
-          using _IV = __vec_builtin_type<_Ip, __width_of<_TV>>;
-          return __vec_cast<_UV>(__vec_cast<_IV>(__v));
-        }
+		      && sizeof(_UV) < sizeof(_TV) && sizeof(_Up) < sizeof(int))
+	{
+	  using _Ip = __integer_from<std::min(sizeof(int), sizeof(_Tp))>;
+	  using _IV = __vec_builtin_type<_Ip, __width_of<_TV>>;
+	  return __vec_cast<_UV>(__vec_cast<_IV>(__v));
+	}
 #if VIR_NEXT_PATCH
       if constexpr (!_Traits._M_have_sse4_1() && is_integral_v<_Tp>
-                      && sizeof(_Up) == sizeof(_Tp) * 4)
-        { // GCC uses scalar conversions unless it can use SSE4.1 instructions
-          if constexpr (!is_integral_v<_Up>)
-            {
-              using _Ip = __integer_from<std::min(sizeof(int), sizeof(_Up))>;
-              using _IV = __vec_builtin_type<_Ip, __width_of<_TV>>;
-              return __vec_cast<_UV>(__vec_cast<_IV>(__v));
-            }
-          else if constexpr (sizeof(_TV) == 2)
-            return __vec_split_lo(__vec_cast<__vec_builtin_type<_Up, __width_of<_UV> * 2>>(
-                                    __vec_concat(__v, _TV())));
-          else if constexpr (sizeof(_TV) == 4)
-            {
-              auto __v1 = __vec_zero_pad_to_16(__v);
-              using _V1 = decltype(__v1);
-              if constexpr (is_signed_v<_Tp>)
-                {
-                  if constexpr (sizeof(_Tp) == 1)
-                    {
-                      auto __v2 = __vec_interleave_lo(__v1, __v1);
-                      auto __v4 = __vec_interleave_lo(__v2, __v2);
-                      return reinterpret_cast<_UV>(__vec_bit_cast<__integer_from<sizeof(_Up)>>(__v4)
-                               >> __CHAR_BIT__ * (sizeof(_Up) - 1));
-                    }
-                  else
-                    {
-                      _V1 __sign = __v1 < 0;
-                      using _V2 = __vec_builtin_type_bytes<__integer_from<sizeof(_Tp) * 2>,
-                                                           sizeof(__v1)>;
-                      _V2 __v2 = reinterpret_cast<_V2>(__vec_interleave_lo(__v1, __sign));
-                      _V2 __s2 = reinterpret_cast<_V2>(__vec_interleave_lo(__sign, __sign));
-                      return reinterpret_cast<_UV>(__vec_interleave_lo(__v2, __s2));
-                    }
-                }
-              else
-                {
-                  auto __v2 = __vec_interleave_lo(__v1, _V1());
-                  auto __v4 = __vec_interleave_lo(__v2, _V1());
-                  return reinterpret_cast<_UV>(__v4);
-                }
-            }
-        }
+		      && sizeof(_Up) == sizeof(_Tp) * 4)
+	{ // GCC uses scalar conversions unless it can use SSE4.1 instructions
+	  if constexpr (!is_integral_v<_Up>)
+	    {
+	      using _Ip = __integer_from<std::min(sizeof(int), sizeof(_Up))>;
+	      using _IV = __vec_builtin_type<_Ip, __width_of<_TV>>;
+	      return __vec_cast<_UV>(__vec_cast<_IV>(__v));
+	    }
+	  else if constexpr (sizeof(_TV) == 2)
+	    return __vec_split_lo(__vec_cast<__vec_builtin_type<_Up, __width_of<_UV> * 2>>(
+				    __vec_concat(__v, _TV())));
+	  else if constexpr (sizeof(_TV) == 4)
+	    {
+	      auto __v1 = __vec_zero_pad_to_16(__v);
+	      using _V1 = decltype(__v1);
+	      if constexpr (is_signed_v<_Tp>)
+		{
+		  if constexpr (sizeof(_Tp) == 1)
+		    {
+		      auto __v2 = __vec_interleave_lo(__v1, __v1);
+		      auto __v4 = __vec_interleave_lo(__v2, __v2);
+		      return reinterpret_cast<_UV>(__vec_bit_cast<__integer_from<sizeof(_Up)>>(__v4)
+			       >> __CHAR_BIT__ * (sizeof(_Up) - 1));
+		    }
+		  else
+		    {
+		      _V1 __sign = __v1 < 0;
+		      using _V2 = __vec_builtin_type_bytes<__integer_from<sizeof(_Tp) * 2>,
+							   sizeof(__v1)>;
+		      _V2 __v2 = reinterpret_cast<_V2>(__vec_interleave_lo(__v1, __sign));
+		      _V2 __s2 = reinterpret_cast<_V2>(__vec_interleave_lo(__sign, __sign));
+		      return reinterpret_cast<_UV>(__vec_interleave_lo(__v2, __s2));
+		    }
+		}
+	      else
+		{
+		  auto __v2 = __vec_interleave_lo(__v1, _V1());
+		  auto __v4 = __vec_interleave_lo(__v2, _V1());
+		  return reinterpret_cast<_UV>(__v4);
+		}
+	    }
+	}
 #endif
 #endif
       return __builtin_convertvector(__v, _UV);
@@ -432,13 +432,13 @@ namespace std::simd
     {
       using _Tp = __vec_value_type<_TV>;
       if constexpr (is_floating_point_v<_Tp>)
-        {
-          using _UV = __vec_builtin_type<__integer_from<sizeof(_Tp)>, __width_of<_TV>>;
-          return __builtin_bit_cast(
-                   _TV, __builtin_bit_cast(_UV, __a) ^ __builtin_bit_cast(_UV, __b));
-        }
+	{
+	  using _UV = __vec_builtin_type<__integer_from<sizeof(_Tp)>, __width_of<_TV>>;
+	  return __builtin_bit_cast(
+		   _TV, __builtin_bit_cast(_UV, __a) ^ __builtin_bit_cast(_UV, __b));
+	}
       else
-        return __a ^ __b;
+	return __a ^ __b;
     }
 
   template <__vec_builtin _TV>
@@ -448,13 +448,13 @@ namespace std::simd
     {
       using _Tp = __vec_value_type<_TV>;
       if constexpr (is_floating_point_v<_Tp>)
-        {
-          using _UV = __vec_builtin_type<__integer_from<sizeof(_Tp)>, __width_of<_TV>>;
-          return __builtin_bit_cast(
-                   _TV, __builtin_bit_cast(_UV, __a) | __builtin_bit_cast(_UV, __b));
-        }
+	{
+	  using _UV = __vec_builtin_type<__integer_from<sizeof(_Tp)>, __width_of<_TV>>;
+	  return __builtin_bit_cast(
+		   _TV, __builtin_bit_cast(_UV, __a) | __builtin_bit_cast(_UV, __b));
+	}
       else
-        return __a | __b;
+	return __a | __b;
     }
 
   template <__vec_builtin _TV>
@@ -464,13 +464,13 @@ namespace std::simd
     {
       using _Tp = __vec_value_type<_TV>;
       if constexpr (is_floating_point_v<_Tp>)
-        {
-          using _UV = __vec_builtin_type<__integer_from<sizeof(_Tp)>, __width_of<_TV>>;
-          return __builtin_bit_cast(
-                   _TV, __builtin_bit_cast(_UV, __a) & __builtin_bit_cast(_UV, __b));
-        }
+	{
+	  using _UV = __vec_builtin_type<__integer_from<sizeof(_Tp)>, __width_of<_TV>>;
+	  return __builtin_bit_cast(
+		   _TV, __builtin_bit_cast(_UV, __a) & __builtin_bit_cast(_UV, __b));
+	}
       else
-        return __a & __b;
+	return __a & __b;
     }
 
   /** @internal
@@ -488,7 +488,7 @@ namespace std::simd
       using _Tp = __vec_value_type<_TV>;
       using _UV = __vec_builtin_type<__integer_from<sizeof(_Tp)>, __width_of<_TV>>;
       return __builtin_bit_cast(
-               _TV, ~__builtin_bit_cast(_UV, __a) & __builtin_bit_cast(_UV, __b));
+	       _TV, ~__builtin_bit_cast(_UV, __a) & __builtin_bit_cast(_UV, __b));
     }
 
   template <__vec_builtin _TV>
@@ -499,9 +499,9 @@ namespace std::simd
       using _Tp = __vec_value_type<_TV>;
       using _UV = __vec_builtin_type_bytes<__integer_from<sizeof(_Tp)>, sizeof(_TV)>;
       if constexpr (is_floating_point_v<__vec_value_type<_TV>>)
-        return __builtin_bit_cast(_TV, ~__builtin_bit_cast(_UV, __a));
+	return __builtin_bit_cast(_TV, ~__builtin_bit_cast(_UV, __a));
       else
-        return ~__a;
+	return ~__a;
     }
 
   /**
@@ -512,7 +512,7 @@ namespace std::simd
     constexpr _V _S_signmask = __vec_xor(_V() + 1, _V() - 1);
 
   template <__vec_builtin _TV, int _Np = __width_of<_TV>,
-            typename = make_integer_sequence<int, _Np>>
+	    typename = make_integer_sequence<int, _Np>>
     struct _VecOps;
 
   template <__vec_builtin _TV, int _Np, int... _Is>
@@ -554,8 +554,8 @@ namespace std::simd
       static constexpr _TV
       _S_extract(__vec_builtin auto __x, _Offset = {})
       {
-        static_assert(is_same_v<__vec_value_type<_TV>, __vec_value_type<decltype(__x)>>);
-        return __builtin_shufflevector(__x, decltype(__x)(), (_Is + _Offset::value)...);
+	static_assert(is_same_v<__vec_value_type<_TV>, __vec_value_type<decltype(__x)>>);
+	return __builtin_shufflevector(__x, decltype(__x)(), (_Is + _Offset::value)...);
       }
 
       // swap neighboring elements
@@ -580,48 +580,48 @@ namespace std::simd
       static constexpr void
       _S_overwrite_even_elements(_TV& __x, _HV __y) requires (_Np > 1)
       {
-        constexpr __simd_size_type __n = __width_of<_TV>;
-        __x = __builtin_shufflevector(__x,
+	constexpr __simd_size_type __n = __width_of<_TV>;
+	__x = __builtin_shufflevector(__x,
 #ifdef _GLIBCXX_CLANG
-                                      __vec_concat(__y, __y),
+				      __vec_concat(__y, __y),
 #else
-                                      __y,
+				      __y,
 #endif
-                                      ((_Is & 1) == 0 ? __n + _Is / 2 : _Is)...);
+				      ((_Is & 1) == 0 ? __n + _Is / 2 : _Is)...);
       }
 
       [[__gnu__::__always_inline__]]
       static constexpr void
       _S_overwrite_even_elements(_TV& __xl, _TV& __xh, _TV __y)
       {
-        constexpr __simd_size_type __nl = __width_of<_TV>;
-        constexpr __simd_size_type __nh = __nl * 3 / 2;
-        __xl = __builtin_shufflevector(__xl, __y, ((_Is & 1) == 0 ? __nl + _Is / 2 : _Is)...);
-        __xh = __builtin_shufflevector(__xh, __y, ((_Is & 1) == 0 ? __nh + _Is / 2 : _Is)...);
+	constexpr __simd_size_type __nl = __width_of<_TV>;
+	constexpr __simd_size_type __nh = __nl * 3 / 2;
+	__xl = __builtin_shufflevector(__xl, __y, ((_Is & 1) == 0 ? __nl + _Is / 2 : _Is)...);
+	__xh = __builtin_shufflevector(__xh, __y, ((_Is & 1) == 0 ? __nh + _Is / 2 : _Is)...);
       }
 
       [[__gnu__::__always_inline__]]
       static constexpr void
       _S_overwrite_odd_elements(_TV& __x, _HV __y) requires (_Np > 1)
       {
-        constexpr __simd_size_type __n = __width_of<_TV>;
-        __x = __builtin_shufflevector(__x,
+	constexpr __simd_size_type __n = __width_of<_TV>;
+	__x = __builtin_shufflevector(__x,
 #ifdef _GLIBCXX_CLANG
-                                      __vec_concat(__y, __y),
+				      __vec_concat(__y, __y),
 #else
-                                      __y,
+				      __y,
 #endif
-                                      ((_Is & 1) == 1 ? __n + _Is / 2 : _Is)...);
+				      ((_Is & 1) == 1 ? __n + _Is / 2 : _Is)...);
       }
 
       [[__gnu__::__always_inline__]]
       static constexpr void
       _S_overwrite_odd_elements(_TV& __xl, _TV& __xh, _TV __y)
       {
-        constexpr __simd_size_type __nl = __width_of<_TV>;
-        constexpr __simd_size_type __nh = __nl * 3 / 2;
-        __xl = __builtin_shufflevector(__xl, __y, ((_Is & 1) == 1 ? __nl + _Is / 2 : _Is)...);
-        __xh = __builtin_shufflevector(__xh, __y, ((_Is & 1) == 1 ? __nh + _Is / 2 : _Is)...);
+	constexpr __simd_size_type __nl = __width_of<_TV>;
+	constexpr __simd_size_type __nh = __nl * 3 / 2;
+	__xl = __builtin_shufflevector(__xl, __y, ((_Is & 1) == 1 ? __nl + _Is / 2 : _Is)...);
+	__xh = __builtin_shufflevector(__xh, __y, ((_Is & 1) == 1 ? __nh + _Is / 2 : _Is)...);
       }
 
 #if VIR_NEXT_PATCH
@@ -643,11 +643,11 @@ namespace std::simd
       _S_addsub(_TV __x, _TV __y)
       {
 #if 0
-        return __x + _S_complex_negate_imag(__y);
+	return __x + _S_complex_negate_imag(__y);
 #else
-        // GCC recognizes this pattern as addsub
-        return __builtin_shufflevector(__x - __y, __x + __y,
-                                       (_Is + (_Is & 1) * __width_of<_TV>)...);
+	// GCC recognizes this pattern as addsub
+	return __builtin_shufflevector(__x - __y, __x + __y,
+				       (_Is + (_Is & 1) * __width_of<_TV>)...);
 #endif
       }
 
@@ -662,36 +662,36 @@ namespace std::simd
       // True iff all elements at even indexes are zero. This includes signed zeros only when
       // -fno-signed-zeros is in effect.
       template <_OptTraits _Traits = {}>
-        [[__gnu__::__always_inline__]]
-        static constexpr bool
-        _S_complex_real_is_const_known_zero(_TV __x)
-        {
-          if constexpr (_Traits._M_conforming_to_STDC_annex_G())
-            {
-              using _Up = _UInt<sizeof(_Tp)>;
-              return (((_Is & 1) == 1 || __is_const_known_equal_to(__builtin_bit_cast(_Up, __x[_Is]),
-                                                                 _Up())) && ...);
-            }
-          else
-            return (((_Is & 1) == 1 || __is_const_known_equal_to(__x[_Is], _Tp())) && ...);
+	[[__gnu__::__always_inline__]]
+	static constexpr bool
+	_S_complex_real_is_const_known_zero(_TV __x)
+	{
+	  if constexpr (_Traits._M_conforming_to_STDC_annex_G())
+	    {
+	      using _Up = _UInt<sizeof(_Tp)>;
+	      return (((_Is & 1) == 1 || __is_const_known_equal_to(
+					   __builtin_bit_cast(_Up, __x[_Is]), _Up())) && ...);
+	    }
+	  else
+	    return (((_Is & 1) == 1 || __is_const_known_equal_to(__x[_Is], _Tp())) && ...);
       }
 
       // True iff all elements at odd indexes are zero. This includes signed zeros only when
       // -fno-signed-zeros is in effect.
       template <_OptTraits _Traits = {}>
-        [[__gnu__::__always_inline__]]
-        static constexpr bool
-        _S_complex_imag_is_const_known_zero(_TV __x)
-        {
-          if constexpr (_Traits._M_conforming_to_STDC_annex_G())
-            {
-              using _Up = _UInt<sizeof(_Tp)>;
-              return (((_Is & 1) == 0 || __is_const_known_equal_to(__builtin_bit_cast(_Up, __x[_Is]),
-                                                                 _Up())) && ...);
-            }
-          else
-            return (((_Is & 1) == 0 || __is_const_known_equal_to(__x[_Is], _Tp())) && ...);
-        }
+	[[__gnu__::__always_inline__]]
+	static constexpr bool
+	_S_complex_imag_is_const_known_zero(_TV __x)
+	{
+	  if constexpr (_Traits._M_conforming_to_STDC_annex_G())
+	    {
+	      using _Up = _UInt<sizeof(_Tp)>;
+	      return (((_Is & 1) == 0 || __is_const_known_equal_to(
+					   __builtin_bit_cast(_Up, __x[_Is]), _Up())) && ...);
+	    }
+	  else
+	    return (((_Is & 1) == 0 || __is_const_known_equal_to(__x[_Is], _Tp())) && ...);
+	}
 #endif
     };
 }

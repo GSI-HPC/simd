@@ -81,8 +81,8 @@ namespace std::simd
     bit_width(const _Vp& __v) noexcept
     {
       return rebind_t<make_signed_t<typename _Vp::value_type>, _Vp>([&](int __i) {
-               return std::bit_width(__v[__i]);
-             });
+	       return std::bit_width(__v[__i]);
+	     });
     }
 
   template<__simd_vec_type _Vp>
@@ -91,8 +91,8 @@ namespace std::simd
     countl_zero(const _Vp& __v) noexcept
     {
       return rebind_t<make_signed_t<typename _Vp::value_type>, _Vp>([&](int __i) {
-               return std::countl_zero(__v[__i]);
-             });
+	       return std::countl_zero(__v[__i]);
+	     });
     }
 
   template<__simd_vec_type _Vp>
@@ -101,8 +101,8 @@ namespace std::simd
     countl_one(const _Vp& __v) noexcept
     {
       return rebind_t<make_signed_t<typename _Vp::value_type>, _Vp>([&](int __i) {
-               return std::countl_one(__v[__i]);
-             });
+	       return std::countl_one(__v[__i]);
+	     });
     }
 
   template<__simd_vec_type _Vp>
@@ -111,8 +111,8 @@ namespace std::simd
     countr_zero(const _Vp& __v) noexcept
     {
       return rebind_t<make_signed_t<typename _Vp::value_type>, _Vp>([&](int __i) {
-               return std::countr_zero(__v[__i]);
-             });
+	       return std::countr_zero(__v[__i]);
+	     });
     }
 
   template<__simd_vec_type _Vp>
@@ -121,8 +121,8 @@ namespace std::simd
     countr_one(const _Vp& __v) noexcept
     {
       return rebind_t<make_signed_t<typename _Vp::value_type>, _Vp>([&](int __i) {
-               return std::countr_one(__v[__i]);
-             });
+	       return std::countr_one(__v[__i]);
+	     });
     }
 
   template<__simd_vec_type _Vp>
@@ -131,8 +131,8 @@ namespace std::simd
     popcount(const _Vp& __v) noexcept
     {
       return rebind_t<make_signed_t<typename _Vp::value_type>, _Vp>([&](int __i) {
-               return std::popcount(__v[__i]);
-             });
+	       return std::popcount(__v[__i]);
+	     });
     }
 }
 

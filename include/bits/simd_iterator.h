@@ -27,10 +27,10 @@ namespace std::simd
       friend class __iterator<const _Vp>;
 
       template <typename, typename>
-        friend class basic_vec;
+	friend class basic_vec;
 
       template <size_t, typename>
-        friend class basic_mask;
+	friend class basic_mask;
 
       _Vp* _M_data = nullptr;
 
@@ -70,45 +70,45 @@ namespace std::simd
       constexpr __iterator&
       operator++()
       {
-        ++_M_offset;
-        return *this;
+	++_M_offset;
+	return *this;
       }
 
       constexpr __iterator
       operator++(int)
       {
-        __iterator r = *this;
-        ++_M_offset;
-        return r;
+	__iterator r = *this;
+	++_M_offset;
+	return r;
       }
 
       constexpr __iterator&
       operator--()
       {
-        --_M_offset;
-        return *this;
+	--_M_offset;
+	return *this;
       }
 
       constexpr __iterator
       operator--(int)
       {
-        __iterator r = *this;
-        --_M_offset;
-        return r;
+	__iterator r = *this;
+	--_M_offset;
+	return r;
       }
 
       constexpr __iterator&
       operator+=(difference_type __x)
       {
-        _M_offset += __x;
-        return *this;
+	_M_offset += __x;
+	return *this;
       }
 
       constexpr __iterator&
       operator-=(difference_type __x)
       {
-        _M_offset -= __x;
-        return *this;
+	_M_offset -= __x;
+	return *this;
       }
 
       constexpr value_type

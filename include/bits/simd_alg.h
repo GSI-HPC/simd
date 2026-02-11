@@ -43,7 +43,7 @@ namespace std::simd
     [[__gnu__::__always_inline__]]
     constexpr basic_vec<_Tp, _Ap>
     clamp(const basic_vec<_Tp, _Ap>& __v, const basic_vec<_Tp, _Ap>& __lo,
-          const basic_vec<_Tp, _Ap>& __hi)
+	  const basic_vec<_Tp, _Ap>& __hi)
     {
       __glibcxx_simd_precondition(none_of(__lo > __hi), "lower bound is larger than upper bound");
       return max(__lo, min(__hi, __v));
