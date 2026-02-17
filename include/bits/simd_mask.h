@@ -151,7 +151,11 @@ namespace simd
     [[__gnu__::__always_inline__]]
     constexpr resize_t<_Ip::size(), _Vp>
     permute(const _Vp& __v, const _Ip& __indices)
+#if VIR_PATCH_PERMUTE_DYNAMIC
+    { return resize_t<_Ip::size(), _Vp>::_S_dynamic_permute(__v, __indices); }
+#else
     { return __v[__indices]; }
+#endif
 
   // [simd.creation] ----------------------------------------------------------
   template<__simd_vec_type _Vp, typename _Ap>

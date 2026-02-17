@@ -129,7 +129,7 @@ for file in "$SRC_DIR"/*.h; do
     echo "Processing $filename..."
 
     # Use awk to handle VIR_EXTENSIONS conditional blocks
-    cat "$file" | filter VIR_EXTENSIONS | filter VIR_NEXT_PATCH | fix_copyright > "$DEST_DIR/$filename"
+    cat "$file" | filter VIR_EXTENSIONS | filter VIR_PATCH_PERMUTE_DYNAMIC | filter VIR_NEXT_PATCH | fix_copyright > "$DEST_DIR/$filename"
   fi
 done
 

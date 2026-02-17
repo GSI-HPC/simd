@@ -1534,6 +1534,58 @@ namespace simd
 	else
 	  return _M_data[__i];
       }
+#if VIR_PATCH_PERMUTE_DYNAMIC
+
+      // [simd.subscr] and [simd.permute.dynamic] -----------------------------
+      template <__simd_integral _IV>
+	[[__gnu__::__always_inline__]]
+	constexpr resize_t<_IV::size.value, basic_vec>
+	operator[](const _IV& __perm) const
+	{ return resize_t<_IV::size.value, basic_vec>::_S_dynamic_permute(*this, __perm); }
+
+      template <typename _A0, __simd_integral _IV>
+	[[__gnu__::__always_inline__]]
+	static constexpr basic_vec
+	_S_dynamic_permute(const basic_vec<value_type, _A0>& __v, const _IV& __perm)
+	{
+	  static_assert(_IV::size.value == _S_size);
+	  __glibcxx_simd_precondition((__perm >= cw<0> && __perm <= cw<_A0::_S_size - 1>)._M_all_of(),
+				      "a dynamic permute index is out of bounds");
+	  if constexpr (_A0::_S_size == 1)
+	    // it's a trivial broadcast
+	    return __v[0];
+	  else if constexpr (sizeof(typename _IV::value_type) != sizeof(value_type))
+	    return _S_dynamic_permute(
+		     __v, rebind_t<__integer_from<sizeof(value_type)>, _IV>(__perm));
+	  else if constexpr (_S_size == _A0::_S_size
+			       && sizeof(typename _IV::value_type) == sizeof(value_type))
+	    {
+	      if constexpr (_IV::_S_is_partial)
+		{
+		  constexpr auto __k = _IV::mask_type::_S_init(_IV::mask_type::_S_implicit_mask);
+		  const auto __pv = __select_impl(__k, __perm, 0)._M_concat_data();
+		  return __builtin_shuffle(__v._M_data, __pv);
+		}
+	      else
+		return __builtin_shuffle(__v._M_data, __perm._M_concat_data());
+	    }
+	  else if constexpr (_A0::_S_nreg >= 2)
+	    {
+	      const auto __k0 = __perm < __v._N0;
+	      const _IV __perm1 = __perm - __v._N0;
+	      if (__k0._M_all_of())
+		return _S_dynamic_permute(__v._M_data0, __perm);
+	      else if (__k0._M_none_of())
+		return _S_dynamic_permute(__v._M_data1, __perm1);
+	      else
+		return __select_impl(
+			 __k0, _S_dynamic_permute(__v._M_data0, __select_impl(__k0, __perm, 0)),
+			 _S_dynamic_permute(__v._M_data1, __select_impl(__k0, 0, __perm1)));
+	    }
+	  constexpr auto [...__is] = _IotaArray<_S_size>;
+	  return _DataType{__v[__perm[__is]]...};
+	}
+#endif
 
       // [simd.unary] unary operators -----------------------------------------
       // increment and decrement are implemented in terms of operator+=/-= which avoids UB on
@@ -2483,6 +2535,28 @@ namespace simd
 	    return reinterpret_cast<const _AliasingT*>(this)[__i];
 	  }
       }
+#if VIR_PATCH_PERMUTE_DYNAMIC
+
+      // [simd.subscr] and [simd.permute.dynamic] -----------------------------
+      template <__simd_integral _IV>
+	[[__gnu__::__always_inline__]]
+	constexpr resize_t<_IV::size.value, basic_vec>
+	operator[](const _IV& __perm) const
+	{ return resize_t<_IV::size.value, basic_vec>::_S_dynamic_permute(*this, __perm); }
+
+      template <typename _A0, __simd_integral _IV>
+	[[__gnu__::__always_inline__]]
+	static constexpr basic_vec
+	_S_dynamic_permute(const basic_vec<value_type, _A0>& __v, const _IV& __perm)
+	{
+	  static_assert(_IV::size.value == _S_size);
+	  __glibcxx_simd_precondition((__perm >= cw<0> && __perm <= cw<_A0::_S_size - 1>)._M_all_of(),
+				      "a dynamic permute index is out of bounds");
+	  const auto [__lo, __hi] = chunk<_N0>(__perm);
+	  return _S_init(_DataType0::_S_dynamic_permute(__v, __lo),
+			 _DataType1::_S_dynamic_permute(__v, __hi));
+	}
+#endif
 
       // [simd.unary] unary operators -----------------------------------------
       [[__gnu__::__always_inline__]]
