@@ -43,6 +43,43 @@ vinsertf128
 
 ^"f7(
 vunpcklps
+
+^"f8(
+?vmovq
+?vmovq
+?vmovq
+?vmovq
+vpunpcklqdq
+vpunpcklqdq
+?vmovdqa
+?vmovdqa
+vperm2i128
+
+^"f9(
+?vmovq
+?vmovq
+?vmovq
+?vmovq
+vmovlhps
+vmovlhps
+?vmovaps
+?vmovaps
+vinsertf128
+
+^"f10(
+?vmovdqa
+?vmovd
+?vmovd
+vinsertps
+?vmovd
+?vmovd
+vinsertps
+?vmovq
+?vmovq
+vpunpcklqdq
+?vmovdqa
+?vmovdqa
+vperm2i128
 */
 
 #include "../include/simd"
@@ -80,4 +117,20 @@ void f6(simd::vec<float, 6> a, simd::vec<float, 2> b) {
 
 void f7(simd::vec<float, 1> a, simd::vec<float, 1> b) {
   g(simd::cat(a, b));
+}
+
+void f8(simd::vec<short, 4> a, simd::vec<short, 4> b,
+	simd::vec<short, 4> c, simd::vec<short, 4> d) {
+  g(simd::cat(a, b, c, d));
+}
+
+void f9(simd::vec<float, 2> a, simd::vec<float, 2> b,
+	simd::vec<float, 2> c, simd::vec<float, 2> d) {
+  g(simd::cat(a, b, c, d));
+}
+
+auto f10(simd::vec<short, 2> a, simd::vec<short, 2> b,
+	 simd::vec<short, 2> c, simd::vec<short, 2> d,
+	 simd::vec<short, 8> e) {
+  g(simd::cat(a, b, c, d, e));
 }

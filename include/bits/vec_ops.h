@@ -168,7 +168,30 @@ namespace simd
    * with the elements from applying this function recursively to @p __rest.
    *
    * @pre _N0 <= __width_of<_TV0> && _N1 <= __width_of<_TV1> && _Ns <= __width_of<_TVs> && ...
+   *
+   * Strategy: Aim for a power-of-2 tree concat. E.g.
+   * - cat(2, 2, 2, 2) -> cat(4, 2, 2) -> cat(4, 4)
+   * - cat(2, 2, 2, 2, 8) -> cat(4, 2, 2, 8) -> cat(4, 4, 8) -> cat(8, 8)
    */
+  template <int _N0, int _N1, int... _Ns, __vec_builtin _TV0, __vec_builtin _TV1,
+	   __vec_builtin... _TVs>
+    [[__gnu__::__always_inline__]]
+    constexpr __vec_builtin_type<__vec_value_type<_TV0>,
+				 __bit_ceil(unsigned(_N0 + (_N1 + ... + _Ns)))>
+    __vec_concat_sized(const _TV0& __a, const _TV1& __b, const _TVs&... __rest);
+
+  template <int _N0, int _N1, int _N2, int... _Ns, __vec_builtin _TV0, __vec_builtin _TV1,
+	    __vec_builtin _TV2, __vec_builtin... _TVs>
+    requires (__has_single_bit(unsigned(_N0))) && (_N0 >= (_N1 + _N2))
+    [[__gnu__::__always_inline__]]
+    constexpr __vec_builtin_type<__vec_value_type<_TV0>,
+				 __bit_ceil(unsigned(_N0 + _N1 + (_N2 + ... + _Ns)))>
+    __vec_concat_sized(const _TV0& __a, const _TV1& __b, const _TV2& __c, const _TVs&... __rest)
+    {
+      return __vec_concat_sized<_N0, _N1 + _N2, _Ns...>(
+	       __a, __vec_concat_sized<_N1, _N2>(__b, __c), __rest...);
+    }
+
   template <int _N0, int _N1, int... _Ns, __vec_builtin _TV0, __vec_builtin _TV1,
 	   __vec_builtin... _TVs>
     [[__gnu__::__always_inline__]]
