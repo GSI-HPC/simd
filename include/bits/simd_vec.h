@@ -337,6 +337,20 @@ namespace simd
       constexpr const _DataType&
       _M_get() const
       { return _M_data; }
+#if VIR_PATCH_PERMUTE_DYNAMIC
+
+      /** \internal
+       * Bit-cast the given object \p __x to basic_vec.
+       *
+       * This is necessary for _S_nreg > 1 where the last element can be a scalar or when the sizeof
+       * doesn't match because of different alignment requirements of the sub-vecs.
+       */
+      template <typename _Up, typename _UAbi>
+	[[__gnu__::__always_inline__]]
+	static constexpr basic_vec
+	_S_recursive_bit_cast(const basic_vec<_Up, _UAbi>& __x)
+	{ return __builtin_bit_cast(basic_vec, __x._M_concat_data(false)); }
+#endif
 
       [[__gnu__::__always_inline__]]
       friend constexpr bool
@@ -350,7 +364,17 @@ namespace simd
 	if constexpr (_S_is_scalar)
 	  return __vec_builtin_type<__canon_value_type, 1>{_M_data};
 	else
+#if VIR_PATCH_PERMUTE_DYNAMIC
+	  {
+	    if constexpr (_S_is_partial)
+	      if (__do_sanitize)
+		return __select_impl(mask_type::_S_init(mask_type::_S_implicit_mask),
+				     *this, 0)._M_data;
+	    return _M_data;
+	  }
+#else
 	  return _M_data;
+#endif
       }
 
       template <int _Size = _S_size, int _Offset = 0, typename _A0, typename _Fp>
@@ -1549,41 +1573,60 @@ namespace simd
 	_S_dynamic_permute(const basic_vec<value_type, _A0>& __v, const _IV& __perm)
 	{
 	  static_assert(_IV::size.value == _S_size);
-	  __glibcxx_simd_precondition((__perm >= cw<0> && __perm <= cw<_A0::_S_size - 1>)._M_all_of(),
-				      "a dynamic permute index is out of bounds");
+	  constexpr int __max_index = _A0::_S_size - 1;
+	  if constexpr (is_unsigned_v<typename _IV::value_type>)
+	    __glibcxx_simd_precondition((__perm <= __max_index)._M_all_of(),
+					"a dynamic permute index is out of bounds");
+	  else
+	    __glibcxx_simd_precondition((__perm >= 0 && __perm <= __max_index)._M_all_of(),
+					"a dynamic permute index is out of bounds");
+	  using _ShufIndexType = _UInt<sizeof(value_type)>;
+	  constexpr bool __can_convert_perm = numeric_limits<_ShufIndexType>::max()
+						>= _A0::_S_size - 1;
 	  if constexpr (_A0::_S_size == 1)
 	    // it's a trivial broadcast
 	    return __v[0];
-	  else if constexpr (sizeof(typename _IV::value_type) != sizeof(value_type))
-	    return _S_dynamic_permute(
-		     __v, rebind_t<__integer_from<sizeof(value_type)>, _IV>(__perm));
-	  else if constexpr (_S_size == _A0::_S_size
-			       && sizeof(typename _IV::value_type) == sizeof(value_type))
+	  else if constexpr (_S_size <= 2 // __builtin_shuffle (+ _S_extract) is less efficient
+			       || !__can_convert_perm)
 	    {
-	      if constexpr (_IV::_S_is_partial)
+	      constexpr auto [...__is] = _IotaArray<_S_size>;
+	      if consteval
 		{
-		  constexpr auto __k = _IV::mask_type::_S_init(_IV::mask_type::_S_implicit_mask);
-		  const auto __pv = __select_impl(__k, __perm, 0)._M_concat_data();
-		  return __builtin_shuffle(__v._M_data, __pv);
+		  return _DataType{__v[__perm[__is]]...};
 		}
 	      else
-		return __builtin_shuffle(__v._M_data, __perm._M_concat_data());
+		{
+		  using _AliasT [[__gnu__::__may_alias__]] = value_type;
+		  const _AliasT* __src = reinterpret_cast<const _AliasT*>(&__v);
+		  return _DataType{__src[size_t(__perm[__is])]...};
+		}
 	    }
 	  else if constexpr (_A0::_S_nreg >= 2)
-	    {
+	    { // recurse to 
 	      const auto __k0 = __perm < __v._N0;
-	      const _IV __perm1 = __perm - __v._N0;
+	      const _IV __perm0 = __select_impl(__k0, __perm, 0);
+	      const _IV __perm1 = __select_impl(__k0, 0, __perm - __v._N0);
+	      const basic_vec __lo = _S_dynamic_permute(__v._M_data0, __perm0);
+	      const basic_vec __hi = _S_dynamic_permute(__v._M_data1, __perm1);
 	      if (__k0._M_all_of())
-		return _S_dynamic_permute(__v._M_data0, __perm);
+		return __lo;
 	      else if (__k0._M_none_of())
-		return _S_dynamic_permute(__v._M_data1, __perm1);
+		return __hi;
 	      else
-		return __select_impl(
-			 __k0, _S_dynamic_permute(__v._M_data0, __select_impl(__k0, __perm, 0)),
-			 _S_dynamic_permute(__v._M_data1, __select_impl(__k0, 0, __perm1)));
+		return __select_impl(static_cast<mask_type>(__k0), __lo, __hi);
 	    }
-	  constexpr auto [...__is] = _IotaArray<_S_size>;
-	  return _DataType{__v[__perm[__is]]...};
+	  else
+	    { // adjust arguments for and call __builtin_shuffle
+	      const auto __p0 = rebind_t<_ShufIndexType, _IV>(__perm)._M_concat_data(true);
+	      const auto& __v0 = __v._M_data;
+	      if constexpr (sizeof(__v0) == sizeof(__p0))
+		return __vec_shuffle(__v0, __p0);
+	      else if constexpr (sizeof(__v0) < sizeof(__p0))
+		return __vec_shuffle(__vec_zero_pad_to<sizeof(__p0)>(__v0), __p0);
+	      else
+		return _VecOps<_DataType>::_S_extract(
+			 __vec_shuffle(__v0, __vec_zero_pad_to<sizeof(__v0)>(__p0)));
+	    }
 	}
 #endif
 
@@ -2183,6 +2226,26 @@ namespace simd
       constexpr const _DataType1&
       _M_get_high() const
       { return _M_data1; }
+#if VIR_PATCH_PERMUTE_DYNAMIC
+
+      template <typename _Up, typename _UAbi>
+	[[__gnu__::__always_inline__]]
+	static constexpr basic_vec
+	_S_recursive_bit_cast(const basic_vec<_Up, _UAbi>& __x)
+	{
+	  using _UV = basic_vec<_Up, _UAbi>;
+	  if constexpr (_UAbi::_S_nreg >= 2 && !__has_single_bit(unsigned(_UAbi::_S_size)))
+	    return _S_init(__builtin_bit_cast(_DataType0, __x._M_get_low()),
+			   _DataType1::_S_recursive_bit_cast(__x._M_get_high()));
+	  else if constexpr (sizeof(basic_vec) == sizeof(__x))
+	    return __builtin_bit_cast(basic_vec, __x);
+	  else
+	    { // e.g. on IvyBridge (different alignment => different sizeof)
+	      struct _Tmp { alignas(_UV) basic_vec _M_data; };
+	      return __builtin_bit_cast(_Tmp, __x)._M_data;
+	    }
+	}
+#endif
 
       [[__gnu__::__always_inline__]]
       friend constexpr bool
@@ -2549,9 +2612,7 @@ namespace simd
 	static constexpr basic_vec
 	_S_dynamic_permute(const basic_vec<value_type, _A0>& __v, const _IV& __perm)
 	{
-	  static_assert(_IV::size.value == _S_size);
-	  __glibcxx_simd_precondition((__perm >= cw<0> && __perm <= cw<_A0::_S_size - 1>)._M_all_of(),
-				      "a dynamic permute index is out of bounds");
+	  static_assert(_IV::_S_size == _S_size);
 	  const auto [__lo, __hi] = chunk<_N0>(__perm);
 	  return _S_init(_DataType0::_S_dynamic_permute(__v, __lo),
 			 _DataType1::_S_dynamic_permute(__v, __hi));

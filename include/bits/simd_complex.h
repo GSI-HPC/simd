@@ -670,6 +670,19 @@ namespace simd
       constexpr const auto&
       _M_get_high() const requires (_Ap::_S_nreg >= 2)
       { return _M_data._M_get_high(); }
+#if VIR_PATCH_PERMUTE_DYNAMIC
+
+      template <typename _Up, typename _UAbi>
+	[[__gnu__::__always_inline__]]
+	static constexpr basic_vec
+	_S_recursive_bit_cast(const basic_vec<_Up, _UAbi>& __x)
+	{ return _S_init(_TSimd::_S_recursive_bit_cast(__x)); }
+
+      [[__gnu__::__always_inline__]]
+      constexpr auto
+      _M_concat_data(bool __do_sanitize = false) const
+      { return _M_data._M_concat_data(__do_sanitize); }
+#endif
 
       [[__gnu__::__always_inline__]]
       friend constexpr bool
@@ -945,6 +958,79 @@ namespace simd
       constexpr value_type
       operator[](__simd_size_type __i) const
       { return value_type(_M_data[__i * 2], _M_data[__i * 2 + 1]); }
+#if VIR_PATCH_PERMUTE_DYNAMIC
+
+      // [simd.subscr] and [simd.permute.dynamic] -----------------------------
+      template <__simd_integral _IV>
+	[[__gnu__::__always_inline__]]
+	constexpr resize_t<_IV::size.value, basic_vec>
+	operator[](const _IV& __perm) const
+	{ return resize_t<_IV::size.value, basic_vec>::_S_dynamic_permute(*this, __perm); }
+
+      template <typename _A0, __simd_integral _IV>
+	[[__gnu__::__always_inline__]]
+	static constexpr basic_vec
+	_S_dynamic_permute(const basic_vec<value_type, _A0>& __v, const _IV& __perm)
+	{
+	  static_assert(_IV::_S_size == _S_size);
+	  if constexpr (sizeof(value_type) == sizeof(float) || sizeof(value_type) == sizeof(double))
+	    {
+	      using _Up = conditional_t<sizeof(value_type) == sizeof(float), float, double>;
+	      using _From = __similar_vec<_Up, _A0::_S_size, _A0>;
+	      using _To = __similar_vec<_Up, _S_size, abi_type>;
+	      return basic_vec::_S_recursive_bit_cast(
+		       _To::_S_dynamic_permute(_From::_S_recursive_bit_cast(__v), __perm));
+	    }
+	  else
+	    {
+	      static_assert(sizeof(value_type) == 16); // 128-bit shuffles
+	      // we don't use __builtin_shuffle directly since we don't have support for 128-bit
+	      // value types. If __int128 is available then it is actually usable in vector builtins
+	      // but GCC doesn't recognize/optimize the shuffle patterns.
+	      __glibcxx_simd_precondition(
+		(__perm >= cw<0> && __perm <= cw<_A0::_S_size - 1>)._M_all_of(),
+		"a dynamic permute index is out of bounds");
+	      if constexpr (_TSimd::abi_type::_S_nreg == 1 && _A0::_S_nreg == 1)
+		{
+#if _GLIBCXX_X86
+		  // Use VPERMPS (permute floats across all lanes). We therefore need to expand
+		  // __perm to shuffle 4 consecutive 32-Byte blocks.
+		  constexpr int __n = sizeof(__v) / sizeof(float);
+		  const auto __vf = __builtin_bit_cast(vec<float, __n>, __v);
+		  if constexpr (sizeof(typename _IV::value_type) == sizeof(int)
+				  && _A0::_S_size == _S_size)
+		    {
+		      const vec<unsigned, __n> __idx
+			= __builtin_bit_cast(vec<unsigned char, __n>,
+					     __perm * 0x04'04'04'04 + 0x03'02'01'00);
+		      return __builtin_bit_cast(basic_vec,
+						__builtin_shuffle(__vf._M_concat_data(),
+								  __idx._M_concat_data()));
+		    }
+#endif
+		  const array __elems = chunk<2>(__v._M_data);
+		  constexpr auto [...__is] = _IotaArray<_S_size>;
+		  return _S_init(cat(__elems[__perm[__is]]...));
+		}
+	      else if (__is_const_known(__perm))
+		{
+		  const array __elems = chunk<2>(__v._M_data);
+		  constexpr auto [...__is] = _IotaArray<_S_size>;
+		  return _S_init(cat(__elems[__perm[__is]]...));
+		}
+	      else
+		{
+		  basic_vec __r = {};
+		  byte* __dst = reinterpret_cast<byte*>(&__r);
+		  const byte* __src = reinterpret_cast<const byte*>(&__v);
+		  constexpr int __block = sizeof(value_type);
+		  for (int __i = 0; __i < _S_size; ++__i)
+		    __builtin_memcpy(__dst + __i * __block, __src + __perm[__i] * __block, __block);
+		  return __r;
+		}
+	    }
+	}
+#endif
 
       // [simd.unary] unary operators -----------------------------------------
       [[__gnu__::__always_inline__]]
@@ -1614,6 +1700,11 @@ namespace simd
 	return resize_t<_M_real._N1, basic_vec>(
 		 _M_real._M_get_high(), _M_imag._M_get_high());
       }
+#if VIR_PATCH_PERMUTE_DYNAMIC
+
+      constexpr auto
+      _M_concat_data(bool __do_sanitize = false) = delete("not for _CxCtgus");
+#endif
 
       [[__gnu__::__always_inline__]]
       friend constexpr bool
@@ -1901,6 +1992,24 @@ namespace simd
       constexpr value_type
       operator[](__simd_size_type __i) const
       { return value_type(_M_real[__i], _M_imag[__i]); }
+#if VIR_PATCH_PERMUTE_DYNAMIC
+
+      // [simd.subscr] and [simd.permute.dynamic] -----------------------------
+      template <__simd_integral _IV>
+	[[__gnu__::__always_inline__]]
+	constexpr resize_t<_IV::size.value, basic_vec>
+	operator[](const _IV& __perm) const
+	{ return resize_t<_IV::size.value, basic_vec>::_S_dynamic_permute(*this, __perm); }
+
+      template <typename _A0, __simd_integral _IV>
+	[[__gnu__::__always_inline__]]
+	static constexpr basic_vec
+	_S_dynamic_permute(const basic_vec<value_type, _A0>& __v, const _IV& __perm)
+	{
+	  return basic_vec(_RealSimd::_S_dynamic_permute(__v._M_real, __perm),
+			   _RealSimd::_S_dynamic_permute(__v._M_imag, __perm));
+	}
+#endif
 
       // [simd.unary] unary operators -----------------------------------------
       [[__gnu__::__always_inline__]]

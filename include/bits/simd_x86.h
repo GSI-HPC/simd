@@ -424,6 +424,109 @@ namespace simd
 	    }
 	}
     }
+#if VIR_PATCH_PERMUTE_DYNAMIC
+
+  // overload for 32/64/128-bit pshufb without OpenCL modulo semantics
+  template <__vec_builtin _TV, __vec_builtin _IV, _ArchTraits _Traits = {}>
+    requires (sizeof(__vec_value_type<_TV>) == sizeof(char) && sizeof(_TV) <= 16
+		&& sizeof(_TV) >= 4) && (_Traits._M_have_ssse3())
+    [[__gnu__::__always_inline__]]
+    constexpr _TV
+    __vec_shuffle(_TV __v, _IV __perm)
+    {
+      if (__is_const_known(__perm))
+	return __builtin_shuffle(__v, __perm);
+      else if constexpr (sizeof(_TV) == 16)
+	return reinterpret_cast<_TV>(
+		 __builtin_ia32_pshufb128(__vec_bit_cast<char>(__v), __vec_bit_cast<char>(__perm)));
+      else
+	 {
+	   const auto __r = __vec_split_lo(__builtin_ia32_pshufb128(
+					     __vec_zero_pad_to_16(__vec_bit_cast<char>(__v)),
+					     __vec_zero_pad_to_16(__vec_bit_cast<char>(__perm))));
+	   if constexpr (sizeof(_TV) == 8)
+	     return reinterpret_cast<_TV>(__r);
+	   else
+	     return reinterpret_cast<_TV>(__vec_split_lo(__r));
+	 }
+    }
+
+  // overload for 256-bit pshufb without OpenCL modulo semantics
+  template <__vec_builtin _TV, __vec_builtin _IV, _ArchTraits _Traits = {}>
+    requires (sizeof(__vec_value_type<_TV>) == sizeof(char) && __width_of<_TV> == 32)
+      && (_Traits._M_have_avx2())
+    [[__gnu__::__always_inline__]]
+    constexpr _TV
+    __vec_shuffle(_TV __v_, _IV __perm_)
+    {
+      if (__is_const_known(__perm_))
+	return __builtin_shuffle(__v_, __perm_);
+      else
+	{
+	  const auto __v = __vec_bit_cast<char>(__v_);
+	  const auto __perm = __vec_bit_cast<char>(__perm_);
+	  auto __v0 = __builtin_shufflevector(
+			__v, __v,
+			0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+			0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+	  auto __v1 = __builtin_shufflevector(
+			__v, __v,
+			16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+			16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31);
+	  __v0 = __builtin_ia32_pshufb256(__v0, __perm);
+	  __v1 = __builtin_ia32_pshufb256(__v1, __perm);
+	  return reinterpret_cast<_TV>(__perm > 15 ? __v1 : __v0);
+	}
+    }
+
+  // overload for 512-bit pshufb without OpenCL modulo semantics
+  template <__vec_builtin _TV, __vec_builtin _IV, _ArchTraits _Traits = {}>
+    requires (sizeof(__vec_value_type<_TV>) == sizeof(char) && __width_of<_TV> == 64)
+      && (_Traits._M_have_avx512bw())
+    [[__gnu__::__always_inline__]]
+    constexpr _TV
+    __vec_shuffle(_TV __v_, _IV __perm_)
+    {
+      if (__is_const_known(__perm_))
+	return __builtin_shuffle(__v_, __perm_);
+      else
+	{
+	  const auto __v = __vec_bit_cast<char>(__v_);
+	  const auto __perm = __vec_bit_cast<char>(__perm_);
+	  auto __v0 = __builtin_shufflevector(
+			__v, __v,
+			0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+			0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+			0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+			0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+	  auto __v1 = __builtin_shufflevector(
+			__v, __v,
+			16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+			16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+			16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+			16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31);
+	  auto __v2 = __builtin_shufflevector(
+			__v, __v,
+			32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
+			32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
+			32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
+			32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47);
+	  auto __v3 = __builtin_shufflevector(
+			__v, __v,
+			48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63,
+			48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63,
+			48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63,
+			48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63);
+	  __vec_builtin_type_bytes<char, 64> __z = {};
+	  __v0 = __builtin_ia32_pshufb512_mask(__v0, __perm, __z, -1);
+	  __v1 = __builtin_ia32_pshufb512_mask(__v1, __perm, __z, -1);
+	  __v2 = __builtin_ia32_pshufb512_mask(__v2, __perm, __z, -1);
+	  __v3 = __builtin_ia32_pshufb512_mask(__v3, __perm, __z, -1);
+	  return reinterpret_cast<_TV>(__perm > 31 ? (__perm > 47 ? __v3 : __v2)
+						   : (__perm > 15 ? __v1 : __v0));
+	}
+    }
+#endif // VIR_PATCH_PERMUTE_DYNAMIC
 #endif // not Clang
 
   template <_X86Cmp _Cmp, __vec_builtin _TV, _ArchTraits _Traits = {}>

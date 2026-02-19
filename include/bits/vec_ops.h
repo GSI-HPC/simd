@@ -319,6 +319,22 @@ namespace simd
       return __builtin_shufflevector(__x, __y, __n / 2 + __rotr(__is)...);
     }
 #endif
+#if VIR_PATCH_PERMUTE_DYNAMIC
+
+  // also see overloads in bits/simd_x86.h
+  template <__vec_builtin _TV, __vec_builtin _IV, _ArchTraits = {}>
+    [[__gnu__::__always_inline__]]
+    constexpr _TV
+    __vec_shuffle(_TV __v, _IV __perm)
+    {
+#if __has_builtin(__builtin_shuffle)
+      return __builtin_shuffle(__v, __perm);
+#else
+      constexpr int [...__is] = _IotaArray<__width_of<_IV>>;
+      return _TV {__v[__perm[__is]]...};
+#endif
+    }
+#endif
 
   /** \internal
    * Simple wrapper around __builtin_convertvector to provide static_cast-like syntax.
