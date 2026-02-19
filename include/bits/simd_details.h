@@ -77,9 +77,15 @@
   do {                                                                                             \
     const bool __precondition_result = !bool(expr);                                                \
     if (__builtin_constant_p(__precondition_result) && __precondition_result)                      \
-      []() __attribute__((__noipa__, __warning__(                                                  \
-	"precondition failure. \n" _GLIBCXX_SIMD_LOC "note: " msg " (precondition '" #expr         \
-	"' does not hold)"))) {}();                                                                \
+      {                                                                                            \
+	struct _Precondition                                                                       \
+	{                                                                                          \
+	  [[__gnu__::__noipa__, __gnu__::__warning__("precondition failure. \n"                    \
+	    _GLIBCXX_SIMD_LOC "note: " msg " (precondition '" #expr "' does not hold)")]]          \
+	  static inline void _S_fail() noexcept {}                                                 \
+	};                                                                                         \
+	_Precondition::_S_fail();                                                                  \
+      }                                                                                            \
     if (__builtin_expect(__precondition_result, false))                                            \
       std::simd::__invoke_ub(                                                                      \
 	_GLIBCXX_SIMD_LOC "precondition failure in '%s':\n" msg " ('" #expr "' does not hold)",    \
