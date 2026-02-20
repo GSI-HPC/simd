@@ -1302,6 +1302,19 @@ namespace simd
 	  return _M_data;
 	else if constexpr (_S_use_bitmask)
 	  {
+#if _GLIBCXX_X86
+	    if (!__is_const_known(_M_data))
+	      {
+		if constexpr (sizeof(_M_data) == 1)
+		  return 1 == __builtin_ia32_ktestcqi(_M_data, _S_implicit_mask);
+		else if constexpr (sizeof(_M_data) == 2)
+		  return 1 == __builtin_ia32_ktestchi(_M_data, _S_implicit_mask);
+		else if constexpr (sizeof(_M_data) == 4)
+		  return 1 == __builtin_ia32_ktestcsi(_M_data, _S_implicit_mask);
+		else if constexpr (sizeof(_M_data) == 8)
+		  return 1 == __builtin_ia32_ktestcdi(_M_data, _S_implicit_mask);
+	      }
+#endif
 	    if constexpr (_S_is_partial)
 	      // PR120925 (partial kortest pattern not recognized)
 	      return (_M_data & _S_implicit_mask) == _S_implicit_mask;
@@ -1324,6 +1337,19 @@ namespace simd
 	  return _M_data;
 	else if constexpr (_S_use_bitmask)
 	  {
+#if _GLIBCXX_X86
+	    if (!__is_const_known(_M_data))
+	      {
+		if constexpr (sizeof(_M_data) == 1)
+		  return 1 != __builtin_ia32_ktestzqi(_M_data, _S_implicit_mask);
+		else if constexpr (sizeof(_M_data) == 2)
+		  return 1 != __builtin_ia32_ktestzhi(_M_data, _S_implicit_mask);
+		else if constexpr (sizeof(_M_data) == 4)
+		  return 1 != __builtin_ia32_ktestzsi(_M_data, _S_implicit_mask);
+		else if constexpr (sizeof(_M_data) == 8)
+		  return 1 != __builtin_ia32_ktestzdi(_M_data, _S_implicit_mask);
+	      }
+#endif
 	    if constexpr (_S_is_partial)
 	      // PR120925 (partial kortest pattern not recognized)
 	      return (_M_data & _S_implicit_mask) != 0;
@@ -1346,6 +1372,19 @@ namespace simd
 	  return !_M_data;
 	else if constexpr (_S_use_bitmask)
 	  {
+#if _GLIBCXX_X86
+	    if (!__is_const_known(_M_data))
+	      {
+		if constexpr (sizeof(_M_data) == 1)
+		  return 1 == __builtin_ia32_ktestzqi(_M_data, _S_implicit_mask);
+		else if constexpr (sizeof(_M_data) == 2)
+		  return 1 == __builtin_ia32_ktestzhi(_M_data, _S_implicit_mask);
+		else if constexpr (sizeof(_M_data) == 4)
+		  return 1 == __builtin_ia32_ktestzsi(_M_data, _S_implicit_mask);
+		else if constexpr (sizeof(_M_data) == 8)
+		  return 1 == __builtin_ia32_ktestzdi(_M_data, _S_implicit_mask);
+	      }
+#endif
 	    if constexpr (_S_is_partial)
 	      // PR120925 (partial kortest pattern not recognized)
 	      return (_M_data & _S_implicit_mask) == 0;
