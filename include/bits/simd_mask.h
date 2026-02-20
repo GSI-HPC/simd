@@ -569,7 +569,7 @@ namespace simd
 
       [[__gnu__::__always_inline__]]
       constexpr auto
-      _M_concat_data(bool __do_sanitize = true) const
+      _M_concat_data(bool __do_sanitize = _S_is_partial) const
       {
 	if constexpr (_S_is_scalar)
 	  return __vec_builtin_type<__integer_from<_Bytes>, 1>{__integer_from<_Bytes>(-_M_data)};
@@ -1595,18 +1595,18 @@ namespace simd
 
       [[__gnu__::__always_inline__]]
       constexpr auto
-      _M_concat_data(bool __do_sanitize = true) const
+      _M_concat_data(bool __do_sanitize = _S_is_partial) const
       {
 	if constexpr (_S_use_bitmask)
 	  {
 	    static_assert(_S_size <= numeric_limits<unsigned long long>::digits,
 			  "cannot concat more than 64 bits");
 	    using _Up = _Bitmask<_S_size>;
-	    return _Up(_M_data0._M_concat_data(true) | (_Up(_M_data1._M_concat_data(__do_sanitize)) << _N0));
+	    return _Up(_M_data0._M_concat_data() | (_Up(_M_data1._M_concat_data(__do_sanitize)) << _N0));
 	  }
 	else
 	  {
-	    auto __lo = _M_data0._M_concat_data(true);
+	    auto __lo = _M_data0._M_concat_data();
 	    auto __hi = __vec_zero_pad_to<sizeof(__lo)>(_M_data1._M_concat_data(__do_sanitize));
 	    return __vec_concat(__lo, __hi);
 	  }
