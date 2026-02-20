@@ -415,6 +415,7 @@ struct constexpr_verifier
       {
 	f();
 	okay = false;
+	//__builtin_trap();
       }
     catch (const test::precondition_failure& failure)
       {
@@ -423,6 +424,7 @@ struct constexpr_verifier
     catch (...)
       {
 	okay = false;
+	//__builtin_trap();
       }
     return {};
   }
@@ -448,6 +450,7 @@ struct constexpr_verifier
 	  using Common = decltype(std::simd::select(v == ref, v, ref));
 	  okay = okay && equal_with_nan_and_inf_fixup<Common>(v, ref);
 	}
+      //if (!okay) __builtin_trap();
       return {};
     }
 
