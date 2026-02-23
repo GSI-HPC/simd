@@ -50,7 +50,7 @@ BEGIN {
   skip += 1
   next
 }
-/^#elif/ && skip == 1 {
+/^#elif\>/ && skip == 1 {
   skip = 0
   sub(/^#elif/, "#if")
 }
@@ -58,7 +58,7 @@ BEGIN {
   in_negated_if = 1
   next
 }
-/^#else$/ && (in_negated_if == 1 || skip == 1) {
+/^#else\>/ && (in_negated_if == 1 || skip == 1) {
   if (in_negated_if == 1) {
     in_negated_if = 0
     if (skip != 0) {
@@ -72,7 +72,7 @@ BEGIN {
   }
   next
 }
-/^#endif$/ && skip > 0 {
+/^#endif\>/ && skip > 0 {
   if (skip > 0) {
     skip -= 1
     if (skip == 0) {
@@ -83,7 +83,7 @@ BEGIN {
     exit 1
   }
 }
-/^#endif$/ && drop_next_endif == 1 {
+/^#endif\>/ && drop_next_endif == 1 {
   drop_next_endif = 0
   next
 }
