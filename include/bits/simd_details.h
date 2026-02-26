@@ -98,7 +98,6 @@ namespace std _GLIBCXX_VISIBILITY(default)
 _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
 #if VIR_NEXT_PATCH
-  // Forward declarations.
   template<typename> class complex;
 
 #endif
