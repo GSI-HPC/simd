@@ -18,7 +18,7 @@ static constexpr bool is_iec559 =
 template <typename V>
   struct Tests {};
 
-#if VIR_NEXT_PATCH
+#if VIR_PATCH_MATH
 template <typename V>
   requires std::floating_point<typename V::value_type>
   struct Tests<V>

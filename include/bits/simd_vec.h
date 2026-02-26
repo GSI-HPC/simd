@@ -510,7 +510,7 @@ namespace simd
 		    {
 		      auto __a = _VO::_S_dup_even(__x) * __y;
 		      auto __b = _DataType() * _VO::_S_swap_neighbors(__y);
-#if SIMD_DIAGNOSE_INDETERMINATE_SIGNED_ZERO
+#if VIR_EXTENSIONS && SIMD_DIAGNOSE_INDETERMINATE_SIGNED_ZERO
 		      //if (_SuperImpl::_S_any_of(_SuperImpl::_S_equal_to(__a, 0))) // __b is ±0 by construction
 #endif
 		      _M_data = _VO::_S_addsub(__a, __b);
@@ -1276,7 +1276,7 @@ namespace simd
 	    }
 	}
 
-#if VIR_NEXT_PATCH
+#if VIR_PATCH_MATH
       [[__gnu__::__always_inline__]]
       inline basic_vec
       _M_assoc_barrier() const

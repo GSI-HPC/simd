@@ -3,7 +3,7 @@
  *                       Matthias Kretz <m.kretz@gsi.de>
  */
 
-#if VIR_NEXT_PATCH
+#if VIR_PATCH_MATH
 #ifndef _GLIBCXX_SIMD_MATH_H
 #define _GLIBCXX_SIMD_MATH_H 1
 

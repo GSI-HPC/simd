@@ -155,6 +155,7 @@ for file in "$SRC_DIR"/*.h; do
     # Use awk to handle VIR_EXTENSIONS conditional blocks
     cat "$file" | filter VIR_EXTENSIONS \
       | filter VIR_PATCH_PERMUTE_DYNAMIC \
+      | filter VIR_PATCH_MATH \
       | filter VIR_NEXT_PATCH invert \
       | fix_copyright > "$DEST_DIR/$filename"
   fi

@@ -582,7 +582,7 @@ namespace simd
    */
   struct _OptTraits
   {
-#if VIR_NEXT_PATCH
+#if VIR_PATCH_MATH
     // keep only finite-math-only flag
     consteval _OptTraits
     _M_math_abi() const
@@ -830,7 +830,7 @@ namespace simd
   {
     __UINT64_TYPE__ _M_flags = _GLIBCXX_SIMD_ARCH_TRAITS_INIT;
 
-#if VIR_NEXT_PATCH
+#if VIR_PATCH_MATH
     consteval _ArchTraits
     _M_math_abi() const
     {
@@ -1088,7 +1088,7 @@ namespace simd
    */
   struct _TargetTraits
   : _ArchTraits, _OptTraits
-#if VIR_NEXT_PATCH
+#if VIR_PATCH_MATH
   {
     consteval _TargetTraits
     _M_math_abi() const
