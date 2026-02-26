@@ -1784,23 +1784,6 @@ namespace simd
 	  // e.g. mask<short, 17> is {mask<short, 16>, mask<short, 1>}, where the latter uses
 	  // _ScalarAbi<1>, which is stored as 'bool'
 	  return __i < _N0 ? _M_data0[__i] : _M_data1[__i - _N0];
-#if VIR_NEXT_PATCH
-	else if constexpr (abi_type::_S_is_cx_ileav)
-	  {
-	    // values are duplicated
-	    if constexpr (abi_type::_S_is_bitmask)
-	      {
-		using _AliasingByte [[__gnu__::__may_alias__]] = unsigned char;
-		return bool((reinterpret_cast<const _AliasingByte*>(this)
-			       [2 * __i / __CHAR_BIT__] >> (2 * __i % __CHAR_BIT__)) & 1);
-	      }
-	    else
-	      {
-		using _AliasingInt [[__gnu__::__may_alias__]] = __integer_from<_Bytes / 2>;
-		return reinterpret_cast<const _AliasingInt*>(this)[2 * __i] != 0;
-	      }
-	  }
-#endif
 	else if constexpr (abi_type::_S_is_bitmask)
 	  {
 	    using _AliasingByte [[__gnu__::__may_alias__]] = unsigned char;
