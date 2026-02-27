@@ -1397,6 +1397,8 @@ namespace simd
 	    if constexpr (_S_is_scalar)
 	      return static_cast<value_type>(__x[0]);
 #if VIR_NEXT_PATCH && _GLIBCXX_X86
+	    // Without the pshufb instruction (SSSE3) the following conversions need some help for
+	    // good code-gen.
 	    else if constexpr (!_Traits._M_have_ssse3()
 				 && _UAbi::_S_nreg == 2 && sizeof(__x) == 32
 				 && sizeof(value_type) == 2 && sizeof(_M_data) == 16)
