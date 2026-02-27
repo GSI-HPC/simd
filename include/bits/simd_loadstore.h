@@ -122,9 +122,14 @@ namespace simd
 	}
       else
 	{
-	  if constexpr (!__allow_out_of_bounds
-			  || (__static_size != dynamic_extent
-				&& __static_size >= size_t(_RV::size.value)))
+	  constexpr bool __no_size_check
+	    = !__allow_out_of_bounds
+		|| (__static_size != dynamic_extent
+		      && __static_size >= size_t(_RV::size.value));
+	  if constexpr (_RV::size() == 1)
+	    return __mask[0] && (__no_size_check || __rg_size > 0) ? _RV(_LoadCtorTag(), __ptr)
+								   : _RV();
+	  else if constexpr (__no_size_check)
 	    return _RV::_S_masked_load(__ptr, __mask);
 	  else if (__rg_size >= size_t(_RV::size()))
 	    return _RV::_S_masked_load(__ptr, __mask);

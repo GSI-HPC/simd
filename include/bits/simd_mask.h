@@ -599,7 +599,7 @@ namespace simd
 					  "positive __n that does not overflow.");
 	      constexpr _DataType __0123
 		= __builtin_bit_cast(_DataType, _IotaArray<_Ip(_S_full_size)>);
-	      return __0123 < _Ip(__n);
+	      return basic_mask(__0123 < _Ip(__n));
 	    }
 	  else
 	    {
@@ -1569,13 +1569,18 @@ namespace simd
 	{
 #if __has_builtin(__builtin_ia32_bzhi_di)
 	  if constexpr (_S_use_bitmask && _S_size <= 64 && _Traits._M_have_bmi2())
-	    return __builtin_ia32_bzhi_di(~0ull >> (64 - _S_size), unsigned(__n));
+	    return basic_mask(__builtin_ia32_bzhi_di(~0ull >> (64 - _S_size), unsigned(__n)));
 #endif
-	  if (__n < _N0)
+	  if constexpr (_N0 == 1)
+	    {
+	      static_assert(_S_size == 2); // => __n == 1
+	      return _S_init(_Mask0(true), _Mask1(false));
+	    }
+	  else if (__n < _N0)
 	    return _S_init(_Mask0::_S_partial_mask_of_n(__n), _Mask1(false));
-	  else if (__n == _N0)
+	  else if (__n == _N0 || _N1 == 1)
 	    return _S_init(_Mask0(true), _Mask1(false));
-	  else
+	  else if constexpr (_N1 != 1)
 	    return _S_init(_Mask0(true), _Mask1::_S_partial_mask_of_n(__n - _N0));
 	}
 

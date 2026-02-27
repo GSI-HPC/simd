@@ -1115,8 +1115,10 @@ namespace simd
 	static inline basic_vec
 	_S_masked_load(const _Up* __mem, mask_type __k)
 	{
+	  if constexpr (_S_size == 1)
+	    return __k[0] ? static_cast<value_type>(__mem[0]) : value_type();
 #if _GLIBCXX_X86
-	  if constexpr (_Traits._M_have_avx512f())
+	  else if constexpr (_Traits._M_have_avx512f())
 	    return __x86_masked_load<_DataType>(__mem, __k._M_data);
 	  else if constexpr (_Traits._M_have_avx() && (sizeof(_Up) == 4 || sizeof(_Up) == 8))
 	    {
@@ -1129,7 +1131,7 @@ namespace simd
 		}
 	    }
 #endif
-	  if (__k._M_none_of()) [[unlikely]]
+	  else if (__k._M_none_of()) [[unlikely]]
 	    return basic_vec();
 	  else if constexpr (_S_is_scalar)
 	    return basic_vec(static_cast<value_type>(*__mem));
