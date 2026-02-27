@@ -1827,7 +1827,13 @@ namespace simd
 	_S_masked_load(const _Up* __mem, mask_type __k)
 	{
 	  if constexpr (__complex_like<_Up>)
-	    static_assert(false, "TODO");
+	    { // TODO: optimize
+	      return basic_vec(_RealSimd([&](int __i) {
+				 return __k[__i] ? __mem[__i].real() : _T0();
+			       }), _RealSimd([&](int __i) {
+				     return __k[__i] ? __mem[__i].imag() : _T0();
+				   }));
+	    }
 	  else
 	    return basic_vec(_RealSimd::_S_masked_load(__mem, typename _RealSimd::mask_type(__k)));
 	}
@@ -1863,8 +1869,13 @@ namespace simd
 	static inline void
 	_S_masked_store(const basic_vec& __v, _Up* __mem, const mask_type& __k)
 	{
+	  // TODO: optimize
 	  static_assert(__complex_like<_Up>);
-	  static_assert(false, "TODO");
+	  for (int __i = 0; __i < _S_size; ++__i)
+	    {
+	      if (__k[__i])
+		__mem[__i] = __v[__i];
+	    }
 	}
 
       basic_vec() = default;
