@@ -448,9 +448,7 @@ namespace simd
 
   template <size_t _Bytes, __abi_tag _Ap>
     requires (_Ap::_S_nreg == 1)
-#if VIR_NEXT_PATCH
       && (__filter_abi_variant(_Ap::_S_variant, _AbiVariant::_CxVariants) == _AbiVariant())
-#endif
     class basic_mask<_Bytes, _Ap>
     {
       template <size_t, typename>
@@ -738,7 +736,6 @@ namespace simd
 
 	      // vec-mask to vec-mask
 	      // 2-mask-elements wrapper to plain mask
-#if VIR_NEXT_PATCH
 	      else if constexpr (_UAbi::_S_is_cx_ileav)
 		{
 		  if constexpr (sizeof(__x) == sizeof(_M_data) && _Bytes == _UBytes
@@ -774,7 +771,6 @@ namespace simd
 						  __integer_from<_UBytes>, sizeof(__xv)>>(__xv));
 		    }
 		}
-#endif
 	      else if constexpr (sizeof(__x) == sizeof(_M_data) && _Bytes == _UBytes
 				   && !_S_has_bool_member && !_UV::_S_has_bool_member
 				   && !_UV::_S_use_bitmask && _UV::_S_padding_bytes == 0)
@@ -1008,26 +1004,14 @@ namespace simd
        * \tparam _Use_2_for_1  Store the value of every second element into one bit of the result.
        *                       (precondition: each even/odd pair stores the same value)
        */
-#if VIR_NEXT_PATCH
       template <int _Offset = 0, bool _Use_2_for_1 = false, _ArchTraits _Traits = {}>
 	[[__gnu__::__always_inline__]]
 	constexpr _Bitmask<_S_size / (_Use_2_for_1 + 1) + _Offset>
-#else
-      template <int _Offset = 0, _ArchTraits _Traits = {}>
-	[[__gnu__::__always_inline__]]
-	constexpr _Bitmask<_S_size + _Offset>
-#endif
 	_M_to_uint() const
 	{
-#if VIR_NEXT_PATCH
 	  constexpr int __nbits = _S_size / (_Use_2_for_1 + 1);
-#else
-	  constexpr int __nbits = _S_size;
-#endif
 	  static_assert(__nbits + _Offset <= numeric_limits<unsigned long long>::digits);
-#if VIR_NEXT_PATCH
 	  static_assert(!(_S_is_scalar && _Use_2_for_1));
-#endif
 	  // before shifting
 	  using _U0 = _Bitmask<__nbits>;
 	  // potentially wider type needed for shift by _Offset
@@ -1037,13 +1021,10 @@ namespace simd
 	      auto __bits = _M_data;
 	      if constexpr (_S_is_partial)
 		__bits &= _S_implicit_mask;
-#if VIR_NEXT_PATCH
 	      if constexpr (_Use_2_for_1)
 		__bits = __bit_extract_even<__nbits>(__bits);
-#endif
 	      return _Ur(__bits) << _Offset;
 	    }
-#if VIR_NEXT_PATCH
 	  else if constexpr (_Bytes == sizeof(0ll) && _Use_2_for_1)
 	    {
 	      const auto __u32 = __vec_bit_cast<unsigned>(_M_data);
@@ -1066,54 +1047,30 @@ namespace simd
 	    }
 	  else if constexpr (_Use_2_for_1 && __nbits == 1)
 	    return _Ur(operator[](0)) << _Offset;
-#endif
 	  else
 	    {
 #if _GLIBCXX_X86
 	      if (!__is_const_known(*this))
 		{
 		  _U0 __uint;
-#if VIR_NEXT_PATCH
 		  if constexpr (_Use_2_for_1)
 		    __uint = __x86_cvt_vecmask_to_bitmask<_Traits>(
 			     __vec_bit_cast<__integer_from<_Bytes * 2>>(_M_data));
 		  else
 		    __uint = __x86_cvt_vecmask_to_bitmask<_Traits>( _M_data);
-#else
-		  if constexpr (_Bytes != 2) // movmskb would duplicate each bit
-		    __uint = _U0(__x86_movmsk(_M_data));
-		  else if constexpr (_Bytes == 2 && _Traits._M_have_bmi2())
-		    __uint = __bit_extract_even<__nbits>(__x86_movmsk(_M_data));
-		  else if constexpr (_Bytes == 2)
-		    return __similar_mask<char, __nbits, _Ap>(*this).template _M_to_uint<_Offset>();
-		  else
-		    static_assert(false);
-		  // TODO: with AVX512 use __builtin_ia32_cvt[bwdq]2mask(128|256|512)
-		  // TODO: Ask for compiler builtin to do the best of the above. This should also
-		  // combine with a preceding vector-mask compare to produce a bit-mask compare (on
-		  // AVX512)
-#endif
 		  if constexpr (_S_is_partial)
 		    __uint &= (_U0(1) << _S_size) - 1;
 		  return _Ur(__uint) << _Offset;
 		}
 #endif
-#if VIR_NEXT_PATCH
 	      using _IV = conditional_t<_Use_2_for_1,
 					__similar_vec<__integer_from<_Bytes * 2>, __nbits, _Ap>,
 					_VecType>;
-#else
-	      using _IV = _VecType;
-#endif
 	      static_assert(destructible<_IV>);
 	      const typename _IV::mask_type& __k = [&] [[__gnu__::__always_inline__]] () {
-#if VIR_NEXT_PATCH
 		if constexpr (_Use_2_for_1)
 		  return typename _IV::mask_type(__to_cx_ileav(*this));
 		else if constexpr (is_same_v<typename _IV::mask_type, basic_mask>)
-#else
-		if constexpr (is_same_v<typename _IV::mask_type, basic_mask>)
-#endif
 		  return *this;
 		else
 		  return typename _IV::mask_type(*this);
@@ -1129,13 +1086,8 @@ namespace simd
 		{ // recurse after splitting in two
 		  constexpr int __n_lo = __n - __n % __CHAR_BIT__;
 		  const auto [__lo, __hi] = chunk<__n_lo>(__k);
-#if VIR_NEXT_PATCH
 		  _Ur __bits = __hi.template _M_to_uint<_Offset + __n_lo, _Use_2_for_1>();
 		  return __bits | __lo.template _M_to_uint<_Offset, _Use_2_for_1>();
-#else
-		  _Ur __bits = __hi.template _M_to_uint<_Offset + __n_lo>();
-		  return __bits | __lo.template _M_to_uint<_Offset>();
-#endif
 		}
 	      else
 		{ // limit powers_of_2 to 1, 2, 4, ..., 128
@@ -1443,9 +1395,7 @@ namespace simd
 
   template <size_t _Bytes, __abi_tag _Ap>
     requires (_Ap::_S_nreg > 1)
-#if VIR_NEXT_PATCH
       && (__filter_abi_variant(_Ap::_S_variant, _AbiVariant::_CxVariants) == _AbiVariant())
-#endif
     class basic_mask<_Bytes, _Ap>
     {
       template <size_t, typename>
@@ -1696,7 +1646,6 @@ namespace simd
       {}
 
       // [simd.mask.ctor] conversion constructor ------------------------------
-#if VIR_NEXT_PATCH
       template <size_t _UBytes, typename _UAbi>
 	requires (_S_size == _UAbi::_S_size)
 	  && (_UAbi::_S_is_cx_ctgus && !__scalar_abi_tag<_UAbi>)
@@ -1706,23 +1655,18 @@ namespace simd
 	: basic_mask(__x._M_data) // unwrap _CxCtgus basic_mask partial specialization
 	{}
 
-#endif
       template <size_t _UBytes, typename _UAbi>
 	requires (_S_size == _UAbi::_S_size)
-#if VIR_NEXT_PATCH
 	  && (!_UAbi::_S_is_cx_ctgus || __scalar_abi_tag<_UAbi>)
-#endif
 	[[__gnu__::__always_inline__]]
 	constexpr explicit(__is_mask_conversion_explicit<_Ap, _UAbi>(_Bytes, _UBytes))
 	basic_mask(const basic_mask<_UBytes, _UAbi>& __x) noexcept
 	  : _M_data0([&] {
 	      if constexpr (_UAbi::_S_nreg > 1)
 		{
-#if VIR_NEXT_PATCH
 		  if constexpr (_UAbi::_S_is_cx_ileav)
 		    return __to_cx_ileav(__x._M_data._M_data0);
 		  else
-#endif
 		    return __x._M_data0;
 		}
 	      else
@@ -1731,11 +1675,9 @@ namespace simd
 	    _M_data1([&] {
 	      if constexpr (_UAbi::_S_nreg > 1)
 		{
-#if VIR_NEXT_PATCH
 		  if constexpr (_UAbi::_S_is_cx_ileav)
 		    return __to_cx_ileav(__x._M_data._M_data1);
 		  else
-#endif
 		    return __x._M_data1;
 		}
 	      else
@@ -1858,51 +1800,29 @@ namespace simd
 	  }
       }
 
-#if VIR_NEXT_PATCH
       template <int _Offset = 0, bool _Use_2_for_1 = false, _ArchTraits _Traits = {}>
-#else
-      template <int _Offset = 0, _ArchTraits _Traits = {}>
-#endif
 	[[__gnu__::__always_inline__]]
 	constexpr auto
 	_M_to_uint() const
 	{
-#if VIR_NEXT_PATCH
 	  constexpr int _N0x = _Use_2_for_1 ? _N0 / 2 : _N0;
-#else
-	  constexpr int _N0x = _N0;
-#endif
 	  if constexpr (_N0x >= numeric_limits<unsigned long long>::digits)
 	    {
 	      static_assert(_Offset == 0);
 	      return __trivial_pair {
-#if VIR_NEXT_PATCH
 		_M_data0.template _M_to_uint<0, _Use_2_for_1>(),
 		_M_data1.template _M_to_uint<0, _Use_2_for_1>()
-#else
-		_M_data0.template _M_to_uint<0>(),
-		_M_data1.template _M_to_uint<0>()
-#endif
 	      };
 	    }
 	  else
 	    {
 #if _GLIBCXX_X86
 	      if constexpr (_Bytes == 2 && !_Traits._M_have_bmi2() && _Ap::_S_nreg == 2
-#if VIR_NEXT_PATCH
 			      && !_S_use_bitmask && !_Use_2_for_1)
-#else
-			      && !_S_use_bitmask)
-#endif
 		return __similar_mask<char, _S_size, _Ap>(*this).template _M_to_uint<_Offset>();
 #endif
-#if VIR_NEXT_PATCH
 	      auto __uint = _M_data1.template _M_to_uint<_N0x + _Offset, _Use_2_for_1>();
 	      __uint |= _M_data0.template _M_to_uint<_Offset, _Use_2_for_1>();
-#else
-	      auto __uint = _M_data1.template _M_to_uint<_N0x + _Offset>();
-	      __uint |= _M_data0.template _M_to_uint<_Offset>();
-#endif
 	      return __uint;
 	    }
 	}
@@ -2035,11 +1955,9 @@ namespace simd
 	  using _Vp = vec<_T0, _S_size>;
 	  if constexpr (!is_same_v<basic_mask, typename _Vp::mask_type>)
 	    return __select_impl(static_cast<_Vp::mask_type>(__k), __t, __f);
-#if VIR_NEXT_PATCH
 	  else if constexpr (__complex_like<_T0>)
 	    return _Vp::_S_concat(__select_impl(__k._M_data0, __t, __f),
 				  __select_impl(__k._M_data1, __t, __f));
-#endif
 	  else
 	    return _Vp::_S_init(__select_impl(__k._M_data0, __t, __f),
 				__select_impl(__k._M_data1, __t, __f));
@@ -2078,7 +1996,6 @@ namespace simd
 	    return _M_data0._M_none_of() && _M_data1._M_none_of();
 	}
 
-#if VIR_NEXT_PATCH
       [[__gnu__::__always_inline__]]
       constexpr __simd_size_type
       _M_reduce_count() const noexcept
@@ -2094,7 +2011,6 @@ namespace simd
 	  return _M_data0._M_reduce_count() + _M_data1._M_reduce_count();
       }
 
-#endif
       [[__gnu__::__always_inline__]]
       constexpr __simd_size_type
       _M_reduce_min_index() const

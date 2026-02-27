@@ -388,7 +388,6 @@ template <class T, class... ExtraFlags>
       std::memcpy(typestr, "char32", value_type_field);
     else if constexpr (std::is_same_v<T, wchar_t>)
       std::memcpy(typestr, " wchar", value_type_field);
-#if VIR_NEXT_PATCH
     else if constexpr (std::is_same_v<T, std::complex<std::float16_t>>)
       std::memcpy(typestr, "cxfp16", value_type_field);
     else if constexpr (std::is_same_v<T, std::complex<std::float32_t>>)
@@ -399,7 +398,6 @@ template <class T, class... ExtraFlags>
       std::memcpy(typestr, "cx-flt", value_type_field);
     else if constexpr (std::is_same_v<T, std::complex<double>>)
       std::memcpy(typestr, "cx-dbl", value_type_field);
-#endif
     else
       std::memcpy(typestr, "??????", value_type_field);
 

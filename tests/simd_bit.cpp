@@ -7,7 +7,6 @@
 
 #include <climits>
 
-#if VIR_NEXT_PATCH
 template <typename V>
   requires std::integral<typename V::value_type>
     && (V::size() * sizeof(typename V::value_type) <= 70 * 4) // avoid exploding RAM usage
@@ -118,7 +117,6 @@ template <typename V>
       }
     };
   };
-#endif
 
 template <typename V>
   struct Tests

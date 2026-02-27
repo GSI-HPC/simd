@@ -63,7 +63,6 @@ namespace math_tests
   static_assert(!__math_floating_point<simd::vec<int>>);
   static_assert( __math_floating_point<simd::vec<float>>);
 
-#if VIR_NEXT_PATCH
   template <typename... Ts>
     concept lerp_invocable = requires(Ts... xs) { simd::lerp(xs...); };
 
@@ -127,5 +126,4 @@ namespace math_tests
 				  std::constant_wrapper<2>, simd::vec<float, 1>>);
   static_assert(hypot_invocable_r<simd::vec<float, 1>, holder<short>,
 				  simd::vec<float, 1>, float>);
-#endif
 }

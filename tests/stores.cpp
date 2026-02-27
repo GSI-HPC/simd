@@ -28,12 +28,10 @@ template <typename V>
 	    t.verify_equal(mem[i], T(i + 1));
 	    t.verify_equal(mem[V::size + i], T(i + 1));
 	  }
-#if VIR_NEXT_PATCH
 	if constexpr (complex_like<T>)
 	  {
 	  }
 	else
-#endif
 	  {
 	    simd::unchecked_store(v, ints, simd::flag_convert);
 	    simd::partial_store(v, ints.begin() + V::size() + 1, ints.end(),

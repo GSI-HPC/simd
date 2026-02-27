@@ -3,7 +3,6 @@
  *                       Matthias Kretz <m.kretz@gsi.de>
  */
 
-#if VIR_NEXT_PATCH
 #ifndef _GLIBCXX_SIMD_BIT_H
 #define _GLIBCXX_SIMD_BIT_H 1
 
@@ -157,4 +156,3 @@ _GLIBCXX_END_NAMESPACE_VERSION
 #pragma GCC diagnostic pop
 #endif // C++26
 #endif // _GLIBCXX_SIMD_BIT_H
-#endif

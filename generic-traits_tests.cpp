@@ -7,16 +7,12 @@
 
 #include "include/bits/simd_details.h"
 #include "include/bits/simd_flags.h"
-#if VIR_NEXT_PATCH
 #include <complex>
-#endif
 #include <stdfloat>
 
 namespace simd = std::simd;
 
-#if VIR_NEXT_PATCH
 using std::complex;
-#endif
 using std::float16_t;
 using std::float32_t;
 using std::float64_t;
@@ -29,11 +25,9 @@ void test()
     {
       using T = decltype(t);
       static_assert(__vectorizable<T>);
-#if VIR_NEXT_PATCH
       static_assert(__complex_like<complex<T>>);
       static_assert(__complex_like<const complex<T>&>);
       static_assert(__vectorizable<complex<T>>);
-#endif
     }
 
   static_assert(!__vectorizable<const float>);
@@ -69,12 +63,10 @@ void test()
   static_assert(!__value_preserving_convertible_to<int, float>);
   static_assert( __value_preserving_convertible_to<float, double>);
   static_assert(!__value_preserving_convertible_to<double, float>);
-#if VIR_NEXT_PATCH
   static_assert( __value_preserving_convertible_to<float, complex<float>>);
   static_assert( __value_preserving_convertible_to<float, complex<double>>);
   static_assert( __value_preserving_convertible_to<double, complex<double>>);
   static_assert(!__value_preserving_convertible_to<double, complex<float>>);
-#endif
 
   static_assert(__explicitly_convertible_to<float, float16_t>);
   static_assert(__explicitly_convertible_to<long, float16_t>);
@@ -91,11 +83,9 @@ void test()
   static_assert(__broadcast_constructible<decltype(std::cw<2>), float>);
   static_assert(__broadcast_constructible<decltype(std::cw<0.f>), std::float16_t>);
 
-#if VIR_NEXT_PATCH
   static_assert( __broadcast_constructible<complex<float>, complex<float>>);
   static_assert( __broadcast_constructible<complex<float>, complex<double>>);
   static_assert(!__broadcast_constructible<complex<double>, complex<float>>);
-#endif
 
   static_assert(__higher_rank_than<long, int>);
   static_assert(__higher_rank_than<long long, long>);

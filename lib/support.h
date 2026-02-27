@@ -6,7 +6,6 @@
 #ifndef LIB_SUPPORT_H_
 #define LIB_SUPPORT_H_
 
-#define VIR_NEXT_PATCH 1
 #define VIR_EXTENSIONS 1
 #include <bits/simd_math.h>
 #include <bits/simd_alg.h>

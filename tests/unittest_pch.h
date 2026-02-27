@@ -132,7 +132,6 @@ template <std::size_t N, typename CharT>
       { return std::format_to(ctx.out(), "[{}]", bs.to_string()); }
   };
 
-#if VIR_NEXT_PATCH
 template <typename T>
   concept complex_like = std::simd::__complex_like<T>;
 
@@ -148,7 +147,6 @@ template <complex_like T, typename CharT>
       format(const T& x, std::basic_format_context<Out, CharT>& ctx) const
       { return std::format_to(ctx.out(), "({}+{}i)", x.real(), x.imag()); }
   };
-#endif
 
 template <typename T>
   requires std::is_same_v<T, wchar_t>
@@ -328,15 +326,12 @@ template <typename T>
 	      }
 	  }
       }
-#if VIR_NEXT_PATCH
     else if constexpr (complex_like<T>)
       return bit_equal(a.real(), b.real()) && bit_equal(a.imag(), b.imag());
-#endif
     else
       static_assert(false);
   }
 
-#if VIR_NEXT_PATCH
 // true iff real or imag parts of x are +/-inf. This matches the C23 Annex G interpretation.
 template <complex_like T, typename Abi>
   constexpr typename simd::basic_vec<T, Abi>::mask_type
@@ -345,7 +340,6 @@ template <complex_like T, typename Abi>
     using M = typename simd::basic_vec<T, Abi>::mask_type;
     return M(isinf(x.real()) || isinf(x.imag()));
   }
-#endif
 
 // treat as equal if either:
 // - operator== yields true
@@ -362,7 +356,6 @@ template <typename V>
     else if constexpr (std::simd::__simd_vec_type<V>)
       {
 	using T = typename V::value_type;
-#if VIR_NEXT_PATCH
 	using M = typename V::mask_type;
 	if constexpr (complex_like<T>)
 	  { // fix up nan == nan and (inf,nan) == (inf,?)
@@ -378,14 +371,9 @@ template <typename V>
 #endif
 	  }
 	else
-#endif
 	if constexpr (std::is_floating_point_v<T>)
 	  { // fix up nan == nan results
-#if VIR_NEXT_PATCH
 	    eq |= isnan(a) && isnan(b);
-#else
-	    eq |= a._M_isnan() && b._M_isnan();
-#endif
 	  }
 	else
 	  return false;
@@ -750,12 +738,10 @@ template <std::size_t B, typename Abi>
   is_const_known(const std::simd::basic_mask<B, Abi>& x)
   { return __is_const_known(x); }
 
-#if VIR_NEXT_PATCH
 template <typename T>
   [[gnu::always_inline]] inline bool
   is_const_known(const std::complex<T>& x)
   { return is_const_known(x.real()) && is_const_known(x.imag()); }
-#endif
 
 template <std::ranges::sized_range R>
   [[gnu::always_inline]] inline bool
@@ -919,11 +905,9 @@ template <typename V, int Init = 0, int MaxArg = int(test_iota_max<V, Init>)>
 		    i -= Max - Init + 1;
 		}
 	      using T = value_type_t<V>;
-#if VIR_NEXT_PATCH
 	      if constexpr (std::simd::__simd_complex<V>)
 		return std::complex<T>(T(i), T());
 	      else
-#endif
 		return static_cast<T>(i);
 	    });
 

@@ -3,7 +3,6 @@
  *                       Matthias Kretz <m.kretz@gsi.de>
  */
 
-#define VIR_NEXT_PATCH 1
 #define VIR_EXTENSIONS 1
 
 #include "support.h"

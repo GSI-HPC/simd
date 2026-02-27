@@ -178,7 +178,6 @@ namespace simd
   struct _LoadCtorTag
   {};
 
-#if VIR_NEXT_PATCH
   template <typename _Cx, __vec_builtin _TV, _TargetTraits = {}>
     [[__gnu__::__cold__]]
     constexpr _TV
@@ -247,16 +246,13 @@ namespace simd
       __im0 = __cr.imag();
     }
 
-#endif
   template <integral _Tp>
     inline constexpr _Tp __max_shift
       = (sizeof(_Tp) < sizeof(int) ? sizeof(int) : sizeof(_Tp)) * __CHAR_BIT__;
 
   template <__vectorizable _Tp, __abi_tag _Ap>
     requires (_Ap::_S_nreg == 1)
-#if VIR_NEXT_PATCH
       && (!__complex_like<_Tp>)
-#endif
     class basic_vec<_Tp, _Ap>
     : _BinaryOps<_Tp, _Ap>
     {
@@ -440,7 +436,6 @@ namespace simd
 	  return __r;
 	}
 
-#if VIR_NEXT_PATCH
       using _HalfVec = __similar_resized_vec<value_type, _S_size / 2, _Ap>;
 
       static constexpr bool _SupportCxApi = (_S_size & 1) == 0 && is_floating_point_v<value_type>;
@@ -607,7 +602,6 @@ namespace simd
 	    }
 	}
 
-#endif
       template <typename _Vp>
 	[[__gnu__::__always_inline__]]
 	constexpr auto
@@ -1396,7 +1390,7 @@ namespace simd
 	: _M_data([&] [[__gnu__::__always_inline__]] {
 	    if constexpr (_S_is_scalar)
 	      return static_cast<value_type>(__x[0]);
-#if VIR_NEXT_PATCH && _GLIBCXX_X86
+#if _GLIBCXX_X86
 	    // Without the pshufb instruction (SSSE3) the following conversions need some help for
 	    // good code-gen.
 	    else if constexpr (!_Traits._M_have_ssse3()
@@ -2141,9 +2135,7 @@ namespace simd
 
   template <__vectorizable _Tp, __abi_tag _Ap>
     requires (_Ap::_S_nreg > 1)
-#if VIR_NEXT_PATCH
       && (!__complex_like<_Tp>)
-#endif
     class basic_vec<_Tp, _Ap>
     : _BinaryOps<_Tp, _Ap>
     {
@@ -2273,7 +2265,6 @@ namespace simd
 		   _DataType1::template _S_static_permute<_Size, _Offset + _N0>(__x, __idxmap));
 	}
 
-#if VIR_NEXT_PATCH
       using _HalfVec = __similar_resized_vec<value_type, _S_size / 2, _Ap>;
 
       static constexpr bool _SupportCxApi = (_S_size & 1) == 0 && is_floating_point_v<value_type>;
@@ -2325,7 +2316,6 @@ namespace simd
 						   __re1._M_data1, __im1._M_data1);
 	}
 
-#endif
       template <typename _Vp>
 	[[__gnu__::__always_inline__]]
 	constexpr auto

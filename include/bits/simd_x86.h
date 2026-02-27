@@ -1127,7 +1127,6 @@ namespace simd
 	static_assert(false, "TODO");
     }
 
-#if VIR_NEXT_PATCH
   template <_ArchTraits _Traits = {}, __vec_builtin _TV>
     [[__gnu__::__always_inline__]]
     inline _Bitmask<__width_of<_TV>>
@@ -1174,7 +1173,6 @@ namespace simd
 		 __x86_cvt_vecmask<__vec_builtin_type<char, _Np>>(__k));
     }
 
-#endif
   /** @internal
    * AVX512 masked (converting) loads
    *
