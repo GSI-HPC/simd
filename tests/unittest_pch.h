@@ -926,10 +926,7 @@ template <typename V>
 
 template <typename T>
   concept array_specialization
-    = requires {
-      typename T::value_type;
-      std::tuple_size<T>::value;
-    } && std::same_as<T, std::array<typename T::value_type, std::tuple_size_v<T>>>;
+    = std::same_as<T, std::array<typename T::value_type, std::tuple_size_v<T>>>;
 
 template <int MaxN = -1, typename Args = void, typename Fun = void>
   struct add_test
