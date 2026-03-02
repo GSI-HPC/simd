@@ -1201,7 +1201,7 @@ namespace simd
 	{
 	  return __vec_concat(
 		   __x86_masked_load<__vec_builtin_type<_Tp, __n / 2>>(__mem, __k),
-		   __x86_masked_load<__vec_builtin_type<_Tp, __n / 2>>(__mem, __k >> __n / 2)
+		   __x86_masked_load<__vec_builtin_type<_Tp, __n / 2>>(__mem + __n / 2, __k >> __n / 2)
 		 );
 	}
       else if constexpr (sizeof(_TV) == 64)
