@@ -3,7 +3,6 @@
  *                       Matthias Kretz <m.kretz@gsi.de>
  */
 
-#if VIR_PATCH_MATH
 #ifndef _GLIBCXX_SIMD_MATH_H
 #define _GLIBCXX_SIMD_MATH_H 1
 
@@ -25,6 +24,7 @@ namespace std _GLIBCXX_VISIBILITY(default)
 _GLIBCXX_BEGIN_NAMESPACE_VERSION
 namespace simd
 {
+#if VIR_PATCH_MATH
   template <typename _TV>
     concept __simd_clonable = __vec_builtin<_TV> && sizeof(_TV) >= 16
 				&& (is_same_v<__vec_value_type<_TV>, float>
@@ -395,11 +395,13 @@ namespace simd
     scalbln(const _Vp& __x, const rebind_t<long int, __deduced_vec_t<_Vp>>& n)
     { static_assert(false, "TODO"); }
 
+#endif
   template <signed_integral T, typename Abi>
     [[__gnu__::__always_inline__]]
     constexpr basic_vec<T, Abi>
     abs(const basic_vec<T, Abi>& __x)
     { return __x._M_abs(); }
+#if VIR_PATCH_MATH
 
   template <_TargetTraits _Traits = {}, __math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
@@ -645,6 +647,7 @@ namespace simd
 	  return __ai <= __builtin_bit_cast(_Ip, numeric_limits<_Tp>::max());
 	}
     }
+#endif
 
   template <__math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
@@ -657,6 +660,7 @@ namespace simd
     constexpr typename __deduced_vec_t<_Vp>::mask_type
     isnan(const _Vp& __x)
     { return static_cast<const __deduced_vec_t<_Vp>&>(__x)._M_isnan(); }
+#if VIR_PATCH_MATH
 
   template <_TargetTraits _Traits = {}, __math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
@@ -1154,8 +1158,10 @@ namespace simd
     constexpr basic_vec<T, Abi>
     modf(const type_identity_t<basic_vec<T, Abi>>& __value, basic_vec<T, Abi>* __iptr)
     { static_assert(false, "TODO"); }
+#endif
 } // namespace simd
 
+#if VIR_PATCH_MATH
 // clean up internal macros
 #undef _GLIBCXX_SIMD_HAS_SIMD_CLONE
 #undef _GLIBCXX_SIMD_FN_NAME
@@ -1192,8 +1198,9 @@ namespace simd
   using simd::scalbn;
   using simd::scalbln;
   using simd::cbrt;
+#endif
   using simd::abs;
-  using simd::abs;
+#if VIR_PATCH_MATH
   using simd::fabs;
   using simd::hypot;
   using simd::pow;
@@ -1255,6 +1262,7 @@ namespace simd
   using simd::sph_bessel;
   using simd::sph_legendre;
   using simd::sph_neumann;
+#endif
 
 // [simd.complex.math] --------------------------------------------------------
 namespace simd
@@ -1300,6 +1308,7 @@ namespace simd
     constexpr _Vp
     proj(const _Vp& __x) noexcept
     { return __x._M_proj(); }
+#if VIR_PATCH_MATH
 
   template<__simd_complex _Vp>
     [[__gnu__::__always_inline__]]
@@ -1410,6 +1419,7 @@ namespace simd
     constexpr _Vp
     pow(const _Vp& __x, const _Vp& __y)
     { static_assert(false, "TODO"); }
+#endif
 } // namespace simd
 
   using simd::real;
@@ -1418,7 +1428,9 @@ namespace simd
   using simd::norm;
   using simd::conj;
   using simd::proj;
+#if VIR_PATCH_MATH
   using simd::polar;
+#endif
 
 _GLIBCXX_END_NAMESPACE_VERSION
 } // namespace std
@@ -1426,4 +1438,3 @@ _GLIBCXX_END_NAMESPACE_VERSION
 #pragma GCC diagnostic pop
 #endif // C++26
 #endif // _GLIBCXX_SIMD_MATH_H
-#endif
