@@ -93,11 +93,15 @@ template <typename V>
     static constexpr V ref_k_2 = select(M([](int i) { return i < 2; }), ref_k, T());
 
     ADD_TEST(masked_loads) {
-      std::tuple {make_iota_array<T>(), alternating, M(true), M(false)},
-      [](auto& t, auto mem, M k, M tr, M fa) {
+      std::tuple {make_iota_array<T>(), make_iota_array<int>(), alternating, M(true), M(false)},
+      [](auto& t, auto mem, auto ints, M k, M tr, M fa) {
 	t.verify_equal(simd::unchecked_load<V>(mem, tr), ref);
 	t.verify_equal(simd::unchecked_load<V>(mem, fa), V());
 	t.verify_equal(simd::unchecked_load<V>(mem, k), ref_k);
+
+	t.verify_equal(simd::unchecked_load<V>(ints, tr, simd::flag_convert), ref);
+	t.verify_equal(simd::unchecked_load<V>(ints, fa, simd::flag_convert), V());
+	t.verify_equal(simd::unchecked_load<V>(ints, k, simd::flag_convert), ref_k);
 
 	t.verify_equal(simd::partial_load<V>(mem, tr), ref);
 	t.verify_equal(simd::partial_load<V>(mem, fa), V());
@@ -106,6 +110,13 @@ template <typename V>
 	t.verify_equal(simd::partial_load<V>(mem.begin(), mem.begin() + 2, tr), ref_2);
 	t.verify_equal(simd::partial_load<V>(mem.begin(), mem.begin() + 2, fa), V());
 	t.verify_equal(simd::partial_load<V>(mem.begin(), mem.begin() + 2, k), ref_k_2);
+
+	t.verify_equal(simd::partial_load<V>(ints.begin(), ints.begin() + 2, tr,
+					     simd::flag_convert), ref_2);
+	t.verify_equal(simd::partial_load<V>(ints.begin(), ints.begin() + 2, fa,
+					     simd::flag_convert), V());
+	t.verify_equal(simd::partial_load<V>(ints.begin(), ints.begin() + 2, k,
+					     simd::flag_convert), ref_k_2);
       }
     };
   };

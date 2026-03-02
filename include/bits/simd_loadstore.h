@@ -93,11 +93,12 @@ namespace simd
     unchecked_load(_Rg&& __r, const __load_mask_type_t<_Vp, ranges::range_value_t<_Rg>>& __mask,
 		   flags<_Flags...> __f = {})
     {
-      using _RV = __vec_load_return_t<_Vp, ranges::range_value_t<_Rg>>;
+      using _Tp = ranges::range_value_t<_Rg>;
+      using _RV = __vec_load_return_t<_Vp, _Tp>;
       using _Rp = typename _RV::value_type;
-      static_assert(__vectorizable<ranges::range_value_t<_Rg>>);
-      static_assert(__explicitly_convertible_to<ranges::range_value_t<_Rg>, _Rp>);
-      static_assert(__loadstore_convertible_to<ranges::range_value_t<_Rg>, _Rp, _Flags...>,
+      static_assert(__vectorizable<_Tp>);
+      static_assert(__explicitly_convertible_to<_Tp, _Rp>);
+      static_assert(__loadstore_convertible_to<_Tp, _Rp, _Flags...>,
 		    "'flag_convert' must be used for conversions that are not value-preserving");
 
       constexpr bool __allow_out_of_bounds = __f._S_test(__allow_partial_loadstore);
@@ -116,8 +117,13 @@ namespace simd
       const size_t __rg_size = ranges::size(__r);
       if consteval
 	{
-	  return _RV([&](size_t __i) {
-		   return __i < __rg_size && __mask[int(__i)] ? __r[__i] : _Rp();
+	  return _RV([&](size_t __i) -> _Rp {
+		   if (__i >= __rg_size || !__mask[int(__i)])
+		     return _Rp();
+		   else if constexpr (__complex_like<_Rp> && !__complex_like<_Tp>)
+		     return static_cast<typename _Rp::value_type>(__r[__i]);
+		   else
+		     return static_cast<_Rp>(__r[__i]);
 		 });
 	}
       else
