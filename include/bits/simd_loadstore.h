@@ -291,11 +291,23 @@ namespace simd
 	}
       else
 	{
+#if VIR_PATCH_TEST_STORES
+	  if (!__allow_out_of_bounds || __rg_size >= size_t(_TV::size()))
+	    _TV::_S_masked_store(__v, __ptr, __mask);
+	  else if constexpr (_TV::size() != 1)
+	    {
+	      if (__rg_size == 0) // nothing to do
+		return;
+	      const auto __implicit_k = _TV::mask_type::_S_partial_mask_of_n(int(__rg_size));
+	      _TV::_S_masked_store(__v, __ptr, __mask && __implicit_k);
+	    }
+#else
 	  if (__allow_out_of_bounds && __rg_size < size_t(_TV::size()))
 	    _TV::_S_masked_store(__v, __ptr,
 				 __mask && _TV::mask_type::_S_partial_mask_of_n(int(__rg_size)));
 	  else
 	    _TV::_S_masked_store(__v, __ptr, __mask);
+#endif
 	}
     }
 

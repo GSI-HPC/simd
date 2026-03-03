@@ -1229,8 +1229,19 @@ namespace simd
 	static inline void
 	_S_masked_store(const basic_vec __v, _Up* __mem, const mask_type __k)
 	{
+#if VIR_PATCH_TEST_STORES
+	  if constexpr (_S_is_scalar)
+	    {
+	      if (__k[0])
+		__mem[0] = __v._M_data;
+	    }
+#endif
 #if _GLIBCXX_X86
+#if VIR_PATCH_TEST_STORES
+	  else if constexpr (_Traits._M_have_avx512f())
+#else
 	  if constexpr (_Traits._M_have_avx512f())
+#endif
 	    {
 	      __x86_masked_store(__v._M_data, __mem, __k._M_data);
 	      return;
@@ -1247,10 +1258,15 @@ namespace simd
 	      return;
 	    }
 #endif
+#if VIR_PATCH_TEST_STORES
+	  else if (__k._M_none_of()) [[unlikely]]
+	    return;
+#else
 	  if (__k._M_none_of()) [[unlikely]]
 	    return;
 	  else if constexpr (_S_is_scalar)
 	    __mem[0] = __v._M_data;
+#endif
 	  else
 	    {
 	      // Use at least 4-byte __bits in __bit_foreach for better code-gen

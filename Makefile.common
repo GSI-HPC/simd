@@ -4,7 +4,7 @@
 
 objdir = obj
 
-CXXFLAGS+=-std=c++26 -Wall -Wextra -Werror -O2 -g0 -Wno-attributes -D_GLIBCXX_ASSERTIONS=1 -D_GLIBCXX_SIMD_COND_EXPLICIT_MASK_CONVERSION -DVIR_NEXT_PATCH -DVIR_PATCH_PERMUTE_DYNAMIC -DVIR_PATCH_MATH $(FLAGS)
+CXXFLAGS+=-std=c++26 -Wall -Wextra -Werror -O2 -g0 -Wno-attributes -D_GLIBCXX_ASSERTIONS=1 -D_GLIBCXX_SIMD_COND_EXPLICIT_MASK_CONVERSION -DVIR_NEXT_PATCH -DVIR_PATCH_PERMUTE_DYNAMIC -DVIR_PATCH_MATH -DVIR_PATCH_TEST_STORES $(FLAGS)
 CXXFLAGS_clang := -Wno-unknown-pragmas -ferror-limit=3
 CXXFLAGS_gcc := -fconcepts-diagnostics-depth=2 -fconstexpr-ops-limit=67108864 -fmax-errors=6 -freflection -Wno-psabi -static-libstdc++ -fno-operator-names
 

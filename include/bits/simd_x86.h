@@ -1439,8 +1439,12 @@ namespace simd
 	{
 	  if constexpr (sizeof(_Tp) > sizeof(_Up) && is_integral_v<_Tp> && is_integral_v<_Up>)
 	    {
+#if VIR_PATCH_TEST_STORES
+	      auto* __dst = reinterpret_cast<unsigned long long*>(__mem);
+#else
 	      auto* __dst = reinterpret_cast<
 			      __vec_builtin_type<__x86_intrin_int<_Up>, __n>*>(__mem);
+#endif
 	      if constexpr (sizeof(_Tp) == 2)
 		__builtin_ia32_pmovwb128mem_mask(__dst, __w, __k);
 	      else if constexpr (sizeof(_Tp) == 4 && sizeof(_Up) == 1)
@@ -1452,8 +1456,12 @@ namespace simd
 	      else if constexpr (sizeof(_Tp) == 8 && sizeof(_Up) == 2)
 		__builtin_ia32_pmovqw128mem_mask(__dst, __w, __k);
 	      else if constexpr (sizeof(_Tp) == 8 && sizeof(_Up) == 4)
+#if VIR_PATCH_TEST_STORES
+		__builtin_ia32_pmovqd128mem_mask(__dst, __w, __k);
+#else
 		__builtin_ia32_pmovqd128mem_mask(reinterpret_cast<unsigned long long*>(__mem),
 						 __w, __k);
+#endif
 	      else
 		static_assert(false);
 	    }
@@ -1491,6 +1499,16 @@ namespace simd
 	__x86_masked_store(__vec_zero_pad_to_16(__v), __mem, __k);
     }
 
+#if VIR_PATCH_TEST_STORES
+  template <size_t _Bytes>
+    using __float_from = decltype([] consteval {
+			   if constexpr (sizeof(float) == _Bytes)
+			     return 0.f;
+			   else if constexpr (sizeof(double) == _Bytes)
+			     return 0.;
+			 }());
+
+#endif
   /** @internal
    * AVX(2) masked stores
    */
@@ -1502,13 +1520,20 @@ namespace simd
       using _Tp = __vec_value_type<_TV>;
       constexpr int __n = __width_of<_TV>;
       static_assert(sizeof(_Tp) == 4 || sizeof(_Tp) == 8);
+#if !VIR_PATCH_TEST_STORES
       auto* __dst = reinterpret_cast<
 		      __vec_builtin_type<__x86_intrin_type<_Up>, __n>*>(__mem);
       [[maybe_unused]] const auto __w = __vec_bit_cast<__x86_intrin_type<_Tp>>(__v);
+#endif
       if constexpr (sizeof(_TV) < 16)
 	__x86_masked_store(__vec_zero_pad_to_16(__v), __mem, __vec_zero_pad_to_16(__k));
       else if constexpr (_Traits._M_have_avx2() && is_integral_v<_Tp>)
 	{
+#if VIR_PATCH_TEST_STORES
+	  auto* __dst = reinterpret_cast<
+			  __vec_builtin_type<__x86_intrin_type<_Up>, __n>*>(__mem);
+	  [[maybe_unused]] const auto __w = __vec_bit_cast<__x86_intrin_type<_Tp>>(__v);
+#endif
 	  if constexpr (sizeof(_TV) == 32 && sizeof(_Tp) == 4)
 	    __builtin_ia32_maskstored256(__dst, __k, __w);
 	  else if constexpr (sizeof(_TV) == 16 && sizeof(_Tp) == 4)
@@ -1522,6 +1547,11 @@ namespace simd
 	}
       else
 	{
+#if VIR_PATCH_TEST_STORES
+	  auto* __dst = reinterpret_cast<
+			  __vec_builtin_type<__float_from<sizeof(_Up)>, __n>*>(__mem);
+	  [[maybe_unused]] const auto __w = __vec_bit_cast<__float_from<sizeof(_Tp)>>(__v);
+#endif
 	  if constexpr (sizeof(_TV) == 32 && sizeof(_Tp) == 4)
 	    __builtin_ia32_maskstoreps256(__dst, __k, __w);
 	  else if constexpr (sizeof(_TV) == 16 && sizeof(_Tp) == 4)
