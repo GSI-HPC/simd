@@ -1069,7 +1069,7 @@ template <typename V>
 	constexpr std::string_view test_name = m[i].name;
 	constexpr std::meta::info ifo = m[i].obj;
 	if constexpr (ifo == std::meta::info())
-	  std::println("|{:>15} |  - |{}", test_name, " 🟡 not applicable");
+	  std::println("|{:>25} |  - |{}", test_name, " 🟡 not applicable");
 	else
 	  {
 	    constexpr auto test_ref = &[:ifo:];
@@ -1080,7 +1080,7 @@ template <typename V>
 		static_assert(!array_specialization<A>, "this would be too expensive to compile");
 		template for (constexpr int n : std::_IotaArray<test_ref->max_n>)
 		  {
-		    std::print("|{:>15} |{:>3} |", test_name, n);
+		    std::print("|{:>25} |{:>3} |", test_name, n);
 		    invoke_test_impl<test_ref, n>(std::make_index_sequence<std::tuple_size_v<A>>());
 		  }
 	      }
@@ -1088,13 +1088,13 @@ template <typename V>
 	      { // call for each element
 		template for (constexpr std::size_t I : std::_IotaArray<args.size()>)
 		  {
-		    std::print("|{:>15} |{:>3}: {} |", test_name, I, args[I]);
+		    std::print("|{:>25} |{:>3}: {} |", test_name, I, args[I]);
 		    invoke_test_impl<test_ref>(std::index_sequence<I>());
 		  }
 	      }
 	    else
 	      {
-		std::print("|{:>15} |  - |", test_name);
+		std::print("|{:>25} |  - |", test_name);
 		invoke_test_impl<test_ref>(std::make_index_sequence<std::tuple_size_v<A>>());
 	      }
 	  }
