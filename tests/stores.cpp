@@ -25,8 +25,9 @@ template <typename V>
 	simd::partial_store(v, mem.end(), mem.end());
 	for (int i = 0; i < V::size; ++i)
 	  {
-	    t.verify_equal(mem[i], T(i + 1));
-	    t.verify_equal(mem[V::size + i], i < 2 ? T(i + 1) : T());
+	    const T ref(i + 1);
+	    t.verify_equal(mem[i], ref);
+	    t.verify_equal(mem[V::size + i], i < 2 ? ref : T())(ref);
 	  }
       }
     };
