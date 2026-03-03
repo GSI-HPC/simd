@@ -1254,7 +1254,7 @@ namespace simd
 	  return _M_data;
 	else if constexpr (_S_use_bitmask)
 	  {
-#if _GLIBCXX_X86
+#if VIR_PATCH_MISSED_OPT && _GLIBCXX_X86
 	    if (!__is_const_known(_M_data))
 	      {
 		if constexpr (sizeof(_M_data) == 1)
@@ -1289,7 +1289,7 @@ namespace simd
 	  return _M_data;
 	else if constexpr (_S_use_bitmask)
 	  {
-#if _GLIBCXX_X86
+#if VIR_PATCH_MISSED_OPT && _GLIBCXX_X86
 	    if (!__is_const_known(_M_data))
 	      {
 		if constexpr (sizeof(_M_data) == 1)
@@ -1324,7 +1324,7 @@ namespace simd
 	  return !_M_data;
 	else if constexpr (_S_use_bitmask)
 	  {
-#if _GLIBCXX_X86
+#if VIR_PATCH_MISSED_OPT && _GLIBCXX_X86
 	    if (!__is_const_known(_M_data))
 	      {
 		if constexpr (sizeof(_M_data) == 1)

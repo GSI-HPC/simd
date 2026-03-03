@@ -1392,7 +1392,7 @@ namespace simd
 	: _M_data([&] [[__gnu__::__always_inline__]] {
 	    if constexpr (_S_is_scalar)
 	      return static_cast<value_type>(__x[0]);
-#if _GLIBCXX_X86
+#if VIR_PATCH_MISSED_OPT && _GLIBCXX_X86
 	    // Without the pshufb instruction (SSSE3) the following conversions need some help for
 	    // good code-gen.
 	    else if constexpr (!_Traits._M_have_ssse3()

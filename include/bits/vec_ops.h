@@ -311,6 +311,7 @@ namespace simd
     __x86_cvt_f16c(_TV __v);
 #endif
 
+#if VIR_PATCH_MISSED_OPT
   template <__vec_builtin _TV>
     [[__gnu__::__always_inline__]]
     constexpr _TV
@@ -338,6 +339,7 @@ namespace simd
       constexpr auto [...__is] = _IotaArray<__n>;
       return __builtin_shufflevector(__x, __y, __n / 2 + __rotr(__is)...);
     }
+#endif
 #if VIR_PATCH_PERMUTE_DYNAMIC
 
   // also see overloads in bits/simd_x86.h
@@ -385,6 +387,7 @@ namespace simd
 	  using _IV = __vec_builtin_type<_Ip, __width_of<_TV>>;
 	  return __vec_cast<_UV>(__vec_cast<_IV>(__v));
 	}
+#if VIR_PATCH_MISSED_OPT
       if constexpr (!_Traits._M_have_sse4_1() && is_integral_v<_Tp>
 		      && sizeof(_Up) == sizeof(_Tp) * 4)
 	{ // GCC uses scalar conversions unless it can use SSE4.1 instructions
@@ -428,6 +431,7 @@ namespace simd
 		}
 	    }
 	}
+#endif
 #endif
       return __builtin_convertvector(__v, _UV);
     }

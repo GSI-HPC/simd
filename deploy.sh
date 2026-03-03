@@ -156,6 +156,7 @@ for file in "$SRC_DIR"/*.h; do
     cat "$file" | filter VIR_EXTENSIONS \
       | filter VIR_PATCH_PERMUTE_DYNAMIC \
       | filter VIR_PATCH_MATH \
+      | filter VIR_PATCH_MISSED_OPT \
       | fix_copyright > "$DEST_DIR/$filename"
   fi
 done
