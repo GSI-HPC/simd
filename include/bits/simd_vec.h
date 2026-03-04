@@ -1398,7 +1398,7 @@ namespace simd
 
       // [simd.ctor] conversion constructor -----------------------------------
       template <typename _Up, typename _UAbi, _TargetTraits _Traits = {}>
-	requires (__simd_size_v<_Up, _UAbi> == _S_size)
+	requires (_S_size == _UAbi::_S_size)
 	  && __explicitly_convertible_to<_Up, value_type>
 	[[__gnu__::__always_inline__]]
 	constexpr
@@ -2551,7 +2551,7 @@ namespace simd
 
       // [simd.ctor] conversion constructor -----------------------------------
       template <typename _Up, typename _UAbi>
-	requires (__simd_size_v<_Up, _UAbi> == _S_size)
+	requires (_S_size == _UAbi::_S_size)
 	  && __explicitly_convertible_to<_Up, value_type>
 	[[__gnu__::__always_inline__]]
 	constexpr
@@ -2800,7 +2800,7 @@ namespace simd
   template <typename _Tp, typename _Ap>
     inline constexpr basic_vec<_Tp, _Ap>
     __iota<basic_vec<_Tp, _Ap>> = basic_vec<_Tp, _Ap>([](_Tp __i) -> _Tp {
-      static_assert(__simd_size_v<_Tp, _Ap> - 1 <= numeric_limits<_Tp>::max(),
+      static_assert(_Ap::_S_size - 1 <= numeric_limits<_Tp>::max(),
 		    "iota object would overflow");
       return __i;
     });

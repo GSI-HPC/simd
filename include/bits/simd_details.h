@@ -1281,18 +1281,6 @@ namespace simd
    */
   using __simd_size_type = int;
 
-  /** @internal
-   * The width of <tt>basic_vec<T, Abi></tt> if the specialization <tt>basic_vec<T, Abi></tt> is
-   * enabled, or @c 0 otherwise.
-   *
-   * C++26 [simd.expos.defn]
-   */
-  template <typename _Tp, typename _Ap>
-    constexpr __simd_size_type __simd_size_v = 0;
-
-  template <__vectorizable _Tp, __abi_tag _Ap>
-    constexpr __simd_size_type __simd_size_v<_Tp, _Ap> = _Ap::_S_size;
-
   // integral_constant shortcut
   template <__simd_size_type _Xp>
     inline constexpr integral_constant<__simd_size_type, _Xp> __simd_size_c = {};
@@ -1301,13 +1289,13 @@ namespace simd
   template <typename _Tp, typename _Ap = __native_abi_t<_Tp>>
     class basic_vec;
 
-  template <typename _Tp, __simd_size_type _Np = __simd_size_v<_Tp, __native_abi_t<_Tp>>>
+  template <typename _Tp, __simd_size_type _Np = __native_abi_t<_Tp>::_S_size>
     using vec = basic_vec<_Tp, __deduce_abi_t<_Tp, _Np>>;
 
   template <size_t _Bytes, typename _Ap = __native_abi_t<__integer_from<_Bytes>>>
     class basic_mask;
 
-  template <typename _Tp, __simd_size_type _Np = __simd_size_v<_Tp, __native_abi_t<_Tp>>>
+  template <typename _Tp, __simd_size_type _Np = __native_abi_t<_Tp>::_S_size>
     using mask = basic_mask<sizeof(_Tp), __deduce_abi_t<_Tp, _Np>>;
 
   // [simd.ctor] load constructor constraints

@@ -973,7 +973,7 @@ namespace simd
 
       // [simd.mask.conv] -----------------------------------------------------
       template <typename _Up, typename _UAbi>
-	requires (__simd_size_v<_Up, _UAbi> == _S_size)
+	requires (_UAbi::_S_size == _S_size)
 	[[__gnu__::__always_inline__]]
 	constexpr explicit(sizeof(_Up) != _Bytes)
 	operator basic_vec<_Up, _UAbi>() const noexcept
@@ -1776,7 +1776,7 @@ namespace simd
 
       // [simd.mask.conv] -----------------------------------------------------
       template <typename _Up, typename _UAbi>
-	requires (__simd_size_v<_Up, _UAbi> == _S_size)
+	requires (_UAbi::_S_size == _S_size)
 	[[__gnu__::__always_inline__]]
 	constexpr explicit(sizeof(_Up) != _Bytes)
 	operator basic_vec<_Up, _UAbi>() const noexcept

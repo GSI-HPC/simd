@@ -421,7 +421,7 @@ namespace simd
 
       // [simd.mask.conv] -----------------------------------------------------
       template <typename _Up, typename _UAbi>
-	requires (__simd_size_v<_Up, _UAbi> == _S_size)
+	requires (_UAbi::_S_size == _S_size)
 	[[__gnu__::__always_inline__]]
 	constexpr explicit(sizeof(_Up) != _Bytes)
 	operator basic_vec<_Up, _UAbi>() const noexcept
@@ -855,7 +855,7 @@ namespace simd
 
       // [simd.ctor] conversion constructor -----------------------------------
       template <__complex_like _Up, typename _UAbi>
-	requires (__simd_size_v<_Up, _UAbi> == size.value)
+	requires (_S_size == _UAbi::_S_size)
 	  && __explicitly_convertible_to<_Up, value_type>
 	  && _UAbi::_S_is_cx_ileav
 	[[__gnu__::__always_inline__]]
@@ -866,7 +866,7 @@ namespace simd
 	{}
 
       template <__complex_like _Up, typename _UAbi>
-	requires (__simd_size_v<_Up, _UAbi> == size.value)
+	requires (_S_size == _UAbi::_S_size)
 	  && __explicitly_convertible_to<_Up, value_type>
 	  && (!_UAbi::_S_is_cx_ileav)
 	[[__gnu__::__always_inline__]]
@@ -878,7 +878,7 @@ namespace simd
 
       template <typename _Up, typename _UAbi>
 	requires (!__complex_like<_Up>)
-	  && (__simd_size_v<_Up, _UAbi> == _S_size)
+	  && (_S_size == _UAbi::_S_size)
 	  && __explicitly_convertible_to<_Up, value_type>
 	[[__gnu__::__always_inline__]]
 	constexpr
@@ -1196,7 +1196,7 @@ namespace simd
     };
 
   template <size_t _Bytes, __abi_tag _Ap>
-    requires (__filter_abi_variant(_Ap::_S_variant, _AbiVariant::_CxCtgus) == _AbiVariant::_CxCtgus)
+    requires _Ap::_S_is_cx_ctgus
     class basic_mask<_Bytes, _Ap>
     {
       template <size_t, typename>
@@ -1442,7 +1442,7 @@ namespace simd
 
       // [simd.mask.conv] -----------------------------------------------------
       template <typename _Up, typename _UAbi>
-	requires (__simd_size_v<_Up, _UAbi> == _S_size)
+	requires (_UAbi::_S_size == _S_size)
 	[[__gnu__::__always_inline__]]
 	constexpr explicit(sizeof(_Up) != _Bytes)
 	operator basic_vec<_Up, _UAbi>() const noexcept
@@ -1906,7 +1906,7 @@ namespace simd
 
       // [simd.ctor] conversion constructor -----------------------------------
       template <__complex_like _Up, typename _UAbi>
-	requires (__simd_size_v<_Up, _UAbi> == size.value)
+	requires (_S_size == _UAbi::_S_size)
 	  && __explicitly_convertible_to<_Up, value_type>
 	  && _UAbi::_S_is_cx_ileav
 	[[__gnu__::__always_inline__]]
@@ -1917,7 +1917,7 @@ namespace simd
 	{}
 
       template <__complex_like _Up, typename _UAbi>
-	requires (__simd_size_v<_Up, _UAbi> == size.value)
+	requires (_S_size == _UAbi::_S_size)
 	  && __explicitly_convertible_to<_Up, value_type>
 	  && (!_UAbi::_S_is_cx_ileav)
 	[[__gnu__::__always_inline__]]
@@ -1930,7 +1930,7 @@ namespace simd
 
       template <typename _Up, typename _UAbi> // _Up is not complex!
 	requires (!__complex_like<_Up>)
-	  && (__simd_size_v<_Up, _UAbi> == _S_size)
+	  && (_S_size == _UAbi::_S_size)
 	  && __explicitly_convertible_to<_Up, value_type>
 	[[__gnu__::__always_inline__]]
 	constexpr
@@ -2185,7 +2185,7 @@ namespace simd
     inline constexpr basic_vec<_Tp, _Ap>
     __iota<basic_vec<_Tp, _Ap>> = basic_vec<_Tp, _Ap>([](typename _Tp::value_type __i)
 							  -> typename _Tp::value_type {
-      static_assert(__simd_size_v<_Tp, _Ap> - 1 <= numeric_limits<typename _Tp::value_type>::max(),
+      static_assert(_Ap::_S_size - 1 <= numeric_limits<typename _Tp::value_type>::max(),
 		    "iota object would overflow");
       return __i;
     });
