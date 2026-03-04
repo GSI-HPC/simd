@@ -446,11 +446,36 @@ namespace simd
 #undef _GLIBCXX_DELETE_SIMD
     };
 
+  template <size_t _Bytes, typename _Ap>
+    class _MaskBase
+    {
+    public:
+      _MaskBase() = default;
+
+      // LWG issue from 2026-03-04
+      template <size_t _UBytes, typename _UAbi>
+	requires (_Ap::_S_size != _UAbi::_S_size)
+	explicit
+	_MaskBase(const basic_mask<_UBytes, _UAbi>&) = delete("size mismatch");
+
+      template <typename _Up, typename _UAbi>
+	explicit
+	_MaskBase(const basic_vec<_Up, _UAbi>&)
+	  = delete("use operator! or a comparison to convert a vec into a mask");
+
+      template <typename _Up, typename _UAbi>
+	requires (_Ap::_S_size != _UAbi::_S_size)
+	operator basic_vec<_Up, _UAbi>() const
+	  = delete("size mismatch");
+    };
+
   template <size_t _Bytes, __abi_tag _Ap>
     requires (_Ap::_S_nreg == 1)
       && (__filter_abi_variant(_Ap::_S_variant, _AbiVariant::_CxVariants) == _AbiVariant())
-    class basic_mask<_Bytes, _Ap>
+    class basic_mask<_Bytes, _Ap> : public _MaskBase<_Bytes, _Ap>
     {
+      using _Base = _MaskBase<_Bytes, _Ap>;
+
       template <size_t, typename>
 	friend class basic_mask;
 
@@ -807,6 +832,8 @@ namespace simd
 	  }())
 	{}
 
+      using _Base::_MaskBase;
+
       // [simd.mask.ctor] generator constructor -------------------------------
       template <__simd_generator_invokable<bool, _S_size> _Fp>
 	[[__gnu__::__always_inline__]]
@@ -986,6 +1013,8 @@ namespace simd
 	      return __select_impl(static_cast<_UV::mask_type>(*this), _UV(1), _UV(0));
 	    }
 	}
+
+      using _Base::operator basic_vec;
 
       // [simd.mask.namedconv] ------------------------------------------------
       [[__gnu__::__always_inline__]]
@@ -1396,8 +1425,11 @@ namespace simd
   template <size_t _Bytes, __abi_tag _Ap>
     requires (_Ap::_S_nreg > 1)
       && (__filter_abi_variant(_Ap::_S_variant, _AbiVariant::_CxVariants) == _AbiVariant())
-    class basic_mask<_Bytes, _Ap>
+      class basic_mask<_Bytes, _Ap> : public _MaskBase<_Bytes, _Ap>
     {
+      using _Base = _MaskBase<_Bytes, _Ap>;
+
+
       template <size_t, typename>
 	friend class basic_mask;
 
@@ -1690,6 +1722,8 @@ namespace simd
 	    }())
 	{}
 
+      using _Base::_MaskBase;
+
       // [simd.mask.ctor] generator constructor -------------------------------
       template <__simd_generator_invokable<bool, _S_size> _Fp>
 	[[__gnu__::__always_inline__]]
@@ -1785,6 +1819,8 @@ namespace simd
 	  return _Rp::_S_init(static_cast<_Rp::_DataType0>(_M_data0),
 			      static_cast<_Rp::_DataType1>(_M_data1));
 	}
+
+      using _Base::operator basic_vec;
 
       // [simd.mask.namedconv] ------------------------------------------------
       [[__gnu__::__always_inline__]]

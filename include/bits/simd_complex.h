@@ -121,8 +121,10 @@ namespace simd
 
   template <size_t _Bytes, __abi_tag _Ap>
     requires _Ap::_S_is_cx_ileav
-    class basic_mask<_Bytes, _Ap>
+    class basic_mask<_Bytes, _Ap> : public _MaskBase<_Bytes, _Ap>
     {
+      using _Base = _MaskBase<_Bytes, _Ap>;
+
       template <size_t, typename>
 	friend class basic_mask;
 
@@ -339,6 +341,8 @@ namespace simd
 	  }())
 	{}
 
+      using _Base::_MaskBase;
+
       // [simd.mask.ctor] generator constructor -------------------------------
       template <__simd_generator_invokable<bool, _S_size> _Fp>
 	[[__gnu__::__always_inline__]]
@@ -429,6 +433,8 @@ namespace simd
 	  using _Mp = typename basic_vec<_Up, _UAbi>::mask_type;
 	  return __select_impl(_Mp(*this), basic_vec<_Up, _UAbi>(1), basic_vec<_Up, _UAbi>(0));
 	}
+
+      using _Base::operator basic_vec;
 
       // [simd.mask.namedconv] ------------------------------------------------
       [[__gnu__::__always_inline__]]
@@ -591,7 +597,7 @@ namespace simd
     requires __complex_like<_Tp>
       && _Ap::_S_is_cx_ileav
     class basic_vec<_Tp, _Ap>
-    : _BinaryOps<_Tp, _Ap>
+    : _VecBase<_Tp, _Ap>
     {
       template <typename, typename>
 	friend class basic_vec;
@@ -886,6 +892,8 @@ namespace simd
 	basic_vec(const basic_vec<_Up, _UAbi>& __x) noexcept
 	: basic_vec(_RealSimd(__x))
 	{}
+
+      using _VecBase<_Tp, _Ap>::_VecBase;
 
       // [simd.ctor] generator constructor ------------------------------------
       template <__simd_generator_invokable<value_type, _S_size> _Fp>
@@ -1197,8 +1205,10 @@ namespace simd
 
   template <size_t _Bytes, __abi_tag _Ap>
     requires _Ap::_S_is_cx_ctgus
-    class basic_mask<_Bytes, _Ap>
+    class basic_mask<_Bytes, _Ap> : public _MaskBase<_Bytes, _Ap>
     {
+      using _Base = _MaskBase<_Bytes, _Ap>;
+
       template <size_t, typename>
 	friend class basic_mask;
 
@@ -1368,6 +1378,8 @@ namespace simd
 	: _M_data(__x)
 	{}
 
+      using _Base::_MaskBase;
+
       // [simd.mask.ctor] generator constructor -------------------------------
       template <__simd_generator_invokable<bool, _S_size> _Fp>
 	[[__gnu__::__always_inline__]]
@@ -1451,6 +1463,8 @@ namespace simd
 	  using _Mp = typename _UV::mask_type;
 	  return __select_impl(static_cast<_Mp>(_M_data), _UV(1), _UV(0));
 	}
+
+      using _Base::operator basic_vec;
 
       // [simd.mask.namedconv] ------------------------------------------------
       [[__gnu__::__always_inline__]]
@@ -1613,7 +1627,7 @@ namespace simd
     requires __complex_like<_Tp>
       && (_Ap::_S_is_cx_ctgus || __scalar_abi_tag<_Ap>)
     class basic_vec<_Tp, _Ap>
-    : _BinaryOps<_Tp, _Ap>
+    : _VecBase<_Tp, _Ap>
     {
       template <typename, typename>
 	friend class basic_vec;
@@ -1938,6 +1952,8 @@ namespace simd
 	basic_vec(const basic_vec<_Up, _UAbi>& __x) noexcept
 	: _M_real(__x), _M_imag()
 	{}
+
+      using _VecBase<_Tp, _Ap>::_VecBase;
 
       // [simd.ctor] generator constructor ------------------------------------
       template <__simd_generator_invokable<value_type, _S_size> _Fp>

@@ -187,6 +187,11 @@ template <typename V, typename T = typename V::value_type>
     = usable_vec_or_mask<V, T>
 	&& !std::convertible_to<V, std::array<T, V::size()>>
 	&& std::convertible_to<std::array<T, V::size()>, V>
+	&& std::constructible_from<V, simd::rebind_t<int, V>>
+	&& std::constructible_from<V, simd::rebind_t<float, V>>
+	&& !std::constructible_from<V, simd::resize_t<V::size() + 1, V>>
+	&& !std::constructible_from<V, simd::resize_t<V::size() + 1, typename V::mask_type>>
+	&& !std::constructible_from<typename V::mask_type, V>
 #if SIMD_CONCEPTS
       // Not for masks because std::integral<bool> is true but datapar::integral looks for a
       // basic_vec specialization.
@@ -204,6 +209,9 @@ template <typename M, typename T = typename M::value_type>
 	&& std::convertible_to<std::bitset<M::size()>, M>
 	&& std::constructible_from<M, unsigned long long>
 	&& std::constructible_from<M, unsigned char>
+	&& std::constructible_from<M, simd::rebind_t<int, M>>
+	&& std::constructible_from<M, simd::rebind_t<float, M>>
+	&& !std::constructible_from<M, simd::resize_t<M::size() + 1, M>>
 	&& !std::convertible_to<unsigned long long, M>
 	&& !std::convertible_to<unsigned char, M>
 	&& !std::convertible_to<bool, M>

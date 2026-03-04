@@ -54,9 +54,23 @@ namespace simd
     };
 
   template <typename _Tp, typename _Ap>
-    class _BinaryOps
+    class _VecBase
     {
       using _Vp = basic_vec<_Tp, _Ap>;
+
+    public:
+      _VecBase() = default;
+
+      // LWG issue from 2026-03-04
+      template <typename _Up, typename _UAbi>
+	requires (_Ap::_S_size != _UAbi::_S_size)
+	_VecBase(const basic_vec<_Up, _UAbi>&) = delete("size mismatch");
+
+      template <typename _Up, typename _UAbi>
+	requires (_Ap::_S_size == _UAbi::_S_size) && (!__explicitly_convertible_to<_Up, _Tp>)
+	explicit
+	_VecBase(const basic_vec<_Up, _UAbi>&)
+	  = delete("the value types are not convertible");
 
       [[__gnu__::__always_inline__]]
       friend constexpr _Vp
@@ -254,7 +268,7 @@ namespace simd
     requires (_Ap::_S_nreg == 1)
       && (!__complex_like<_Tp>)
     class basic_vec<_Tp, _Ap>
-    : _BinaryOps<_Tp, _Ap>
+    : _VecBase<_Tp, _Ap>
     {
       template <typename, typename>
 	friend class basic_vec;
@@ -1503,6 +1517,8 @@ namespace simd
 	  }())
 	{}
 
+      using _VecBase<_Tp, _Ap>::_VecBase;
+
       // [simd.ctor] generator constructor ------------------------------------
       template <__simd_generator_invokable<value_type, _S_size> _Fp>
 	[[__gnu__::__always_inline__]]
@@ -2155,7 +2171,7 @@ namespace simd
     requires (_Ap::_S_nreg > 1)
       && (!__complex_like<_Tp>)
     class basic_vec<_Tp, _Ap>
-    : _BinaryOps<_Tp, _Ap>
+    : _VecBase<_Tp, _Ap>
     {
       template <typename, typename>
 	friend class basic_vec;
@@ -2561,6 +2577,8 @@ namespace simd
 	  : _M_data0(get<0>(chunk<_N0>(__x))),
 	    _M_data1(get<1>(chunk<_N0>(__x)))
 	{}
+
+      using _VecBase<_Tp, _Ap>::_VecBase;
 
       // [simd.ctor] generator constructor ------------------------------------
       template <__simd_generator_invokable<value_type, _S_size> _Fp>
