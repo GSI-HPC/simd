@@ -769,55 +769,33 @@ namespace simd
 	      else if constexpr (_S_use_bitmask || _UV::_S_use_bitmask)
 		return basic_mask(__x.to_bitset())._M_data;
 
+	      // _CxCtgus stores its masks matching the complex::value_type (_UBytes/2)
+	      else if constexpr (_UAbi::_S_is_cx_ctgus)
+		return basic_mask(__x._M_data)._M_data;
+
 	      // vec-mask to vec-mask
+	      else if constexpr (_Bytes == _UBytes)
+		return _S_recursive_bit_cast(__x)._M_data;
+
 	      // 2-mask-elements wrapper to plain mask
 	      else if constexpr (_UAbi::_S_is_cx_ileav)
 		{
-		  if constexpr (sizeof(__x) == sizeof(_M_data) && _Bytes == _UBytes
-				    && _UV::_S_padding_bytes == 0)
-		    {
-		      static_assert(!_S_has_bool_member && !_UV::_S_has_bool_member);
-		      return __builtin_bit_cast(_DataType, __x);
-		    }
-		  else if (!__builtin_is_constant_evaluated()
-			     && sizeof(__x) == sizeof(_M_data) && _Bytes == _UBytes)
-		    {
-		      _DataType __tmp = {};
-		      __builtin_memcpy(&__tmp, &__x, sizeof(__x) - _UV::_S_padding_bytes);
-		      return __tmp;
-		    }
-		  else if constexpr (_UBytes / _Bytes > sizeof(0ll))
-		    { // from mask<complex<double>> to mask<char> is expensive. deal with it
+		  if constexpr (_UBytes <= sizeof(0ll))
+		    // two step (bit-cast -> convert)
+		    return basic_mask(__similar_mask<__integer_from<_UBytes>, _S_size, _UAbi>(__x))
+			     ._M_data;
+		  else if constexpr (_Bytes == 1)
+		    { // 16 -> 1
 		      constexpr auto [...__is] = _IotaArray<_S_size>;
-		      return _DataType{__vec_value_type<_DataType>(-__x[__is])...};
+		      using _Ip = __vec_value_type<_DataType>;
+		      return _DataType {_Ip(__x._M_data._M_concat_data()[__is * 2])...};
 		    }
-		  else if constexpr (_Bytes >= 2)
+		  else // from complex<double>
 		    {
-		      return reinterpret_cast<_DataType>(
-			       __vec_mask_cast<__vec_builtin_type_bytes<
-						 __integer_from<_Bytes / 2>, sizeof(_M_data)>>(
-				 __x._M_data._M_concat_data()));
+		      const auto __k2 = __similar_mask<__integer_from<_Bytes / 2>, 2 * _S_size,
+						       _UAbi>(__x._M_data);
+		      return _S_recursive_bit_cast(__k2);
 		    }
-		  else if constexpr (_UBytes <= sizeof(0ll))
-		    {
-		      const auto __xv = __x._M_data._M_concat_data();
-		      return __vec_mask_cast<_DataType>(
-			       reinterpret_cast<__vec_builtin_type_bytes<
-						  __integer_from<_UBytes>, sizeof(__xv)>>(__xv));
-		    }
-		}
-	      else if constexpr (sizeof(__x) == sizeof(_M_data) && _Bytes == _UBytes
-				   && !_S_has_bool_member && !_UV::_S_has_bool_member
-				   && !_UV::_S_use_bitmask && _UV::_S_padding_bytes == 0)
-		return __builtin_bit_cast(_DataType, __x);
-	      else if (!__builtin_is_constant_evaluated()
-			 && sizeof(__x) == sizeof(_M_data) && _Bytes == _UBytes
-			 && !_S_has_bool_member && !_UV::_S_has_bool_member
-			 && !_UV::_S_use_bitmask && _UV::_S_padding_bytes != 0)
-		{
-		  _DataType __tmp = {};
-		  __builtin_memcpy(&__tmp, &__x, sizeof(__x) - _UV::_S_padding_bytes);
-		  return __tmp;
 		}
 	      else
 		{
@@ -1551,7 +1529,8 @@ namespace simd
 	_S_recursive_bit_cast(const basic_mask<_UBytes, _UAbi>& __x)
 	{
 	  using _Mp = basic_mask<_UBytes, _UAbi>;
-	  if constexpr (_Mp::_S_has_bool_member || sizeof(basic_mask) > sizeof(__x))
+	  if constexpr (_Mp::_S_has_bool_member || sizeof(basic_mask) > sizeof(__x)
+			  || _Mp::_S_padding_bytes != 0)
 	    return _S_init(__builtin_bit_cast(_Mask0, __x._M_data0),
 			   _Mask1::_S_recursive_bit_cast(__x._M_data1));
 	  else if constexpr (sizeof(basic_mask) == sizeof(__x))

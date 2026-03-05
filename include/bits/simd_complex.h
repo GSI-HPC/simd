@@ -281,42 +281,23 @@ namespace simd
 		return _DataType::_S_init(__duplicate_each_bit<_S_size>(__x._M_to_uint()));
 	      else if constexpr (_UAbi::_S_is_cx_ctgus)
 		return basic_mask(__x._M_data)._M_data;
-	      else if constexpr (sizeof(__x) == sizeof(_M_data) && _Bytes == _UBytes
-				   && _UV::_S_padding_bytes == 0)
-		{
-		  static_assert(!_S_has_bool_member && !_UV::_S_has_bool_member);
-		  return __builtin_bit_cast(_DataType, __x);
-		}
-	      else if constexpr (_Bytes <= 8)
+	      else if constexpr (_Bytes == _UBytes)
+		return _DataType::_S_recursive_bit_cast(__x);
+	      else if constexpr (_Bytes <= sizeof(0ll))
 		{
 		  using _U2 = __similar_mask<__integer_from<_Bytes>, _S_size, _UAbi>;
-		  if constexpr (_U2::_S_has_bool_member)
-		    return _DataType::_S_recursive_bit_cast(_U2(__x));
-		  else if constexpr (sizeof(_DataType) == sizeof(_U2))
-		    return __builtin_bit_cast(_DataType, _U2(__x));
-		  else
-		    { // the sizeof can differ e.g. on mask<float, 18> -> mask<complex<float>, 18>
-		      using _U3 = __similar_mask<__integer_from<_Bytes / 2>, _S_size * 2,
-						 typename _U2::abi_type>;
-		      static_assert(sizeof(_U3) == sizeof(_U2));
-		      return __builtin_bit_cast(_U3, _U2(__x));
-		    }
+		  return _DataType::_S_recursive_bit_cast(_U2(__x));
 		}
-	      else if constexpr (_UBytes > 1) // call conversion ctor on _DataType
+	      else if constexpr (_UBytes > 1)
 		{
 		  using _U2 = __similar_mask<__integer_from<_UBytes / 2>, _S_size * 2, _UAbi>;
-		  return _U2::_S_recursive_bit_cast(__x);
+		  return _U2::_S_recursive_bit_cast(__x); // calls conversion ctor on _DataType
 		}
-	      else if constexpr (_Bytes >= 4)
-		{
-		  // 1. convert to larger mask type
-		  auto __y = __similar_mask<__integer_from<_Bytes / 2>, _S_size, _UAbi>(__x);
-		  // 2. reinterpret to pass to conversion constructor of _DataType
-		  using _U2 = __similar_mask<__integer_from<_Bytes / 2 / 2>, _S_size * 2, _UAbi>;
-		  return _U2::_S_recursive_bit_cast(__y);
-		}
-	      else
-		static_assert(false);
+	      else // _Bytes == 16 && _UBytes == 1
+		// convert twice (1 -> 2 -> 16)
+		// The conversion to short keeps the intermediate mask as small as possible and thus
+		// requires fewer across-128bit boundary shuffles.
+		return basic_mask(__similar_mask<short, _UV::_S_size, _UAbi>(__x))._M_data;
 	  }())
 	{}
 
