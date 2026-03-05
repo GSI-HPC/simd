@@ -121,9 +121,12 @@ namespace simd
 
   template <size_t _Bytes, __abi_tag _Ap>
     requires _Ap::_S_is_cx_ileav
-    class basic_mask<_Bytes, _Ap> : public _MaskBase<_Bytes, _Ap>
+    class basic_mask<_Bytes, _Ap>
+    : public _MaskBase<_Bytes, _Ap>
     {
       using _Base = _MaskBase<_Bytes, _Ap>;
+
+      using _VecType = _Base::_VecType;
 
       template <size_t, typename>
 	friend class basic_mask;
@@ -141,8 +144,6 @@ namespace simd
       static_assert(_DataType::abi_type::_S_nreg == _Ap::_S_nreg);
 
       static_assert(is_same_v<__cx_ileav_mask<_DataType>, basic_mask>);
-
-      using _VecType = __similar_vec<__integer_from<_Bytes>, _S_size, _Ap>;
 
       static constexpr bool _S_is_scalar = _DataType::_S_is_scalar;
 
@@ -170,31 +171,9 @@ namespace simd
 
       using abi_type = _Ap;
 
-      using iterator = __iterator<basic_mask>;
+      using iterator = _Base::iterator;
 
-      using const_iterator = __iterator<const basic_mask>;
-
-      constexpr iterator
-      begin() noexcept
-      { return {*this, 0}; }
-
-      constexpr const_iterator
-      begin() const noexcept
-      { return {*this, 0}; }
-
-      constexpr const_iterator
-      cbegin() const noexcept
-      { return {*this, 0}; }
-
-      constexpr default_sentinel_t
-      end() const noexcept
-      { return {}; }
-
-      constexpr default_sentinel_t
-      cend() const noexcept
-      { return {}; }
-
-      static constexpr auto size = __simd_size_c<_S_size>;
+      using const_iterator = _Base::const_iterator;
 
       // internal but public API ----------------------------------------------
       [[__gnu__::__always_inline__]]
@@ -597,7 +576,7 @@ namespace simd
     requires __complex_like<_Tp>
       && _Ap::_S_is_cx_ileav
     class basic_vec<_Tp, _Ap>
-    : _VecBase<_Tp, _Ap>
+    : public _VecBase<_Tp, _Ap>
     {
       template <typename, typename>
 	friend class basic_vec;
@@ -630,35 +609,7 @@ namespace simd
     public:
       using value_type = _Tp;
 
-      using abi_type = _Ap;
-
-      using mask_type = basic_mask<sizeof(_Tp), abi_type>;
-
-      using iterator = __iterator<basic_vec>;
-
-      using const_iterator = __iterator<const basic_vec>;
-
-      constexpr iterator
-      begin() noexcept
-      { return {*this, 0}; }
-
-      constexpr const_iterator
-      begin() const noexcept
-      { return {*this, 0}; }
-
-      constexpr const_iterator
-      cbegin() const noexcept
-      { return {*this, 0}; }
-
-      constexpr default_sentinel_t
-      end() const noexcept
-      { return {}; }
-
-      constexpr default_sentinel_t
-      cend() const noexcept
-      { return {}; }
-
-      static constexpr auto size = __simd_size_c<_S_size>;
+      using mask_type = _VecBase<_Tp, _Ap>::mask_type;
 
       // internal but public API ----------------------------------------------
       [[__gnu__::__always_inline__]]
@@ -937,7 +888,7 @@ namespace simd
 	{}
 
       template <ranges::contiguous_range _Rg, typename... _Flags>
-	requires __static_sized_range<_Rg, size.value>
+	requires __static_sized_range<_Rg, _S_size>
 	  && __vectorizable<ranges::range_value_t<_Rg>>
 	  && __explicitly_convertible_to<ranges::range_value_t<_Rg>, value_type>
 	[[__gnu__::__always_inline__]]
@@ -984,7 +935,7 @@ namespace simd
 	    {
 	      using _Up = conditional_t<sizeof(value_type) == sizeof(float), float, double>;
 	      using _From = __similar_vec<_Up, _A0::_S_size, _A0>;
-	      using _To = __similar_vec<_Up, _S_size, abi_type>;
+	      using _To = __similar_vec<_Up, _S_size, _Ap>;
 	      return basic_vec::_S_recursive_bit_cast(
 		       _To::_S_dynamic_permute(_From::_S_recursive_bit_cast(__v), __perm));
 	    }
@@ -1205,9 +1156,12 @@ namespace simd
 
   template <size_t _Bytes, __abi_tag _Ap>
     requires _Ap::_S_is_cx_ctgus
-    class basic_mask<_Bytes, _Ap> : public _MaskBase<_Bytes, _Ap>
+    class basic_mask<_Bytes, _Ap>
+    : public _MaskBase<_Bytes, _Ap>
     {
       using _Base = _MaskBase<_Bytes, _Ap>;
+
+      using _VecType = _Base::_VecType;
 
       template <size_t, typename>
 	friend class basic_mask;
@@ -1223,8 +1177,6 @@ namespace simd
 							     _AbiVariant::_MaskVariants)>>;
 
       static_assert(_DataType::abi_type::_S_nreg == _Ap::_S_nreg);
-
-      using _VecType = __similar_vec<__integer_from<_Bytes>, _S_size, _Ap>;
 
       static constexpr bool _S_is_scalar = _DataType::_S_is_scalar;
 
@@ -1244,32 +1196,6 @@ namespace simd
       using value_type = bool;
 
       using abi_type = _Ap;
-
-      using iterator = __iterator<basic_mask>;
-
-      using const_iterator = __iterator<const basic_mask>;
-
-      constexpr iterator
-      begin() noexcept
-      { return {*this, 0}; }
-
-      constexpr const_iterator
-      begin() const noexcept
-      { return {*this, 0}; }
-
-      constexpr const_iterator
-      cbegin() const noexcept
-      { return {*this, 0}; }
-
-      constexpr default_sentinel_t
-      end() const noexcept
-      { return {}; }
-
-      constexpr default_sentinel_t
-      cend() const noexcept
-      { return {}; }
-
-      static constexpr auto size = __simd_size_c<_S_size>;
 
       // internal but public API ----------------------------------------------
       [[__gnu__::__always_inline__]]
@@ -1627,7 +1553,7 @@ namespace simd
     requires __complex_like<_Tp>
       && (_Ap::_S_is_cx_ctgus || __scalar_abi_tag<_Ap>)
     class basic_vec<_Tp, _Ap>
-    : _VecBase<_Tp, _Ap>
+    : public _VecBase<_Tp, _Ap>
     {
       template <typename, typename>
 	friend class basic_vec;
@@ -1655,37 +1581,7 @@ namespace simd
     public:
       using value_type = _Tp;
 
-      using abi_type = _Ap;
-
-      // We can't use _RealSimd::mask_type here because that would have the wrong value for _Bytes,
-      // which bites us in __select_impl(basic_mask, T, T) where sizeof(T) is constrained to _Bytes.
-      using mask_type = basic_mask<sizeof(_Tp), abi_type>;
-
-      using iterator = __iterator<basic_vec>;
-
-      using const_iterator = __iterator<const basic_vec>;
-
-      constexpr iterator
-      begin() noexcept
-      { return {*this, 0}; }
-
-      constexpr const_iterator
-      begin() const noexcept
-      { return {*this, 0}; }
-
-      constexpr const_iterator
-      cbegin() const noexcept
-      { return {*this, 0}; }
-
-      constexpr default_sentinel_t
-      end() const noexcept
-      { return {}; }
-
-      constexpr default_sentinel_t
-      cend() const noexcept
-      { return {}; }
-
-      static constexpr auto size = __simd_size_c<_S_size>;
+      using mask_type = _VecBase<_Tp, _Ap>::mask_type;
 
       // internal but public API ----------------------------------------------
       [[__gnu__::__always_inline__]]
@@ -1992,7 +1888,7 @@ namespace simd
 	{}
 
       template <ranges::contiguous_range _Rg, typename... _Flags>
-	requires __static_sized_range<_Rg, size.value>
+	requires __static_sized_range<_Rg, _S_size>
 	  && __vectorizable<ranges::range_value_t<_Rg>>
 	  && __explicitly_convertible_to<ranges::range_value_t<_Rg>, value_type>
 	[[__gnu__::__always_inline__]]

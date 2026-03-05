@@ -30,10 +30,10 @@ namespace simd
       friend class __iterator<const _Vp>;
 
       template <typename, typename>
-	friend class basic_vec;
+	friend class _VecBase;
 
       template <size_t, typename>
-	friend class basic_mask;
+	friend class _MaskBase;
 
       _Vp* _M_data = nullptr;
 

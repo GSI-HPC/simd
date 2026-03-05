@@ -59,9 +59,41 @@ namespace simd
       using _Vp = basic_vec<_Tp, _Ap>;
 
     public:
+      using value_type = _Tp;
+
+      using abi_type = _Ap;
+
+      using mask_type = basic_mask<sizeof(_Tp), abi_type>;
+
+      using iterator = __iterator<_Vp>;
+
+      using const_iterator = __iterator<const _Vp>;
+
+      constexpr iterator
+      begin() noexcept
+      { return {static_cast<_Vp&>(*this), 0}; }
+
+      constexpr const_iterator
+      begin() const noexcept
+      { return cbegin(); }
+
+      constexpr const_iterator
+      cbegin() const noexcept
+      { return {static_cast<const _Vp&>(*this), 0}; }
+
+      constexpr default_sentinel_t
+      end() const noexcept
+      { return {}; }
+
+      constexpr default_sentinel_t
+      cend() const noexcept
+      { return {}; }
+
+      static constexpr auto size = __simd_size_c<_Ap::_S_size>;
+
       _VecBase() = default;
 
-      // LWG issue from 2026-03-04
+      // LWG issue from 2026-03-04 / P4042R0
       template <typename _Up, typename _UAbi>
 	requires (_Ap::_S_size != _UAbi::_S_size)
 	_VecBase(const basic_vec<_Up, _UAbi>&) = delete("size mismatch");
@@ -268,7 +300,7 @@ namespace simd
     requires (_Ap::_S_nreg == 1)
       && (!__complex_like<_Tp>)
     class basic_vec<_Tp, _Ap>
-    : _VecBase<_Tp, _Ap>
+    : public _VecBase<_Tp, _Ap>
     {
       template <typename, typename>
 	friend class basic_vec;
@@ -303,35 +335,7 @@ namespace simd
     public:
       using value_type = _Tp;
 
-      using abi_type = _Ap;
-
-      using mask_type = basic_mask<sizeof(_Tp), abi_type>;
-
-      using iterator = __iterator<basic_vec>;
-
-      using const_iterator = __iterator<const basic_vec>;
-
-      constexpr iterator
-      begin() noexcept
-      { return {*this, 0}; }
-
-      constexpr const_iterator
-      begin() const noexcept
-      { return {*this, 0}; }
-
-      constexpr const_iterator
-      cbegin() const noexcept
-      { return {*this, 0}; }
-
-      constexpr default_sentinel_t
-      end() const noexcept
-      { return {}; }
-
-      constexpr default_sentinel_t
-      cend() const noexcept
-      { return {}; }
-
-      static constexpr auto size = __simd_size_c<_S_size>;
+      using mask_type = _VecBase<_Tp, _Ap>::mask_type;
 
       // internal but public API ----------------------------------------------
       [[__gnu__::__always_inline__]]
@@ -722,7 +726,7 @@ namespace simd
 	_M_pad_to_T_with_value() const noexcept
 	{
 	  static_assert(!_Vp::_S_is_partial);
-	  static_assert(abi_type::_S_nreg == 1);
+	  static_assert(_Ap::_S_nreg == 1);
 	  if constexpr (sizeof(_Vp) == 32)
 	    { // when we need to reduce from a 512-bit register
 	      static_assert(sizeof(_M_data) == 32);
@@ -1559,7 +1563,7 @@ namespace simd
 	}
 
       template <ranges::contiguous_range _Rg, typename... _Flags>
-	requires __static_sized_range<_Rg, size.value>
+	requires __static_sized_range<_Rg, _S_size>
 	  && __vectorizable<ranges::range_value_t<_Rg>>
 	  && __explicitly_convertible_to<ranges::range_value_t<_Rg>, value_type>
 	[[__gnu__::__always_inline__]]
@@ -2171,7 +2175,7 @@ namespace simd
     requires (_Ap::_S_nreg > 1)
       && (!__complex_like<_Tp>)
     class basic_vec<_Tp, _Ap>
-    : _VecBase<_Tp, _Ap>
+    : public _VecBase<_Tp, _Ap>
     {
       template <typename, typename>
 	friend class basic_vec;
@@ -2205,35 +2209,7 @@ namespace simd
     public:
       using value_type = _Tp;
 
-      using abi_type = _Ap;
-
-      using mask_type = basic_mask<sizeof(_Tp), abi_type>;
-
-      using iterator = __iterator<basic_vec>;
-
-      using const_iterator = __iterator<const basic_vec>;
-
-      constexpr iterator
-      begin() noexcept
-      { return {*this, 0}; }
-
-      constexpr const_iterator
-      begin() const noexcept
-      { return {*this, 0}; }
-
-      constexpr const_iterator
-      cbegin() const noexcept
-      { return {*this, 0}; }
-
-      constexpr default_sentinel_t
-      end() const noexcept
-      { return {}; }
-
-      constexpr default_sentinel_t
-      cend() const noexcept
-      { return {}; }
-
-      static constexpr auto size = __simd_size_c<_S_size>;
+      using mask_type = _VecBase<_Tp, _Ap>::mask_type;
 
       [[__gnu__::__always_inline__]]
       static constexpr basic_vec
@@ -2600,7 +2576,7 @@ namespace simd
 	{}
 
       template <ranges::contiguous_range _Rg, typename... _Flags>
-	requires __static_sized_range<_Rg, size.value>
+	requires __static_sized_range<_Rg, _S_size>
 	  && __vectorizable<ranges::range_value_t<_Rg>>
 	  && __explicitly_convertible_to<ranges::range_value_t<_Rg>, value_type>
 	constexpr

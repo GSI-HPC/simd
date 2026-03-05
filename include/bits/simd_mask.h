@@ -449,10 +449,43 @@ namespace simd
   template <size_t _Bytes, typename _Ap>
     class _MaskBase
     {
+      using _Mp = basic_mask<_Bytes, _Ap>;
+
+    protected:
+      using _VecType = __simd_vec_from_mask_t<_Bytes, _Ap>;
+
+      static_assert(destructible<_VecType> || _Bytes > sizeof(0ull));
+
     public:
+      using iterator = __iterator<_Mp>;
+
+      using const_iterator = __iterator<const _Mp>;
+
+      constexpr iterator
+      begin() noexcept
+      { return {static_cast<_Mp&>(*this), 0}; }
+
+      constexpr const_iterator
+      begin() const noexcept
+      { return cbegin(); }
+
+      constexpr const_iterator
+      cbegin() const noexcept
+      { return {static_cast<const _Mp&>(*this), 0}; }
+
+      constexpr default_sentinel_t
+      end() const noexcept
+      { return {}; }
+
+      constexpr default_sentinel_t
+      cend() const noexcept
+      { return {}; }
+
+      static constexpr auto size = __simd_size_c<_Ap::_S_size>;
+
       _MaskBase() = default;
 
-      // LWG issue from 2026-03-04
+      // LWG issue from 2026-03-04 / P4042R0
       template <size_t _UBytes, typename _UAbi>
 	requires (_Ap::_S_size != _UAbi::_S_size)
 	explicit
@@ -472,9 +505,12 @@ namespace simd
   template <size_t _Bytes, __abi_tag _Ap>
     requires (_Ap::_S_nreg == 1)
       && (__filter_abi_variant(_Ap::_S_variant, _AbiVariant::_CxVariants) == _AbiVariant())
-    class basic_mask<_Bytes, _Ap> : public _MaskBase<_Bytes, _Ap>
+    class basic_mask<_Bytes, _Ap>
+    : public _MaskBase<_Bytes, _Ap>
     {
       using _Base = _MaskBase<_Bytes, _Ap>;
+
+      using _VecType = _Base::_VecType;
 
       template <size_t, typename>
 	friend class basic_mask;
@@ -515,10 +551,6 @@ namespace simd
 	  }
       }();
 
-      using _VecType = __simd_vec_from_mask_t<_Bytes, _Ap>;
-
-      static_assert(destructible<_VecType> || _Bytes > sizeof(0ull));
-
       static constexpr bool _S_has_bool_member = _S_is_scalar;
 
       // Actual padding bytes, not padding elements.
@@ -532,31 +564,9 @@ namespace simd
 
       using abi_type = _Ap;
 
-      using iterator = __iterator<basic_mask>;
+      using iterator = _Base::iterator;
 
-      using const_iterator = __iterator<const basic_mask>;
-
-      constexpr iterator
-      begin() noexcept
-      { return {*this, 0}; }
-
-      constexpr const_iterator
-      begin() const noexcept
-      { return {*this, 0}; }
-
-      constexpr const_iterator
-      cbegin() const noexcept
-      { return {*this, 0}; }
-
-      constexpr default_sentinel_t
-      end() const noexcept
-      { return {}; }
-
-      constexpr default_sentinel_t
-      cend() const noexcept
-      { return {}; }
-
-      static constexpr auto size = __simd_size_c<_S_size>;
+      using const_iterator = _Base::const_iterator;
 
       // internal but public API ----------------------------------------------
       [[__gnu__::__always_inline__]]
@@ -855,7 +865,7 @@ namespace simd
       // [simd.mask.ctor] bitset constructor ----------------------------------
       [[__gnu__::__always_inline__]]
       constexpr
-      basic_mask(const same_as<bitset<size()>> auto& __b) noexcept // LWG 4382.
+      basic_mask(const same_as<bitset<_S_size>> auto& __b) noexcept // LWG 4382.
       : basic_mask(static_cast<_Bitmask<_S_size>>(__b.to_ullong()))
       {
 	// more than 64 elements in one register? not yet.
@@ -1425,10 +1435,12 @@ namespace simd
   template <size_t _Bytes, __abi_tag _Ap>
     requires (_Ap::_S_nreg > 1)
       && (__filter_abi_variant(_Ap::_S_variant, _AbiVariant::_CxVariants) == _AbiVariant())
-      class basic_mask<_Bytes, _Ap> : public _MaskBase<_Bytes, _Ap>
+    class basic_mask<_Bytes, _Ap>
+    : public _MaskBase<_Bytes, _Ap>
     {
       using _Base = _MaskBase<_Bytes, _Ap>;
 
+      using _VecType = _Base::_VecType;
 
       template <size_t, typename>
 	friend class basic_mask;
@@ -1473,8 +1485,6 @@ namespace simd
 
       _Mask1 _M_data1;
 
-      using _VecType = __simd_vec_from_mask_t<_Bytes, _Ap>;
-
       static constexpr bool _S_has_bool_member = _Mask1::_S_has_bool_member;
 
       // by construction _N0 >= _N1
@@ -1490,31 +1500,9 @@ namespace simd
 
       using abi_type = _Ap;
 
-      using iterator = __iterator<basic_mask>;
+      using iterator = _Base::iterator;
 
-      using const_iterator = __iterator<const basic_mask>;
-
-      constexpr iterator
-      begin() noexcept
-      { return {*this, 0}; }
-
-      constexpr const_iterator
-      begin() const noexcept
-      { return {*this, 0}; }
-
-      constexpr const_iterator
-      cbegin() const noexcept
-      { return {*this, 0}; }
-
-      constexpr default_sentinel_t
-      end() const noexcept
-      { return {}; }
-
-      constexpr default_sentinel_t
-      cend() const noexcept
-      { return {}; }
-
-      static constexpr auto size = __simd_size_c<_S_size>;
+      using const_iterator = _Base::const_iterator;
 
       [[__gnu__::__always_inline__]]
       static constexpr basic_mask
@@ -1737,7 +1725,7 @@ namespace simd
       // [simd.mask.ctor] bitset constructor ----------------------------------
       [[__gnu__::__always_inline__]]
       constexpr
-      basic_mask(const same_as<bitset<size()>> auto& __b) noexcept // LWG 4382.
+      basic_mask(const same_as<bitset<_S_size>> auto& __b) noexcept // LWG 4382.
       : _M_data0(__bitset_split<_N0>(__b)._M_lo), _M_data1(__bitset_split<_N0>(__b)._M_hi)
       {}
 
