@@ -2552,7 +2552,11 @@ namespace simd
 	basic_vec(const basic_vec<_Up, _UAbi>& __x) noexcept
 	  : _M_data0(get<0>(chunk<_N0>(__x))),
 	    _M_data1(get<1>(chunk<_N0>(__x)))
+#if VIR_EXTENSIONS
+	{ static_assert(!is_same_v<basic_vec<_Up, _UAbi>, basic_vec>); }
+#else
 	{}
+#endif
 
       using _VecBase<_Tp, _Ap>::_VecBase;
 
