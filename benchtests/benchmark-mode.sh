@@ -23,6 +23,8 @@ turn_on() {
     write 1 $no_turbo
   elif test -f $boost; then
     write 0 $boost
+  else
+    echo "failed to disable turbo/boost" >&2
   fi
 }
 
@@ -34,6 +36,8 @@ turn_off() {
     governor=powersave
   elif test -f $boost; then
     echo 1 > $boost
+  else
+    echo "failed to enable turbo/boost" >&2
   fi
   for i in /sys/devices/system/cpu/cpufreq/policy[0-9]*/scaling_governor; do
     write $governor $i
@@ -47,8 +51,9 @@ while (($# > 0)); do
       exit
       ;;
     --chown)
+      test -f $no_turbo && sudo chown $USER $no_turbo
+      test -f $boost && sudo chown $USER $boost
       sudo chown $USER \
-        $no_turbo $boost \
         /sys/devices/system/cpu/cpufreq/policy[0-9]*/scaling_governor
       ;;
     on|start) turn_on ;;

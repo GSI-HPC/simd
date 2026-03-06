@@ -27,10 +27,17 @@
 namespace simd = std::simd;
 
 template <class T>
+  concept simd_vec_type = std::same_as<T, simd::basic_vec<typename T::value_type,
+							  typename T::abi_type>>;
+
+template <class T>
+  concept complex_like = std::simd::__complex_like<T>;
+
+template <class T>
   consteval auto
   value_type_t_impl()
   {
-    if constexpr (requires { typename T::value_type; })
+    if constexpr (simd_vec_type<T>)
       return typename T::value_type();
     else if constexpr (requires(T x) { x[0]; })
       return T()[0];
@@ -79,6 +86,9 @@ template <class T>
       return 1;
   }();
 
+/**
+ * Used for colorizing the result (does it match or surpass expected speedup from SIMD width)
+ */
 template <typename T>
   inline constexpr int speedup_size_v = [] {
     if constexpr (size_v<T> == 1)
@@ -484,9 +494,9 @@ template <class T, class... ExtraFlags>
         return ref1;
     }();
 
-    template for (constexpr int i : std::_IotaArray<simd::vec<T>::size() * 2>)
+    template for (constexpr int i : std::_IotaArray<simd::vec<T>::size() * 2 - 1>)
       {
-        constexpr int N = i + 1;
+        constexpr int N = i + 2;
         if constexpr (std::constructible_from<simd::vec<T, N>> and N / simd::vec<T>::size() <= 8)
           {
             set_abistr(std::to_string(N).c_str());
@@ -502,6 +512,26 @@ template <class T, class... ExtraFlags>
             set_abistr(std::to_string(N).c_str());
             bench_lat_thr<simd::vec<T, N>, B>(id, ref);
           }
+      }
+
+    if constexpr (complex_like<T>)
+      {
+	using TT = typename T::value_type;
+	if constexpr (simd::vec<TT>::size() > 1)
+	  {
+	    constexpr int N0 = simd::vec<TT>::size();
+	    using V0 = simd::basic_vec<T, simd::_Abi<N0, 1, 32>>;
+	    template for (constexpr int i : std::_IotaArray<8>)
+	      {
+		constexpr int N = 2 << i;
+		using VN = simd::resize_t<N, V0>;
+		if constexpr (N <= N0 * 8 && std::constructible_from<VN>)
+		  {
+		    set_abistr(("Ctgus " + std::to_string(N)).c_str());
+		    bench_lat_thr<VN, B>(id, ref);
+		  }
+	      }
+	  }
       }
 
     if constexpr (requires { { B::more_types[0] } -> std::same_as<const char* const&>; })

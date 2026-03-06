@@ -31,7 +31,7 @@ namespace vir
     fake_modify_one(T& x)
     {
       if constexpr (std::is_floating_point_v<T>)
-        asm volatile("#MODIFY\t%0" : "+" VIR_SIMD_REG "g"(x));
+        asm volatile("#MODIFY(vg)\t%0" : "+" VIR_SIMD_REG "g"(x));
       else if constexpr (std::simd::__simd_vec_type<std::remove_const_t<T>>)
         {
           if constexpr (requires {x._M_get();})
@@ -40,27 +40,32 @@ namespace vir
               fake_modify_one(xx);
               const_cast<std::remove_const_t<T>&>(x) = xx;
             }
-          else if constexpr (requires {x._M_get_high();})
-            {
-              fake_modify_one(x._M_get_low());
-              fake_modify_one(x._M_get_high());
-            }
-          else if constexpr (T::abi_type::_S_is_cx_ctgus)
+          else if constexpr (requires {x._M_get_real();})
             {
               fake_modify_one(x._M_get_real());
               fake_modify_one(x._M_get_imag());
             }
           else if constexpr (T::abi_type::_S_is_cx_ileav)
             fake_modify_one(x._M_get_ileav());
+          else if constexpr (requires {x._M_get_high();})
+            {
+              fake_modify_one(x._M_get_low());
+              fake_modify_one(x._M_get_high());
+            }
           else
             static_assert(false);
         }
       else if constexpr (std::simd::__vec_builtin<T>)
-        asm volatile("#MODIFY\t%0" : "+" VIR_SIMD_REG (x));
+        asm volatile("#MODIFY(v)\t%0" : "+" VIR_SIMD_REG (x));
+      else if constexpr (std::simd::__complex_like<T>)
+        {
+          fake_modify_one(std::get<0>(x));
+          fake_modify_one(std::get<1>(x));
+        }
       else if constexpr (std::is_scalar_v<T>)
-        asm volatile("#MODIFY\t%0" : "+" VIR_SIMD_REG "g"(x));
+        asm volatile("#MODIFY(g)\t%0" : "+" VIR_SIMD_REG "g"(x));
       else
-        asm volatile("#MODIFY\t%0" : "+m"(x));
+        asm volatile("#MODIFY(m)\t%0" : "+m"(x));
     }
 
   template <typename... Ts>
@@ -80,23 +85,28 @@ namespace vir
         {
           if constexpr (requires {x._M_get();})
             fake_read_one(x._M_get());
-          else if constexpr (requires {x._M_get_high();})
-            {
-              fake_read_one(x._M_get_low());
-              fake_read_one(x._M_get_high());
-            }
-          else if constexpr (T::abi_type::_S_is_cx_ctgus)
+          else if constexpr (requires {x._M_get_real();})
             {
               fake_read_one(x._M_get_real());
               fake_read_one(x._M_get_imag());
             }
           else if constexpr (T::abi_type::_S_is_cx_ileav)
             fake_read_one(x._M_get_ileav());
+          else if constexpr (requires {x._M_get_high();})
+            {
+              fake_read_one(x._M_get_low());
+              fake_read_one(x._M_get_high());
+            }
           else
             static_assert(false);
         }
       else if constexpr (std::simd::__vec_builtin<T>)
         asm volatile("#READ\t%0" ::VIR_SIMD_REG (x));
+      else if constexpr (std::simd::__complex_like<T>)
+        {
+          fake_read_one(x.real());
+          fake_read_one(x.imag());
+        }
       else if constexpr (std::is_scalar_v<T>)
         asm volatile("#READ\t%0" ::VIR_SIMD_REG "g"(x));
       else
