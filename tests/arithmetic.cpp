@@ -98,6 +98,10 @@ template <typename V>
 	t.verify_equal(one * z, z);
 	t.verify_equal(z * one, z);
 
+	t.verify_bit_equal(one * I, I);
+	t.verify_bit_equal(I * one, I);
+	t.verify_bit_equal(I * I, T(-1, 0));
+
 	// Notes:
 	// inf + -inf -> NaN
 	//  0. + -0.  -> 0. (this is arbitrary, why not NaN: indeterminable sign?)
@@ -110,8 +114,6 @@ template <typename V>
 	// complex(1.) / complex(-0., 0.) -> (inf, -nan) => θ got lost
 	// complex(1.) / complex(0., -0.) -> (inf, -nan) => θ got lost
 	// complex(1.) / complex(-DBL_INF, 0.) -> (-0, -0) => θ is wrong
-
-	t.verify_bit_equal(one * I, I);
 
 	// (0+i0) * (-0-i0) -> (-0 + 0) + i(-0 + -0) -> 0-i0
 	t.verify_bit_equal(x * -x, T() * -T());
@@ -126,8 +128,6 @@ template <typename V>
 	t.verify_equal(x.real() * -x, T().real() * -T());
 	t.verify_bit_equal(x.real() * -x, T() * -T());
 
-	t.verify_bit_equal(I * one, I);
-	t.verify_bit_equal(I * I, T(-1, 0));
 	t.verify_bit_equal(z * I, init_vec<V, C(-2, 0), C(0., 2.), C(-2, -1)>);
 	t.verify_bit_equal(std::complex{-0., 0.} * std::complex{0., 1.}, std::complex{-0., 0.});
 	t.verify_bit_equal(std::complex{-0., -1.} * std::complex{0., 0.}, std::complex{0., -0.});
