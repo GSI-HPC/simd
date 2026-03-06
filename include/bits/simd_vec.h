@@ -516,11 +516,11 @@ namespace simd
 	      else
 		{
 		  if (_Traits._M_conforming_to_STDC_annex_G())
-		    {
+		    { // handle negative zero (0 * y can be -0)
 		      auto __a = _VO::_S_dup_even(__x) * __y;
 		      auto __b = _DataType() * _VO::_S_swap_neighbors(__y);
 #if VIR_EXTENSIONS && SIMD_DIAGNOSE_INDETERMINATE_SIGNED_ZERO
-		      //if (_SuperImpl::_S_any_of(_SuperImpl::_S_equal_to(__a, 0))) // __b is ±0 by construction
+		      //if ((__a == 0)._M_any_of()) // __b is ±0 by construction
 #endif
 		      _M_data = _VO::_S_addsub(__a, __b);
 		    }
