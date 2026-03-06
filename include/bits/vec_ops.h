@@ -677,18 +677,18 @@ namespace simd
       { return __vec_xor(_S_broadcast_to_odd(_S_signmask<_TV>[0]), __x); }
 
       // Subtract elements with even index, add elements with odd index.
-      [[__gnu__::__always_inline__]]
-      static constexpr _TV
-      _S_addsub(_TV __x, _TV __y)
-      {
-#if 0
-	return __x + _S_complex_negate_imag(__y);
-#else
-	// GCC recognizes this pattern as addsub
-	return __builtin_shufflevector(__x - __y, __x + __y,
-				       (_Is + (_Is & 1) * __width_of<_TV>)...);
-#endif
-      }
+      template <_ArchTraits _Traits = {}>
+	[[__gnu__::__always_inline__]]
+	static constexpr _TV
+	_S_addsub(_TV __x, _TV __y)
+	{
+	  if constexpr (_Traits._M_have_addsub())
+	    // GCC recognizes this pattern as addsub
+	    return __builtin_shufflevector(__x - __y, __x + __y,
+					   (_Is + (_Is & 1) * __width_of<_TV>)...);
+	  else
+	    return __x + _S_complex_negate_real(__y);
+	}
 
       // true if all elements are know to be equal to __ref at compile time
       [[__gnu__::__always_inline__]]

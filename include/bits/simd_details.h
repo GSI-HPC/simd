@@ -992,6 +992,10 @@ namespace simd
       consteval bool
       _M_eval_as_f32() const
       { return is_same_v<_Tp, _Float16> && !_M_have_avx512fp16(); }
+
+    consteval bool
+    _M_have_addsub() const
+    { return _M_have_sse3(); }
   };
 
   template <typename _Tp, _ArchTraits _Traits = {}>
@@ -1004,7 +1008,7 @@ namespace simd
       else if constexpr (__complex_like<_Tp>)
 	{
 	  constexpr auto __underlying = std::simd::__native_abi<typename _Tp::value_type>();
-	  if constexpr (__underlying._S_size == 1)
+	  if constexpr (__underlying._S_size <= 2)
 	    return _ScalarAbi<1>();
 	  else
 	    return _Abi_t<__underlying._S_size / 2, 1,
