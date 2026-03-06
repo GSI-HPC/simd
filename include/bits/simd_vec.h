@@ -251,32 +251,28 @@ namespace simd
       return __builtin_bit_cast(_TV, __arr);
     }
 
-  template <typename _Cx, __vec_builtin _TV, _TargetTraits = {}>
-    [[__gnu__::__cold__]]
+  template <typename _Cx, __vec_builtin _TV, typename _Kp, _TargetTraits = {}>
+    [[__gnu__::__cold__, __gnu__::__noinline__]]
     constexpr void
-    __cxctgus_redo_mul(_TV& __re0, _TV& __im0, const _TV __re1, const _TV __im1,
-		       const _TV __re, const _TV __im, const auto __nan, int __n)
+    __cxctgus_redo_mul(_TV& __re, _TV& __im, const _TV __re0, const _TV __im0,
+		       const _TV __re1, const _TV __im1, const _Kp __nan, int __n)
     {
-      alignas(_TV) __vec_value_type<_TV> __arr_re[__width_of<_TV>] = {};
-      alignas(_TV) __vec_value_type<_TV> __arr_im[__width_of<_TV>] = {};
       for (int __i = 0; __i < __n; ++__i)
 	{
-	  if (__nan[__i])
+	  bool __isnan;
+	  if constexpr (is_integral_v<_Kp>)
+	    __isnan = (__nan & (_Kp(1) << __i)) != 0;
+	  else
+	    __isnan = __nan[__i] != 0;
+	  if (__isnan)
 	    {
 	      const _Cx __c0(__re0[__i], __im0[__i]);
 	      const _Cx __c1(__re1[__i], __im1[__i]);
 	      const _Cx __cr = __c0 * __c1;
-	      __arr_re[__i] = __cr.real();
-	      __arr_im[__i] = __cr.imag();
-	    }
-	  else
-	    {
-	      __arr_re[__i] = __re[__i];
-	      __arr_im[__i] = __im[__i];
+	      __vec_set(__re, __i, __cr.real());
+	      __vec_set(__im, __i, __cr.imag());
 	    }
 	}
-      __re0 = __builtin_bit_cast(_TV, __arr_re);
-      __im0 = __builtin_bit_cast(_TV, __arr_im);
     }
 
   template <typename _Cx, floating_point _Tp, _TargetTraits = {}>
@@ -608,15 +604,12 @@ namespace simd
 	    {
 	      basic_vec __re = __re0 * __re1 - __im0 * __im1;
 	      basic_vec __im = __re0 * __im1 + __im0 * __re1;
-	      const auto __nan = __re._M_isnan() && __im._M_isnan();
+	      const auto __nan = __re._M_isunordered(__im);
 	      if (any_of(__nan)) [[unlikely]]
-		__cxctgus_redo_mul<_Cx>(__re0._M_data, __im0._M_data, __re1._M_data, __im1._M_data,
-					__re._M_data, __im._M_data, __nan, _S_size);
-	      else
-		{
-		  __re0 = __re;
-		  __im0 = __im;
-		}
+		__cxctgus_redo_mul<_Cx>(__re._M_data, __im._M_data, __re0._M_data, __im0._M_data,
+					__re1._M_data, __im1._M_data, __nan._M_data, _S_size);
+	      __re0 = __re;
+	      __im0 = __im;
 	    }
 	}
 
