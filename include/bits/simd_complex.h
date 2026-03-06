@@ -190,6 +190,216 @@ namespace simd
 
   // complex interleaved (_CxIleav) -------------------------------------------
 
+  /** @internal
+   * @brief Functions acting on / recursing into the non-complex fp vec objects, interpreting even
+   * elements as real and odd elements as imaginary.
+   */
+  namespace __cxileav
+  {
+    /** @internal
+     * @brief Set even (real) elements in @p __x to the values in @p __re.
+     */
+    template <typename _Tp, typename _Ap>
+      [[__gnu__::__always_inline__]]
+      constexpr void
+      __set_real(basic_vec<_Tp, _Ap>& __x,
+		 const __similar_vec<_Tp, _Ap::_S_size / 2, _Ap>& __re) noexcept
+      {
+	if constexpr (_Ap::_S_nreg >= 2)
+	  { // recurse
+	    constexpr int __n0 = __x._M_get_low().size();
+	    const auto& [__lo, __hi] = __re.template _M_chunk<
+					 __similar_vec<_Tp, __n0 / 2, _Ap>>();
+	    __set_real(__x._M_get_low(), __lo);
+	    __set_real(__x._M_get_high(), __hi);
+	  }
+	else
+	  {
+	    using _DataType = typename _Ap::template _DataType<_Tp>;
+	    _DataType& __xv = __x._M_get();
+	    const auto __rv = __re._M_get();
+	    if constexpr (_Ap::_S_size == 2)
+	      __vec_set(__xv, 0, __rv);
+	    else if (__is_const_known(__x, __re))
+	      {
+		constexpr auto [...__is] = _IotaArray<_Ap::_S_size>;
+		__xv = _DataType {((__is & 1) == 0 ? __rv[__is / 2] : __xv[__is])...};
+	      }
+	    else
+	      _VecOps<_DataType>::_S_overwrite_even_elements(__xv, __rv);
+	  }
+      }
+
+    /** @internal
+     * @brief Set odd (imaginary) elements in @p __x to the values in @p __im.
+     */
+    template <typename _Tp, typename _Ap>
+      [[__gnu__::__always_inline__]]
+      constexpr void
+      __set_imag(basic_vec<_Tp, _Ap>& __x,
+		 const __similar_vec<_Tp, _Ap::_S_size / 2, _Ap>& __im) noexcept
+      {
+	if constexpr (_Ap::_S_nreg >= 2)
+	  { // recurse
+	    constexpr int __n0 = __x._M_get_low().size();
+	    const auto& [__lo, __hi] = __im.template _M_chunk<
+					 __similar_vec<_Tp, __n0 / 2, _Ap>>();
+	    __set_imag(__x._M_get_low(), __lo);
+	    __set_imag(__x._M_get_high(), __hi);
+	  }
+	else
+	  {
+	    using _DataType = typename _Ap::template _DataType<_Tp>;
+	    _DataType& __xv = __x._M_get();
+	    const auto __iv = __im._M_get();
+	    if constexpr (_Ap::_S_size == 2)
+	      __vec_set(__xv, 1, __iv);
+	    else if (__is_const_known(__x, __im))
+	      {
+		constexpr auto [...__is] = _IotaArray<_Ap::_S_size>;
+		__xv = _DataType {((__is & 1) == 1 ? __iv[__is / 2] : __xv[__is])...};
+	      }
+	    else
+	      _VecOps<_DataType>::_S_overwrite_odd_elements(__xv, __iv);
+	  }
+      }
+
+    /** @internal
+     * @brief Return @p __x after flipping the sign of odd (imaginary) elements.
+     */
+    template <typename _Tp, typename _Ap>
+      [[__gnu__::__always_inline__]]
+      constexpr basic_vec<_Tp, _Ap>
+      __negate_imag(const basic_vec<_Tp, _Ap>& __x)
+      {
+	if constexpr (_Ap::_S_nreg >= 2) // recurse
+	  return basic_vec<_Tp, _Ap>::_S_init(__negate_imag(__x._M_get_low()),
+					      __negate_imag(__x._M_get_high()));
+	else
+	  return _VecOps<typename _Ap::template _DataType<_Tp>>
+		   ::_S_complex_negate_imag(__x._M_get());
+      }
+
+    /** @internal
+     * @brief Recompute all complex multiplications where @p __nan is true using @p _Cx's
+     * multiplication operator.
+     *
+     * @todo use coarser _TargetTraits and move into .so
+     */
+    template <typename _Cx, _TargetTraits, __vec_builtin _TV>
+      [[__gnu__::__cold__]]
+      constexpr _TV
+      __redo_mul(_TV __r, const _TV __x, const _TV __y, const auto __nan, const int __n)
+      {
+	// redo multiplication using scalar complex-mul on (NaN, NaN) results
+	for (int __i = 0; __i < __n; __i += 2)
+	  {
+	    if (__nan[__i] && __nan[__i + 1])
+	      {
+		using _Tc = typename _Cx::value_type;
+		const _Cx __cx(_Tc(__x[__i]), _Tc(__x[__i + 1]));
+		const _Cx __cy(_Tc(__y[__i]), _Tc(__y[__i + 1]));
+		const _Cx __cr = __cx * __cy;
+		__vec_set(__r, __i, __cr.real());
+		__vec_set(__r, __i + 1, __cr.imag());
+	      }
+	  }
+	return __r;
+      }
+
+    /** @internal
+     * @brief Complex multiplication of @p __x and @p __y, returning the result in @p __x.
+     */
+    template <typename _Cx, _TargetTraits _Traits, typename _Tp, typename _Ap>
+      [[__gnu__::__always_inline__]]
+      constexpr void
+      __mul(basic_vec<_Tp, _Ap>& __x, const basic_vec<_Tp, _Ap>& __y)
+      {
+	static_assert(__complex_like<_Cx>);
+	if constexpr (_Ap::_S_nreg >= 2)
+	  { // recurse
+	    __mul<_Cx, _Traits>(__x._M_get_low(), __y._M_get_low());
+	    __mul<_Cx, _Traits>(__x._M_get_high(), __y._M_get_high());
+	  }
+	else if constexpr (_Traits.template _M_eval_as_f32<_Tp>())
+	  { // eval float16_t as float
+	    using _Vf32 = rebind_t<float, basic_vec<_Tp, _Ap>>;
+	    _Vf32 __xf32(__x);
+	    __mul<_Cx, _Traits>(__xf32, _Vf32(__y));
+	    __x = static_cast<basic_vec<_Tp, _Ap>>(__xf32);
+	  }
+	else
+	  {
+	    using _DataType = typename _Ap::template _DataType<_Tp>;
+	    const _DataType __xv = __x._M_get();
+	    const _DataType __yv = __y._M_get();
+	    using _VO = _VecOps<_DataType>; // don't care for actual numer of elements
+	    using _VOS = _VecOps<_DataType, _Ap::_S_size>; // to check for const-prop values
+	    if (_VOS::_S_complex_imag_is_const_known_zero(__xv))
+	      {
+		if (_VOS::_S_complex_imag_is_const_known_zero(__yv))
+		  __x = __xv * __yv;
+		else
+		  {
+		    if (_Traits._M_conforming_to_STDC_annex_G())
+		      { // handle negative zero (0 * y can be -0)
+			auto __a = _VO::_S_dup_even(__xv) * __yv;
+			auto __b = _DataType() * _VO::_S_swap_neighbors(__yv);
+#if VIR_EXTENSIONS && SIMD_DIAGNOSE_INDETERMINATE_SIGNED_ZERO
+			//if ((__a == 0)._M_any_of()) // __b is ±0 by construction
+#endif
+			__x = _VO::_S_addsub(__a, __b);
+		      }
+		    else
+		      __x = _VO::_S_dup_even(__xv) * __yv;
+		  }
+	      }
+	    else if (_VOS::_S_complex_imag_is_const_known_zero(__yv))
+	      {
+		if (_Traits._M_conforming_to_STDC_annex_G())
+		  __x = _VO::_S_addsub(_VO::_S_dup_even(__yv) * __xv,
+				       _DataType() * _VO::_S_swap_neighbors(__xv));
+		else
+		  __x = _VO::_S_dup_even(__yv) * __xv;
+	      }
+	    else if (_VOS::_S_complex_real_is_const_known_zero(__yv))
+	      {
+		if (_Traits._M_conforming_to_STDC_annex_G())
+		  __x = _VO::_S_addsub(_DataType(), _VO::_S_dup_odd(__yv)
+					 * _VO::_S_swap_neighbors(__xv));
+		else
+		  __x = _VO::_S_dup_odd(__yv)
+			  * _VO::_S_complex_negate_real(_VO::_S_swap_neighbors(__xv));
+	      }
+	    else if (_VOS::_S_complex_real_is_const_known_zero(__xv))
+	      {
+		if (_Traits._M_conforming_to_STDC_annex_G())
+		  __x = _VO::_S_addsub(_DataType(), _VO::_S_dup_odd(__xv)
+					 * _VO::_S_swap_neighbors(__yv));
+		else
+		  __x = _VO::_S_dup_odd(__xv)
+			  * _VO::_S_complex_negate_real(_VO::_S_swap_neighbors(__yv));
+	      }
+	    else
+	      {
+#if _GLIBCXX_X86
+		if (_Traits._M_have_fma() && !__is_const_known(__xv, __yv))
+		  {
+		    if constexpr (_Traits._M_have_fma())
+		      __x = __x86_complex_multiplies(__xv, __yv);
+		  }
+		else
+#endif
+		  __x = _VO::_S_addsub(_VO::_S_dup_even(__xv) * __yv,
+				       _VO::_S_dup_odd(__xv) * _VO::_S_swap_neighbors(__yv));
+		const auto __nan = __x._M_isnan();
+		if (_Traits._M_conforming_to_STDC_annex_G() && __nan._M_any_of())
+		  __x = __redo_mul<_Cx, _Traits>(__x._M_get(), __xv, __yv, __nan, _Ap::_S_size);
+	      }
+	  }
+      }
+  }
+
   template <size_t _Bytes, __abi_tag _Ap>
     requires _Ap::_S_is_cx_ileav && (_Ap::_S_size >= 2) // size 1 is in simd_mask.h
     class basic_mask<_Bytes, _Ap>
@@ -968,8 +1178,8 @@ namespace simd
       constexpr
       basic_vec(const _RealSimd& __re, const _RealSimd& __im = {}) noexcept
       {
-	_M_data._M_complex_set_real(__re);
-	_M_data._M_complex_set_imag(__im);
+	__cxileav::__set_real(_M_data, __re);
+	__cxileav::__set_imag(_M_data, __im);
       }
 
       // [simd.subscr] --------------------------------------------------------
@@ -1124,14 +1334,15 @@ namespace simd
 	return __x;
       }
 
-      [[__gnu__::__always_inline__]]
-      friend constexpr basic_vec&
-      operator*=(basic_vec& __x, const basic_vec& __y) noexcept
-      requires requires(value_type __a) { __a * __a; }
-      {
-	__x._M_data.template _M_complex_multiply_with<basic_vec>(__y._M_data);
-	return __x;
-      }
+      template <_TargetTraits _Traits = {}>
+	[[__gnu__::__always_inline__]]
+	friend constexpr basic_vec&
+	operator*=(basic_vec& __x, const basic_vec& __y) noexcept
+	requires requires(value_type __a) { __a * __a; }
+	{
+	  __cxileav::__mul<value_type, _Traits>(__x._M_data, __y._M_data);
+	  return __x;
+	}
 
 #if VIR_PATCH_IMPROVE_CX
       template <_TargetTraits _Traits = {}>
@@ -1191,12 +1402,12 @@ namespace simd
       [[__gnu__::__always_inline__]]
       constexpr void
       real(const _RealSimd& __x) noexcept
-      { _M_data._M_complex_set_real(__x); }
+      { __cxileav::__set_real(_M_data, __x); }
 
       [[__gnu__::__always_inline__]]
       constexpr void
       imag(const _RealSimd& __x) noexcept
-      { _M_data._M_complex_set_imag(__x); }
+      { __cxileav::__set_imag(_M_data, __x); }
 
       // [simd.cond] ---------------------------------------------------------
       [[__gnu__::__always_inline__]]
@@ -1250,11 +1461,102 @@ namespace simd
       [[__gnu__::__always_inline__]]
       constexpr basic_vec
       _M_conj() const
-      { return _S_init(_M_data._M_complex_conj()); }
+      { return _S_init(__cxileav::__negate_imag(_M_data)); }
     };
 
   // complex contiguous (_CxCtgus) --------------------------------------------
   // (and _CxIleav basic_vec with size 1)
+
+  /** @internal
+   * @brief Functions acting on / recursing into the non-complex fp vec objects, where real and
+   * imaginary parts are stored in separate vec objects.
+   */
+  namespace __cxctgus
+  {
+    /** @internal
+     * @brief Recompute all complex multiplications where @p __nan is true using @p _Cx's
+     * multiplication operator.
+     *
+     * @todo use coarser _TargetTraits and move into .so
+     */
+    template <typename _Cx, _TargetTraits, __vec_builtin _TV, typename _Kp>
+      [[__gnu__::__cold__, __gnu__::__noinline__]]
+      constexpr void
+      __redo_mul(_TV& __re, _TV& __im, const _TV __re0, const _TV __im0,
+		 const _TV __re1, const _TV __im1, const _Kp __nan, int __n)
+      {
+	for (int __i = 0; __i < __n; ++__i)
+	  {
+	    bool __isnan;
+	    if constexpr (is_integral_v<_Kp>)
+	      __isnan = (__nan & (_Kp(1) << __i)) != 0;
+	    else
+	      __isnan = __nan[__i] != 0;
+	    if (__isnan)
+	      {
+		const _Cx __c0(__re0[__i], __im0[__i]);
+		const _Cx __c1(__re1[__i], __im1[__i]);
+		const _Cx __cr = __c0 * __c1;
+		__vec_set(__re, __i, __cr.real());
+		__vec_set(__im, __i, __cr.imag());
+	      }
+	  }
+      }
+
+    /** @internal
+     * @brief Complex multiplication of (@p __re0, @p __im0) and (@p __re1, @p __im1), returning the
+     * result in @p __re0 and @p __im0.
+     */
+    template <typename _Cx, _TargetTraits _Traits, typename _Tp, typename _Ap>
+      [[__gnu__::__always_inline__]]
+      constexpr void
+      __mul(basic_vec<_Tp, _Ap>& __re0, basic_vec<_Tp, _Ap>& __im0,
+	    const basic_vec<_Tp, _Ap>& __re1, const basic_vec<_Tp, _Ap>& __im1)
+      {
+	static_assert(__complex_like<_Cx>);
+	if constexpr (_Ap::_S_nreg >= 2)
+	  {
+	    __mul<_Cx, _Traits>(__re0._M_get_low(), __im0._M_get_low(),
+				__re1._M_get_low(), __im1._M_get_low());
+	    __mul<_Cx, _Traits>(__re0._M_get_high(), __im0._M_get_high(),
+				__re1._M_get_high(), __im1._M_get_high());
+	  }
+	else if constexpr (_Ap::_S_size == 1)
+	  { // use _Cx::operator*
+	    const _Cx __c0(__re0._M_get(), __im0._M_get());
+	    const _Cx __c1(__re1._M_get(), __im1._M_get());
+	    const _Cx __cr = __c0 * __c1;
+	    __re0._M_get() = __cr.real();
+	    __im0._M_get() = __cr.imag();
+	  }
+	else if constexpr (_Traits.template _M_eval_as_f32<_Tp>())
+	  {
+	    using _Vf = rebind_t<float, basic_vec<_Tp, _Ap>>;
+#if VIR_EXTENSIONS
+	    using _Cf = __rebind_complex_t<float, _Cx>;
+#else
+	    using _Cf = complex<float>;
+#endif
+	    _Vf __re0f = __re0;
+	    _Vf __im0f = __im0;
+	    __mul<_Cf, _Traits, float, typename _Vf::abi_type>(__re0f, __im0f, __re1, __im1);
+	    __re0 = static_cast<basic_vec<_Tp, _Ap>>(__re0f);
+	    __im0 = static_cast<basic_vec<_Tp, _Ap>>(__im0f);
+	  }
+	else
+	  {
+	    basic_vec<_Tp, _Ap> __re = __re0 * __re1 - __im0 * __im1;
+	    basic_vec<_Tp, _Ap> __im = __re0 * __im1 + __im0 * __re1;
+	    const auto __nan = __re._M_isunordered(__im);
+	    if (__nan._M_any_of()) [[unlikely]]
+	      __redo_mul<_Cx, _Traits>(__re._M_get(), __im._M_get(), __re0._M_get(), __im0._M_get(),
+				       __re1._M_get(), __im1._M_get(),
+				       __nan._M_concat_data(), _Ap::_S_size);
+	    __re0 = __re;
+	    __im0 = __im;
+	  }
+      }
+  }
 
   template <size_t _Bytes, __abi_tag _Ap>
     requires _Ap::_S_is_cx_ctgus && (_Ap::_S_size >= 2) // size 1 is in simd_mask.h
@@ -1684,13 +1986,23 @@ namespace simd
 
       // internal but public API ----------------------------------------------
       [[__gnu__::__always_inline__]]
-      constexpr const _RealSimd&
-      _M_get_real() const
+      constexpr _RealSimd&
+      _M_get_real() noexcept
       { return _M_real; }
 
       [[__gnu__::__always_inline__]]
       constexpr const _RealSimd&
-      _M_get_imag() const
+      _M_get_real() const noexcept
+      { return _M_real; }
+
+      [[__gnu__::__always_inline__]]
+      constexpr _RealSimd&
+      _M_get_imag() noexcept
+      { return _M_imag; }
+
+      [[__gnu__::__always_inline__]]
+      constexpr const _RealSimd&
+      _M_get_imag() const noexcept
       { return _M_imag; }
 
       [[__gnu__::__always_inline__]]
@@ -2128,8 +2440,7 @@ namespace simd
 	operator*=(basic_vec& __x, const basic_vec& __y) noexcept
 	requires requires(value_type __a) { __a * __a; }
 	{
-	  _RealSimd::template _S_cxctgus_mul<value_type>(
-	    __x._M_real, __x._M_imag, __y._M_real, __y._M_imag);
+	  __cxctgus::__mul<value_type, _Traits>(__x._M_real, __x._M_imag, __y._M_real, __y._M_imag);
 	  return __x;
 	}
 

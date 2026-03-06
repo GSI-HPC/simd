@@ -224,70 +224,6 @@ namespace simd
   struct _LoadCtorTag
   {};
 
-  template <typename _Cx, __vec_builtin _TV, _TargetTraits = {}>
-    [[__gnu__::__cold__]]
-    constexpr _TV
-    __cx_redo_mul(_TV __r, const _TV __x, const _TV __y, const auto __nan, int __n)
-    {
-      // redo multiplication using scalar complex-mul on (NaN, NaN) results
-      alignas(_TV) __vec_value_type<_TV> __arr[__width_of<_TV>] = {};
-      for (int __i = 0; __i < __n; __i += 2)
-	{
-	  if (__nan[__i] && __nan[__i + 1])
-	    {
-	      using _Tc = typename _Cx::value_type;
-	      const _Cx __cx(_Tc(__x[__i]), _Tc(__x[__i + 1]));
-	      const _Cx __cy(_Tc(__y[__i]), _Tc(__y[__i + 1]));
-	      const _Cx __cr = __cx * __cy;
-	      __arr[__i] = __cr.real();
-	      __arr[__i + 1] = __cr.imag();
-	    }
-	  else
-	    {
-	      __arr[__i] = __r[__i];
-	      __arr[__i + 1] = __r[__i + 1];
-	    }
-	}
-      return __builtin_bit_cast(_TV, __arr);
-    }
-
-  template <typename _Cx, __vec_builtin _TV, typename _Kp, _TargetTraits = {}>
-    [[__gnu__::__cold__, __gnu__::__noinline__]]
-    constexpr void
-    __cxctgus_redo_mul(_TV& __re, _TV& __im, const _TV __re0, const _TV __im0,
-		       const _TV __re1, const _TV __im1, const _Kp __nan, int __n)
-    {
-      for (int __i = 0; __i < __n; ++__i)
-	{
-	  bool __isnan;
-	  if constexpr (is_integral_v<_Kp>)
-	    __isnan = (__nan & (_Kp(1) << __i)) != 0;
-	  else
-	    __isnan = __nan[__i] != 0;
-	  if (__isnan)
-	    {
-	      const _Cx __c0(__re0[__i], __im0[__i]);
-	      const _Cx __c1(__re1[__i], __im1[__i]);
-	      const _Cx __cr = __c0 * __c1;
-	      __vec_set(__re, __i, __cr.real());
-	      __vec_set(__im, __i, __cr.imag());
-	    }
-	}
-    }
-
-  template <typename _Cx, floating_point _Tp, _TargetTraits = {}>
-    [[__gnu__::__always_inline__]]
-    constexpr void
-    __cxctgus_redo_mul(_Tp& __re0, _Tp& __im0, const _Tp __re1, const _Tp __im1,
-		       const _Tp, const _Tp, const auto, int)
-    {
-      const _Cx __c0(__re0, __im0);
-      const _Cx __c1(__re1, __im1);
-      const _Cx __cr = __c0 * __c1;
-      __re0 = __cr.real();
-      __im0 = __cr.imag();
-    }
-
   template <integral _Tp>
     inline constexpr _Tp __max_shift
       = (sizeof(_Tp) < sizeof(int) ? sizeof(int) : sizeof(_Tp)) * __CHAR_BIT__;
@@ -342,8 +278,13 @@ namespace simd
       }
 
       [[__gnu__::__always_inline__]]
+      constexpr _DataType&
+      _M_get() noexcept
+      { return _M_data; }
+
+      [[__gnu__::__always_inline__]]
       constexpr const _DataType&
-      _M_get() const
+      _M_get() const noexcept
       { return _M_data; }
 #if VIR_PATCH_PERMUTE_DYNAMIC
 
@@ -446,169 +387,6 @@ namespace simd
 		}
 	    }
 	  return __r;
-	}
-
-      using _HalfVec = __similar_vec<value_type, _S_size / 2, _Ap>;
-
-      static constexpr bool _SupportCxApi = (_S_size & 1) == 0 && is_floating_point_v<value_type>;
-
-      [[__gnu__::__always_inline__]]
-      constexpr void
-      _M_complex_set_real(const _HalfVec& __x) requires _SupportCxApi
-      {
-	if (__is_const_known(*this, __x))
-	  {
-	    constexpr auto [...__is] = _IotaArray<_S_size>;
-	    _M_data = _DataType { ((__is & 1) == 0 ? __canon_value_type(__x[__is / 2])
-						   : _M_data[__is])...};
-	  }
-	else if constexpr (_S_size == 2)
-	  _M_data[0] = __x[0];
-	else
-	  _VecOps<_DataType>::_S_overwrite_even_elements(_M_data, __x);
-      }
-
-      [[__gnu__::__always_inline__]]
-      constexpr void
-      _M_complex_set_imag(const _HalfVec& __x) requires _SupportCxApi
-      {
-	if (__is_const_known(*this, __x))
-	  {
-	    constexpr auto [...__is] = _IotaArray<_S_size>;
-	    _M_data = _DataType { ((__is & 1) == 1 ? __canon_value_type(__x[__is / 2])
-						   : _M_data[__is])...};
-	  }
-	else if constexpr (_S_size == 2)
-	  _M_data[1] = __x[0];
-	else
-	  _VecOps<_DataType>::_S_overwrite_odd_elements(_M_data, __x);
-      }
-
-      [[__gnu__::__always_inline__]]
-      constexpr basic_vec
-      _M_complex_conj() const requires _SupportCxApi
-      { return _VecOps<_DataType>::_S_complex_negate_imag(_M_data); }
-
-      template <typename _CxVec, _TargetTraits _Traits = {}>
-	requires _CxVec::abi_type::_S_is_cx_ileav
-	[[__gnu__::__always_inline__]]
-	constexpr void
-	_M_complex_multiply_with(basic_vec __yvec)
-	{
-	  const _DataType __x = _M_data;
-	  const _DataType __y = __yvec._M_data;
-	  static_assert((_S_size & 1) == 0);
-	  using _VO = _VecOps<_DataType>;
-	  if constexpr (_Traits.template _M_eval_as_f32<value_type>())
-	    {
-	      using _Vf = rebind_t<float, basic_vec>;
-	      _Vf __xf = _Vf(*this);
-	      __xf.template _M_complex_multiply_with<_CxVec>(_Vf(__yvec));
-	      *this = basic_vec(__xf);
-	      return;
-	    }
-	  else if (_VecOps<_DataType, _S_size>::_S_complex_imag_is_const_known_zero(__x))
-	    {
-	      if (_VecOps<_DataType, _S_size>::_S_complex_imag_is_const_known_zero(__y))
-		_M_data = __x * __y;
-	      else
-		{
-		  if (_Traits._M_conforming_to_STDC_annex_G())
-		    { // handle negative zero (0 * y can be -0)
-		      auto __a = _VO::_S_dup_even(__x) * __y;
-		      auto __b = _DataType() * _VO::_S_swap_neighbors(__y);
-#if VIR_EXTENSIONS && SIMD_DIAGNOSE_INDETERMINATE_SIGNED_ZERO
-		      //if ((__a == 0)._M_any_of()) // __b is ±0 by construction
-#endif
-		      _M_data = _VO::_S_addsub(__a, __b);
-		    }
-		  else
-		    _M_data = _VO::_S_dup_even(__x) * __y;
-		}
-	    }
-	  else if (_VecOps<_DataType, _S_size>::_S_complex_imag_is_const_known_zero(__y))
-	    {
-	      if (_Traits._M_conforming_to_STDC_annex_G())
-		_M_data = _VO::_S_addsub(_VO::_S_dup_even(__y) * __x,
-					 _DataType() * _VO::_S_swap_neighbors(__x));
-	      else
-		_M_data = _VO::_S_dup_even(__y) * __x;
-	    }
-	  else if (_VecOps<_DataType, _S_size>::_S_complex_real_is_const_known_zero(__y))
-	    {
-	      if (_Traits._M_conforming_to_STDC_annex_G())
-		_M_data = _VO::_S_addsub(_DataType(), _VO::_S_dup_odd(__y)
-					   * _VO::_S_swap_neighbors(__x));
-	      else
-		_M_data = _VO::_S_dup_odd(__y)
-			    * _VO::_S_complex_negate_real(_VO::_S_swap_neighbors(__x));
-	    }
-	  else if (_VecOps<_DataType, _S_size>::_S_complex_real_is_const_known_zero(__x))
-	    {
-	      if (_Traits._M_conforming_to_STDC_annex_G())
-		_M_data = _VO::_S_addsub(_DataType(), _VO::_S_dup_odd(__x)
-					   * _VO::_S_swap_neighbors(__y));
-	      else
-		_M_data = _VO::_S_dup_odd(__x)
-			    * _VO::_S_complex_negate_real(_VO::_S_swap_neighbors(__y));
-	    }
-	  else
-	    {
-#if _GLIBCXX_X86
-	      if (_Traits._M_have_fma() && !__is_const_known(__x, __y))
-		{
-		  if constexpr (_Traits._M_have_fma())
-		    _M_data = __x86_complex_multiplies(__x, __y);
-		}
-	      else
-#endif
-		_M_data = _VO::_S_addsub(_VO::_S_dup_even(__x) * __y,
-					 _VO::_S_dup_odd(__x) * _VO::_S_swap_neighbors(__y));
-	      mask_type __nan = _M_isnan();
-	      if (_Traits._M_conforming_to_STDC_annex_G() && __nan._M_any_of()) [[unlikely]]
-		_M_data = __cx_redo_mul<typename _CxVec::value_type>(_M_data, __x, __y, __nan,
-								     _S_size);
-	    }
-	}
-
-      template <__complex_like _Cx, _TargetTraits _Traits = {}>
-	[[__gnu__::__always_inline__]]
-	static constexpr void
-	_S_cxctgus_mul(basic_vec& __re0, basic_vec& __im0, basic_vec __re1, basic_vec __im1)
-	{
-	  if constexpr (_S_is_scalar)
-	    {
-	      const _Cx __c0(__re0._M_data, __im0._M_data);
-	      const _Cx __c1(__re1._M_data, __im1._M_data);
-	      const _Cx __cr = __c0 * __c1;
-	      __re0._M_data = __cr.real();
-	      __im0._M_data = __cr.imag();
-	    }
-	  else if constexpr (_Traits.template _M_eval_as_f32<value_type>())
-	    {
-	      using _Vf = rebind_t<float, basic_vec>;
-#if VIR_EXTENSIONS
-	      using _Cf = __rebind_complex_t<float, _Cx>;
-#else
-	      using _Cf = complex<float>;
-#endif
-	      _Vf __re0f = __re0;
-	      _Vf __im0f = __im0;
-	      _Vf::template _S_cxctgus_mul<_Cf>(__re0f, __im0f, __re1, __im1);
-	      __re0 = basic_vec(__re0f);
-	      __im0 = basic_vec(__im0f);
-	    }
-	  else
-	    {
-	      basic_vec __re = __re0 * __re1 - __im0 * __im1;
-	      basic_vec __im = __re0 * __im1 + __im0 * __re1;
-	      const auto __nan = __re._M_isunordered(__im);
-	      if (any_of(__nan)) [[unlikely]]
-		__cxctgus_redo_mul<_Cx>(__re._M_data, __im._M_data, __re0._M_data, __im0._M_data,
-					__re1._M_data, __im1._M_data, __nan._M_data, _S_size);
-	      __re0 = __re;
-	      __im0 = __im;
-	    }
 	}
 
       template <typename _Vp>
@@ -2215,13 +1993,23 @@ namespace simd
       }
 
       [[__gnu__::__always_inline__]]
-      constexpr const _DataType0&
-      _M_get_low() const
+      constexpr _DataType0&
+      _M_get_low() noexcept
       { return _M_data0; }
 
       [[__gnu__::__always_inline__]]
+      constexpr const _DataType0&
+      _M_get_low() const noexcept
+      { return _M_data0; }
+
+      [[__gnu__::__always_inline__]]
+      constexpr _DataType1&
+      _M_get_high() noexcept
+      { return _M_data1; }
+
+      [[__gnu__::__always_inline__]]
       constexpr const _DataType1&
-      _M_get_high() const
+      _M_get_high() const noexcept
       { return _M_data1; }
 #if VIR_PATCH_PERMUTE_DYNAMIC
 
@@ -2266,57 +2054,6 @@ namespace simd
 	  return _S_init(
 		   _DataType0::template _S_static_permute<_Size, _Offset>(__x, __idxmap),
 		   _DataType1::template _S_static_permute<_Size, _Offset + _N0>(__x, __idxmap));
-	}
-
-      using _HalfVec = __similar_vec<value_type, _S_size / 2, _Ap>;
-
-      static constexpr bool _SupportCxApi = (_S_size & 1) == 0 && is_floating_point_v<value_type>;
-
-      [[__gnu__::__always_inline__]]
-      constexpr void
-      _M_complex_set_real(const _HalfVec& __x) requires _SupportCxApi
-      {
-	const auto& [__lo, __hi]
-	  = __x.template _M_chunk<__similar_resized_vec<value_type, _N0 / 2, _Ap>>();
-	_M_data0._M_complex_set_real(__lo);
-	_M_data1._M_complex_set_real(__hi);
-      }
-
-      [[__gnu__::__always_inline__]]
-      constexpr void
-      _M_complex_set_imag(const _HalfVec& __x) requires _SupportCxApi
-      {
-	const auto& [__lo, __hi]
-	  = __x.template _M_chunk<__similar_vec<value_type, _N0 / 2, _Ap>>();
-	_M_data0._M_complex_set_imag(__lo);
-	_M_data1._M_complex_set_imag(__hi);
-      }
-
-      [[__gnu__::__always_inline__]]
-      constexpr basic_vec
-      _M_complex_conj() const requires _SupportCxApi
-      { return _S_init(_M_data0._M_complex_conj(), _M_data1._M_complex_conj()); }
-
-      template <typename _CxVec, _TargetTraits _Traits = {}>
-	requires _CxVec::abi_type::_S_is_cx_ileav
-	[[__gnu__::__always_inline__]]
-	constexpr void
-	_M_complex_multiply_with(const basic_vec& __yvec)
-	{
-	  _M_data0.template _M_complex_multiply_with<_CxVec>(__yvec._M_data0);
-	  _M_data1.template _M_complex_multiply_with<_CxVec>(__yvec._M_data1);
-	}
-
-      template <__complex_like _Cx>
-	[[__gnu__::__always_inline__]]
-	static constexpr void
-	_S_cxctgus_mul(basic_vec& __re0, basic_vec& __im0,
-		       const basic_vec& __re1, const basic_vec& __im1)
-	{
-	  _DataType0::template _S_cxctgus_mul<_Cx>(__re0._M_data0, __im0._M_data0,
-						   __re1._M_data0, __im1._M_data0);
-	  _DataType1::template _S_cxctgus_mul<_Cx>(__re0._M_data1, __im0._M_data1,
-						   __re1._M_data1, __im1._M_data1);
 	}
 
       template <typename _Vp>
