@@ -23,23 +23,21 @@ namespace std _GLIBCXX_VISIBILITY(default)
 _GLIBCXX_BEGIN_NAMESPACE_VERSION
 namespace simd
 {
-  /** \internal
-   * The mask type, whose _DataType member is \p _Mp.
+  /** @internal
+   * @brief Return a _CxIleav mask that holds @p __k as its data member.
    */
-  template <__simd_mask_type _Mp>
-    requires (_Mp::size() % 2 == 0)
-      && (__filter_abi_variant(_Mp::abi_type::_S_variant, _AbiVariant::_CxVariants)
-	    == _AbiVariant())
-    using __cx_ileav_mask
-      = basic_mask<__mask_element_size<_Mp> * 2,
-		   _Abi_t<_Mp::size() / 2, _Mp::abi_type::_S_nreg,
-			  _Mp::abi_type::_S_variant, _AbiVariant::_CxIleav>>;
-
-  template <__simd_mask_type _Mp>
+  template <size_t _Bytes, typename _Ap>
     [[__gnu__::__always_inline__]]
-    constexpr __cx_ileav_mask<_Mp>
-    __to_cx_ileav(const _Mp& __k)
-    { return __cx_ileav_mask<_Mp>::_S_init(__k); }
+    constexpr basic_mask<_Bytes * 2, _Abi_t<_Ap::_S_size / 2, _Ap::_S_nreg,
+					    _Ap::_S_variant, _AbiVariant::_CxIleav>>
+    __to_cx_ileav(const basic_mask<_Bytes, _Ap>& __k)
+    {
+      static_assert(_Ap::_S_size % 2 == 0
+		      && (__filter_abi_variant(_Ap::_S_variant, _AbiVariant::_CxVariants)
+			    == _AbiVariant()));
+      return basic_mask<_Bytes * 2, _Abi_t<_Ap::_S_size / 2, _Ap::_S_nreg,
+					   _Ap::_S_variant, _AbiVariant::_CxIleav>>::_S_init(__k);
+    }
 
   constexpr void
   __check_hi_bits_for_zero(unsigned_integral auto __x)
@@ -141,10 +139,12 @@ namespace simd
 					__filter_abi_variant(_Ap::_S_variant,
 							     _AbiVariant::_MaskVariants)>>;
 
+#if VIR_ASSERT_SANITY
       static_assert(_DataType::abi_type::_S_nreg == _Ap::_S_nreg);
 
-      static_assert(is_same_v<__cx_ileav_mask<_DataType>, basic_mask>);
+      static_assert(is_same_v<decltype(__to_cx_ileav(_DataType())), basic_mask>);
 
+#endif
       static constexpr bool _S_is_scalar = _DataType::_S_is_scalar;
 
       // Interleaved storage requires at least two vector elements and therefore cannot ever be

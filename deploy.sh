@@ -158,6 +158,7 @@ for file in "$SRC_DIR"/*.h; do
       | filter VIR_PATCH_MATH \
       | filter VIR_PATCH_MISSED_OPT \
       | filter VIR_PATCH_TEST_STORES \
+      | filter VIR_ASSERT_SANITY \
       | fix_copyright > "$DEST_DIR/$filename"
   fi
 done
