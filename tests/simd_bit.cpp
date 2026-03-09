@@ -44,14 +44,7 @@ template <typename V>
 	t.verify_equal(bit_ceil(b), select(b == T(), T(1), b));
 	t.verify_equal(std::bit_ceil(a), bit_ceil(a));
 	t.verify_equal(std::simd::bit_ceil(a), bit_ceil(a));
-	t.verify_equal(bit_ceil(a),
-		       V([](T i) {
-			 if (i > msb)
-			   i -= msb + 1;
-			 while (!std::has_single_bit(i))
-			   i = (i | (i >> 1)) + 1;
-			 return T(i);
-		       }));
+	t.verify_equal(bit_ceil(a), V([&](int i) { return std::bit_ceil(a[i]); }));
       }
     };
 
@@ -62,15 +55,7 @@ template <typename V>
 	t.verify_equal(bit_floor(b), b);
 	t.verify_equal(std::bit_floor(a), bit_floor(a));
 	t.verify_equal(std::simd::bit_floor(a), bit_floor(a));
-	t.verify_equal(bit_floor(a),
-		       V([](T i) -> T {
-			 if (i == 0)
-			   return 0;
-			 int shift = 0;
-			 while ((i >> shift) > 1)
-			   ++shift;
-			 return T(1) << shift;
-		       }));
+	t.verify_equal(bit_floor(a), V([&](int i) { return std::bit_floor(a[i]); }));
       }
     };
 
