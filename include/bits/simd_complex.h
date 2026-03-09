@@ -1825,9 +1825,10 @@ namespace simd
 	    { // TODO: optimize
 	      return basic_vec(_RealSimd([&](int __i) {
 				 return __k[__i] ? __mem[__i].real() : _T0();
-			       }), _RealSimd([&](int __i) {
-				     return __k[__i] ? __mem[__i].imag() : _T0();
-				   }));
+			       }),
+			       _RealSimd([&](int __i) {
+				 return __k[__i] ? __mem[__i].imag() : _T0();
+			       }));
 	    }
 	  else
 	    return basic_vec(_RealSimd::_S_masked_load(__mem, typename _RealSimd::mask_type(__k)));
