@@ -156,6 +156,7 @@ for file in "$SRC_DIR"/*.h; do
     cat "$file" | filter VIR_EXTENSIONS \
       | filter VIR_PATCH_PERMUTE_DYNAMIC \
       | filter VIR_PATCH_MATH \
+      | filter VIR_PATCH_IMPROVE_CX \
       | filter VIR_PATCH_MISSED_OPT \
       | filter VIR_PATCH_TEST_STORES \
       | filter VIR_ASSERT_SANITY \

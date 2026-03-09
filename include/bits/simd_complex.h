@@ -23,6 +23,72 @@ namespace std _GLIBCXX_VISIBILITY(default)
 _GLIBCXX_BEGIN_NAMESPACE_VERSION
 namespace simd
 {
+#if VIR_PATCH_IMPROVE_CX
+  /** @internal
+   * @brief Add neighboring elements while shifting element positions down accordingly.
+   *
+   * This is not a full reduction (summation). The operation executes _Vp::size()/2 additions.
+   *
+   * @note The input vec must hold an even number of elements.
+   */
+  template <_ArchTraits _Traits = {}, __simd_floating_point _Vp>
+    constexpr resize_t<_Vp::size() / 2, _Vp>
+    __hadd(const _Vp& __x) noexcept;
+
+  template <_ArchTraits _Traits = {}, __simd_floating_point _V0, __simd_floating_point _V1>
+    [[__gnu__::__always_inline__]]
+    constexpr resize_t<(_V0::size() + _V1::size()) / 2, _V0>
+    __hadd(const _V0& __x, const _V1& __y) noexcept
+    {
+      static_assert(__has_single_bit(unsigned(_V0::size())));
+      static_assert(_V1::size() % 2 == 0);
+      static_assert(_V0::size() >= _V1::size());
+      if constexpr (_V0::abi_type::_S_nreg >= 2)
+	return cat(__hadd(__x._M_get_low(), __x._M_get_high()), __hadd(__y));
+#if _GLIBCXX_X86
+      else if constexpr (_Traits._M_have_sse3() && sizeof(__x) == 16 && _V0::size() == 4)
+	return __builtin_ia32_haddps(__x._M_get(), __vec_zero_pad_to<16>(__y._M_get()));
+      else if constexpr (_Traits._M_have_avx() && sizeof(__x) == 32 && _V0::size() == 8)
+	return __x86_swizzle4x64_acbd(
+		 __builtin_ia32_haddps256(__x._M_get(), __vec_zero_pad_to<32>(__y._M_get())));
+      else if constexpr (_Traits._M_have_sse3() && sizeof(__x) == 16 && _V0::size() == 2)
+	return __builtin_ia32_haddpd(__x._M_get(), __vec_zero_pad_to<16>(__y._M_get()));
+      else if constexpr (_Traits._M_have_avx() && sizeof(__x) == 32 && _V0::size() == 4)
+	return __x86_swizzle4x64_acbd(
+		 __builtin_ia32_haddpd256(__x._M_get(), __vec_zero_pad_to<32>(__y._M_get())));
+#endif
+      else
+	return cat(permute<_V0::size() / 2>(__x, [](int __i) consteval { return __i * 2; }),
+		   permute<_V1::size() / 2>(__x, [](int __i) consteval { return __i * 2; }))
+		 + cat(permute<_V0::size() / 2>(__x, [](int __i) consteval { return __i * 2 + 1; }),
+		       permute<_V1::size() / 2>(__x, [](int __i) consteval { return __i * 2 + 1; }));
+    }
+
+  template <_ArchTraits _Traits, __simd_floating_point _Vp>
+    [[__gnu__::__always_inline__]]
+    constexpr resize_t<_Vp::size() / 2, _Vp>
+    __hadd(const _Vp& __x) noexcept
+    {
+      using _V2 = resize_t<_Vp::size() / 2, _Vp>;
+      static_assert(_Vp::size() % 2 == 0);
+      if constexpr (_Vp::abi_type::_S_nreg >= 2)
+	return __hadd(__x._M_get_low(), __x._M_get_high());
+#if _GLIBCXX_X86
+      else if constexpr (_Traits._M_have_sse3() && sizeof(__x) == 16 && _Vp::size() > 2)
+	return __vec_split_lo(__builtin_ia32_haddps(__x._M_get(), __x._M_get()));
+      else if constexpr (_Traits._M_have_sse3() && sizeof(__x) == 32 && _Vp::size() > 4)
+	return __builtin_ia32_haddps(__vec_split_lo(__x._M_get()), __vec_split_hi(__x._M_get()));
+      else if constexpr (_Traits._M_have_sse3() && sizeof(__x) == 16 && _Vp::size() == 2)
+	return __vec_split_lo(__builtin_ia32_haddpd(__x._M_get(), __x._M_get()));
+      else if constexpr (_Traits._M_have_sse3() && sizeof(__x) == 32 && _Vp::size() <= 4)
+	return __builtin_ia32_haddpd(__vec_split_lo(__x._M_get()), __vec_split_hi(__x._M_get()));
+#endif
+      else
+	return _V2::_S_static_permute(__x, [](int __i) consteval { return __i * 2; })
+		 + _V2::_S_static_permute(__x, [](int __i) consteval { return __i * 2 + 1; });
+    }
+
+#endif
   /** @internal
    * @brief Return a _CxIleav mask that holds @p __k as its data member.
    */
@@ -1053,6 +1119,28 @@ namespace simd
 	return __x;
       }
 
+#if VIR_PATCH_IMPROVE_CX
+      template <_TargetTraits _Traits = {}>
+	[[__gnu__::__always_inline__]]
+	friend constexpr basic_vec&
+	operator/=(basic_vec& __x, const basic_vec& __y) noexcept
+	requires requires(value_type __a) { __a / __a; }
+	{
+	  // If norm(y) does not overflow (for real or per definition), then use the mathematical
+	  // formula (no numeric tricks needed):
+	  // x / y = x * conj(y) / (y * conj(y))
+	  //       = x * conj(y) / norm(y)
+	  if constexpr (_Traits._M_finite_math_only() || !_Traits._M_conforming_to_STDC_annex_G())
+	    {
+	      // don't call _M_norm() because it returns a _RealSimd
+	      _TSimd __ynorm = __y._M_data * __y._M_data;
+	      __ynorm += _TSimd::_S_static_permute(__ynorm, _SwapNeighbors<1>());
+	      return _S_init((__x * __y._M_conj())._M_data / __ynorm);
+	    }
+	  else
+	    static_assert(false, "TODO");
+	}
+#else
       template <int _RemoveMe = 0>
       [[__gnu__::__always_inline__]]
       friend constexpr basic_vec&
@@ -1061,6 +1149,7 @@ namespace simd
       {
 	static_assert(false, "TODO");
       }
+#endif
 
       // [simd.comparison] compare operators ----------------------------------
       [[__gnu__::__always_inline__]]
@@ -1102,27 +1191,42 @@ namespace simd
       { return _S_init(__select_impl(__k._M_data, __t._M_data, __f._M_data)); }
 
       // [simd.complex.math] internals ---------------------------------------
+#if VIR_PATCH_IMPROVE_CX
+      template <_TargetTraits _Traits = {}>
+	[[__gnu__::__always_inline__]]
+	constexpr _RealSimd
+	_M_abs() const
+	{
+	  if constexpr (_Traits._M_finite_math_only() || !_Traits._M_conforming_to_STDC_annex_G())
+	    return sqrt(_M_norm());
+	  else
+	    return hypot(real(), imag());
+	}
+#else
       [[__gnu__::__always_inline__]]
       constexpr _RealSimd
       _M_abs() const; // TODO
+#endif
 
       // associated functions
       [[__gnu__::__always_inline__]]
       constexpr _RealSimd
       _M_norm() const
       {
-#if 0
-	return (_M_data * _M_data)._M_hadd();
+#if VIR_PATCH_IMPROVE_CX
+	_TSimd __squared = _M_data * _M_data;
+#if 1
+	return __hadd(__squared);
 #elif 0
-	const auto __squared = _M_data * _M_data;
-	return permute<size.value>(
-		 __squared + __squared._M_swap_neighbors(),
-		 [](unsigned __i) { return __i * 2; });
-#elif 0
-	const auto __squared = _M_data * _M_data;
-	return permute<size.value>(__squared, [](int __i) { return __i * 2; })
-		 + permute<size.value>(__squared, [](int __i) { return __i * 2 + 1; });
-#elif 1
+	__squared += _TSimd::_S_static_permute(__squared, _SwapNeighbors<1>());
+	return _RealSimd::_S_static_permute(__squared, [](int __i) consteval { return i * 2; });
+#else
+	return _RealSimd::_S_static_permute(__squared,
+					    [](int __i) consteval { return __i * 2; })
+		 + _RealSimd::_S_static_permute(__squared,
+						[](int __i) consteval { return __i * 2 + 1; });
+#endif
+#else
 	auto __re = real();
 	auto __im = imag();
 	return __re * __re + __im * __im;
@@ -2053,6 +2157,18 @@ namespace simd
       }
 
       // [simd.complex.math] internals ---------------------------------------
+#if VIR_PATCH_IMPROVE_CX
+      template <_TargetTraits _Traits = {}>
+	[[__gnu__::__always_inline__]]
+	constexpr _RealSimd
+	_M_abs() const
+	{
+	  if constexpr (_Traits._M_finite_math_only() || !_Traits._M_conforming_to_STDC_annex_G())
+	    return sqrt(_M_norm());
+	  else
+	    return hypot(_M_real, _M_imag);
+	}
+#else
       [[__gnu__::__always_inline__]]
       constexpr _RealSimd
       _M_abs() const
@@ -2060,6 +2176,7 @@ namespace simd
 	// FIXME: avoid overflow & underflow in _M_norm
 	return sqrt(_M_norm());
       }
+#endif
 
       // associated functions
       [[__gnu__::__always_inline__]]
