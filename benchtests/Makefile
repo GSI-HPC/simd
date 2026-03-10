@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright © 2025–2026 GSI Helmholtzzentrum fuer Schwerionenforschung GmbH
+#                       Matthias Kretz <m.kretz@gsi.de>
+
 benchmarks=$(patsubst %.cpp,%,$(wildcard *.cpp))
 archs=native ivybridge westmere x86-64
 CXXFLAGS=-g0 -O2 -std=gnu++26 -Wall -Wextra -Wno-psabi -fmax-errors=2 -DVIR_NEXT_PATCH -DVIR_EXTENSIONS

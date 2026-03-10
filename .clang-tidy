@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: CC0-1.0
+# Copyright © 2026      GSI Helmholtzzentrum fuer Schwerionenforschung GmbH
+#                       Matthias Kretz <m.kretz@gsi.de>
 ---
 Checks: >-
   bugprone-*,

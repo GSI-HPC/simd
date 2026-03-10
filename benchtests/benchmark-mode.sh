@@ -1,4 +1,7 @@
 #!/bin/bash
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright © 2011–2026 Matthias Kretz <kretz@kde.org>
 
 no_turbo=/sys/devices/system/cpu/intel_pstate/no_turbo
 boost=/sys/devices/system/cpu/cpufreq/boost

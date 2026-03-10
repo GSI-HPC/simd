@@ -1,4 +1,8 @@
 #!/bin/bash
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright © 2023–2026 GSI Helmholtzzentrum fuer Schwerionenforschung GmbH
+#                       Matthias Kretz <m.kretz@gsi.de>
 
 dir="${0%/*}"
 [[ "$dir" == '.' ]] && dir="$PWD"

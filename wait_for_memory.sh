@@ -1,4 +1,9 @@
 #!/bin/zsh
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright © 2025–2026 GSI Helmholtzzentrum fuer Schwerionenforschung GmbH
+#                       Matthias Kretz <m.kretz@gsi.de>
+#
 [[ -z "$1" ]] && exit 0 # single job => unconditionally start
 max_jobs=$1
 
