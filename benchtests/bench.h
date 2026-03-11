@@ -520,7 +520,8 @@ template <class T, class... ExtraFlags>
 	if constexpr (simd::vec<TT>::size() > 1)
 	  {
 	    constexpr int N0 = simd::vec<TT>::size();
-	    using V0 = simd::basic_vec<T, simd::_Abi<N0, 1, 32>>;
+	    using V0 = simd::basic_vec<T, simd::_Abi_t<N0, 1, simd::_AbiVariant::_CxCtgus,
+						       simd::vec<float>::abi_type::_S_variant>>;
 	    template for (constexpr int i : std::_IotaArray<8>)
 	      {
 		constexpr int N = 2 << i;
