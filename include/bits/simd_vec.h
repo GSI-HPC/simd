@@ -308,11 +308,9 @@ namespace simd
 
       static constexpr int _S_full_size = __bit_ceil(unsigned(_S_size));
 
-      static constexpr bool _S_is_scalar = __scalar_abi_tag<_Ap>;
+      static constexpr bool _S_is_scalar = _S_size == 1;
 
-      static_assert(!_S_is_scalar || _S_size == 1);
-
-      static constexpr bool _S_use_bitmask = _Ap::_S_is_bitmask;
+      static constexpr bool _S_use_bitmask = _Ap::_S_is_bitmask && !_S_is_scalar;
 
       using _DataType = typename _Ap::template _DataType<_Tp>;
 
@@ -450,7 +448,7 @@ namespace simd
 	  return __r;
 	}
 
-      using _HalfVec = __similar_resized_vec<value_type, _S_size / 2, _Ap>;
+      using _HalfVec = __similar_vec<value_type, _S_size / 2, _Ap>;
 
       static constexpr bool _SupportCxApi = (_S_size & 1) == 0 && is_floating_point_v<value_type>;
 
@@ -2182,12 +2180,12 @@ namespace simd
 
       static constexpr int _N1 = _S_size - _N0;
 
-      using _DataType0 = __similar_resized_vec<_Tp, _N0, _Ap>;
+      using _DataType0 = __similar_vec<_Tp, _N0, _Ap>;
 
       // the implementation (and users) depend on elements being contiguous in memory
       static_assert(_N0 * sizeof(_Tp) == sizeof(_DataType0));
 
-      using _DataType1 = __similar_resized_vec<_Tp, _N1, _Ap>;
+      using _DataType1 = __similar_vec<_Tp, _N1, _Ap>;
 
       static_assert(_DataType0::abi_type::_S_nreg + _DataType1::abi_type::_S_nreg == _Ap::_S_nreg);
 
@@ -2196,6 +2194,8 @@ namespace simd
       _DataType0 _M_data0;
 
       _DataType1 _M_data1;
+
+      static constexpr bool _S_use_bitmask = _Ap::_S_is_bitmask;
 
       static constexpr bool _S_is_partial = _DataType1::_S_is_partial;
 
@@ -2268,7 +2268,7 @@ namespace simd
 		   _DataType1::template _S_static_permute<_Size, _Offset + _N0>(__x, __idxmap));
 	}
 
-      using _HalfVec = __similar_resized_vec<value_type, _S_size / 2, _Ap>;
+      using _HalfVec = __similar_vec<value_type, _S_size / 2, _Ap>;
 
       static constexpr bool _SupportCxApi = (_S_size & 1) == 0 && is_floating_point_v<value_type>;
 
@@ -2287,7 +2287,7 @@ namespace simd
       _M_complex_set_imag(const _HalfVec& __x) requires _SupportCxApi
       {
 	const auto& [__lo, __hi]
-	  = __x.template _M_chunk<__similar_resized_vec<value_type, _N0 / 2, _Ap>>();
+	  = __x.template _M_chunk<__similar_vec<value_type, _N0 / 2, _Ap>>();
 	_M_data0._M_complex_set_imag(__lo);
 	_M_data1._M_complex_set_imag(__hi);
       }

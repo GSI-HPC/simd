@@ -111,18 +111,21 @@ namespace simd
     struct resize
     {};
 
-  template <__simd_size_type _Np, __simd_vec_or_mask_type _Vp, _ArchTraits _Traits>
-    requires requires { typename _Vp::mask_type; }
+  template <__simd_size_type _Np, __simd_vec_type _Vp, _ArchTraits _Traits>
+    requires (_Np >= 1)
     //requires requires { typename __deduce_abi_t<typename _Vp::value_type, _Np>; }
     struct resize<_Np, _Vp, _Traits>
-    { using type = __similar_resized_vec<typename _Vp::value_type, _Np, typename _Vp::abi_type>; };
+    { using type = __similar_vec<typename _Vp::value_type, _Np, typename _Vp::abi_type>; };
 
   template <__simd_size_type _Np, __simd_mask_type _Mp, _ArchTraits _Traits>
+    requires (_Np >= 1)
     //requires requires { typename __deduce_abi_t<typename _Mp::value_type, _Np>; }
     struct resize<_Np, _Mp, _Traits>
     {
       using _A1 = decltype(__abi_rebind<__mask_element_size<_Mp>, _Np, typename _Mp::abi_type,
 					true>());
+
+      static_assert(__abi_tag<_A1>);
 
       static_assert(_Mp::abi_type::_S_variant == _A1::_S_variant || __scalar_abi_tag<_A1>
 		      || __scalar_abi_tag<typename _Mp::abi_type>);
@@ -286,7 +289,7 @@ namespace simd
 	      constexpr int __new_offset = _Offset.value - (0 + ... + _Vs...[__skip]::size.value);
 	      return __extract_simd_at<_Dst>(cw<__new_offset>, __xs...[__is + __skip_front]...);
 	    }
-	  else if constexpr (__scalar_abi_tag<_Adst>)
+	  else if constexpr (_Adst::_S_size == 1)
 	    { // trivial conversion to one value_type
 	      return _Dst(__x0[_Offset.value]);
 	    }
@@ -504,7 +507,8 @@ namespace simd
 
   template <size_t _Bytes, __abi_tag _Ap>
     requires (_Ap::_S_nreg == 1)
-      && (__filter_abi_variant(_Ap::_S_variant, _AbiVariant::_CxVariants) == _AbiVariant())
+      && (__filter_abi_variant(_Ap::_S_variant, _AbiVariant::_CxVariants) == _AbiVariant()
+	    || _Ap::_S_size == 1) // _Abi<1, 1, _CxIleav> and _Abi<1, 1, _CxCtgus> go here
     class basic_mask<_Bytes, _Ap>
     : public _MaskBase<_Bytes, _Ap>
     {
@@ -520,7 +524,11 @@ namespace simd
 
       static constexpr int _S_size = _Ap::_S_size;
 
-      static constexpr bool _S_is_scalar = __scalar_abi_tag<_Ap>;
+      using _DataType = typename _Ap::template _MaskDataType<_Bytes>;
+
+      static constexpr bool _S_has_bool_member = is_same_v<_DataType, bool>;
+
+      static constexpr bool _S_is_scalar = _S_has_bool_member;
 
       static constexpr bool _S_use_bitmask = _Ap::_S_is_bitmask;
 
@@ -535,8 +543,6 @@ namespace simd
 
       static constexpr bool _S_is_partial = _S_size != _S_full_size;
 
-      using _DataType = typename _Ap::template _MaskDataType<_Bytes>;
-
       static constexpr _DataType _S_implicit_mask = [] {
 	if constexpr (_S_is_scalar)
 	  return true;
@@ -550,8 +556,6 @@ namespace simd
 	    return _DataType{ (__is < _S_size ? -1 : 0)... };
 	  }
       }();
-
-      static constexpr bool _S_has_bool_member = _S_is_scalar;
 
       // Actual padding bytes, not padding elements.
       // => _S_padding_bytes is 0 even if _S_is_partial is true.
@@ -587,6 +591,30 @@ namespace simd
       constexpr const _DataType&
       _M_get() const
       { return _M_data; }
+
+      /** @internal
+       * @brief Converts the type of the mask without changing the data member.
+       *
+       * Since _Abi<1, 1, _CxCtgus> uses this partial specialization of basic_mask, the _M_data
+       * member cannot be used as mask that matches the basic_vec elements.
+       */
+      [[__gnu__::__always_inline__]]
+      constexpr auto
+      _M_get_ileav_data() const noexcept
+      requires _Ap::_S_is_cx_ileav
+      { return __component_mask_for_ileav<_Bytes, _Ap>(_M_data); }
+
+      /** @internal
+       * @brief Converts the type of the mask from a scalar (bool) into a mask of 2 elements.
+       *
+       * Since _Abi<1, 1, _CxIleav> uses this partial specialization of basic_mask, the _M_data
+       * member cannot be used as mask that matches the basic_vec elements.
+       */
+      [[__gnu__::__always_inline__]]
+      constexpr auto
+      _M_get_ctgus_data() const noexcept
+      requires _Ap::_S_is_cx_ctgus
+      { return __component_mask_for_ctgus<_Bytes, _Ap>(_M_data); }
 
       /** \internal
        * Bit-cast the given object \p __x to basic_mask.
@@ -1436,11 +1464,11 @@ namespace simd
 
       static constexpr int _Nreg1 = _Ap::_S_nreg - _Nreg0;
 
-      using _Abi0 = conditional_t<_N0 == _Nreg0 || __scalar_abi_tag<_Ap>,
-				  _ScalarAbi<_N0>, _Abi_t<_N0, _Nreg0, _Ap::_S_variant>>;
+      // explicitly request _Nreg0 rather than use __abi_rebind. This way _Float16 can use half
+      // of native registers (since they convert to full float32 registers).
+      using _Abi0 = decltype(_Ap::template _S_resize<_N0, _Nreg0>());
 
-      using _Abi1 = conditional_t<_N1 == _Nreg1 || __scalar_abi_tag<_Ap>,
-				  _ScalarAbi<_N1>, _Abi_t<_N1, _Nreg1, _Ap::_S_variant>>;
+      using _Abi1 = decltype(_Ap::template _S_resize<_N1, _Nreg1>());
 
       using _Mask0 = basic_mask<_Bytes, _Abi0>;
 
@@ -1673,6 +1701,8 @@ namespace simd
 		  else
 		    return __x._M_data0;
 		}
+	      else if constexpr (_N0 == 1)
+		return _Mask0(__x[0]);
 	      else
 		return get<0>(chunk<_N0>(__x));
 	    }()),
@@ -1684,6 +1714,8 @@ namespace simd
 		  else
 		    return __x._M_data1;
 		}
+	      else if constexpr (_N1 == 1)
+		return _Mask1(__x[_N0]);
 	      else
 		return get<1>(chunk<_N0>(__x));
 	    }())

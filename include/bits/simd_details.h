@@ -269,6 +269,16 @@ namespace simd
 	}());
 #endif
 
+  template <size_t _Bytes>
+    using __float_from = decltype([] consteval {
+			   if constexpr (sizeof(double) == _Bytes)
+			     return double();
+			   else if constexpr (sizeof(float) == _Bytes)
+			     return float();
+			   else if constexpr (sizeof(_Float16) == _Bytes)
+			     return _Float16();
+			 }());
+
   /** @internal
    * Alias for an unsigned integer type T such that sizeof(T) equals _Bytes.
    */
@@ -400,8 +410,8 @@ namespace simd
 	using _MaskDataType = bool;
 
       template <int _N2, int _Nreg2 = _N2>
-	consteval _ScalarAbi<_N2>
-	_M_resize() const
+	static consteval _ScalarAbi<_N2>
+	_S_resize()
 	{
 	  static_assert(_N2 == _Nreg2);
 	  return {};
@@ -455,7 +465,8 @@ namespace simd
 
       static_assert(!(_S_is_cx_ileav && _S_is_cx_ctgus)); // can't be both
 
-      static_assert(_S_size > _S_nreg || (_S_is_cx_ileav && _S_size * 2 > _S_nreg)); // when equal use _ScalarAbi
+      static_assert(_S_size >= _S_nreg || (_S_is_cx_ileav && _S_size * 2 >= _S_nreg));
+
       static constexpr bool _S_is_bitmask
 	= __filter_abi_variant(_S_variant, _AbiVariant::_BitMask) == _AbiVariant::_BitMask;
 
@@ -464,19 +475,24 @@ namespace simd
       template <typename _Tp>
 	using _DataType = decltype([] {
 			    static_assert(_S_nreg == 1);
-			    static_assert(!_S_is_cx_ileav);
-			    static_assert(!_S_is_cx_ctgus);
-			    constexpr int __n = __bit_ceil(unsigned(_S_size));
-			    using _Vp [[__gnu__::__vector_size__(sizeof(_Tp) * __n)]]
-			      = __canonical_vec_type_t<_Tp>;
-			    return _Vp();
+			    if constexpr (_S_size == 1)
+			      return __canonical_vec_type_t<_Tp>();
+			    else
+			      {
+				constexpr int __n = __bit_ceil(unsigned(_S_size));
+				using _Vp [[__gnu__::__vector_size__(sizeof(_Tp) * __n)]]
+				  = __canonical_vec_type_t<_Tp>;
+				return _Vp();
+			      }
 			  }());
 
       template <size_t _Bytes>
 	using _MaskDataType
 	  = decltype([] {
-	      static_assert(!_S_is_cx_ileav);
-	      if constexpr (_S_is_vecmask)
+	      static_assert(_S_nreg == 1);
+	      if constexpr (_S_size == 1)
+		return bool();
+	      else if constexpr (_S_is_vecmask)
 		{
 		  constexpr unsigned __vbytes = _Bytes * __bit_ceil(unsigned(_S_size));
 		  using _Vp [[__gnu__::__vector_size__(__vbytes)]] = __integer_from<_Bytes>;
@@ -489,11 +505,11 @@ namespace simd
 	    }());
 
       template <int _N2, int _Nreg2 = __div_ceil(_N2, _S_size)>
-	consteval auto
-	_M_resize() const
+	static consteval auto
+	_S_resize()
 	{
-	  if constexpr (_N2 == 1 && !_S_is_cx_ileav)
-	    return _ScalarAbi<1>();
+	  if constexpr (_N2 == 1)
+	    return _Abi<1, 1, _Var>();
 	  else
 	    return _Abi<_N2, _Nreg2, _Var>();
 	}
@@ -529,7 +545,7 @@ namespace simd
       = same_as<decltype(_Tp::_S_variant), const _AbiVariant>
 	  && (_Tp::_S_size >= _Tp::_S_nreg) && (_Tp::_S_nreg >= 1)
 	  && requires(_Tp __x) {
-	    { __x.template _M_resize<_Tp::_S_size, _Tp::_S_nreg>() } -> same_as<_Tp>;
+	    { __x.template _S_resize<_Tp::_S_size, _Tp::_S_nreg>() } -> same_as<_Tp>;
 	  };
 
   template <typename _Tp>
@@ -1095,7 +1111,7 @@ namespace simd
       else if constexpr (_Np == __native._S_size)
 	return __native;
       else
-	return __native.template _M_resize<_Np>();
+	return __native.template _S_resize<_Np>();
     }
 
   /** @internal
@@ -1116,38 +1132,40 @@ namespace simd
     {
       if constexpr (_Np <= 0 || !__vectorizable<_Tp>)
 	return _InvalidAbi();
+
+      else if constexpr (__scalar_abi_tag<_A0>)
+	return _A0::template _S_resize<_Np>();
+
       else
 	{
 	  using _Native = remove_const_t<decltype(std::simd::__native_abi<_Tp>())>;
 	  static_assert(0 != _Native::_S_size);
 	  constexpr int __nreg = __div_ceil(_Np, _Native::_S_size);
 
-	  if constexpr (__scalar_abi_tag<_A0>)
-	    return std::simd::__deduce_abi<_Tp, _Np>();
-
-	  else if constexpr (__scalar_abi_tag<_Native> || (_A0::_S_is_cx_ctgus && _Np == 1))
-	    return _ScalarAbi<_Np>();
+	  if constexpr (__scalar_abi_tag<_Native>)
+	    return _Native::template _S_resize<_Np>();
 
 	  else if constexpr (__complex_like<_Tp> && _A0::_S_is_cx_ctgus && _Native::_S_is_cx_ileav)
 	    // we need half the number of registers since the number applies twice, to reals and
 	    // imaginaries.
-	    return _Abi_t<_Np, __div_ceil(__nreg, 2), _A0::_S_variant>();
+	    return _A0::template _S_resize<_Np, __div_ceil(__nreg, 2)>();
 
 	  else if constexpr (__complex_like<_Tp> && _A0::_S_is_cx_ileav && _Native::_S_is_cx_ctgus)
-	    return _Abi_t<_Np, __nreg * 2, _A0::_S_variant>();
+	    return _A0::template _S_resize<_Np, __nreg * 2>();
 
 	  else if constexpr (__complex_like<_Tp> && (_A0::_S_is_cx_ctgus || _A0::_S_is_cx_ileav))
-	    return _Abi_t<_Np, __nreg, _A0::_S_variant>();
+	    return _A0::template _S_resize<_Np, __nreg>();
 
 	  else if constexpr (__complex_like<_Tp>)
-	    return _Abi_t<_Np, __nreg, _A0::_S_variant, _AbiVariant::_CxIleav>();
-
-	  else if constexpr (_Np == __nreg)
-	    return _ScalarAbi<_Np>();
+	    // Bit vs. Vec Mask determined by _A0, _CxVariant determined by _Native
+	    return _Abi_t<_Native::_S_size, 1, _A0::_S_variant,
+			  __filter_abi_variant(_Native::_S_variant, _AbiVariant::_CxVariants)>
+		     ::template _S_resize<_Np, __nreg>();
 
 	  else
-	    return _Abi_t<_Np, __nreg, __filter_abi_variant(_A0::_S_variant,
-							    _AbiVariant::_MaskVariants)>();
+	    return _Abi_t<_Native::_S_size, 1, __filter_abi_variant(_A0::_S_variant,
+								    _AbiVariant::_MaskVariants)
+			 >::template _S_resize<_Np, __nreg>();
 	}
     }
 
@@ -1171,17 +1189,7 @@ namespace simd
 	return _InvalidAbi();
 
       else if constexpr (__scalar_abi_tag<_A0>)
-	{
-	  if constexpr (_IsOnlyResize)
-	    // stick to _ScalarAbi (e.g. _Float16 without hardware support)
-	    return _ScalarAbi<_Np>();
-	  else if constexpr (_Bytes == sizeof(double) * 2)
-	    // we can be certain it's a mask<complex<double>, _Np>.
-	    return __abi_rebind<complex<double>, _Np, _A0>();
-	  else
-	    // otherwise, fresh start via __deduce_abi_t using __integer_from
-	    return std::simd::__deduce_abi<__integer_from<_Bytes>, _Np>();
-	}
+	return _A0::template _S_resize<_Np>();
 
       // If the source ABI is complex, _Bytes == sizeof(complex<float>) or
       // sizeof(complex<float16_t>), and _IsOnlyResize is true, then it's a mask<complex<float>,
@@ -1521,13 +1529,19 @@ namespace simd
   template <__vectorizable _Tp, __simd_size_type _Np, __abi_tag _Ap>
     using __similar_mask = basic_mask<sizeof(_Tp), decltype(__abi_rebind<_Tp, _Np, _Ap>())>;
 
+  template <size_t _Bytes, __abi_tag _Ap>
+    using __component_mask_for_ileav
+      = basic_mask<_Bytes / 2,
+		   decltype(__abi_rebind<__float_from<_Bytes / 2>, _Ap::_S_size * 2, _Ap>())>;
+
+  template <size_t _Bytes, __abi_tag _Ap>
+    using __component_mask_for_ctgus
+      = basic_mask<_Bytes / 2,
+		   decltype(__abi_rebind<__float_from<_Bytes / 2>, _Ap::_S_size, _Ap>())>;
+
   // Allow _Tp to be _InvalidInteger for __integer_from<16>
   template <typename _Tp, __simd_size_type _Np, __abi_tag _Ap>
     using __similar_vec = basic_vec<_Tp, decltype(__abi_rebind<_Tp, _Np, _Ap>())>;
-
-  template <typename _Tp, __simd_size_type _Np, __abi_tag _Ap>
-    using __similar_resized_vec = conditional_t<__scalar_abi_tag<_Ap>, basic_vec<_Tp, _ScalarAbi<_Np>>,
-						basic_vec<_Tp, decltype(__abi_rebind<_Tp, _Np, _Ap>())>>;
 
   // LWG4470 [simd.expos]
   template <size_t _Bytes, typename _Ap>

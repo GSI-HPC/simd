@@ -16,6 +16,7 @@ using std::complex;
 using std::float16_t;
 using std::float32_t;
 using std::float64_t;
+using std::is_same_v;
 
 using namespace std::simd;
 
@@ -40,6 +41,12 @@ void test()
       static_assert(sizeof(__integer_from<N>) == N);
       static_assert(__vectorizable<__integer_from<N>>);
     }
+  template for (constexpr int N : {2, 4, 8})
+    {
+      static_assert(std::floating_point<__float_from<N>>);
+      static_assert(sizeof(__float_from<N>) == N);
+      static_assert(__vectorizable<__float_from<N>>);
+    }
 
   static_assert(__div_ceil(5, 3) == 2);
 
@@ -48,6 +55,45 @@ void test()
 
   static_assert(__scalar_abi_tag<_ScalarAbi<1>>);
   static_assert(__scalar_abi_tag<_ScalarAbi<2>>);
+  static_assert(!__scalar_abi_tag<_Abi_t<1, 1>>);
+
+  static_assert(__abi_tag<_ScalarAbi<1>>);
+  static_assert(__abi_tag<_ScalarAbi<2>>);
+  static_assert(__abi_tag<_Abi_t<1, 1, _AbiVariant::_CxIleav>>);
+  static_assert(__abi_tag<_Abi_t<1, 1, _AbiVariant::_CxCtgus>>);
+
+  using AN = decltype(__native_abi<float>());
+  using A1 = decltype(__native_abi<float>()._S_resize<1>());
+  static_assert(A1::_S_size == 1);
+  static_assert(A1::_S_nreg == 1);
+  static_assert(A1::_S_variant == AN::_S_variant);
+  static_assert(__scalar_abi_tag<A1> == __scalar_abi_tag<AN>);
+  static_assert(is_same_v<decltype(__abi_rebind<float, AN::_S_size, A1>()), AN>);
+  if constexpr (AN::_S_size >= 2) // the target has SIMD support for float
+    {
+      {
+	using A2 = decltype(__abi_rebind<float, 2, AN>());
+	static_assert(A2::_S_size == 2);
+	static_assert(A2::_S_nreg == 1);
+	static_assert(A2::_S_variant == AN::_S_variant);
+	using A2x = decltype(__abi_rebind<float, 2, decltype(__abi_rebind<float, 1, A2>())>());
+	static_assert(is_same_v<A2, A2x>);
+      }
+      using A4 = decltype(__abi_rebind<float, 4, AN>());
+      static_assert(A4::_S_size == 4);
+
+      // at this point we unconditionally expect _CxIleav from __abi_rebind:
+      using AC2 = decltype(__abi_rebind<complex<float>, 2, AN>());
+      static_assert(AC2::_S_size == 2);
+      static_assert(AC2::_S_nreg == A4::_S_nreg);
+      static_assert(AC2::_S_variant != A4::_S_variant);
+      static_assert(__filter_abi_variant(AC2::_S_variant, _AbiVariant::_MaskVariants)
+		      == A4::_S_variant);
+      static_assert(__filter_abi_variant(AC2::_S_variant, _AbiVariant::_CxVariants)
+		      == _AbiVariant::_CxIleav);
+      static_assert(AC2::_S_is_cx_ileav);
+      static_assert(!AC2::_S_is_cx_ctgus);
+    }
 
   static_assert(__streq_to_1("1"));
   static_assert(!__streq_to_1(""));

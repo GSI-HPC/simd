@@ -59,12 +59,20 @@ namespace LWG4420
 }
 #endif
 
+constexpr auto default_mask_abi_variant =
+#ifdef __AVX512F__
+  simd::_AbiVariant::_BitMask;
+#else
+  simd::_AbiVariant();
+#endif
+
 namespace test01
 {
   using std::same_as;
 
-  static_assert(same_as<simd::vec<int, 1>::abi_type, simd::_ScalarAbi<1>>);
-  static_assert(same_as<simd::vec<float, 1>::abi_type, simd::_ScalarAbi<1>>);
+  using Abi1 = simd::_Abi_t<1, 1, default_mask_abi_variant>;
+  static_assert(same_as<simd::vec<int, 1>::abi_type, Abi1>);
+  static_assert(same_as<simd::vec<float, 1>::abi_type, Abi1>);
 
 #if defined __SSE__ && !defined __AVX__
   static_assert(same_as<simd::vec<float>::abi_type, simd::_Abi_t<4, 1>>);
@@ -88,18 +96,43 @@ namespace test02
   static_assert(!destructible<simd::basic_mask<7>>);
 
   template <int N>
-    using expected_abi
-#ifdef __AVX512F__
-      = _Abi_t<N, 1, _AbiVariant::_BitMask, _AbiVariant::_CxIleav>;
-#elif defined __SSE2__
-      = _Abi_t<N, 1, _AbiVariant::_CxIleav>;
-#else
-      // FIXME: With SSE the answer depends on T
-      = _ScalarAbi<N>;
-#endif
+    using expected_abi = _Abi_t<N, 1, default_mask_abi_variant, _AbiVariant::_CxIleav>;
 
   static_assert(same_as<simd::vec<complex<float>, 1>::abi_type, expected_abi<1>>);
+#ifdef __AVX__
   static_assert(same_as<simd::vec<complex<double>, 1>::abi_type, expected_abi<1>>);
+#else
+  static_assert(same_as<simd::vec<complex<double>, 1>::abi_type, simd::_ScalarAbi<1>>);
+#endif
+
+#if defined __AVX512F__
+  static_assert(same_as<simd::vec<complex<float>, 2>::abi_type,
+			_Abi_t<2, 1, _AbiVariant::_CxIleav, _AbiVariant::_BitMask>>);
+  static_assert(same_as<simd::vec<complex<double>, 2>::abi_type,
+			_Abi_t<2, 1, _AbiVariant::_CxIleav, _AbiVariant::_BitMask>>);
+  static_assert(same_as<simd::vec<complex<float>, 4>::abi_type,
+			_Abi_t<4, 1, _AbiVariant::_CxIleav, _AbiVariant::_BitMask>>);
+  static_assert(same_as<simd::vec<complex<double>, 4>::abi_type,
+			_Abi_t<4, 1, _AbiVariant::_CxIleav, _AbiVariant::_BitMask>>);
+#elif defined __AVX__
+  static_assert(same_as<simd::vec<complex<float>, 2>::abi_type,
+			_Abi_t<2, 1, _AbiVariant::_CxIleav>>);
+  static_assert(same_as<simd::vec<complex<double>, 2>::abi_type,
+			_Abi_t<2, 1, _AbiVariant::_CxIleav>>);
+  static_assert(same_as<simd::vec<complex<float>, 4>::abi_type,
+			_Abi_t<4, 1, _AbiVariant::_CxIleav>>);
+  static_assert(same_as<simd::vec<complex<double>, 4>::abi_type,
+			_Abi_t<4, 2, _AbiVariant::_CxIleav>>);
+#elif defined __SSE__
+  static_assert(same_as<simd::vec<complex<float>, 2>::abi_type,
+			_Abi_t<2, 1, _AbiVariant::_CxIleav>>);
+  static_assert(same_as<simd::vec<complex<double>, 2>::abi_type,
+			_ScalarAbi<2>>);
+  static_assert(same_as<simd::vec<complex<float>, 4>::abi_type,
+			_Abi_t<4, 2, _AbiVariant::_CxIleav>>);
+  static_assert(same_as<simd::vec<complex<double>, 4>::abi_type,
+			_ScalarAbi<4>>);
+#endif
 
   static_assert(same_as<simd::vec<int>::mask_type, simd::mask<int>>);
   static_assert(same_as<simd::vec<float>::mask_type, simd::mask<float>>);
@@ -108,12 +141,6 @@ namespace test02
   static_assert(destructible<simd::vec<complex<float>>>);
   static_assert(same_as<simd::vec<complex<float>>::mask_type, simd::mask<complex<float>>>);
   static_assert(same_as<simd::vec<complex<float>, 1>::mask_type, simd::mask<complex<float>, 1>>);
-  static_assert(same_as<simd::vec<complex<double>>::mask_type::abi_type,
-			expected_abi<simd::vec<complex<double>>::size()>>);
-
-  // not the same because of the __deduce_t difference above
-  static_assert(!same_as<simd::vec<complex<float>, 1>::mask_type, simd::vec<double, 1>::mask_type>);
-
 
   // ensure 'true ? int : vec<float>' doesn't work
   template <typename T>

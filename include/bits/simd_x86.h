@@ -1499,16 +1499,6 @@ namespace simd
 	__x86_masked_store(__vec_zero_pad_to_16(__v), __mem, __k);
     }
 
-#if VIR_PATCH_TEST_STORES
-  template <size_t _Bytes>
-    using __float_from = decltype([] consteval {
-			   if constexpr (sizeof(float) == _Bytes)
-			     return 0.f;
-			   else if constexpr (sizeof(double) == _Bytes)
-			     return 0.;
-			 }());
-
-#endif
   /** @internal
    * AVX(2) masked stores
    */

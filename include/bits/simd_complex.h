@@ -91,18 +91,23 @@ namespace simd
 #endif
   /** @internal
    * @brief Return a _CxIleav mask that holds @p __k as its data member.
+   *
+   * @note If the resulting mask type has size 1, then it will actually store a single bool, rather
+   * than the given mask object.
    */
-  template <size_t _Bytes, typename _Ap>
+  template <size_t _Bytes, typename _Ap, __abi_tag _Aret
+	      = decltype(__abi_rebind<complex<__float_from<_Bytes>>, _Ap::_S_size / 2, _Ap>())>
     [[__gnu__::__always_inline__]]
-    constexpr basic_mask<_Bytes * 2, _Abi_t<_Ap::_S_size / 2, _Ap::_S_nreg,
-					    _Ap::_S_variant, _AbiVariant::_CxIleav>>
+    constexpr basic_mask<_Bytes * 2, _Aret>
     __to_cx_ileav(const basic_mask<_Bytes, _Ap>& __k)
     {
       static_assert(_Ap::_S_size % 2 == 0
 		      && (__filter_abi_variant(_Ap::_S_variant, _AbiVariant::_CxVariants)
 			    == _AbiVariant()));
-      return basic_mask<_Bytes * 2, _Abi_t<_Ap::_S_size / 2, _Ap::_S_nreg,
-					   _Ap::_S_variant, _AbiVariant::_CxIleav>>::_S_init(__k);
+      if constexpr (_Aret::_S_size == 1)
+	return basic_mask<_Bytes * 2, _Aret>(__k[0]);
+      else
+	return basic_mask<_Bytes * 2, _Aret>::_S_init(__k);
     }
 
   constexpr void
@@ -183,8 +188,10 @@ namespace simd
 	return __builtin_bit_cast(__tree_of_ulong_t<__div_ceil(_Np, size_t(__CHAR_BIT__))>, __b);
     }
 
+  // complex interleaved (_CxIleav) -------------------------------------------
+
   template <size_t _Bytes, __abi_tag _Ap>
-    requires _Ap::_S_is_cx_ileav
+    requires _Ap::_S_is_cx_ileav && (_Ap::_S_size >= 2) // size 1 is in simd_mask.h
     class basic_mask<_Bytes, _Ap>
     : public _MaskBase<_Bytes, _Ap>
     {
@@ -200,10 +207,7 @@ namespace simd
 
       static constexpr int _S_size = _Ap::_S_size;
 
-      using _DataType
-	= basic_mask<_Bytes / 2, _Abi_t<_S_size * 2, _Ap::_S_nreg,
-					__filter_abi_variant(_Ap::_S_variant,
-							     _AbiVariant::_MaskVariants)>>;
+      using _DataType = __component_mask_for_ileav<_Bytes, _Ap>;
 
 #if VIR_ASSERT_SANITY
       static_assert(_DataType::abi_type::_S_nreg == _Ap::_S_nreg);
@@ -256,6 +260,11 @@ namespace simd
       _M_concat_data() const
       { return _M_data._M_concat_data(); }
 
+      [[__gnu__::__always_inline__]]
+      constexpr const _DataType&
+      _M_get_ileav_data() const
+      { return _M_data; }
+
       template <_ArchTraits _Traits = {}>
 	[[__gnu__::__always_inline__]]
 	static constexpr basic_mask
@@ -283,6 +292,11 @@ namespace simd
 	      static_assert(!is_same_v<_M2, basic_mask>);
 	      return static_cast<_M2>(*this).template _M_chunk<_Mp>();
 	    }
+	  else if constexpr (_Mp::_S_size == 1)
+	    {
+	      constexpr auto [...__is] = _IotaArray<_S_size>;
+	      return array{_Mp(_M_data[__is])...};
+	    }
 	  else // _Mp is the same partial specialization
 	    {
 	      constexpr int __rem = _S_size % _Mp::_S_size;
@@ -305,7 +319,7 @@ namespace simd
 	[[__gnu__::__always_inline__]]
 	static constexpr basic_mask
 	_S_concat(const basic_mask<_Bytes, _As>&... __xs) noexcept
-	{ return basic_mask::_S_init(_DataType::_S_concat(__xs._M_data...)); }
+	{ return basic_mask::_S_init(_DataType::_S_concat(__xs._M_get_ileav_data()...)); }
 
       // [simd.mask.overview] default constructor -----------------------------
       basic_mask() = default;
@@ -620,8 +634,7 @@ namespace simd
     };
 
   template <__vectorizable _Tp, __abi_tag _Ap>
-    requires __complex_like<_Tp>
-      && _Ap::_S_is_cx_ileav
+    requires __complex_like<_Tp> && _Ap::_S_is_cx_ileav && (_Ap::_S_size >= 2) // size 1 is below
     class basic_vec<_Tp, _Ap>
     : public _VecBase<_Tp, _Ap>
     {
@@ -661,7 +674,7 @@ namespace simd
       // internal but public API ----------------------------------------------
       [[__gnu__::__always_inline__]]
       constexpr const _TSimd&
-      _M_get_ileav() const
+      _M_get_ileav_data() const
       { return _M_data; }
 
       [[__gnu__::__always_inline__]]
@@ -701,7 +714,8 @@ namespace simd
 	    {
 	      constexpr int __n = _S_size / _Vp::_S_size;
 	      constexpr int __rem = _S_size % _Vp::_S_size;
-	      const auto __chunked = _M_data.template _M_chunk<typename _Vp::_TSimd>();
+	      const auto __chunked = _M_data.template _M_chunk<resize_t<_Vp::_S_size * 2,
+									_TSimd>>();
 	      constexpr auto [...__is] = _IotaArray<__n>;
 	      if constexpr (__rem == 0)
 		return array<_Vp, __n> {_Vp::_S_init(__chunked[__is])...};
@@ -726,7 +740,7 @@ namespace simd
 	[[__gnu__::__always_inline__]]
 	static constexpr basic_vec
 	_S_concat(const basic_vec<value_type, _As>&... __xs) noexcept
-	{ return basic_vec::_S_init(_TSimd::_S_concat(__xs._M_data...)); }
+	{ return basic_vec::_S_init(_TSimd::_S_concat(__xs._M_get_ileav_data()...)); }
 
       template <typename _BinaryOp>
 	[[__gnu__::__always_inline__]]
@@ -1013,13 +1027,13 @@ namespace simd
 								  __idx._M_concat_data()));
 		    }
 #endif
-		  const array __elems = chunk<2>(__v._M_data);
+		  const array __elems = chunk<2>(__v._M_get_ileav_data());
 		  constexpr auto [...__is] = _IotaArray<_S_size>;
 		  return _S_init(cat(__elems[__perm[__is]]...));
 		}
 	      else if (__is_const_known(__perm))
 		{
-		  const array __elems = chunk<2>(__v._M_data);
+		  const array __elems = chunk<2>(__v._M_get_ileav_data());
 		  constexpr auto [...__is] = _IotaArray<_S_size>;
 		  return _S_init(cat(__elems[__perm[__is]]...));
 		}
@@ -1239,8 +1253,11 @@ namespace simd
       { return _S_init(_M_data._M_complex_conj()); }
     };
 
+  // complex contiguous (_CxCtgus) --------------------------------------------
+  // (and _CxIleav basic_vec with size 1)
+
   template <size_t _Bytes, __abi_tag _Ap>
-    requires _Ap::_S_is_cx_ctgus
+    requires _Ap::_S_is_cx_ctgus && (_Ap::_S_size >= 2) // size 1 is in simd_mask.h
     class basic_mask<_Bytes, _Ap>
     : public _MaskBase<_Bytes, _Ap>
     {
@@ -1256,10 +1273,7 @@ namespace simd
 
       static constexpr int _S_size = _Ap::_S_size;
 
-      using _DataType
-	= basic_mask<_Bytes / 2, _Abi_t<_S_size, _Ap::_S_nreg,
-					__filter_abi_variant(_Ap::_S_variant,
-							     _AbiVariant::_MaskVariants)>>;
+      using _DataType = __component_mask_for_ctgus<_Bytes, _Ap>;
 
       static_assert(_DataType::abi_type::_S_nreg == _Ap::_S_nreg);
 
@@ -1319,6 +1333,11 @@ namespace simd
 	      static_assert(!is_same_v<_M2, basic_mask>);
 	      return static_cast<_M2>(*this).template _M_chunk<_Mp>();
 	    }
+	  else if constexpr (_Mp::_S_size == 1)
+	    {
+	      constexpr auto [...__is] = _IotaArray<_S_size>;
+	      return array{_Mp(_M_data[__is])...};
+	    }
 	  else // _Mp is the same partial specialization
 	    {
 	      constexpr int __rem = _S_size % _Mp::_S_size;
@@ -1335,26 +1354,23 @@ namespace simd
       _S_concat(const basic_mask& __x0) noexcept
       { return __x0; }
 
-      template <typename _A0>
-	[[__gnu__::__always_inline__]]
-	static constexpr const auto&
-	_S_unwrap_cx_ctgus(const basic_mask<_Bytes, _A0>& __x) noexcept
-	{
-	  static_assert(_A0::_S_is_cx_ctgus);
-	  return __x._M_data;
-	}
-
+      /** @internal
+       * @brief Adjust the mask type to match _RealSimd.
+       *
+       * This is a trivial unwrap for this partial specialization of basic_mask. However, for
+       * _Abi<1, 1, _CxCtgus> _M_data is the bool object and needs to be converted.
+       */
       [[__gnu__::__always_inline__]]
-      static constexpr basic_mask<_Bytes / 2, _ScalarAbi<1>>
-      _S_unwrap_cx_ctgus(const basic_mask<_Bytes, _ScalarAbi<1>>& __x) noexcept
-      { return basic_mask<_Bytes / 2, _ScalarAbi<1>>(__x._M_data); }
+      constexpr const _DataType&
+      _M_get_ctgus_data() const noexcept
+      { return _M_data; }
 
       template <typename... _As>
 	requires (sizeof...(_As) > 1)
 	[[__gnu__::__always_inline__]]
 	static constexpr basic_mask
 	_S_concat(const basic_mask<_Bytes, _As>&... __xs) noexcept
-	{ return basic_mask::_S_init(_DataType::_S_concat(_S_unwrap_cx_ctgus(__xs)...)); }
+	{ return basic_mask::_S_init(_DataType::_S_concat(__xs._M_get_ctgus_data()...)); }
 
       // [simd.mask.overview] default constructor -----------------------------
       basic_mask() = default;
@@ -1635,8 +1651,8 @@ namespace simd
     };
 
   template <__vectorizable _Tp, __abi_tag _Ap>
-    requires __complex_like<_Tp>
-      && (_Ap::_S_is_cx_ctgus || __scalar_abi_tag<_Ap>)
+    requires __complex_like<_Tp> && (_Ap::_S_is_cx_ctgus || _Ap::_S_size == 1
+				       || __scalar_abi_tag<_Ap>)
     class basic_vec<_Tp, _Ap>
     : public _VecBase<_Tp, _Ap>
     {
@@ -1649,15 +1665,13 @@ namespace simd
 
       using _T0 = typename _Tp::value_type;
 
-      using _RealSimd = __similar_resized_vec<_T0, _S_size, _Ap>;
+      using _RealSimd = __similar_vec<_T0, _S_size, _Ap>;
 
       _RealSimd _M_real = {};
 
       _RealSimd _M_imag = {};
 
-      static constexpr bool _S_is_scalar = __scalar_abi_tag<_Ap>;
-
-      static_assert(_S_is_scalar == _RealSimd::_S_is_scalar);
+      static constexpr bool _S_is_scalar = _RealSimd::_S_is_scalar;
 
       static constexpr bool _S_use_bitmask = _RealSimd::_S_use_bitmask;
 
@@ -1694,11 +1708,28 @@ namespace simd
 	return resize_t<_M_real._N1, basic_vec>(
 		 _M_real._M_get_high(), _M_imag._M_get_high());
       }
-#if VIR_PATCH_PERMUTE_DYNAMIC
 
+      [[__gnu__::__always_inline__]]
       constexpr auto
-      _M_concat_data(bool __do_sanitize = false) = delete("not for _CxCtgus");
-#endif
+      _M_concat_data(bool /*do_sanitize*/ = false) const
+      requires (_S_size == 1) // only for _CxCtgus of size 1
+      {
+	return __vec_builtin_type<__canonical_vec_type_t<_T0>, 2>{
+	  _M_real._M_data, _M_imag._M_data
+	};
+      }
+
+      [[__gnu__::__always_inline__]]
+      constexpr auto
+      _M_get_ileav_data() const
+      requires (_S_size == 1 && _Ap::_S_is_cx_ileav)
+      { return __builtin_bit_cast(__similar_vec<_T0, 2, _Ap>, *this); }
+
+      [[__gnu__::__always_inline__]]
+      static constexpr basic_vec
+      _S_init(const __similar_vec<_T0, 2, _Ap>& __x)
+      requires (_S_size == 1 && _Ap::_S_is_cx_ileav)
+      { return __builtin_bit_cast(basic_vec, __x); }
 
       [[__gnu__::__always_inline__]]
       friend constexpr bool
