@@ -34,7 +34,7 @@ make_obj_dir_rule := mkdir -p $(objdir)/check
 endif
 
 ifeq ($(file < $(objdir)/.cxx_version),)
-unused=$(or $(shell $(make_obj_dir_rule) && echo ok),$(error "Failed to set up objdir: $(make_obj_dir_rule)"))
+unused:=$(or $(shell $(make_obj_dir_rule) && echo ok),$(error "Failed to set up objdir: $(make_obj_dir_rule)"))
 $(shell test -w check || ln -sf $(objdir)/check check)
 $(file > $(objdir)/.cxx_version,$(cxx_version))
 else
