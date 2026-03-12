@@ -330,6 +330,9 @@ template <class B, std::size_t N>
     std::cout << '\n';
   }
 
+static bool use_cxctgus = true;
+static bool use_odd_widths = true;
+
 template <class T, class... ExtraFlags>
   void
   bench_all()
@@ -497,11 +500,12 @@ template <class T, class... ExtraFlags>
     template for (constexpr int i : std::_IotaArray<simd::vec<T>::size() * 2 - 1>)
       {
         constexpr int N = i + 2;
-        if constexpr (std::constructible_from<simd::vec<T, N>> and N / simd::vec<T>::size() <= 8)
-          {
-            set_abistr(std::to_string(N).c_str());
-            bench_lat_thr<simd::vec<T, N>, B>(id, ref);
-          }
+	if (use_odd_widths || std::has_single_bit(unsigned(N)))
+	  if constexpr (std::constructible_from<simd::vec<T, N>> and N / simd::vec<T>::size() <= 8)
+	    {
+	      set_abistr(std::to_string(N).c_str());
+	      bench_lat_thr<simd::vec<T, N>, B>(id, ref);
+	    }
       }
 
     template for (constexpr int i : std::_IotaArray<4>)
@@ -519,17 +523,20 @@ template <class T, class... ExtraFlags>
 	using TT = typename T::value_type;
 	if constexpr (simd::vec<TT>::size() > 1)
 	  {
-	    constexpr int N0 = simd::vec<TT>::size();
-	    using V0 = simd::basic_vec<T, simd::_Abi_t<N0, 1, simd::_AbiVariant::_CxCtgus,
-						       simd::vec<float>::abi_type::_S_variant>>;
-	    template for (constexpr int i : std::_IotaArray<8>)
+	    if (use_cxctgus)
 	      {
-		constexpr int N = 2 << i;
-		using VN = simd::resize_t<N, V0>;
-		if constexpr (N <= N0 * 8 && std::constructible_from<VN>)
+		constexpr int N0 = simd::vec<TT>::size();
+		using V0 = simd::basic_vec<T, simd::_Abi_t<N0, 1, simd::_AbiVariant::_CxCtgus,
+							   simd::vec<float>::abi_type::_S_variant>>;
+		template for (constexpr int i : std::_IotaArray<8>)
 		  {
-		    set_abistr(("Ctgus " + std::to_string(N)).c_str());
-		    bench_lat_thr<VN, B>(id, ref);
+		    constexpr int N = 2 << i;
+		    using VN = simd::resize_t<N, V0>;
+		    if constexpr (N <= N0 * 8 && std::constructible_from<VN>)
+		      {
+			set_abistr(("Ctgus " + std::to_string(N)).c_str());
+			bench_lat_thr<VN, B>(id, ref);
+		      }
 		  }
 	      }
 	  }
@@ -889,6 +896,8 @@ usage()
                " -a, --print-addr    Print instruction pointer for each RDTSCP loop\n"
                "     --no-speedup    Do not print Speedup column\n"
                "     --no-sched      Do not set CPU affinity and FIFO scheduler\n"
+               "     --no-cxctgus    Do not try _CxCtgus ABI variants\n"
+               "     --only-power2   Only benchmark power-of-2 widths\n"
                " -h, --help          This message.\n";
 }
 
@@ -913,6 +922,10 @@ main(int argc, char** argv)
         }
       else if (a == "--no-sched")
         set_affinity = false;
+      else if (a == "--no-cxctgus")
+	use_cxctgus = false;
+      else if (a == "--only-power2")
+	use_odd_widths = false;
     }
   if (set_affinity)
     {

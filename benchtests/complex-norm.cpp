@@ -10,11 +10,6 @@
 template <int Special>
   struct Benchmark<Special>
   {
-    template <typename T>
-      static constexpr bool accept
-	= complex_like<T>
-	    or (simd_vec_type<T> and requires { requires T::abi_type::_S_is_cx_ileav; });
-
     static constexpr Info<2> info = {"Latency", "Throughput"};
 
     template <simd_vec_type T>
@@ -84,7 +79,7 @@ template <int Special>
 void
 bench_main()
 {
-  //bench_all<std::complex<std::float16_t>>();
+  bench_all<std::complex<std::float16_t>>();
   bench_all<std::complex<float>>();
   bench_all<std::complex<double>>();
 }
