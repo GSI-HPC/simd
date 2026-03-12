@@ -638,7 +638,7 @@ namespace simd
 	  {
 	    if constexpr (_S_is_partial)
 	      if (__do_sanitize)
-		return _M_data & _S_implicit_mask;
+		return _DataType(_M_data & _S_implicit_mask);
 	    return _M_data;
 	  }
       }
