@@ -16,7 +16,6 @@ using std::complex;
 using std::float16_t;
 using std::float32_t;
 using std::float64_t;
-using std::is_same_v;
 
 using namespace std::simd;
 
@@ -68,7 +67,7 @@ void test()
   static_assert(A1::_S_nreg == 1);
   static_assert(A1::_S_variant == AN::_S_variant);
   static_assert(__scalar_abi_tag<A1> == __scalar_abi_tag<AN>);
-  static_assert(is_same_v<decltype(__abi_rebind<float, AN::_S_size, A1>()), AN>);
+  static_assert(std::is_same_v<decltype(__abi_rebind<float, AN::_S_size, A1>()), AN>);
   if constexpr (AN::_S_size >= 2) // the target has SIMD support for float
     {
       {
@@ -77,7 +76,7 @@ void test()
 	static_assert(A2::_S_nreg == 1);
 	static_assert(A2::_S_variant == AN::_S_variant);
 	using A2x = decltype(__abi_rebind<float, 2, decltype(__abi_rebind<float, 1, A2>())>());
-	static_assert(is_same_v<A2, A2x>);
+	static_assert(std::is_same_v<A2, A2x>);
       }
       using A4 = decltype(__abi_rebind<float, 4, AN>());
       static_assert(A4::_S_size == 4);
