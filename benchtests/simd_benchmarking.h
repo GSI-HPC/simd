@@ -46,7 +46,7 @@ namespace vir
               fake_modify_one(x._M_get_imag());
             }
           else if constexpr (T::abi_type::_S_is_cx_ileav)
-            fake_modify_one(x._M_get_ileav());
+            fake_modify_one(x._M_get_ileav_data());
           else if constexpr (requires {x._M_get_high();})
             {
               fake_modify_one(x._M_get_low());
@@ -91,7 +91,7 @@ namespace vir
               fake_read_one(x._M_get_imag());
             }
           else if constexpr (T::abi_type::_S_is_cx_ileav)
-            fake_read_one(x._M_get_ileav());
+            fake_read_one(x._M_get_ileav_data());
           else if constexpr (requires {x._M_get_high();})
             {
               fake_read_one(x._M_get_low());
