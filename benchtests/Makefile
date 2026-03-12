@@ -4,12 +4,15 @@
 
 benchmarks=$(patsubst %.cpp,%,$(wildcard *.cpp))
 archs=native ivybridge westmere x86-64
-CXXFLAGS=-g0 -O2 -std=gnu++26 -Wall -Wextra -Wno-psabi -fmax-errors=2 -DVIR_NEXT_PATCH -DVIR_EXTENSIONS
+CXXFLAGS=-g0 -O2 -std=gnu++26 -Wall -Wextra -Wno-psabi -fmax-errors=2 -D VIR_PATCH_MATH -DVIR_EXTENSIONS
 
 fastmath=-ffast-math
 default=
+improve_cx1=-DVIR_PATCH_IMPROVE_CX=1
+improve_cx2=-DVIR_PATCH_IMPROVE_CX=2
+improve_cx3=-DVIR_PATCH_IMPROVE_CX=3
 
-variants=default fastmath
+variants=default fastmath improve_cx1 improve_cx2 improve_cx3
 
 all: all-targets
 
