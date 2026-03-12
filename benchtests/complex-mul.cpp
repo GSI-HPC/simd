@@ -34,7 +34,7 @@ template <int Special>
 	  }
 
 	return {
-	  0.25 * time_mean([&] [[gnu::always_inline]] {
+	  0.25 * time_median([&] [[gnu::always_inline]] {
 		   auto d = data[0];
 		   vir::fake_modify(d); T r = d * b;
 		   vir::fake_modify(d);   r = d * r;
@@ -42,7 +42,7 @@ template <int Special>
 		   vir::fake_modify(d);   r = d * r;
 		   b = r;
 		 }),
-	  1./6. * time_mean([&] [[gnu::always_inline]] {
+	  1./6. * time_median([&] [[gnu::always_inline]] {
 		    auto d0 = data[0]; vir::fake_modify(b, d0); T r0 = d0 * b;
 		    auto d1 = data[1]; vir::fake_modify(b, d1); T r1 = d1 * b;
 		    auto d2 = data[2]; vir::fake_modify(b, d2); T r2 = d2 * b;
