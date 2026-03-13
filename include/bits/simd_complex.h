@@ -43,33 +43,36 @@ namespace simd
       static_assert(__has_single_bit(unsigned(_V0::size())));
       static_assert(_V1::size() % 2 == 0);
       static_assert(_V0::size() >= _V1::size());
-#if _GLIBCXX_X86 && VIR_PATCH_IMPROVE_CX == 3
-      constexpr bool __is_fp32 = sizeof(typename _V0::value_type) == sizeof(float);
-      constexpr bool __is_fp64 = sizeof(typename _V0::value_type) == sizeof(double);
-#endif
       if constexpr (_V0::abi_type::_S_nreg >= 2)
 	return cat(__hadd(__x._M_get_low(), __x._M_get_high()), __hadd(__y));
-#if _GLIBCXX_X86 && VIR_PATCH_IMPROVE_CX == 3
-      else if constexpr (_Traits._M_have_sse3() && sizeof(__x) == 16 && __is_fp32)
-	return __builtin_ia32_haddps(__x._M_get(), __vec_zero_pad_to<16>(__y._M_get()));
-      else if constexpr (_Traits._M_have_avx() && sizeof(__x) == 32 && __is_fp32)
-	return __x86_swizzle4x64_acbd(
-		 __builtin_ia32_haddps256(__x._M_get(), __vec_zero_pad_to<32>(__y._M_get())));
-      else if constexpr (_Traits._M_have_sse3() && sizeof(__x) == 16 && __is_fp64)
-	return __builtin_ia32_haddpd(__x._M_get(), __vec_zero_pad_to<16>(__y._M_get()));
-      else if constexpr (_Traits._M_have_avx() && sizeof(__x) == 32 && __is_fp64)
-	return __x86_swizzle4x64_acbd(
-		 __builtin_ia32_haddpd256(__x._M_get(), __vec_zero_pad_to<32>(__y._M_get())));
-#endif
       else
-#if VIR_PATCH_IMPROVE_CX == 2
-	return cat(permute<_V0::size() / 2>(__x, [](int __i) consteval { return __i * 2; }),
-		   permute<_V1::size() / 2>(__y, [](int __i) consteval { return __i * 2; }))
-		 + cat(permute<_V0::size() / 2>(__x, [](int __i) consteval { return __i * 2 + 1; }),
-		       permute<_V1::size() / 2>(__y, [](int __i) consteval { return __i * 2 + 1; }));
-#else
-	return cat(__hadd(__x), __hadd(__y));
+	{
+#if _GLIBCXX_X86 && VIR_PATCH_IMPROVE_CX == 3
+	  if ! consteval
+	    {
+	      constexpr bool __is_fp32 = sizeof(typename _V0::value_type) == sizeof(float);
+	      constexpr bool __is_fp64 = sizeof(typename _V0::value_type) == sizeof(double);
+	      if constexpr (_Traits._M_have_sse3() && sizeof(__x) == 16 && __is_fp32)
+		return __builtin_ia32_haddps(__x._M_get(), __vec_zero_pad_to<16>(__y._M_get()));
+	      else if constexpr (_Traits._M_have_avx() && sizeof(__x) == 32 && __is_fp32)
+		return __x86_swizzle4x64_acbd(
+			 __builtin_ia32_haddps256(__x._M_get(), __vec_zero_pad_to<32>(__y._M_get())));
+	      else if constexpr (_Traits._M_have_sse3() && sizeof(__x) == 16 && __is_fp64)
+		return __builtin_ia32_haddpd(__x._M_get(), __vec_zero_pad_to<16>(__y._M_get()));
+	      else if constexpr (_Traits._M_have_avx() && sizeof(__x) == 32 && __is_fp64)
+		return __x86_swizzle4x64_acbd(
+			 __builtin_ia32_haddpd256(__x._M_get(), __vec_zero_pad_to<32>(__y._M_get())));
+	    }
 #endif
+#if 2 == VIR_PATCH_IMPROVE_CX
+	  return cat(permute<_V0::size() / 2>(__x, [](int __i) consteval { return __i * 2; }),
+		     permute<_V1::size() / 2>(__y, [](int __i) consteval { return __i * 2; }))
+		   + cat(permute<_V0::size() / 2>(__x, [](int __i) consteval { return __i * 2 + 1; }),
+			 permute<_V1::size() / 2>(__y, [](int __i) consteval { return __i * 2 + 1; }));
+#else
+	  return cat(__hadd(__x), __hadd(__y));
+#endif
+	}
     }
 
   template <_ArchTraits _Traits, __simd_floating_point _Vp>
@@ -79,30 +82,33 @@ namespace simd
     {
       using _V2 = resize_t<_Vp::size() / 2, _Vp>;
       static_assert(_Vp::size() % 2 == 0);
-#if _GLIBCXX_X86 && VIR_PATCH_IMPROVE_CX == 3
-      constexpr bool __is_fp32 = sizeof(typename _Vp::value_type) == sizeof(float);
-      constexpr bool __is_fp64 = sizeof(typename _Vp::value_type) == sizeof(double);
-#endif
       if constexpr (_Vp::abi_type::_S_nreg >= 2)
 	return __hadd(__x._M_get_low(), __x._M_get_high());
-#if _GLIBCXX_X86 && VIR_PATCH_IMPROVE_CX == 3
-      else if constexpr (_Traits._M_have_sse3() && sizeof(__x) == 16 && __is_fp32)
-	return __vec_split_lo(__builtin_ia32_haddps(__x._M_get(), __x._M_get()));
-      else if constexpr (_Traits._M_have_sse3() && sizeof(__x) == 32 && __is_fp32)
-	return __builtin_ia32_haddps(__vec_split_lo(__x._M_get()), __vec_split_hi(__x._M_get()));
-      else if constexpr (_Traits._M_have_sse3() && sizeof(__x) == 16 && __is_fp64)
-	return __vec_split_lo(__builtin_ia32_haddpd(__x._M_get(), __x._M_get()));
-      else if constexpr (_Traits._M_have_sse3() && sizeof(__x) == 32 && __is_fp64)
-	return __builtin_ia32_haddpd(__vec_split_lo(__x._M_get()), __vec_split_hi(__x._M_get()));
-#endif
       else
-#if VIR_PATCH_IMPROVE_CX == 2
-	return _V2::_S_static_permute(__x, [](int __i) consteval { return __i * 2; })
-		 + _V2::_S_static_permute(__x, [](int __i) consteval { return __i * 2 + 1; });
-#else
-	return _V2::_S_static_permute(__x + _Vp::_S_static_permute(__x, _SwapNeighbors<1>()),
-				      [](int __i) consteval { return __i * 2; });
+	{
+#if _GLIBCXX_X86 && VIR_PATCH_IMPROVE_CX == 3
+	  if !consteval
+	    {
+	      constexpr bool __is_fp32 = sizeof(typename _Vp::value_type) == sizeof(float);
+	      constexpr bool __is_fp64 = sizeof(typename _Vp::value_type) == sizeof(double);
+	      if constexpr (_Traits._M_have_sse3() && sizeof(__x) == 16 && __is_fp32)
+		return __vec_split_lo(__builtin_ia32_haddps(__x._M_get(), __x._M_get()));
+	      else if constexpr (_Traits._M_have_sse3() && sizeof(__x) == 32 && __is_fp32)
+		return __builtin_ia32_haddps(__vec_split_lo(__x._M_get()), __vec_split_hi(__x._M_get()));
+	      else if constexpr (_Traits._M_have_sse3() && sizeof(__x) == 16 && __is_fp64)
+		return __vec_split_lo(__builtin_ia32_haddpd(__x._M_get(), __x._M_get()));
+	      else if constexpr (_Traits._M_have_sse3() && sizeof(__x) == 32 && __is_fp64)
+		return __builtin_ia32_haddpd(__vec_split_lo(__x._M_get()), __vec_split_hi(__x._M_get()));
+	    }
 #endif
+#if 2 == VIR_PATCH_IMPROVE_CX
+	  return _V2::_S_static_permute(__x, [](int __i) consteval { return __i * 2; })
+		   + _V2::_S_static_permute(__x, [](int __i) consteval { return __i * 2 + 1; });
+#else
+	  return _V2::_S_static_permute(__x + _Vp::_S_static_permute(__x, _SwapNeighbors<1>()),
+					[](int __i) consteval { return __i * 2; });
+#endif
+	}
     }
 
 #endif
@@ -1439,7 +1445,12 @@ namespace simd
 	constexpr _RealSimd
 	_M_abs() const
 	{
-	  if constexpr (_Traits._M_finite_math_only() || !_Traits._M_conforming_to_STDC_annex_G())
+	  if constexpr (_Traits._M_eval_as_f32<_T0>())
+	    { // no need for hypot anymore
+	      const rebind_t<float, _TSimd> __x = _M_data;
+	      return static_cast<_RealSimd>(sqrt(__hadd(__x * __x)));
+	    }
+	  else if constexpr (_Traits._M_finite_math_only() || !_Traits._M_conforming_to_STDC_annex_G())
 	    return sqrt(_M_norm());
 	  else
 	    return hypot(real(), imag());
@@ -1447,23 +1458,34 @@ namespace simd
 #else
       [[__gnu__::__always_inline__]]
       constexpr _RealSimd
-      _M_abs() const; // TODO
+      _M_abs() const; // TODO: depends on [simd.math]
 #endif
 
       // associated functions
+#if VIR_PATCH_IMPROVE_CX
+      template <_TargetTraits _Traits = {}>
+	[[__gnu__::__always_inline__]]
+	constexpr _RealSimd
+	_M_norm() const
+	{
+	  if constexpr (_Traits._M_eval_as_f32<_T0>())
+	    {
+	      const rebind_t<float, _TSimd> __x = _M_data;
+	      return static_cast<_RealSimd>(__hadd(__x * __x));
+	    }
+	  else
+	    return __hadd(_M_data * _M_data);
+	}
+#else
       [[__gnu__::__always_inline__]]
       constexpr _RealSimd
       _M_norm() const
       {
-#if VIR_PATCH_IMPROVE_CX
-	_TSimd __squared = _M_data * _M_data;
-	return __hadd(__squared);
-#else
 	auto __re = real();
 	auto __im = imag();
 	return __re * __re + __im * __im;
-#endif
       }
+#endif
 
       [[__gnu__::__always_inline__]]
       constexpr basic_vec
@@ -2513,7 +2535,13 @@ namespace simd
 	constexpr _RealSimd
 	_M_abs() const
 	{
-	  if constexpr (_Traits._M_finite_math_only() || !_Traits._M_conforming_to_STDC_annex_G())
+	  if constexpr (_Traits._M_eval_as_f32<_T0>())
+	    { // no need for hypot anymore
+	      const rebind_t<float, _RealSimd> __re = _M_real;
+	      const rebind_t<float, _RealSimd> __im = _M_imag;
+	      return static_cast<_RealSimd>(sqrt(__re * __re + __im * __im));
+	    }
+	  else if constexpr (_Traits._M_finite_math_only() || !_Traits._M_conforming_to_STDC_annex_G())
 	    return sqrt(_M_norm());
 	  else
 	    return hypot(_M_real, _M_imag);
@@ -2521,18 +2549,31 @@ namespace simd
 #else
       [[__gnu__::__always_inline__]]
       constexpr _RealSimd
-      _M_abs() const
-      {
-	// FIXME: avoid overflow & underflow in _M_norm
-	return sqrt(_M_norm());
-      }
+      _M_abs() const; // TODO: depends on [simd.math]
 #endif
 
       // associated functions
+#if VIR_PATCH_IMPROVE_CX
+      template <_TargetTraits _Traits = {}>
+	[[__gnu__::__always_inline__]]
+	constexpr _RealSimd
+	_M_norm() const
+	{
+	  if constexpr (_Traits._M_eval_as_f32<_T0>())
+	    {
+	      const rebind_t<float, _RealSimd> __re = _M_real;
+	      const rebind_t<float, _RealSimd> __im = _M_imag;
+	      return static_cast<_RealSimd>(__re * __re + __im * __im);
+	    }
+	  else
+	    return _M_real * _M_real + _M_imag * _M_imag;
+	}
+#else
       [[__gnu__::__always_inline__]]
       constexpr _RealSimd
       _M_norm() const
       { return _M_real * _M_real + _M_imag * _M_imag; }
+#endif
 
       [[__gnu__::__always_inline__]]
       constexpr basic_vec
