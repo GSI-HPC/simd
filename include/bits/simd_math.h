@@ -1213,9 +1213,6 @@ namespace simd
   using simd::scalbn;
   using simd::scalbln;
   using simd::cbrt;
-#endif
-  using simd::abs;
-#if VIR_PATCH_MATH
   using simd::fabs;
   using simd::hypot;
   using simd::pow;
@@ -1439,6 +1436,7 @@ namespace simd
 
   using simd::real;
   using simd::imag;
+  using simd::abs;
   using simd::arg;
   using simd::norm;
   using simd::conj;
