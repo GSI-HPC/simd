@@ -2,6 +2,7 @@
 /* Copyright © 2024–2026 GSI Helmholtzzentrum fuer Schwerionenforschung GmbH
  *                       Matthias Kretz <m.kretz@gsi.de>
  */
+// requires float
 
 #include "unittest.h"
 

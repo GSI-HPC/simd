@@ -2,6 +2,7 @@
 /* Copyright © 2023–2026 GSI Helmholtzzentrum fuer Schwerionenforschung GmbH
  *                       Matthias Kretz <m.kretz@gsi.de>
  */
+// requires int
 
 #include "unittest_pch.h"
 

@@ -2,7 +2,7 @@
 # Copyright © 2025      GSI Helmholtzzentrum fuer Schwerionenforschung GmbH
 #                       Matthias Kretz <m.kretz@gsi.de>
 
-default: info
+all: obj/libsimd.so
 
 include Makefile.common
 
@@ -90,9 +90,7 @@ $(objdir)/libsimd.so: $(foreach src,$(lib_srcs),$(foreach arch,$(libarchs),$(obj
 	@printf -- '$(msg_link) $@\n'
 	@$(LINK_CXX) $(CXXFLAGS) -fno-lto -shared -o $@ $^
 
-fortests := for t in $(tests); do
 fortestarchs := for a in $(testarchs); do
-fortesttypes := for type in $(testtypes); do
 fortestwidths := for w in $(testwidths); do
 
 clang_flags = $(CXXFLAGS)
@@ -130,6 +128,9 @@ debug:
 	@echo "tests: $(tests)"
 	@echo "testwidths: $(testwidths)"
 	@for i in $(testtypes); do echo "- $$i"; done
+	@echo "int_tests: $(int_tests)"
+	@echo "float_tests: $(float_tests)"
+	@echo "complex_tests: $(complex_tests)"
 	@echo "width=$(call getwidth,shift_left.core2/signed-char.34)"
 	@echo "type=$(call gettype,shift_left.core2/signed-char.34)"
 	@echo "arch=$(call getarch,shift_left.core2/signed-char.34)"
@@ -161,51 +162,63 @@ helptargets+=check-$(1)
 
 endef
 
+testtypes_for_test = $(if $(filter $(1),$(complex_tests)),$(complex_testtypes),) \
+		     $(if $(filter $(1),$(float_tests)),$(float_testtypes),) \
+		     $(if $(filter $(1),$(int_tests)),$(int_testtypes),)
+
 $(foreach t,$(tests),\
-	$(eval $(call check_template,$(t),$(fortestarchs) $(fortestwidths) $(fortesttypes) \
-	  echo "check/$(t).$$$$a/$$$$type.$$$$w";done;done;done)) \
+	$(eval $(call check_template,$(t), $(fortestarchs) $(fortestwidths) for type in $(call testtypes_for_test,$(t)); do \
+	  echo "check/$(t).$$$$a/$$$$type.$$$$w"; \
+	done;done;done)) \
+	)
+
+tests_for_type = $(if $(filter $(1),$(complex_testtypes)),$(complex_tests),\
+		 $(if $(filter $(1),$(float_testtypes)),$(float_tests),\
+		 $(int_tests)))
+
+$(foreach type,$(testtypes),\
+	$(eval $(call check_template,$(type),\
+	  for t in $(call tests_for_type,$(type)); do $(fortestarchs) $(fortestwidths) \
+	    echo "check/$$$$t.$$$$a/$(type).$$$$w";done;done;done))\
 	)
 
 $(foreach type,$(testtypes),\
-	$(eval $(call check_template,$(type),$(fortests) $(fortestarchs) $(fortestwidths) \
-	  echo "check/$$$$t.$$$$a/$(type).$$$$w";done;done;done)) \
+	$(foreach w,$(testwidths),\
+	  $(eval $(call check_template,$(type).$(w),for t in $(call tests_for_type,$(type)); do $(fortestarchs) \
+	    echo "check/$$$$t.$$$$a/$(type).$(w)";done;done))) \
 	)
+
+$(foreach t,$(tests),\
+	$(foreach type,$(call testtypes_for_test,$(t)),\
+	  $(eval $(call check_template,$(t).$(type),$(fortestarchs) $(fortestwidths) \
+	    echo "check/$(t).$$$$a/$(type).$$$$w";done;done))) \
+	$(foreach type,$(call testtypes_for_test,$(t)),\
+	  $(foreach w,$(testwidths),\
+	    $(eval $(call check_template,$(t).$(type).$(w),$(fortestarchs) \
+	      echo "check/$(t).$$$$a/$(type).$(w)";done)))) \
+	$(foreach arch,$(testarchs),\
+	  $(foreach type,$(call testtypes_for_test,$(t)),\
+	    $(eval $(call check_template,$(t).$(arch).$(type),$(fortestwidths) \
+	      echo "check/$(t).$(arch)/$(type).$$$$w";done))) \
+	  $(foreach w,1 4 8 16,\
+	    $(eval $(call check_template,$t.$(arch).$w,for type in $(call testtypes_for_test,$(t)); do \
+	      echo "check/$t.$(arch)/$$$$type.$w";done)))) \
+	)
+
+fortesttypes := for type in $(testtypes); do
 
 $(foreach arch,$(testarchs),\
 	$(eval $(call simple_check_template,constexpr-$(arch),$(objdir)/constexpr.$(arch).s))\
 	$(eval $(call simple_check_template,math-traits-$(arch),$(objdir)/math-traits.$(arch).s))\
-	$(eval $(call check_template,$(arch),$(fortesttypes) $(fortests) \
+	$(eval $(call check_template,$(arch),$(fortesttypes) for t in $(call tests_for_type,$(type)); do \
 	  echo "check-$$$$t.$(arch).$$$$type";done;done;\
 	  echo "check-math-traits-$(arch)";\
 	  echo "check-constexpr-$(arch)")) \
 	)
 
-$(foreach type,$(testtypes),\
-	$(foreach w,$(testwidths),\
-	  $(eval $(call check_template,$(type).$(w),$(fortests) $(fortestarchs) \
-	    echo "check/$$$$t.$$$$a/$(type).$(w)";done;done))) \
-	)
-
-$(foreach t,$(tests),\
-	$(foreach type,$(testtypes),\
-	  $(eval $(call check_template,$(t).$(type),$(fortestarchs) $(fortestwidths) \
-	    echo "check/$(t).$$$$a/$(type).$$$$w";done;done))) \
-	$(foreach type,$(testtypes),\
-	  $(foreach w,$(testwidths),\
-	    $(eval $(call check_template,$(t).$(type).$(w),$(fortestarchs) \
-	      echo "check/$(t).$$$$a/$(type).$(w)";done)))) \
-	$(foreach arch,$(testarchs),\
-	  $(foreach type,$(testtypes),\
-	    $(eval $(call check_template,$(t).$(arch).$(type),$(fortestwidths) \
-	      echo "check/$(t).$(arch)/$(type).$$$$w";done))) \
-	  $(foreach w,1 4 8 16,\
-	    $(eval $(call check_template,$t.$(arch).$w,$(fortesttypes) \
-	      echo "check/$t.$(arch)/$$$$type.$w";done)))) \
-	)
-
 $(check_targets): $(objdir)/compile_commands.json $(wildcard tests/*.cpp) Makefile Makefile.common
 	$(file >$@)
-	$(foreach t,$(tests),$(foreach w,$(testwidths),$(foreach y,$(testtypes),$(foreach a,$(testarchs),\
+	$(foreach t,$(tests),$(foreach w,$(testwidths),$(foreach y,$(call testtypes_for_test,$(t)),$(foreach a,$(testarchs),\
 		$(file >>$@,check/$t.$a/$y.$w)\
 	))))
 #		$(file >>$@,check/fast-math/$t.$a/$y.$w)\
