@@ -646,7 +646,7 @@ namespace simd
 		 return std::isfinite(__x[__i]);
 	       });
       else if constexpr (_Vp::size() == 1)
-	return std::isfinite(__x[0]);
+	return _Kp(std::isfinite(__x[0]));
       else if constexpr (_Traits.template _M_eval_as_f32<typename _Vp::value_type>())
 	return _Kp(isfinite<_Traits, rebind_t<float, _Vp>>(__x));
       else if constexpr (_Vp::abi_type::_S_nreg > 1)
@@ -690,7 +690,7 @@ namespace simd
 		 return std::isnormal(__x[__i]);
 	       });
       else if constexpr (_Vp::size() == 1)
-	return std::isnormal(__x[0]);
+	return _Kp(std::isnormal(__x[0]));
       else if constexpr (_Traits.template _M_eval_as_f32<typename _Vp::value_type>())
 	return _Kp(isnormal<_Traits, rebind_t<float, _Vp>>(__x));
       else if constexpr (_Vp::abi_type::_S_nreg > 1)
