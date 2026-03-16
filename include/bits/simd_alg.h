@@ -24,17 +24,45 @@ namespace std _GLIBCXX_VISIBILITY(default)
 _GLIBCXX_BEGIN_NAMESPACE_VERSION
 namespace simd
 {
+  /**
+   * @brief Returns the smaller value of @p __a or @p __b, element-wise.
+   *
+   * @note NaN inputs are implemented as erroneous behavior.
+   */
   template<typename _Tp, typename _Ap>
     [[__gnu__::__always_inline__]]
     constexpr basic_vec<_Tp, _Ap>
     min(const basic_vec<_Tp, _Ap>& __a, const basic_vec<_Tp, _Ap>& __b) noexcept
+#if VIR_EXTENSIONS
+    {
+      if constexpr (is_floating_point_v<_Tp>)
+	__glibcxx_simd_erroneous_unless(none_of(__a._M_isunordered(__b)),
+					"min requires totally_ordered");
+      return __select_impl(__a < __b, __a, __b);
+    }
+#else
     { return __select_impl(__a < __b, __a, __b); }
+#endif
 
+  /**
+   * @brief Returns the smaller value of @p __a or @p __b, element-wise.
+   *
+   * @note NaN inputs are implemented as erroneous behavior.
+   */
   template<typename _Tp, typename _Ap>
     [[__gnu__::__always_inline__]]
     constexpr basic_vec<_Tp, _Ap>
     max(const basic_vec<_Tp, _Ap>& __a, const basic_vec<_Tp, _Ap>& __b) noexcept
+#if VIR_EXTENSIONS
+    {
+      if constexpr (is_floating_point_v<_Tp>)
+	__glibcxx_simd_erroneous_unless(__a._M_isunordered(__b)._M_none_of(),
+					"max requires totally_ordered");
+      return __select_impl(__a < __b, __b, __a);
+    }
+#else
     { return __select_impl(__a < __b, __b, __a); }
+#endif
 
   template<typename _Tp, typename _Ap>
     [[__gnu__::__always_inline__]]

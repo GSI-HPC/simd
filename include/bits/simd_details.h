@@ -91,6 +91,21 @@
 	_GLIBCXX_SIMD_LOC "precondition failure in '%s':\n" msg " ('" #expr "' does not hold)",    \
 	__PRETTY_FUNCTION__ __VA_OPT__(,) __VA_ARGS__);                                            \
   } while(false)
+
+#define __glibcxx_simd_erroneous_unless(expr, msg)                                                 \
+  do {                                                                                             \
+    const bool __precondition_result = !bool(expr);                                                \
+    if (__builtin_constant_p(__precondition_result) && __precondition_result)                      \
+      {                                                                                            \
+	struct _Precondition                                                                       \
+	{                                                                                          \
+	  [[__gnu__::__noipa__, __gnu__::__warning__("precondition failure. \n"                    \
+	    _GLIBCXX_SIMD_LOC "note: " msg " (precondition '" #expr "' does not hold)")]]          \
+	  static inline void _S_fail() noexcept {}                                                 \
+	};                                                                                         \
+	_Precondition::_S_fail();                                                                  \
+      }                                                                                            \
+  } while(false)
 #endif
 
 namespace std _GLIBCXX_VISIBILITY(default)
