@@ -3,7 +3,7 @@
 #                       Matthias Kretz <m.kretz@gsi.de>
 
 benchmarks=$(patsubst %.cpp,%,$(wildcard *.cpp))
-archs=native ivybridge westmere x86-64
+archs=native ivybridge westmere x86-64 x86-64-v2
 CXXFLAGS=-g0 -O2 -std=gnu++26 -Wall -Wextra -Wno-psabi -fmax-errors=2 -D VIR_PATCH_MATH -DVIR_EXTENSIONS
 
 fastmath=-ffast-math

@@ -165,6 +165,10 @@ struct TimeResults
   { return TimeResults{a.addr, a.cycles_per_call - b.cycles_per_call}; }
 
   friend TimeResults
+  operator/(TimeResults a, double b)
+  { return TimeResults{a.addr, a.cycles_per_call / b}; }
+
+  friend TimeResults
   operator*(TimeResults a, double b)
   { return TimeResults{a.addr, a.cycles_per_call * b}; }
 

@@ -17,7 +17,7 @@ template <int Special>
       "Latency", "Throughput", "Sweep"};
 
     template <bool Latency, class T>
-      static double
+      static auto
       do_benchmark()
       {
         T a = T() + 0x1.fe8222p-10f;
@@ -26,7 +26,7 @@ template <int Special>
         using ::hypot;
         using std::hypot;
         if constexpr (Latency)
-          return time_mean<200'000>([=]() mutable {
+          return time_median<200'000>([=]() mutable {
                    T r = a;
                    r = hypot(vir::make_unknown(r), vir::make_unknown(b));
                    r = hypot(vir::make_unknown(r), vir::make_unknown(b));
@@ -36,7 +36,7 @@ template <int Special>
                    a = r;
                  }) * 0.25;
         else
-          return time_mean<100'000>([=]() {
+          return time_median<100'000>([=]() {
                    vir::fake_read(hypot(vir::make_unknown(a), vir::make_unknown(b)));
                    vir::fake_read(hypot(vir::make_unknown(a), vir::make_unknown(b)));
                    vir::fake_read(hypot(vir::make_unknown(a), vir::make_unknown(b)));
@@ -49,7 +49,7 @@ template <int Special>
       }
 
     template <class T>
-      static double
+      static auto
       sweep()
       {
         using TT = value_type_t<T>;
@@ -67,17 +67,17 @@ template <int Special>
         inputs[3903] = std::numeric_limits<TT>::max() * TT(0.93);
         using ::hypot;
         using std::hypot;
-        return time_mean<1>([&] {
-                 for (int i = 0; i < 4096; ++i)
+        return time_median<1>([&] {
+		 for (unsigned i = 0; i < inputs.size(); ++i)
                    {
                      T a = T() + inputs[i];
-                     for (int j = 0; j < 4096; j += size_v<T>)
+		     for (unsigned j = 0; j < inputs.size(); j += size_v<T>)
                        {
                          T b = load<T>(inputs, j);
                          vir::fake_read(hypot(a, b));
                        }
                    }
-               }) / (4096 * 4096 / size_v<T>);
+	       }) / (inputs.size() * inputs.size() / size_v<T>);
       }
 
     template <class T>
@@ -127,8 +127,8 @@ template <int Special>
       }
   };
 
-int
-main()
+void
+bench_main()
 {
   bench_all<float>();
   bench_all<double>();
