@@ -41,6 +41,27 @@ namespace test
 #include <meta>
 #include <ranges>
 
+namespace std::simd
+{
+  template <floating_point T, typename Abi>
+    constexpr basic_vec<T, Abi>
+    operator&(const basic_vec<T, Abi>& x, const basic_vec<T, Abi>& y)
+    {
+      using V0 = vec<T>;
+      if constexpr (x.size() < V0::size())
+	{
+	  return __vec_and(x._M_concat_data(), y._M_concat_data());
+	}
+      else
+	{
+	  auto [...xs] = chunk<V0>(x);
+	  const auto [...ys] = chunk<V0>(y);
+	  ((xs = __vec_and(xs._M_concat_data(), ys._M_concat_data())), ...);
+	  return cat(xs...);
+	}
+    }
+}
+
 using run_function = void(*)();
 
 // global objects
@@ -256,11 +277,8 @@ template <typename T0, typename T1>
 	T0 ref0(ref1);
 	T1 val1(val0);
 	const auto subnormal = fabs(ref1) < L::min();
-	using I = as_unsigned_t<T1>;
 	const T1 eps1 = select(subnormal, L::denorm_min(),
-			       L::epsilon() * std::bit_cast<T0>(
-						std::bit_cast<I>(ref1)
-						  & std::bit_cast<I>(signexp_mask)));
+			       L::epsilon() * (ref1 & signexp_mask));
 	const T0 ulp = select(val0 == ref0 || (isnan(val0) && isnan(ref0)),
 			      T0(), T0((ref1 - val1) / eps1));
 	if !consteval
