@@ -137,9 +137,9 @@ namespace simd
     using resize_t = typename resize<_Np, _Vp>::type;
 
   // [simd.syn]
-  static constexpr __simd_size_type zero_element   = numeric_limits<int>::min();
+  inline constexpr __simd_size_type zero_element   = numeric_limits<int>::min();
 
-  static constexpr __simd_size_type uninit_element = zero_element + 1;
+  inline constexpr __simd_size_type uninit_element = zero_element + 1;
 
   // [simd.permute.static]
   template<__simd_size_type _Np = 0, __simd_vec_or_mask_type _Vp,
