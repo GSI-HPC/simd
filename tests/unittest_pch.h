@@ -40,6 +40,7 @@ namespace test
 #include <cfenv>
 #include <meta>
 #include <ranges>
+#include <inplace_vector>
 
 namespace std::simd
 {
@@ -196,11 +197,12 @@ struct additional_info
   const bool failed = false;
 
   template <typename... Args>
-    constexpr void
+    constexpr additional_info
     operator()(std::string_view fmt, const Args&... args)
     {
       if (failed)
 	std::println("| {}", std::format(std::runtime_format(fmt), args...));
+      return *this;
     }
 
   constexpr additional_info
@@ -210,6 +212,96 @@ struct additional_info
       std::println("|{:>9} | {}", "", value);
     return *this;
   }
+};
+
+class FloatExceptCompare
+{
+public:
+  static inline bool ignore = false;
+  static inline int ignore_spurious = 0;
+  static inline int ignore_missing = 0;
+
+#if (math_errhandling & MATH_ERREXCEPT) && defined FE_INEXACT
+private:
+  int first_state;
+  int second_state;
+
+public:
+  FloatExceptCompare()
+  { reset(); }
+
+  // call after first math function invocation
+  [[gnu::noipa]]
+  void
+  record_first()
+  {
+    if (!ignore)
+      {
+	first_state = std::fetestexcept(FE_ALL_EXCEPT);
+	std::feclearexcept(FE_ALL_EXCEPT);
+      }
+  }
+
+  [[gnu::noipa]]
+  void
+  record_second()
+  {
+    if (!ignore)
+      {
+	second_state = std::fetestexcept(FE_ALL_EXCEPT);
+	std::feclearexcept(FE_ALL_EXCEPT);
+      }
+  }
+
+  // call after second math function invocation with different implementation but equal arguments
+  [[gnu::always_inline]]
+  auto
+  verify_equal_state(auto& t, std::source_location loc = std::source_location::current()) const
+  {
+    if (!ignore)
+      {
+	const int difference = second_state ^ first_state;
+	if (difference != 0 && ((second_state | (first_state & ignore_spurious))
+				  ^ (first_state | (second_state & ignore_missing))))
+	  {
+	    std::inplace_vector<std::string_view, 5> names;
+	    if (difference & FE_INEXACT)
+	      names.push_back("FE_INEXACT");
+	    if (difference & FE_UNDERFLOW)
+	      names.push_back("FE_UNDERFLOW");
+	    if (difference & FE_OVERFLOW)
+	      names.push_back("FE_OVERFLOW");
+	    if (difference & FE_DIVBYZERO)
+	      names.push_back("FE_DIVBYZERO");
+	    if (difference & FE_INVALID)
+	      names.push_back("FE_INVALID");
+	    return t.log_failure(first_state, second_state, loc, 0, "FloatExceptCompare")
+		     ("difference = {} {}", difference, names);
+	  }
+      }
+    return additional_info();
+  }
+
+  [[gnu::noipa]]
+  void
+  reset()
+  {
+    first_state = -1;
+    second_state = -1;
+    std::feclearexcept(FE_ALL_EXCEPT);
+  }
+#else
+public:
+  void record_first() {}
+
+  void record_second() {}
+
+  auto verify_equal_state(auto&) const {
+    return additional_info();
+  }
+
+  void reset() {}
+#endif
 };
 
 struct log_novalue {};
@@ -365,13 +457,11 @@ template <complex_like T, typename Abi>
 // - or for complex, a and b are any infinity (see my_isinf)
 // - or for complex, a and b are NaNs in real *and* imag components
 template <typename V>
-  constexpr bool
-  equal_with_nan_and_inf_fixup(const V& a, const V& b)
+  constexpr auto
+  equal_with_nan_and_inf_fixup_mask(const V& a, const V& b)
   {
     auto eq = a == b;
-    if (std::simd::all_of(eq))
-      return true;
-    else if constexpr (std::simd::__simd_vec_type<V>)
+    if constexpr (std::simd::__simd_vec_type<V>)
       {
 	using T = typename V::value_type;
 	using M = typename V::mask_type;
@@ -388,20 +478,20 @@ template <typename V>
 		    || (my_isinf(a) && my_isinf(b));
 #endif
 	  }
-	else
-	if constexpr (std::is_floating_point_v<T>)
+	else if constexpr (std::is_floating_point_v<T>)
 	  { // fix up nan == nan results
 	    eq |= isnan(a) && isnan(b);
 	  }
-	else
-	  return false;
-	return std::simd::all_of(eq);
       }
     else if constexpr (std::is_floating_point_v<V>)
-      return std::isnan(a) && std::isnan(b);
-    else
-      return false;
+      eq |= std::isnan(a) && std::isnan(b);
+    return eq;
   }
+
+template <typename V>
+  constexpr bool
+  equal_with_nan_and_inf_fixup(const V& a, const V& b)
+  { return std::simd::all_of(equal_with_nan_and_inf_fixup_mask(a, b)); }
 
 struct constexpr_verifier
 {
@@ -493,7 +583,7 @@ struct constexpr_verifier
   }
 
   constexpr ignore_the_rest
-  verify_equal_to_ulp(const auto& x, const auto& y, float allowed_distance) &
+  verify_equal_to_ulp(const auto& x, const auto& y, auto allowed_distance) &
   {
     okay = okay && std::simd::all_of(ulp_distance(x, y) <= allowed_distance);
     return {};
@@ -708,23 +798,25 @@ struct runtime_verifier
   }
 
   // ulp_distance_signed can raise FP exceptions and thus must be conditionally executed
-  [[gnu::always_inline]]
-  additional_info
-  verify_equal_to_ulp(auto&& x, auto&& y, float allowed_distance,
-		      std::source_location loc = std::source_location::current())
-  {
-    const auto ip = determine_ip();
-    const bool success = std::simd::all_of(ulp_distance(x, y) <= allowed_distance);
-    if (success)
-      {
-	++passed_tests;
-	return {};
-      }
-    else
-      return log_failure(x, y, loc, ip, "verify_equal_to_ulp")
-	       ("distance:", ulp_distance_signed(x, y),
-		"\n allowed:", allowed_distance);
-  }
+  template <typename V>
+    [[gnu::always_inline]]
+    additional_info
+    verify_equal_to_ulp(const V& x, const V& y, auto allowed_distance,
+			std::source_location loc = std::source_location::current())
+    {
+      const auto eq = equal_with_nan_and_inf_fixup_mask(x, y);
+      const auto ip = determine_ip();
+      const bool success = std::simd::all_of(eq || ulp_distance(x, y) <= allowed_distance);
+      if (success)
+	{
+	  ++passed_tests;
+	  return {};
+	}
+      else
+	return log_failure(x, y, loc, ip, "verify_equal_to_ulp")
+		 ("distance: {} (allowed: {})", select(eq, V{}, ulp_distance_signed(x, y)),
+		  int(allowed_distance));
+    }
 };
 
 template <int... is>
@@ -1012,6 +1104,25 @@ template <auto test_ref, int... is, std::size_t... arg_idx>
       requires (Tmp == 0) __VA_OPT__(&& (__VA_ARGS__))                                             \
       static constexpr repeat_n_times<N>::add_test test_n_obj_##name<Tmp> =
 
+/**
+ * Define a set of input values in @p values (as a std::array) that the test framework passes
+ * to the math function given via a lambda to @p tester. The framework will determine whether the
+ * math function takes 1, 2, or 3 arguments and call the function with all possible argument
+ * comibinations.
+ *
+ * The value of @p n_random determines how many random numbers to generate and pass to the function.
+ *
+ * Besides testing for equal results (compared with the scalar @c <cmath> functions), the framework
+ * also tests for equal floating-point exceptions.
+ */
+template <array_specialization ArgArray, typename Tester>
+  struct make_math_test
+  {
+    const ArgArray values;
+    const int n_random;
+    Tester tester;
+  };
+
 template <typename T, int N = sizeof(0ll) * CHAR_BIT * 4>
   struct trivial_vector
   {
@@ -1061,13 +1172,41 @@ template <typename T>
       {
 	if (is_variable_template(ifo) && has_identifier(ifo)
 	      && identifier_of(ifo).starts_with("test_"))
-	{
-	  std::meta::info obj = substitute(ifo, {std::meta::reflect_constant(0)});
-	  const int off = identifier_of(ifo).starts_with("test_n_obj_") ? 11 : 9;
-	  if (is_same_type(remove_const(type_of(obj)), ^^dummy_test))
-	    obj = std::meta::info();
-	  r.push_back(test_info {obj, identifier_of(ifo).substr(off)});
-	}
+	  {
+	    std::meta::info obj = substitute(ifo, {std::meta::reflect_constant(0)});
+	    const int off = identifier_of(ifo).starts_with("test_n_obj_") ? 11 : 9;
+	    if (is_same_type(remove_const(type_of(obj)), ^^dummy_test))
+	      obj = std::meta::info();
+	    r.push_back(test_info {obj, identifier_of(ifo).substr(off)});
+	  }
+	else if (is_variable(ifo) && is_static_member(ifo) && has_identifier(ifo)
+		   && has_template_arguments(type_of(ifo))
+		   && template_of(type_of(ifo)) == ^^make_math_test)
+	  r.push_back(test_info {ifo, identifier_of(ifo)});
+      }
+    return r;
+  }
+
+template <typename V, typename... Ts>
+  consteval std::array<V, simd::__div_ceil(int(sizeof...(Ts)), V::size())>
+  make_packed_array(Ts... values)
+  {
+    using T = typename V::value_type;
+    const std::array<T, sizeof...(Ts)> inputs = {static_cast<T>(values)...};
+    std::array<V, simd::__div_ceil(int(sizeof...(Ts)), V::size())> r = {};
+    if constexpr (r.size() == 1)
+      {
+	constexpr int ndups = simd::__div_ceil(V::size(), int(sizeof...(Ts)));
+	simd::basic_vec tmp = inputs;
+	constexpr auto [...is] = std::_IotaArray<ndups>;
+	r[0] = std::get<0>(simd::chunk<V>(simd::cat(((void)is, tmp)...)));
+      }
+    else
+      {
+	auto it = inputs.begin();
+	for (std::size_t i = 0; i < r.size() - 1; ++i, it += V::size())
+	  r[i] = simd::unchecked_load<V>(it, inputs.end());
+	r.back() = simd::partial_load<V>(it, inputs.end());
       }
     return r;
   }
@@ -1088,6 +1227,77 @@ template <typename V>
 	constexpr std::meta::info ifo = m[i].obj;
 	if constexpr (ifo == std::meta::info())
 	  std::println("|{:>25} |  - |{}", test_name, " 🟡 not applicable");
+	else if constexpr (has_template_arguments(type_of(ifo))
+			     && template_of(type_of(ifo)) == ^^make_math_test)
+	  {
+	    std::print("|{:>25} |  - |", test_name);
+	    constexpr auto test_ref = &[:ifo:];
+	    auto tester = test_ref->tester;
+	    constexpr auto [...is] = std::_IotaArray<test_ref->values.size()>;
+	    constexpr std::array arg0s = make_packed_array<V>(test_ref->values[is]...);
+	    if constexpr (requires(V x) { { tester(x, x) } -> std::same_as<V>; })
+	      {
+		const auto before = failed_tests;
+		constexpr std::array arg1s = {V(test_ref->values[is])...};
+		//constexpr_verifier t0;
+		runtime_verifier t1{"constprop"};
+		runtime_verifier t2{"runtime"};
+		using T = typename V::value_type;
+		try
+		  {
+		    template for (constexpr int a0i : std::_IotaArray<arg0s.size()>)
+		      {
+			template for (constexpr int a1i : std::_IotaArray<arg1s.size()>)
+			  {
+			    constexpr V a0 = arg0s[a0i];
+			    constexpr V a1 = arg1s[a1i];
+			    //const V x0 = test_ref->tester(a0, a1);
+			    //const V x1 = test_ref->tester(a1, a0);
+			    const V y0 = V([&](int i) -> T { return test_ref->tester(a0[i], a1[i]); });
+			    const V y1 = V([&](int i) -> T { return test_ref->tester(a1[i], a0[i]); });
+			    //t0.verify_equal_to_ulp(x0, y0, std::cw<1>);
+			    //t0.verify_equal_to_ulp(x1, y1, std::cw<1>);
+			    t1.verify_equal_to_ulp(test_ref->tester(a0, a1), y0, std::cw<1>);
+			    t1.verify_equal_to_ulp(test_ref->tester(a1, a0), y1, std::cw<1>);
+			  }
+		      }
+		      //if (t0.okay)
+		      //++passed_tests;
+		  }
+		catch(const test::precondition_failure& fail)
+		  {
+		    ++failed_tests;
+		  }
+		for (const V& x : arg0s)
+		  {
+		    for (const V& y : arg1s)
+		      {
+			FloatExceptCompare fec;
+			fec.ignore_missing = FE_UNDERFLOW | FE_INEXACT;
+			fec.ignore_spurious = FE_INEXACT;
+			V res = test_ref->tester(x, y);
+			fec.record_first();
+			// use make_value_unknown to avoid reuse of the result from testfun and thus
+			// no fp exceptions
+			V expect = V([&](int i) {
+			  return test_ref->tester(make_value_unknown(x[i]),
+						  make_value_unknown(y[i]));
+			});
+			fec.record_second();
+			t2.verify_equal_to_ulp(res, expect, std::cw<1>)
+			  ("inputs: {}, {}", x, y)
+			  ("normal||0: {}, {}", isnormal(x) || x == 0, isnormal(y) || y == 0);
+			fec.verify_equal_state(t2)("inputs: {}, {}", x, y)
+			  ("result: {} == {::a}", res, res);
+			res = test_ref->tester(y, x);
+			expect = V([&](int i) { return test_ref->tester(y[i], x[i]); });
+			t2.verify_equal_to_ulp(res, expect, std::cw<1>);
+		      }
+		  }
+		if (before == failed_tests)
+		  std::println("{}", " ✅ PASS");
+	      }
+	  }
 	else
 	  {
 	    constexpr auto test_ref = &[:ifo:];
@@ -1138,29 +1348,5 @@ int main()
 	       passed_tests, failed_tests);
   return failed_tests != 0 ? EXIT_FAILURE : EXIT_SUCCESS;
 }
-
-template <typename V, typename... Ts>
-  consteval std::array<V, simd::__div_ceil(int(sizeof...(Ts)), V::size())>
-  make_packed_array(Ts... values)
-  {
-    using T = typename V::value_type;
-    const std::array<T, sizeof...(Ts)> inputs = {static_cast<T>(values)...};
-    std::array<V, simd::__div_ceil(int(sizeof...(Ts)), V::size())> r = {};
-    if constexpr (r.size() == 1)
-      {
-	constexpr int ndups = simd::__div_ceil(V::size(), int(sizeof...(Ts)));
-	simd::basic_vec tmp = inputs;
-	constexpr auto [...is] = std::_IotaArray<ndups>;
-	r[0] = std::get<0>(simd::chunk<V>(simd::cat(((void)is, tmp)...)));
-      }
-    else
-      {
-	auto it = inputs.begin();
-	for (std::size_t i = 0; i < r.size() - 1; ++i, it += V::size())
-	  r[i] = simd::unchecked_load<V>(it, inputs.end());
-	r.back() = simd::partial_load<V>(it, inputs.end());
-      }
-    return r;
-  }
 
 #endif  // TESTS_UNITTEST_PCH_H_

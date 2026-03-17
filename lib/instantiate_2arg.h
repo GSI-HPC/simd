@@ -150,9 +150,15 @@ CONCAT(__fast_2x_, FN)(flt32_4, flt32_4, flt32_2, flt32_2);
 template _GLIBCXX_SIMD_MATH_RET_TYPE(flt32_4, flt32_4)
 CONCAT(__fast_2x_, FN)(flt32_4, flt32_4, flt32_4, flt32_4);
 
+template _GLIBCXX_SIMD_MATH_RET_TYPE(flt64_2, flt64_2)
+CONCAT(__fast_2x_, FN)(flt64_2, flt64_2, flt64_2, flt64_2);
+
 template _GLIBCXX_SIMD_MATH_RET_TYPE(flt32_4, flt32_2)
 CONCAT(__2x_, FN)(flt32_4, flt32_4, flt32_2, flt32_2);
 template _GLIBCXX_SIMD_MATH_RET_TYPE(flt32_4, flt32_4)
 CONCAT(__2x_, FN)(flt32_4, flt32_4, flt32_4, flt32_4);
+
+template _GLIBCXX_SIMD_MATH_RET_TYPE(flt64_2, flt64_2)
+CONCAT(__2x_, FN)(flt64_2, flt64_2, flt64_2, flt64_2);
 #endif
 

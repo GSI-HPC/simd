@@ -6,26 +6,14 @@
 
 #include "unittest.h"
 
-static constexpr bool is_iec559 =
-#ifdef __GCC_IEC_559
-      __GCC_IEC_559 >= 2;
-#elif defined __STDC_IEC_559__
-      __STDC_IEC_559__ == 1;
-#else
-      false;
-#endif
-
-// no tests for non-floating-point types
-template <typename V>
-  struct Tests {};
-
 #if VIR_PATCH_MATH
 template <typename V>
-  requires std::floating_point<typename V::value_type>
-  struct Tests<V>
+  struct Tests
   {
     using T = typename V::value_type;
     using M = typename V::mask_type;
+
+    static_assert(std::floating_point<T>);
 
     using L = std::numeric_limits<T>;
 
@@ -35,6 +23,7 @@ template <typename V>
     static constexpr T max = L::max();
     static constexpr T inf = L::infinity();
     static constexpr T nan = L::quiet_NaN();
+    static constexpr T zero = 0;
 
     static constexpr T after_one = 1 + L::epsilon();
     static constexpr T before_one = (2 - L::epsilon()) / 2;
@@ -67,6 +56,31 @@ template <typename V>
 	  t.verify_equal(nearbyint(x), V([&](int i) { return std::nearbyint(x[i]); }));
 	}
       }
+    };
+
+    ADD_TEST(hypot) {
+      std::tuple {(test_iota<V> + 21) / 3},
+      [](auto& t, V x) {
+	t.verify_equal_to_ulp(hypot(x, x),
+			      V([&](int i) -> T {
+				return std::hypot(x[i], x[i]);
+			      }), std::cw<1>)(
+	  "input: {}", x);
+      }
+    };
+
+    static constexpr auto hypot_special_values = make_math_test {
+      std::array{
+#ifdef __STDC_IEC_559__
+	nan, nan, inf, -inf, -zero, denorm_min, norm_min / 3,
+#endif
+	zero, norm_min, T(1), T(2), max / 5, max / 3, max / 2,
+#ifndef __FAST_MATH__
+	max // fast-math hypot is imprecise for the max exponent
+#endif
+      },
+      10000,
+      [](const auto& x, const auto& y) { return std::hypot(x, y); }
     };
   };
 #endif

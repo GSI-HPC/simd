@@ -60,6 +60,7 @@ namespace std::simd
       using L = numeric_limits<T>;
       constexpr int N = __width_of<TV>;
       using V = vec<T, N>;
+      using M = mask<T, N>;
       const V x = x0;
       const V y = y0;
       if constexpr (!is_void_v<IncreasePrecision<T>>)
@@ -71,8 +72,11 @@ namespace std::simd
               return r;
             return select(isinf(x) || isinf(y), inf_v<V>, r);
           }
-      const V absx = fabs(x); // no error
-      const V absy = fabs(y); // no error
+      // NaN inputs to min/max are UB (requires totally_ordered), replace inputs where a NaN output
+      // is needed with precise 3²+4²=5².
+      const M nan = isunordered(x, y);
+      const V absx = select(nan, V(3), fabs(x)); // no error
+      const V absy = select(nan, V(4), fabs(y)); // no error
       V hi = max(absx, absy); // no error
       V lo = min(absx, absy); // no error
       const auto huge_diff = is_large_diff(hi, lo);
@@ -84,8 +88,19 @@ namespace std::simd
           const V scale_back = rescale_factors(hi, lo);
           return scale_back * sqrt((lo * lo)._M_assoc_barrier() + hi * hi);
         }
+      else if (all_of(isnormal(x) || x == 0) && all_of(isnormal(y) || y == 0))
+	{ // more likely and cheaper than the branch below
+	  const auto k0 = lo == 0;
+	  const auto h0 = hi;
+	  hi = select(hi == 0, V(1), hi);
+	  const V scale_back = rescale_factors(hi, lo);
+	  const V r = scale_back * sqrt((lo * lo)._M_assoc_barrier() + hi * hi);
+	  return select(k0, h0, r);
+	}
       else
         {
+	  const M inf = isinf(x) || isinf(y);
+	  lo = select(inf && !nan, norm_min_v<V>, lo); // avoid potential FE_OVERFLOW
           // slower path to support subnormals
           // if hi is subnormal, avoid scaling by inf & final mul by 0
           // (which yields NaN) by using min()
@@ -93,11 +108,11 @@ namespace std::simd
           // invert exponent w/o error and w/o using the slow divider
           // unit: xor inverts the exponent but off by 1. Multiplication
           // with .5 adjusts for the discrepancy.
-          const V scale = select(hi >= norm_min_v<V>,
-                                 (hi & inf_v<V>) ^ inf_v<V> * T(.5),
+	  const V scale = select(isnormal(hi), // hi == inf must be excluded to avoid FE_INVALID
+				 ((hi & inf_v<V>) ^ inf_v<V>) * T(.5),
                                  subnorm_scale);
           // adjust final exponent for subnormal inputs
-          V hi_exp = select(hi >= norm_min_v<V>, V(hi & inf_v<V>),
+	  V hi_exp = select(isnormal(hi), V(hi & inf_v<V>),
                             V(norm_min_v<V>)); // no error
           V h1 = hi * scale; // no error
           lo *= scale;       // no error
@@ -107,8 +122,8 @@ namespace std::simd
 
           V fixup = hi; // lo == 0
           // where(lo == 0, fixup)                   = hi;
-          fixup = select(isunordered(x, y), L::quiet_NaN(), fixup);
-          fixup = select(isinf(absx) || isinf(absy), L::infinity(), fixup);
+	  fixup = select(nan, L::quiet_NaN(), fixup);
+	  fixup = select(inf, L::infinity(), fixup);
           // Instead of lo == 0, the following could depend on h1² ==
           // h1² + lo (i.e. hi is so much larger than the other two
           // inputs that the result is exactly hi). While this may
@@ -116,7 +131,7 @@ namespace std::simd
           // ISA has FMAs (because h1² + lo is an FMA, but the
           // intermediate
           // h1² must be kept)
-          return select(lo == 0 || isunordered(x, y) || isinf(absx) || isinf(absy), fixup, r);
+	  return select(lo == 0 || nan || inf, fixup, r);
         }
     }
 
