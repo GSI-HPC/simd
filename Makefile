@@ -145,7 +145,7 @@ debug:
 more_checks := ci check check10 check1 check-failed check-passed check-untested check-fast-math rerun
 
 .PHONY: $(more_checks)
-$(more_checks): $(check_targets)
+$(more_checks): $(check_targets) $(objdir)/libsimd.a
 	@$(MAKE) -f Makefile.more --no-print-directory $@
 
 helptargets := $(more_checks) $(codegen_targets) check-constexpr
