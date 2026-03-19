@@ -40,7 +40,8 @@ print_progress := flock $(objdir)/.progress ./increment.sh $(objdir)/.progress |
 		  }
 endif
 
-.PHONY: check check10 check1
+.PHONY: check ci check10 check1
+
 check: check-constexpr $(shuffled_checks) $(codegen_targets)
 
 ci: check-constexpr $(wordlist 1,$(shell echo $$((5*$(words $(tests))))),$(shuffled_checks))
