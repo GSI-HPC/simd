@@ -219,7 +219,7 @@ check/$(1).$(2)/%: tests/$(1).cpp $(objdir)/$(2).hpp tests/unittest*.h $(objdir)
 	@mkdir -p $$(dir $$(@:check/%=$(objdir)/%.exe)) $$(dir $$@)
 	@rm -f $$(@:check/%=$(objdir)/%.exe) $$@
 	@./wait_for_memory.sh "$$(NUM_JOBS)"
-	@$$(call call_compiler,$$(CXXFLAGS) -march=$(2) -D UNITTEST_TYPE="$$(call gettype,$$*)" -D UNITTEST_WIDTH=$$(call getwidth,$$*) -include $(objdir)/$(2).hpp $(if $(DIRECT),-o $$(@:check/%=$(objdir)/%.exe),-c -o $$(@:check/%=$(objdir)/%.o)) $$<)
+	@$$(call call_compiler,$$< -march=$(2) -DUNITTEST_TYPE="$$(call gettype,$$*)" -DUNITTEST_WIDTH=$$(call getwidth,$$*) $$(CXXFLAGS) -include $(objdir)/$(2).hpp $(if $(DIRECT),-o $$(@:check/%=$(objdir)/%.exe),-c -o $$(@:check/%=$(objdir)/%.o)))
 ifeq ($(DIRECT),)
 	@true || printf -- '$$(msg_link) $$@\n'
 	@$$(LINK_CXX) $$(CXXFLAGS) -march=$(2) $(objdir)/libsimd.a -o $$(@:check/%=$(objdir)/%.exe) $$(@:check/%=$(objdir)/%.o)
@@ -245,7 +245,7 @@ else
 	@mkdir -p $$(dir $$(@:check/%=$(objdir)/%.exe)) $$(dir $$@)
 	@printf -- '$$(msg_build) $(if $(DIRECT),and link )$$(@:check/%=  $(objdir)/%.exe)\n'
 	@rm -f $$(@:check/%=$(objdir)/%.exe) $$@
-	@$$(call call_compiler,$$(CXXFLAGS) -ffast-math -march=$(2) -D UNITTEST_TYPE="$$(call gettype,$$*)" -D UNITTEST_WIDTH=$$(call getwidth,$$*) -include $(objdir)/$(2).fast-math.hpp $(if $(DIRECT),-o $$(@:check/%=$(objdir)/%.exe),-c -o $$(@:check/%=$(objdir)/%.o)) $$<)
+	@$$(call call_compiler,$$< -march=$(2) -DUNITTEST_TYPE="$$(call gettype,$$*)" -DUNITTEST_WIDTH=$$(call getwidth,$$*) -ffast-math $$(CXXFLAGS) -include $(objdir)/$(2).fast-math.hpp $(if $(DIRECT),-o $$(@:check/%=$(objdir)/%.exe),-c -o $$(@:check/%=$(objdir)/%.o)))
 ifeq ($(DIRECT),)
 	@true || printf -- '$$(msg_link) $$@\n'
 	@$$(LINK_CXX) $$(CXXFLAGS) -ffast-math -march=$(2) -o $$(@:check/%=$(objdir)/%.exe) $$(@:check/%=$(objdir)/%.o)
