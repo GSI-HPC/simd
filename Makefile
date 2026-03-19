@@ -2,7 +2,7 @@
 # Copyright © 2025–2026 GSI Helmholtzzentrum fuer Schwerionenforschung GmbH
 #                       Matthias Kretz <m.kretz@gsi.de>
 
-all: obj/libsimd.so
+all: obj/libsimd.so obj/libsimd.a
 
 include Makefile.common
 
@@ -85,10 +85,13 @@ endef
 
 $(foreach arch,$(libarchs),$(eval $(call lib_template,$(arch))))
 
-$(objdir)/libsimd.so: $(foreach src,$(lib_srcs),$(foreach arch,$(libarchs),$(objdir)/$(arch)/$(src).o)) \
-                      $(foreach src,$(lib_srcs),$(foreach arch,$(libarchs),$(objdir)/$(arch)/finite-$(src).o))
+$(objdir)/libsimd.so $(objdir)/libsimd.a: \
+  $(foreach src,$(lib_srcs),$(foreach arch,$(libarchs),$(objdir)/$(arch)/$(src).o)) \
+  $(foreach src,$(lib_srcs),$(foreach arch,$(libarchs),$(objdir)/$(arch)/finite-$(src).o))
 	@printf -- '$(msg_link) $@\n'
-	@$(LINK_CXX) $(CXXFLAGS) -fno-lto -shared -o $@ $^
+	@$(if $(patsubst %.so,,$@),\
+		$(AR) rcs $@ $^,\
+		$(LINK_CXX) $(CXXFLAGS) -fno-lto -shared -o $@ $^)
 
 fortestarchs := for a in $(testarchs); do
 fortestwidths := for w in $(testwidths); do
@@ -161,10 +164,6 @@ check-$(1):
 helptargets+=check-$(1)
 
 endef
-
-testtypes_for_test = $(if $(filter $(1),$(complex_tests)),$(complex_testtypes),) \
-		     $(if $(filter $(1),$(float_tests)),$(float_testtypes),) \
-		     $(if $(filter $(1),$(int_tests)),$(int_testtypes),)
 
 $(foreach t,$(tests),\
 	$(eval $(call check_template,$(t), $(fortestarchs) $(fortestwidths) for type in $(call testtypes_for_test,$(t)); do \

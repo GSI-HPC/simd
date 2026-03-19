@@ -145,6 +145,10 @@ testtypes ::= $(subst ::,--,$(testtypes))
 
 testwidths ::= $(shell seq 1 65)
 
+testtypes_for_test = $(if $(filter $(1),$(complex_tests)),$(complex_testtypes),) \
+		     $(if $(filter $(1),$(float_tests)),$(float_testtypes),) \
+		     $(if $(filter $(1),$(int_tests)),$(int_testtypes),)
+
 getwidth = $(subst .,,$(suffix $(1)))
 gettype = $(subst -, ,$(subst complex-double,std::complex<double>,$(subst complex-float,std::complex<float>,$(subst complex-float16_t,std::complex<float16_t>,$(subst .,,$(basename $(notdir $(1))))))))
 getarch = $(subst .,,$(suffix $(subst /,,$(dir $(1)))))
@@ -210,7 +214,7 @@ no_fast_math = $(shell head -n10 tests/$(1).cpp | grep -q no-fast-math && echo 1
 #	@driver.sh $(1) $(2) $$* "$(DIRECT)" "$$(CXX)" "$$(LINK_CXX)" $$(CXXFLAGS)
 # arguments: test, arch
 define exe_template
-check/$(1).$(2)/%: tests/$(1).cpp $(objdir)/$(2).hpp tests/unittest*.h $(objdir)/libsimd.so | $(objdir)/$(2).hpp.gch setup_progress
+check/$(1).$(2)/%: tests/$(1).cpp $(objdir)/$(2).hpp tests/unittest*.h $(objdir)/libsimd.a | $(objdir)/$(2).hpp.gch setup_progress
 	@printf -- '$$(msg_build) $(if $(DIRECT),and link )$$(@:check/%=  $(objdir)/%.exe)\n'
 	@mkdir -p $$(dir $$(@:check/%=$(objdir)/%.exe)) $$(dir $$@)
 	@rm -f $$(@:check/%=$(objdir)/%.exe) $$@
@@ -218,7 +222,7 @@ check/$(1).$(2)/%: tests/$(1).cpp $(objdir)/$(2).hpp tests/unittest*.h $(objdir)
 	@$$(call call_compiler,$$(CXXFLAGS) -march=$(2) -D UNITTEST_TYPE="$$(call gettype,$$*)" -D UNITTEST_WIDTH=$$(call getwidth,$$*) -include $(objdir)/$(2).hpp $(if $(DIRECT),-o $$(@:check/%=$(objdir)/%.exe),-c -o $$(@:check/%=$(objdir)/%.o)) $$<)
 ifeq ($(DIRECT),)
 	@true || printf -- '$$(msg_link) $$@\n'
-	@$$(LINK_CXX) $$(CXXFLAGS) -march=$(2) $(objdir)/libsimd.so -o $$(@:check/%=$(objdir)/%.exe) $$(@:check/%=$(objdir)/%.o)
+	@$$(LINK_CXX) $$(CXXFLAGS) -march=$(2) $(objdir)/libsimd.a -o $$(@:check/%=$(objdir)/%.exe) $$(@:check/%=$(objdir)/%.o)
 	@touch -r $$(@:check/%=$(objdir)/%.o) $$(@:check/%=$(objdir)/%.exe)
 	@rm $$(@:check/%=$(objdir)/%.o)
 endif

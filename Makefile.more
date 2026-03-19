@@ -8,8 +8,9 @@ shuffled_checks := $(shell shuf $(check_targets))
 
 untested := $(filter-out $(wildcard check/*.*/*.*),$(shuffled_checks))
 
-totaltests := $(shell echo $$(( $(words $(testarchs)) * $(words $(tests)) \
-	      * $(words $(testtypes)) * $(words $(testwidths)) )))
+totaltests := $(shell echo $$(( $(words $(testarchs)) \
+	      * $(words $(foreach t,$(tests),$(foreach y,$(call testtypes_for_test,$(t)),x))) \
+	      * $(words $(testwidths)) )))
 
 total1  := $(shell echo $$(( ($(totaltests) + 50) / 100)))
 
