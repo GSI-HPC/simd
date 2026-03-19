@@ -4,9 +4,9 @@
 
 include Makefile.common
 
-shuffled_checks := $(shell shuf $(check_targets))
+shuffled_checks = $(shell shuf $(check_targets))
 
-untested := $(filter-out $(wildcard check/*.*/*.*),$(shuffled_checks))
+untested = $(filter-out $(wildcard check/*.*/*.*),$(shuffled_checks))
 
 totaltests := $(shell echo $$(( $(words $(testarchs)) \
 	      * $(words $(foreach t,$(tests),$(foreach y,$(call testtypes_for_test,$(t)),x))) \
