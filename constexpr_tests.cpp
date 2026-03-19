@@ -99,11 +99,7 @@ namespace test02
     using expected_abi = _Abi_t<N, 1, default_mask_abi_variant, _AbiVariant::_CxIleav>;
 
   static_assert(same_as<simd::vec<complex<float>, 1>::abi_type, expected_abi<1>>);
-#ifdef __AVX__
   static_assert(same_as<simd::vec<complex<double>, 1>::abi_type, expected_abi<1>>);
-#else
-  static_assert(same_as<simd::vec<complex<double>, 1>::abi_type, simd::_ScalarAbi<1>>);
-#endif
 
 #if defined __AVX512F__
   static_assert(same_as<simd::vec<complex<float>, 2>::abi_type,
@@ -127,11 +123,11 @@ namespace test02
   static_assert(same_as<simd::vec<complex<float>, 2>::abi_type,
 			_Abi_t<2, 1, _AbiVariant::_CxIleav>>);
   static_assert(same_as<simd::vec<complex<double>, 2>::abi_type,
-			_ScalarAbi<2>>);
+			_Abi_t<2, 2, _AbiVariant::_CxIleav>>);
   static_assert(same_as<simd::vec<complex<float>, 4>::abi_type,
 			_Abi_t<4, 2, _AbiVariant::_CxIleav>>);
   static_assert(same_as<simd::vec<complex<double>, 4>::abi_type,
-			_ScalarAbi<4>>);
+			_Abi_t<4, 4, _AbiVariant::_CxIleav>>);
 #endif
 
   static_assert(same_as<simd::vec<int>::mask_type, simd::mask<int>>);

@@ -394,48 +394,9 @@ namespace simd
 #endif
 
   /** @internal
-   * This ABI tag describes basic_vec objects that store one element per data member and basic_mask
-   * objects that store one bool data members.
-   *
-   * @tparam _Np   The number of elements, which also matches the number of data members in
-   *               basic_vec and basic_mask.
-   */
-  template <int _Np = 1>
-    struct _ScalarAbi
-    {
-      static constexpr int _S_size = _Np;
-
-      static constexpr int _S_nreg = _Np;
-
-      static constexpr _AbiVariant _S_variant = {};
-
-      template <typename _Tp>
-	using _DataType = __canonical_vec_type_t<_Tp>;
-
-      static constexpr bool _S_is_cx_ileav = false;
-
-      static constexpr bool _S_is_cx_ctgus = false;
-
-      static constexpr bool _S_is_vecmask = false;
-
-      // in principle a bool is a 1-bit bitmask, but this is asking for an AVX512 bitmask
-      static constexpr bool _S_is_bitmask = false;
-
-      template <size_t>
-	using _MaskDataType = bool;
-
-      template <int _N2, int _Nreg2 = _N2>
-	static consteval _ScalarAbi<_N2>
-	_S_resize()
-	{
-	  static_assert(_N2 == _Nreg2);
-	  return {};
-	}
-    };
-
-  /** @internal
    * This ABI tag describes basic_vec objects that store one or more objects declared with the
-   * [[gnu::vector_size(N)]] attribute.
+   * [[gnu::vector_size(N)]] attribute (except if size and number of registers is equal, in which
+   * case a scalar is used).
    * Applied to basic_mask objects, this ABI tag either describes corresponding vector-mask objects
    * or bit-mask objects. Which one is used is determined via @p _Var.
    *
@@ -563,9 +524,12 @@ namespace simd
 	    { __x.template _S_resize<_Tp::_S_size, _Tp::_S_nreg>() } -> same_as<_Tp>;
 	  };
 
+  /** @internal
+   * Satisfied if @p _Tp is a valid simd ABI tag and the number of registers equals the size.
+   */
   template <typename _Tp>
     concept __scalar_abi_tag
-      = same_as<_Tp, _ScalarAbi<_Tp::_S_size>> && __abi_tag<_Tp>;
+      = same_as<_Tp, _Abi_t<_Tp::_S_size, _Tp::_S_size, _Tp::_S_variant>> && __abi_tag<_Tp>;
 
   // Determine if math functions must *raise* floating-point exceptions.
   // math_errhandling may expand to an extern symbol, in which case we must assume fp exceptions
@@ -1039,18 +1003,15 @@ namespace simd
       else if constexpr (__complex_like<_Tp>)
 	{
 	  constexpr auto __underlying = std::simd::__native_abi<typename _Tp::value_type>();
-	  if constexpr (__underlying._S_size <= 2)
-	    return _ScalarAbi<1>();
-	  else
-	    return _Abi_t<__underlying._S_size / 2, 1,
-			  __underlying._S_variant, _AbiVariant::_CxIleav>();
+	  constexpr int __cx_size = __underlying._S_size / (__underlying._S_size == 1 ? 1 : 2);
+	  return _Abi_t<__cx_size, 1, __underlying._S_variant, _AbiVariant::_CxIleav>();
 	}
       else if constexpr (_Traits._M_have_avx512fp16())
 	return _Abi_t<64 / sizeof(_Tp), 1, _AbiVariant::_BitMask>();
       else if constexpr (_Traits._M_have_avx512f())
 	return _Abi_t<64 / __adj_sizeof, 1, _AbiVariant::_BitMask>();
       else if constexpr (is_same_v<_Tp, _Float16> && !_Traits._M_have_f16c())
-	return _ScalarAbi<1>();
+	return _Abi_t<1, 1>();
       else if constexpr (_Traits._M_have_avx2())
 	return _Abi_t<32 / __adj_sizeof, 1>();
       else if constexpr (_Traits._M_have_avx() && is_floating_point_v<_Tp>)
@@ -1062,7 +1023,7 @@ namespace simd
 	return _Abi_t<16 / __adj_sizeof, 1>();
       // no MMX: we can't emit EMMS where it would be necessary
       else
-	return _ScalarAbi<1>();
+	return _Abi_t<1, 1>();
     }
 
 #else
@@ -1083,8 +1044,10 @@ namespace simd
     {
       if constexpr (!__vectorizable<_Tp>)
 	return _InvalidAbi();
+      else if constexpr (__complex_like<_Tp>)
+	return _Abi_t<1, 1, _AbiVariant::_CxIleav>();
       else
-	return _ScalarAbi<1>();
+	return _Abi_t<1, 1>();
     }
 
 #endif
@@ -1148,17 +1111,32 @@ namespace simd
       if constexpr (_Np <= 0 || !__vectorizable<_Tp>)
 	return _InvalidAbi();
 
-      else if constexpr (__scalar_abi_tag<_A0>)
-	return _A0::template _S_resize<_Np>();
-
       else
 	{
 	  using _Native = remove_const_t<decltype(std::simd::__native_abi<_Tp>())>;
 	  static_assert(0 != _Native::_S_size);
 	  constexpr int __nreg = __div_ceil(_Np, _Native::_S_size);
 
-	  if constexpr (__scalar_abi_tag<_Native>)
-	    return _Native::template _S_resize<_Np>();
+	  // __scalar_abi_tag is sticky (unless we reach size 1, where we can't know whether it was
+	  // an explicit __scalar_abi_tag before some resize_t)
+	  if constexpr (__scalar_abi_tag<_Native> || (__scalar_abi_tag<_A0> && _A0::_S_size >= 2))
+	    {
+	      constexpr bool __remove_cx
+		= __filter_abi_variant(_A0::_S_variant, _AbiVariant::_CxVariants) != _AbiVariant()
+		    && !__complex_like<_Tp>;
+	      constexpr bool __add_cx
+		= __filter_abi_variant(_A0::_S_variant, _AbiVariant::_CxVariants) == _AbiVariant()
+		    && __complex_like<_Tp>;
+
+	      if constexpr (__remove_cx)
+		return _Abi_t<_Np, _Np,
+			      __filter_abi_variant(_A0::_S_variant, _AbiVariant::_MaskVariants)>();
+	      else if constexpr (__add_cx)
+		return _Abi_t<_Np, _Np, _A0::_S_variant,
+			      __filter_abi_variant(_Native::_S_variant, _AbiVariant::_CxVariants)>();
+	      else
+		return _A0::template _S_resize<_Np, _Np>();
+	    }
 
 	  else if constexpr (__complex_like<_Tp> && _A0::_S_is_cx_ctgus && _Native::_S_is_cx_ileav)
 	    // we need half the number of registers since the number applies twice, to reals and
@@ -1202,9 +1180,6 @@ namespace simd
 
       if constexpr (_Bytes == 0 || _Np <= 0)
 	return _InvalidAbi();
-
-      else if constexpr (__scalar_abi_tag<_A0>)
-	return _A0::template _S_resize<_Np>();
 
       // If the source ABI is complex, _Bytes == sizeof(complex<float>) or
       // sizeof(complex<float16_t>), and _IsOnlyResize is true, then it's a mask<complex<float>,
@@ -1265,12 +1240,6 @@ namespace simd
       return true;
 #else
       if (__b0 != __b1)
-	return true;
-
-      // everything is better than _ScalarAbi, except when converting to a single bool
-      if constexpr (__scalar_abi_tag<_To>)
-	return __n > 1;
-      else if constexpr (__scalar_abi_tag<_From>)
 	return true;
 
       // converting to a bit-mask is better

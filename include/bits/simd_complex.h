@@ -41,9 +41,11 @@ namespace simd
     __hadd(const _V0& __x, const _V1& __y) noexcept
     {
       static_assert(__has_single_bit(unsigned(_V0::size())));
-      static_assert(_V1::size() % 2 == 0);
       static_assert(_V0::size() >= _V1::size());
-      if constexpr (_V0::abi_type::_S_nreg >= 2)
+      static_assert(_V1::size() % 2 == 0 || _V0::size() == 1);
+      if constexpr (_V0::size() == 1)
+	return __x + __y;
+      else if constexpr (_V0::abi_type::_S_nreg >= 2)
 	return cat(__hadd(__x._M_get_low(), __x._M_get_high()), __hadd(__y));
       else
 	{
@@ -228,7 +230,9 @@ namespace simd
       __set_real(basic_vec<_Tp, _Ap>& __x,
 		 const __similar_vec<_Tp, _Ap::_S_size / 2, _Ap>& __re) noexcept
       {
-	if constexpr (_Ap::_S_nreg >= 2)
+	if constexpr (__scalar_abi_tag<_Ap> && _Ap::_S_size == 2)
+	  __x._M_get_low() = __re;
+	else if constexpr (_Ap::_S_nreg >= 2)
 	  { // recurse
 	    constexpr int __n0 = __x._M_get_low().size();
 	    const auto& [__lo, __hi] = __re.template _M_chunk<
@@ -262,7 +266,9 @@ namespace simd
       __set_imag(basic_vec<_Tp, _Ap>& __x,
 		 const __similar_vec<_Tp, _Ap::_S_size / 2, _Ap>& __im) noexcept
       {
-	if constexpr (_Ap::_S_nreg >= 2)
+	if constexpr (__scalar_abi_tag<_Ap> && _Ap::_S_size == 2)
+	  __x._M_get_high() = __im;
+	else if constexpr (_Ap::_S_nreg >= 2)
 	  { // recurse
 	    constexpr int __n0 = __x._M_get_low().size();
 	    const auto& [__lo, __hi] = __im.template _M_chunk<
@@ -295,7 +301,9 @@ namespace simd
       constexpr basic_vec<_Tp, _Ap>
       __negate_imag(const basic_vec<_Tp, _Ap>& __x)
       {
-	if constexpr (_Ap::_S_nreg >= 2) // recurse
+	if constexpr (__scalar_abi_tag<_Ap> && _Ap::_S_size == 2)
+	  return basic_vec<_Tp, _Ap>::_S_init(__x._M_get_low(), -__x._M_get_high());
+	else if constexpr (_Ap::_S_nreg >= 2) // recurse
 	  return basic_vec<_Tp, _Ap>::_S_init(__negate_imag(__x._M_get_low()),
 					      __negate_imag(__x._M_get_high()));
 	else
@@ -339,7 +347,13 @@ namespace simd
       __mul(basic_vec<_Tp, _Ap>& __x, const basic_vec<_Tp, _Ap>& __y)
       {
 	static_assert(__complex_like<_Cx>);
-	if constexpr (_Ap::_S_nreg >= 2)
+	if constexpr (__scalar_abi_tag<_Ap> && _Ap::_S_size == 2)
+	  {
+	    const _Cx __c = _Cx(__x[0], __x[1]) * _Cx(__y[0], __y[1]);
+	    __x._M_get_low() = __c.real();
+	    __x._M_get_high() = __c.imag();
+	  }
+	else if constexpr (_Ap::_S_nreg >= 2)
 	  { // recurse
 	    __mul<_Cx, _Traits>(__x._M_get_low(), __y._M_get_low());
 	    __mul<_Cx, _Traits>(__x._M_get_high(), __y._M_get_high());
@@ -443,16 +457,12 @@ namespace simd
       using _DataType = __component_mask_for_ileav<_Bytes, _Ap>;
 
 #if VIR_ASSERT_SANITY
-      static_assert(_DataType::abi_type::_S_nreg == _Ap::_S_nreg);
+      static_assert(_DataType::abi_type::_S_nreg == _Ap::_S_nreg || __scalar_abi_tag<_Ap>);
 
       static_assert(is_same_v<decltype(__to_cx_ileav(_DataType())), basic_mask>);
 
 #endif
       static constexpr bool _S_is_scalar = _DataType::_S_is_scalar;
-
-      // Interleaved storage requires at least two vector elements and therefore cannot ever be
-      // scalar.
-      static_assert(!_S_is_scalar);
 
       static constexpr bool _S_use_bitmask = _DataType::_S_use_bitmask;
 
@@ -461,9 +471,6 @@ namespace simd
       static constexpr bool _S_is_partial = _DataType::_S_is_partial;
 
       static constexpr bool _S_has_bool_member = _DataType::_S_has_bool_member;
-
-      // same as for _S_is_scalar
-      static_assert(!_S_has_bool_member);
 
       static constexpr size_t _S_padding_bytes = _DataType::_S_padding_bytes;
 
@@ -586,14 +593,23 @@ namespace simd
 	basic_mask(const basic_mask<_UBytes, _UAbi>& __x) noexcept
 	  : _M_data([&] {
 	      using _UV = basic_mask<_UBytes, _UAbi>;
-	      if constexpr (_UV::_S_is_scalar)
-		return _DataType([&](int __i) { return __x[__i / 2]; });
-	      else if constexpr (_UAbi::_S_is_cx_ileav)
+	      if constexpr (_UAbi::_S_is_cx_ileav)
+		// _CxIleav -> _CxIleav => we can simply convert the contained mask
 		return __x._M_data; // calls conversion ctor on _DataType
+
+	      // __x is not _CxIleav from here on
 	      else if constexpr (_S_use_bitmask || _UV::_S_use_bitmask)
 		return _DataType::_S_init(__duplicate_each_bit<_S_size>(__x._M_to_uint()));
+
+	      // vec-mask to vec-mask from here on
 	      else if constexpr (_UAbi::_S_is_cx_ctgus)
+		// unwrap _CxCtgus mask and recurse
 		return basic_mask(__x._M_data)._M_data;
+
+	      else if constexpr (_UV::_S_is_scalar || _S_is_scalar)
+		// need to duplicate & convert one vector element into two bools
+		return _DataType([&](int __i) { return __x[__i / 2]; }); // TODO: optimize
+
 	      else if constexpr (_Bytes == _UBytes)
 		return _DataType::_S_recursive_bit_cast(__x);
 	      else if constexpr (_Bytes <= sizeof(0ll))
@@ -886,7 +902,7 @@ namespace simd
 
       _TSimd _M_data = {};
 
-      static constexpr bool _S_use_bitmask = _Ap::_S_is_bitmask;
+      static constexpr bool _S_use_bitmask = _TSimd::_S_use_bitmask;
 
       static constexpr bool _S_is_partial = sizeof(_M_data) > sizeof(_Tp) * _S_size;
 
@@ -1982,8 +1998,7 @@ namespace simd
     };
 
   template <__vectorizable _Tp, __abi_tag _Ap>
-    requires __complex_like<_Tp> && (_Ap::_S_is_cx_ctgus || _Ap::_S_size == 1
-				       || __scalar_abi_tag<_Ap>)
+    requires __complex_like<_Tp> && (_Ap::_S_is_cx_ctgus || _Ap::_S_size == 1)
     class basic_vec<_Tp, _Ap>
     : public _VecBase<_Tp, _Ap>
     {

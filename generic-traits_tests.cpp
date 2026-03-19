@@ -52,26 +52,24 @@ void test()
   static_assert(sizeof(_Bitmask<3>) == 1);
   static_assert(sizeof(_Bitmask<30>) == 4);
 
-  static_assert(__scalar_abi_tag<_ScalarAbi<1>>);
-  static_assert(__scalar_abi_tag<_ScalarAbi<2>>);
-  static_assert(!__scalar_abi_tag<_Abi_t<1, 1>>);
+  static_assert(__scalar_abi_tag<_Abi_t<1, 1>>);
+  static_assert(__scalar_abi_tag<_Abi_t<2, 2>>);
+  static_assert(!__scalar_abi_tag<_Abi_t<2, 1>>);
 
-  static_assert(__abi_tag<_ScalarAbi<1>>);
-  static_assert(__abi_tag<_ScalarAbi<2>>);
-  static_assert(__abi_tag<_Abi_t<1, 1, _AbiVariant::_CxIleav>>);
-  static_assert(__abi_tag<_Abi_t<1, 1, _AbiVariant::_CxCtgus>>);
+  static_assert(__abi_tag<_Abi_t<2, 1, _AbiVariant::_CxIleav>>);
+  static_assert(__abi_tag<_Abi_t<2, 1, _AbiVariant::_CxCtgus>>);
 
   using AN = decltype(__native_abi<float>());
   using A1 = decltype(__native_abi<float>()._S_resize<1>());
   static_assert(A1::_S_size == 1);
   static_assert(A1::_S_nreg == 1);
   static_assert(A1::_S_variant == AN::_S_variant);
-  static_assert(__scalar_abi_tag<A1> == __scalar_abi_tag<AN>);
   static_assert(std::is_same_v<decltype(__abi_rebind<float, AN::_S_size, A1>()), AN>);
   if constexpr (AN::_S_size >= 2) // the target has SIMD support for float
     {
       {
 	using A2 = decltype(__abi_rebind<float, 2, AN>());
+	static_assert(__scalar_abi_tag<A2> == __scalar_abi_tag<AN>);
 	static_assert(A2::_S_size == 2);
 	static_assert(A2::_S_nreg == 1);
 	static_assert(A2::_S_variant == AN::_S_variant);
@@ -93,6 +91,17 @@ void test()
       static_assert(AC2::_S_is_cx_ileav);
       static_assert(!AC2::_S_is_cx_ctgus);
     }
+
+  {
+    using ACx2 = _Abi_t<2, 2, _AbiVariant::_CxIleav>;
+    static_assert(__abi_tag<ACx2>);
+    static_assert(__scalar_abi_tag<ACx2>);
+    using AM4 = decltype(__abi_rebind<__float_from<2>, ACx2::_S_size * 2, ACx2>());
+    static_assert(__abi_tag<AM4>);
+    static_assert(__scalar_abi_tag<AM4>);
+    static_assert(AM4::_S_size == ACx2::_S_size * 2);
+    static_assert(!AM4::_S_is_cx_ileav);
+  }
 
   static_assert(__streq_to_1("1"));
   static_assert(!__streq_to_1(""));
