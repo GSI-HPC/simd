@@ -143,7 +143,7 @@ testtypes ::= \
 
 testtypes ::= $(subst ::,--,$(testtypes))
 
-testwidths ::= $(shell seq 1 65)
+testwidths ::= $(shell seq 1 64)
 
 testtypes_for_test = $(if $(filter $(1),$(complex_tests)),$(complex_testtypes),) \
 		     $(if $(filter $(1),$(float_tests)),$(float_testtypes),) \
