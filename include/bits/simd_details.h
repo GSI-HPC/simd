@@ -807,8 +807,8 @@ namespace simd
       constexpr __UINT64_TYPE__ __v1_mask  = 0b0000000000'0000000110; // SSE2
       constexpr __UINT64_TYPE__ __v2_mask  = 0b0000000000'0000111110; // SSE4.1
       constexpr __UINT64_TYPE__ __v3a_mask = 0b0000000000'0111111110; // AVX
-      constexpr __UINT64_TYPE__ __v3b_mask = 0b0000011111'1111111110; // Haswell–...lake / Zen1–3
-      constexpr __UINT64_TYPE__ __v4_mask  = 0b1111111111'1111111110; // Xeon / Xen4–5
+      constexpr __UINT64_TYPE__ __v3b_mask = 0b0000011111'1111111110; // Haswell-...lake / Zen1-3
+      constexpr __UINT64_TYPE__ __v4_mask  = 0b1111111111'1111111110; // Xeon / Xen4-5
       // the FP16 flag is implied by passing float16_t vectors
       if ((_M_flags & __v4_mask) == __v4_mask)
 	return _ArchTraits{__v4_mask};
@@ -1221,7 +1221,7 @@ namespace simd
    *
    * On IvyBridge, (vec<float> == 0.f) == (rebind_t<int, vec<float>> == 0) does not compile. It does
    * compile on basically every other target, though. This is due to the difference in ABI tag:
-   * _Abi<8, 1, …> vs. _Abi<8, 2, …> (8 elements, 1 vs. 2 registers).
+   * _Abi<8, 1, [...]> vs. _Abi<8, 2, [...]> (8 elements, 1 vs. 2 registers).
    * I know how to define this funtion for libstdc++ to avoid interconvertible masks. The question
    * is whether we can specify this in general for C++29.
    *
