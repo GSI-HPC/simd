@@ -790,6 +790,7 @@ namespace simd
 		  if constexpr (_S_use_bitmask)
 		    return ((_DataType(__x[__is]) << __is) | ...);
 		  else
+#if VIR_EXTENSIONS
 		    { // optimize via bit_cast to vec<signed char/short> -> != 0 -> mask conversion
 		      constexpr int __cx = _UAbi::_S_is_cx_ileav + 1;
 		      using _V1 = vec<__integer_from<sizeof(bool) * __cx>, _S_size>;
@@ -802,6 +803,9 @@ namespace simd
 		      const _Tmp __tmp = {__x, {}};
 		      return basic_mask(__builtin_bit_cast(_V1, __tmp) != 0)._M_data;
 		    }
+#else
+		    return _DataType{__vec_value_type<_DataType>(-__x[__is])...};
+#endif
 		}
 
 	      // vec-/bit-mask to bit-mask | bit-mask to vec-mask
@@ -1713,6 +1717,7 @@ namespace simd
 	: basic_mask(__x._M_data) // unwrap _CxCtgus basic_mask partial specialization
 	{}
 
+#if VIR_EXTENSIONS
       template <int _Member, size_t _UBytes, typename _UAbi>
 	[[__gnu__::__always_inline__]]
 	constexpr auto
@@ -1761,13 +1766,43 @@ namespace simd
 	  else
 	    return get<_Member>(chunk<_N0>(__x));
 	}
+#endif
 
       template <size_t _UBytes, typename _UAbi>
 	requires (_S_size == _UAbi::_S_size) && (!_UAbi::_S_is_cx_ctgus)
 	[[__gnu__::__always_inline__]]
 	constexpr explicit(__is_mask_conversion_explicit<_Ap, _UAbi>(_Bytes, _UBytes))
 	basic_mask(const basic_mask<_UBytes, _UAbi>& __x) noexcept
+#if VIR_EXTENSIONS
 	: _M_data0(_S_init_member<0>(__x)), _M_data1(_S_init_member<1>(__x))
+#else
+	  : _M_data0([&] {
+	      if constexpr (_UAbi::_S_nreg > 1)
+		{
+		  if constexpr (_UAbi::_S_is_cx_ileav)
+		    return __to_cx_ileav(__x._M_data._M_data0);
+		  else
+		    return __x._M_data0;
+		}
+	      else if constexpr (_N0 == 1)
+		return _Mask0(__x[0]);
+	      else
+		return get<0>(chunk<_N0>(__x));
+	    }()),
+	    _M_data1([&] {
+	      if constexpr (_UAbi::_S_nreg > 1)
+		{
+		  if constexpr (_UAbi::_S_is_cx_ileav)
+		    return __to_cx_ileav(__x._M_data._M_data1);
+		  else
+		    return __x._M_data1;
+		}
+	      else if constexpr (_N1 == 1)
+		return _Mask1(__x[_N0]);
+	      else
+		return get<1>(chunk<_N0>(__x));
+	    }())
+#endif
 	{}
 
       using _Base::_MaskBase;
