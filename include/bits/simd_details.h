@@ -533,12 +533,15 @@ namespace simd
 
   // Determine if math functions must *raise* floating-point exceptions.
   // math_errhandling may expand to an extern symbol, in which case we must assume fp exceptions
-  // need to be considered.
+  // need to be considered. A conforming C library must define math_errhandling, but in case it
+  // isn't defined we simply use the fallback.
+#ifdef math_errhandling
   template <int = 0>
     requires requires { typename bool_constant<0 != (math_errhandling & MATH_ERREXCEPT)>; }
     consteval bool
     __handle_fpexcept_impl(int)
     { return 0 != (math_errhandling & MATH_ERREXCEPT); }
+#endif
 
   // Fallback if math_errhandling doesn't work: implement correct exception behavior.
   consteval bool
