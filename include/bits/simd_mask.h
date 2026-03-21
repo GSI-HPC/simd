@@ -86,8 +86,8 @@ namespace simd
     {};
 
   /**
-   * Computes a member @c type <tt>basic_vec<_Tp, Abi></tt>, where @c Abi is chosen such that the
-   * number of elements is equal to <tt>_Vp::size()</tt> and features of the ABI tag (such as the
+   * Computes a member @c type `basic_vec<_Tp, Abi>`, where @c Abi is chosen such that the
+   * number of elements is equal to `_Vp::size()` and features of the ABI tag (such as the
    * internal representation of masks, or storage order of complex components) are preserved.
    */
   template <__vectorizable _Tp, __simd_vec_type _Vp, _ArchTraits _Traits>
@@ -616,8 +616,8 @@ namespace simd
       requires _Ap::_S_is_cx_ctgus
       { return __component_mask_for_ctgus<_Bytes, _Ap>(_M_data); }
 
-      /** \internal
-       * Bit-cast the given object \p __x to basic_mask.
+      /** @internal
+       * Bit-cast the given object @p __x to basic_mask.
        *
        * This is necessary for _S_nreg > 1 where the last element can be bool or when the sizeof
        * doesn't match because of different alignment requirements of the sub-masks.
@@ -1057,11 +1057,11 @@ namespace simd
 	return to_ullong();
       }
 
-      /** \internal
+      /** @internal
        * Return the mask as the smallest possible unsigned integer (up to 64 bits).
        *
-       * \tparam _Offset       Adjust the return type & value to start at bit \p _Offset.
-       * \tparam _Use_2_for_1  Store the value of every second element into one bit of the result.
+       * @tparam _Offset       Adjust the return type & value to start at bit @p _Offset.
+       * @tparam _Use_2_for_1  Store the value of every second element into one bit of the result.
        *                       (precondition: each even/odd pair stores the same value)
        */
       template <int _Offset = 0, bool _Use_2_for_1 = false, _ArchTraits _Traits = {}>

@@ -39,7 +39,7 @@ namespace simd
   {};
 
   /** @internal
-   * <tt>struct convert-flag</tt>
+   * `struct convert-flag`
    *
    * C++26 [simd.expos] / [simd.flags]
    */
@@ -48,7 +48,7 @@ namespace simd
   {};
 
   /** @internal
-   * <tt>struct aligned-flag</tt>
+   * `struct aligned-flag`
    *
    * C++26 [simd.expos] / [simd.flags]
    */
@@ -63,7 +63,7 @@ namespace simd
   };
 
   /** @internal
-   * <tt>template<size_t N> struct overaligned-flag</tt>
+   * `template<size_t N> struct overaligned-flag`
    *
    * @tparam _Np  alignment in bytes
    *

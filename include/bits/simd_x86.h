@@ -39,7 +39,7 @@ namespace simd
     = 4;
 #endif
 
-  /** \internal
+  /** @internal
    * Return a bit-mask for the given vector-mask.
    *
    * Caveats:
@@ -1057,7 +1057,7 @@ namespace simd
 	static_assert(false);
     }
 
-  /** \internal
+  /** @internal
    * AVX instructions typically work per 128-bit chunk. Horizontal operations thus produce vectors
    * where the two 128-bit chunks in the center are swapped. This function works as a fix-up step.
    */
@@ -1072,7 +1072,7 @@ namespace simd
 							   0, 2, 1, 3));
     }
 
-  /** \internal
+  /** @internal
    * Like __builtin_convertvector but with a precondition that input values are either 0 or -1.
    */
   template <__vec_builtin _To, __vec_builtin _From>
@@ -1102,8 +1102,8 @@ namespace simd
 	static_assert(false, "TODO");
     }
 
-  /** \internal
-   * Overload that concatenates \p __k0 and \p __k1 while converting.
+  /** @internal
+   * Overload that concatenates @p __k0 and @p __k1 while converting.
    */
   template <__vec_builtin _To, __vec_builtin _From>
     [[__gnu__::__always_inline__]]

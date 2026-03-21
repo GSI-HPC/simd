@@ -394,11 +394,21 @@ namespace simd
 #endif
 
   /** @internal
-   * This ABI tag describes basic_vec objects that store one or more objects declared with the
-   * [[gnu::vector_size(N)]] attribute (except if size and number of registers is equal, in which
-   * case a scalar is used).
-   * Applied to basic_mask objects, this ABI tag either describes corresponding vector-mask objects
-   * or bit-mask objects. Which one is used is determined via @p _Var.
+   * @brief This ABI tag determines the data member(s) of basic_vec and basic_mask.
+   *
+   * @p _Nreg determines the number of recursive basic_vec/basic_mask data members where @p _Nreg is
+   * equal to 1. With @p _Nreg equal to 1, the basic_vec/basic_mask holds one vector builtin (@p
+   * _Np greater than 1) or a scalar (@ _Np equal to 1).
+   * @f$\lceil\frac{\mathtt{Np}}{\mathtt{Nreg}}\rceil@f$ therefore determines the number of elements
+   * in a register (except for a remainder where it can be smaller). If @p _Np equals @p _Nreg, (the
+   * aforementioned quotient is 1), then basic_vec (recursively) holds non-vector data members and
+   * basic_mask holds bools.
+   *
+   * The @p _Var parameter determines details about the data member in the one register case. Masks
+   * can be represented as vector masks (the default comparison result of GNU vector builtins),
+   * bit-masks as used by AVX-512, bit-masks as used by ARM SVE (not yet implemented), or a single
+   * bool (for the @p _Np equals 1 case). For basic_mask it determines the actual data layout and
+   * for basic_mask it determines the result of compares.
    *
    * @tparam _Np    The number of elements.
    * @tparam _Nreg  The number of registers needed to store @p _Np elements.
@@ -525,7 +535,8 @@ namespace simd
 	  };
 
   /** @internal
-   * Satisfied if @p _Tp is a valid simd ABI tag and the number of registers equals the size.
+   * Satisfied if @p _Tp is a valid simd ABI tag and one element is stored per register (number of
+   * registers equals size).
    */
   template <typename _Tp>
     concept __scalar_abi_tag
@@ -1096,7 +1107,7 @@ namespace simd
     }
 
   /** @internal
-   * Alias for an ABI tag @c A such that <tt>basic_vec<_Tp, A></tt> stores @p _Np elements.
+   * Alias for an ABI tag @c A such that `basic_vec<_Tp, A>` stores @p _Np elements.
    *
    * C++26 [simd.expos.abi]
    */
@@ -1169,9 +1180,9 @@ namespace simd
    * @c rebind implementation detail for basic_mask.
    *
    * The important difference here is that we have no information about the actual value-type other
-   * than its @c sizeof. So <tt>_Bytes == 8</tt> could mean <tt>complex<float></tt>, @c double, or
-   * @c int64_t. E.g. <tt>_Np == 4</tt> with AVX w/o AVX2 that's <tt>vector(4) int</tt>,
-   * <tt>vector(4) long long</tt>, or <tt>2x vector(2) long long</tt>.
+   * than its @c sizeof. So `_Bytes == 8` could mean `complex<float>`, @c double, or @c int64_t.
+   * E.g. `_Np == 4` with AVX w/o AVX2 that's `vector(4) int`, `vector(4) long long`, or `2x
+   * vector(2) long long`.
    * That's why this overload has the additional @p _IsOnlyResize parameter, which tells us that the
    * value-type doesn't change.
    */
@@ -1315,7 +1326,7 @@ namespace simd
 	return dynamic_extent;
     }
 
-  // [simd.general] value-reserving
+  // [simd.general] value-preserving
   template <typename _From, typename _To>
     concept __arithmetic_only_value_preserving_convertible_to
       = convertible_to<_From, _To> && is_arithmetic_v<_From> && is_arithmetic_v<_To>
@@ -1502,7 +1513,7 @@ namespace simd
       };
 
   /** @internal
-   * Returns the highest index @c i where <tt>(__bits >> i) & 1</tt> equals @c 1.
+   * Returns the highest index @c i where `(__bits >> i) & 1` equals @c 1.
    */
   [[__gnu__::__always_inline__]]
   constexpr __simd_size_type

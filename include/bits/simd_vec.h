@@ -1096,7 +1096,7 @@ namespace simd
        * @brief Converting constructor from GCC vector builtins.
        *
        * This constructor enables direct construction from GCC vector builtins
-       * (<tt>[[gnu::vector_size(N)]]</tt>).
+       * (`[[gnu::vector_size(N)]]`).
        *
        * @param __x GCC vector builtin to convert from.
        *

@@ -39,7 +39,7 @@ namespace simd
     using __vec_builtin_type_bytes [[__gnu__::__vector_size__(_Bytes)]] = _Tp;
 
   /**
-   * Alias for a vector builtin with given value type \p _Tp and \p _Width.
+   * Alias for a vector builtin with given value type @p _Tp and @p _Width.
    */
   template <__vectorizable _Tp, __simd_size_type _Width>
     requires (__signed_has_single_bit(_Width))
@@ -65,7 +65,7 @@ namespace simd
       = __vec_builtin_of<_Tp, remove_cvref_t<decltype(declval<const _Tp>()[0])>>;
 
   /**
-   * Alias for the value type of the given __vec_builtin type \p _Tp.
+   * Alias for the value type of the given __vec_builtin type @p _Tp.
    */
   template <__vec_builtin _Tp>
     using __vec_value_type = remove_cvref_t<decltype(declval<const _Tp>()[0])>;
@@ -81,7 +81,7 @@ namespace simd
     inline constexpr __simd_size_type __width_of<_Tp> = sizeof(_Tp) / sizeof(__vec_value_type<_Tp>);
 
   /**
-   * Alias for a vector builtin with equal value type and new width \p _Np.
+   * Alias for a vector builtin with equal value type and new width @p _Np.
    */
   template <__simd_size_type _Np, __vec_builtin _TV>
     using __resize_vec_builtin_t = __vec_builtin_type<__vec_value_type<_TV>, _Np>;
@@ -152,7 +152,7 @@ namespace simd
     }
 
   /** @internal
-   * Return vector builtin with all values from \p __a and \p __b.
+   * Return vector builtin with all values from @p __a and @p __b.
    */
   template <__vec_builtin _TV>
     [[__gnu__::__always_inline__]]
@@ -436,9 +436,9 @@ namespace simd
       return __builtin_convertvector(__v, _UV);
     }
 
-  /** \internal
+  /** @internal
    * Overload of the above cast function that determines the destination vector type from a given
-   * element type \p _Up and the `__width_of` the argument type.
+   * element type @p _Up and the `__width_of` the argument type.
    *
    * Calls the above overload.
    */
@@ -448,7 +448,7 @@ namespace simd
     __vec_cast(_TV __v)
     { return __vec_cast<__vec_builtin_type<_Up, __width_of<_TV>>>(__v); }
 
-  /** \internal
+  /** @internal
    * As above, but with additional precondition on possible values of the argument.
    *
    * Precondition: __k[i] is either 0 or -1 for all i.
