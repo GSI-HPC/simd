@@ -376,9 +376,9 @@ namespace simd
   template <>
     struct __canonical_vec_type<wchar_t>
     {
-      using type = std::conditional_t<std::is_signed_v<wchar_t>,
-				      simd::__integer_from<sizeof(wchar_t)>,
-				      simd::_UInt<sizeof(wchar_t)>>;
+      using type = std::__conditional_t<std::is_signed_v<wchar_t>,
+					simd::__integer_from<sizeof(wchar_t)>,
+					simd::_UInt<sizeof(wchar_t)>>;
     };
 
 #if defined(__FLT64_DIG__) && defined(_GLIBCXX_DOUBLE_IS_IEEE_BINARY64)

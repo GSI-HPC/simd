@@ -562,7 +562,7 @@ namespace simd
 
       using _Tp = __vec_value_type<_TV>;
 
-      using _HV = __half_vec_builtin_t<conditional_t<_Np >= 2, _TV, __double_vec_builtin_t<_TV>>>;
+      using _HV = __half_vec_builtin_t<__conditional_t<_Np >= 2, _TV, __double_vec_builtin_t<_TV>>>;
 
       [[__gnu__::__always_inline__]]
       static constexpr _TV

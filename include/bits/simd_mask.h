@@ -370,9 +370,9 @@ namespace simd
 	      const auto __x1 = __xlast._M_concat_data();
 	      if constexpr (sizeof(__x1) <= sizeof(double) && (_Afirst::_S_size & 1) == 0)
 		{ // can use a single insert instruction
-		  using _Up = conditional_t<
+		  using _Up = __conditional_t<
 				is_floating_point_v<__vec_value_type<_Ret>>,
-				conditional_t<sizeof(__x1) == sizeof(double), double, float>,
+				__conditional_t<sizeof(__x1) == sizeof(double), double, float>,
 				__integer_from<sizeof(__x1)>>;
 		  auto __r2 = __vec_bit_cast<_Up>(__r);
 		  __vec_set(__r2, _Afirst::_S_size / 2, __vec_bit_cast<_Up>(__x1)[0]);
