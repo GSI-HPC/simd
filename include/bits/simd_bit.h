@@ -29,7 +29,12 @@ namespace simd
     [[__gnu__::__always_inline__]]
     constexpr _Vp
     byteswap(const _Vp& __v) noexcept
-    { return _Vp([&](int __i) { return std::byteswap(__v[__i]); }); }
+    {
+      if constexpr (sizeof(typename _Vp::value_type) == 1)
+	return __v;
+      else
+	return _Vp([&](int __i) { return std::byteswap(__v[__i]); });
+    }
 
   template<__simd_vec_type _Vp>
     requires __unsigned_integer<typename _Vp::value_type>
