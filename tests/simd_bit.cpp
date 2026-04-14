@@ -9,9 +9,32 @@
 #include <climits>
 
 template <typename V>
+  struct CheckInvocable
+  {
+    using T = typename V::value_type;
+    static constexpr bool unsigned_integer
+      = any_type_of<T, unsigned char, unsigned short, unsigned int, unsigned long,
+		    unsigned long long>;
+    static_assert(std::integral<T> == requires(V x) { std::byteswap(x); });
+    static_assert(unsigned_integer == requires(V x) { std::bit_ceil(x); });
+    static_assert(unsigned_integer == requires(V x) { std::bit_floor(x); });
+    static_assert(unsigned_integer == requires(V x) { std::has_single_bit(x); });
+    static_assert(unsigned_integer == requires(V x, V y) { std::rotl(x, y); });
+    static_assert(unsigned_integer == requires(V x, int y) { std::rotl(x, y); });
+    static_assert(unsigned_integer == requires(V x, V y) { std::rotr(x, y); });
+    static_assert(unsigned_integer == requires(V x, int y) { std::rotr(x, y); });
+    static_assert(unsigned_integer == requires(V x) { std::bit_width(x); });
+    static_assert(unsigned_integer == requires(V x) { std::countl_zero(x); });
+    static_assert(unsigned_integer == requires(V x) { std::countl_one(x); });
+    static_assert(unsigned_integer == requires(V x) { std::countr_zero(x); });
+    static_assert(unsigned_integer == requires(V x) { std::countr_one(x); });
+    static_assert(unsigned_integer == requires(V x) { std::popcount(x); });
+  };
+
+template <typename V>
   requires std::integral<typename V::value_type>
     && (V::size() * sizeof(typename V::value_type) <= 70 * 4) // avoid exploding RAM usage
-  struct Tests<V>
+  struct Tests<V> : CheckInvocable<V>
   {
     using T = typename V::value_type;
     using M = typename V::mask_type;
@@ -105,7 +128,7 @@ template <typename V>
   };
 
 template <typename V>
-  struct Tests
+  struct Tests : CheckInvocable<V>
   {};
 
 #include "unittest.h"

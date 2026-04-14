@@ -25,12 +25,14 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 namespace simd
 {
   template<__simd_vec_type _Vp>
+    requires integral<typename _Vp::value_type>
     [[__gnu__::__always_inline__]]
     constexpr _Vp
     byteswap(const _Vp& __v) noexcept
     { return _Vp([&](int __i) { return std::byteswap(__v[__i]); }); }
 
   template<__simd_vec_type _Vp>
+    requires __unsigned_integer<typename _Vp::value_type>
     [[__gnu__::__always_inline__]]
     constexpr _Vp
     bit_ceil(const _Vp& __v)
@@ -42,42 +44,55 @@ namespace simd
     }
 
   template<__simd_vec_type _Vp>
+    requires __unsigned_integer<typename _Vp::value_type>
     [[__gnu__::__always_inline__]]
     constexpr _Vp
     bit_floor(const _Vp& __v) noexcept
     { return _Vp([&](int __i) { return std::bit_floor(__v[__i]); }); }
 
   template<__simd_vec_type _Vp>
+    requires __unsigned_integer<typename _Vp::value_type>
     [[__gnu__::__always_inline__]]
     constexpr typename _Vp::mask_type
     has_single_bit(const _Vp& __v) noexcept
     { return typename _Vp::mask_type([&](int __i) { return std::has_single_bit(__v[__i]); }); }
 
   template<__simd_vec_type _V0, __simd_vec_type _V1>
+    requires __unsigned_integer<typename _V0::value_type>
+      && integral<typename _V1::value_type>
+      && (_V0::size() == _V1::size())
+      && (sizeof(typename _V0::value_type) == sizeof(typename _V1::value_type))
     [[__gnu__::__always_inline__]]
     constexpr _V0
     rotl(const _V0& __v, const _V1& __s) noexcept
     { return _V0([&](int __i) { return std::rotl(__v[__i], __s[__i]); }); }
 
   template<__simd_vec_type _Vp>
+    requires __unsigned_integer<typename _Vp::value_type>
     [[__gnu__::__always_inline__]]
     constexpr _Vp
     rotl(const _Vp& __v, int __s) noexcept
     { return _Vp([&](int __i) { return std::rotl(__v[__i], __s); }); }
 
   template<__simd_vec_type _V0, __simd_vec_type _V1>
+    requires __unsigned_integer<typename _V0::value_type>
+      && integral<typename _V1::value_type>
+      && (_V0::size() == _V1::size())
+      && (sizeof(typename _V0::value_type) == sizeof(typename _V1::value_type))
     [[__gnu__::__always_inline__]]
     constexpr _V0
     rotr(const _V0& __v, const _V1& __s) noexcept
     { return _V0([&](int __i) { return std::rotr(__v[__i], __s[__i]); }); }
 
   template<__simd_vec_type _Vp>
+    requires __unsigned_integer<typename _Vp::value_type>
     [[__gnu__::__always_inline__]]
     constexpr _Vp
     rotr(const _Vp& __v, int __s) noexcept
     { return _Vp([&](int __i) { return std::rotr(__v[__i], __s); }); }
 
   template<__simd_vec_type _Vp>
+    requires __unsigned_integer<typename _Vp::value_type>
     [[__gnu__::__always_inline__]]
     constexpr rebind_t<make_signed_t<typename _Vp::value_type>, _Vp>
     bit_width(const _Vp& __v) noexcept
@@ -88,6 +103,7 @@ namespace simd
     }
 
   template<__simd_vec_type _Vp>
+    requires __unsigned_integer<typename _Vp::value_type>
     [[__gnu__::__always_inline__]]
     constexpr rebind_t<make_signed_t<typename _Vp::value_type>, _Vp>
     countl_zero(const _Vp& __v) noexcept
@@ -98,6 +114,7 @@ namespace simd
     }
 
   template<__simd_vec_type _Vp>
+    requires __unsigned_integer<typename _Vp::value_type>
     [[__gnu__::__always_inline__]]
     constexpr rebind_t<make_signed_t<typename _Vp::value_type>, _Vp>
     countl_one(const _Vp& __v) noexcept
@@ -108,6 +125,7 @@ namespace simd
     }
 
   template<__simd_vec_type _Vp>
+    requires __unsigned_integer<typename _Vp::value_type>
     [[__gnu__::__always_inline__]]
     constexpr rebind_t<make_signed_t<typename _Vp::value_type>, _Vp>
     countr_zero(const _Vp& __v) noexcept
@@ -118,6 +136,7 @@ namespace simd
     }
 
   template<__simd_vec_type _Vp>
+    requires __unsigned_integer<typename _Vp::value_type>
     [[__gnu__::__always_inline__]]
     constexpr rebind_t<make_signed_t<typename _Vp::value_type>, _Vp>
     countr_one(const _Vp& __v) noexcept
@@ -128,6 +147,7 @@ namespace simd
     }
 
   template<__simd_vec_type _Vp>
+    requires __unsigned_integer<typename _Vp::value_type>
     [[__gnu__::__always_inline__]]
     constexpr rebind_t<make_signed_t<typename _Vp::value_type>, _Vp>
     popcount(const _Vp& __v) noexcept

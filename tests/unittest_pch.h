@@ -76,6 +76,9 @@ static bool first_fail = true;
 
 namespace simd = std::simd;
 
+template <typename T, typename... Us>
+  concept any_type_of = (std::same_as<T, Us> || ...);
+
 template <typename _Tp>
   struct canonical_vec_type
   { using type = _Tp; };
@@ -171,11 +174,7 @@ template <complex_like T, typename CharT>
       { return std::format_to(ctx.out(), "({}+{}i)", x.real(), x.imag()); }
   };
 
-template <typename T>
-  requires std::is_same_v<T, wchar_t>
-    || std::is_same_v<T, char8_t>
-    || std::is_same_v<T, char16_t>
-    || std::is_same_v<T, char32_t>
+template <any_type_of<wchar_t, char8_t, char16_t, char32_t> T>
   struct std::formatter<T, char>
   {
     constexpr std::basic_format_parse_context<char>::iterator
