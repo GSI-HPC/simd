@@ -38,6 +38,7 @@ namespace test
 #include <print>
 #include <concepts>
 #include <cfenv>
+#include <format>
 #include <meta>
 #include <ranges>
 #include <inplace_vector>
@@ -201,7 +202,7 @@ struct additional_info
     operator()(std::string_view fmt, const Args&... args)
     {
       if (failed)
-	std::println("| {}", std::format(std::runtime_format(fmt), args...));
+	std::println("| {}", std::format(std::dynamic_format(fmt), args...));
       return *this;
     }
 
@@ -497,77 +498,111 @@ struct constexpr_verifier
 {
   struct ignore_the_rest
   {
-    constexpr ignore_the_rest
+    consteval ignore_the_rest
     operator()(auto const&, auto const&...)
     { return *this; }
   };
 
-  bool okay = true;
+  int passed = 0;
+  int failed = 0;
 
-  constexpr ignore_the_rest
+  template <typename X, typename Y>
+    consteval ignore_the_rest
+    log_failure([[maybe_unused]] const X& x, [[maybe_unused]] const Y& y, std::string_view s)
+    {
+      ++failed;
+      std::string msg = "❌ FAIL: in constexpr_test: ";
+      msg += s;
+      msg += " failed\n|  result | ";
+#ifdef __glibcxx_constexpr_format
+      if constexpr (simd::__simd_vec_or_mask_type<X>)
+	msg += std::format("{}\n", x);
+      else
+#endif
+	msg += "TODO\n";
+      msg += "|expected | ";
+#ifdef __glibcxx_constexpr_format
+      if constexpr (simd::__simd_vec_or_mask_type<Y>)
+	msg += std::format("{}\n", y);
+      else
+#endif
+	msg += "TODO\n";
+      __builtin_constexpr_diag(0, "test", std::string_view(msg));
+      return {};
+    }
+
+  consteval ignore_the_rest
   verify_precondition_failure(std::string_view expected_msg, auto&& f) &
   {
     try
       {
 	f();
-	okay = false;
-	//__builtin_trap();
+	++failed;
+	__builtin_constexpr_diag(0, "test", "precondition failure not detected");
       }
     catch (const test::precondition_failure& failure)
       {
-	okay = okay && failure.msg == expected_msg;
+	if (failure.msg != expected_msg)
+	  {
+	    ++failed;
+	    __builtin_constexpr_diag(0, "test", "unexpected exception");
+	  }
+	else
+	  ++passed;
       }
     catch (...)
       {
-	okay = false;
-	//__builtin_trap();
+	++failed;
+	__builtin_constexpr_diag(0, "test", "unexpected exception");
       }
     return {};
   }
 
-  constexpr ignore_the_rest
+  consteval ignore_the_rest
   verify(const auto& k) &
   {
-    okay = okay && std::simd::all_of(k);
+    if (!std::simd::all_of(k))
+      return log_failure(k, k == k, "verify failed");
+    ++passed;
     return {};
   }
 
   template <typename V, typename Ref>
-    constexpr ignore_the_rest
+    consteval ignore_the_rest
     verify_equal(const V& v, const Ref& ref) &
     {
+      bool ok;
       if constexpr (std::is_convertible_v<V, Ref> && std::is_convertible_v<Ref, V>)
-	{
-	  okay = okay && equal_with_nan_and_inf_fixup<V>(v, ref)
-		   && equal_with_nan_and_inf_fixup<Ref>(v, ref);
-	}
+	ok = equal_with_nan_and_inf_fixup<V>(v, ref) && equal_with_nan_and_inf_fixup<Ref>(v, ref);
       else
-	{
-	  using Common = decltype(std::simd::select(v == ref, v, ref));
-	  okay = okay && equal_with_nan_and_inf_fixup<Common>(v, ref);
-	}
-      //if (!okay) __builtin_trap();
+	ok = equal_with_nan_and_inf_fixup<decltype(std::simd::select(v == ref, v, ref))>(v, ref);
+      if (!ok)
+	return log_failure(v, ref, "verify_equal");
+      ++passed;
       return {};
     }
 
   template <typename V, typename Ref>
-    constexpr ignore_the_rest
+    consteval ignore_the_rest
     verify_bit_equal(const V& v, const Ref& ref) &
     {
+      bool ok;
       if constexpr (std::is_convertible_v<V, Ref> && std::is_convertible_v<Ref, V>)
-	{
-	  okay = okay && bit_equal<V>(v, ref) && bit_equal<Ref>(v, ref);
-	}
+	ok = bit_equal<V>(v, ref) && bit_equal<Ref>(v, ref);
+      else
+	ok= bit_equal<decltype(std::simd::select(v == ref, v, ref))>(v, ref);
+      if (ok)
+	++passed;
       else
 	{
-	  using Common = decltype(std::simd::select(v == ref, v, ref));
-	  okay = okay && bit_equal<Common>(v, ref);
+	  ++failed;
+	  __builtin_constexpr_diag(0, "test", "verify_bit_equal failed");
 	}
       return {};
     }
 
   template <typename T, typename U>
-    constexpr ignore_the_rest
+    consteval ignore_the_rest
     verify_equal(const std::pair<T, U>& x, const std::pair<T, U>& y) &
     {
       verify_equal(x.first, y.first);
@@ -575,17 +610,31 @@ struct constexpr_verifier
       return {};
     }
 
-  constexpr ignore_the_rest
+  consteval ignore_the_rest
   verify_not_equal(const auto& v, const auto& ref) &
   {
-    okay = okay && std::simd::all_of(v != ref);
+    if (std::simd::all_of(v != ref))
+      ++passed;
+    else
+      {
+	++failed;
+	__builtin_constexpr_diag(0, "test", "verify_not_equal failed");
+      }
     return {};
   }
 
-  constexpr ignore_the_rest
+  consteval ignore_the_rest
   verify_equal_to_ulp(const auto& x, const auto& y, auto allowed_distance) &
   {
-    okay = okay && std::simd::all_of(ulp_distance(x, y) <= allowed_distance);
+    const auto eq = equal_with_nan_and_inf_fixup_mask(x, y);
+    const bool success = std::simd::all_of(eq || ulp_distance(x, y) <= allowed_distance);
+    if (success)
+      ++passed;
+    else
+      {
+	++failed;
+	__builtin_constexpr_diag(0, "test", "verify_equal_to_ulp failed");
+      }
     return {};
   }
 
@@ -598,7 +647,7 @@ struct constexpr_verifier
 
 template <int... is>
   [[nodiscard]]
-  consteval bool
+  consteval std::pair<int, int>
   constexpr_test(auto&& fun, auto&&... args)
   {
     constexpr_verifier t;
@@ -608,9 +657,9 @@ template <int... is>
       }
     catch(const test::precondition_failure& fail)
       {
-	return false;
+	++t.failed;
       }
-    return t.okay;
+    return {t.passed, t.failed};
   }
 
 template <typename T>
@@ -638,22 +687,22 @@ struct runtime_verifier
       if constexpr (std::is_same_v<T, log_novalue>)
 	;
       else if constexpr (std::is_floating_point_v<T>)
-	std::println(std::runtime_format("|{:>9} | {:a}"), what, val);
+	std::println(std::dynamic_format("|{:>9} | {:a}"), what, val);
       else if constexpr (std::is_integral_v<T>)
-	std::println(std::runtime_format("|{:>9} | {:d}"), what, val);
+	std::println(std::dynamic_format("|{:>9} | {:d}"), what, val);
       else if constexpr (std::ranges::range<T>)
 	{
 	  if constexpr (std::is_floating_point_v<std::ranges::range_value_t<T>>)
-	    std::println(std::runtime_format("|{:>9} | {::a}"), what, val);
+	    std::println(std::dynamic_format("|{:>9} | {::a}"), what, val);
 	  else if constexpr (display_string_of(^^T).contains("string"))
-	    std::println(std::runtime_format("|{:>9} | {}"), what, val);
+	    std::println(std::dynamic_format("|{:>9} | {}"), what, val);
 	  else if constexpr (std::is_integral_v<std::ranges::range_value_t<T>>)
-	    std::println(std::runtime_format("|{:>9} | {::d}"), what, val);
+	    std::println(std::dynamic_format("|{:>9} | {::d}"), what, val);
 	  else
-	    std::println(std::runtime_format("|{:>9} | {}"), what, val);
+	    std::println(std::dynamic_format("|{:>9} | {}"), what, val);
 	}
       else
-	std::println(std::runtime_format("|{:>9} | {}"), what, val);
+	std::println(std::dynamic_format("|{:>9} | {}"), what, val);
     }
 
   template <typename X, typename Y>
@@ -667,7 +716,7 @@ struct runtime_verifier
 	  std::println("{}", " ❌ FAIL");
 	}
       ++failed_tests;
-      std::println(std::runtime_format("{}:{}:{}: ({:x}) in {} test: {} failed"),
+      std::println(std::dynamic_format("{}:{}:{}: ({:x}) in {} test: {} failed"),
 		   loc.file_name(), loc.line(), loc.column(), ip, test_kind, s);
       print_value("result", x);
       print_value("expected", y);
@@ -1074,12 +1123,11 @@ template <auto test_ref, int... is, std::size_t... arg_idx>
     [[maybe_unused]] constexpr auto args = test_ref->args;
     constprop_test<is...>(fun, std::get<arg_idx>(args)...);
     runtime_test<is...>(fun, std::get<arg_idx>(args)...);
-    constexpr bool passed = constexpr_test<is...>(fun, std::get<arg_idx>(args)...);
-    if (passed)
-      ++passed_tests;
-    else
+    constexpr auto pf = constexpr_test<is...>(fun, std::get<arg_idx>(args)...);
+    passed_tests += pf.first;
+    if (pf.second > 0)
       {
-	++failed_tests;
+	failed_tests += pf.second;
 	if (first_fail)
 	  std::println("{}", " ❌ FAIL");
 	std::println("{}", "=> constexpr test failed.");
@@ -1340,11 +1388,11 @@ int main()
     }
   catch(const test::precondition_failure& fail)
     {
-      std::println(std::runtime_format("{}:{}: Error: precondition '{}' does not hold: {}"),
+      std::println(std::dynamic_format("{}:{}: Error: precondition '{}' does not hold: {}"),
 		   fail.file, fail.line, fail.expr, fail.msg);
       return EXIT_FAILURE;
     }
-  std::println(std::runtime_format("Passed tests: {}\nFailed tests: {}"),
+  std::println(std::dynamic_format("Passed tests: {}\nFailed tests: {}"),
 	       passed_tests, failed_tests);
   return failed_tests != 0 ? EXIT_FAILURE : EXIT_SUCCESS;
 }
