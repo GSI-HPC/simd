@@ -75,8 +75,8 @@ namespace std::simd
       // NaN inputs to min/max are UB (requires totally_ordered), replace inputs where a NaN output
       // is needed with precise 3²+4²=5².
       const M nan = isunordered(x, y);
-      const V absx = select(nan, V(3), fabs(x)); // no error
-      const V absy = select(nan, V(4), fabs(y)); // no error
+      const V absx = select(nan, T(3), fabs(x)); // no error
+      const V absy = select(nan, T(4), fabs(y)); // no error
       V hi = max(absx, absy); // no error
       V lo = min(absx, absy); // no error
       const auto huge_diff = is_large_diff(hi, lo);
@@ -88,11 +88,11 @@ namespace std::simd
           const V scale_back = rescale_factors(hi, lo);
           return scale_back * sqrt((lo * lo)._M_assoc_barrier() + hi * hi);
         }
-      else if (all_of(isnormal(x) || x == 0) && all_of(isnormal(y) || y == 0))
+      else if (all_of(isnormal(x) || x == T(0)) && all_of(isnormal(y) || y == T(0)))
 	{ // more likely and cheaper than the branch below
-	  const auto k0 = lo == 0;
+	  const auto k0 = lo == T(0);
 	  const auto h0 = hi;
-	  hi = select(hi == 0, V(1), hi);
+	  hi = select(hi == T(0), T(1), hi);
 	  const V scale_back = rescale_factors(hi, lo);
 	  const V r = scale_back * sqrt((lo * lo)._M_assoc_barrier() + hi * hi);
 	  return select(k0, h0, r);
@@ -104,7 +104,7 @@ namespace std::simd
           // slower path to support subnormals
           // if hi is subnormal, avoid scaling by inf & final mul by 0
           // (which yields NaN) by using min()
-          constexpr V subnorm_scale = 1 / norm_min_v<V>;
+	  constexpr V subnorm_scale = T(1) / norm_min_v<V>;
           // invert exponent w/o error and w/o using the slow divider
           // unit: xor inverts the exponent but off by 1. Multiplication
           // with .5 adjusts for the discrepancy.
@@ -131,7 +131,7 @@ namespace std::simd
           // ISA has FMAs (because h1² + lo is an FMA, but the
           // intermediate
           // h1² must be kept)
-	  return select(lo == 0 || nan || inf, fixup, r);
+	  return select(lo == T(0) || nan || inf, fixup, r);
         }
     }
 

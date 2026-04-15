@@ -179,8 +179,8 @@ namespace std::simd
     inline V
     rescale_factors(V& hi, auto&... to_scale)
     {
-      constexpr V two = 2;
-      constexpr V half = 1 / two;
+      constexpr V two = cw<2>;
+      constexpr V half = cw<1> / two;
       const V hi_exp = hi & inf_v<V>; // round down to next power-of-2 = 2^(1-n) = 2*2^-n
       const V scale = hi_exp ^ inf_v<V>; // = 2/hi_exp = 2^n
       hi = (hi & mantissa_mask_v<V>) | two; // = hi * scale

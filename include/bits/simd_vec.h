@@ -318,7 +318,7 @@ namespace simd
 	    if constexpr (_S_is_partial)
 	      if (__do_sanitize)
 		return __select_impl(mask_type::_S_init(mask_type::_S_implicit_mask),
-				     *this, 0)._M_data;
+				     *this, __canon_value_type())._M_data;
 	    return _M_data;
 	  }
 #else
@@ -1169,6 +1169,14 @@ namespace simd
        *
        * @note The constructor is implicit if the conversion (if any) is value-preserving.
        */
+#if !VIR_CONSTEVAL_BROADCAST
+      template <__broadcast_constructible<value_type> _Up>
+	[[__gnu__::__always_inline__]]
+	constexpr
+	basic_vec(_Up&& __x) noexcept
+	  : _M_data(_DataType() == _DataType() ? static_cast<value_type>(__x) : value_type())
+	{}
+#else
       template <__explicitly_convertible_to<value_type> _Up>
 	[[__gnu__::__always_inline__]]
 	constexpr explicit(!__broadcast_constructible<_Up, value_type>)
@@ -1182,6 +1190,7 @@ namespace simd
 	: _M_data(_DataType() == _DataType()
 		    ? __value_preserving_cast<value_type>(__x) : value_type())
 	{}
+#endif
 
       // [simd.ctor] conversion constructor -----------------------------------
       template <typename _Up, typename _UAbi, _TargetTraits _Traits = {}>
@@ -2257,6 +2266,14 @@ namespace simd
       { return _M_concat_data(); }
 
       // [simd.ctor] broadcast constructor ------------------------------------
+#if !VIR_CONSTEVAL_BROADCAST
+      template <__broadcast_constructible<value_type> _Up>
+	[[__gnu__::__always_inline__]]
+	constexpr
+	basic_vec(_Up&& __x) noexcept
+	  : _M_data0(static_cast<value_type>(__x)), _M_data1(static_cast<value_type>(__x))
+	{}
+#else
       template <__explicitly_convertible_to<value_type> _Up>
 	[[__gnu__::__always_inline__]]
 	constexpr explicit(!__broadcast_constructible<_Up, value_type>)
@@ -2270,6 +2287,7 @@ namespace simd
 	: _M_data0(__value_preserving_cast<value_type>(__x)),
 	  _M_data1(__value_preserving_cast<value_type>(__x))
 	{}
+#endif
 
       // [simd.ctor] conversion constructor -----------------------------------
       template <typename _Up, typename _UAbi>

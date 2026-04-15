@@ -31,7 +31,7 @@ template <typename V>
     ADD_TEST(Norm) {
       std::tuple {test_iota<V>},
       [](auto& t, const V x) {
-	const V y = {x.real(), x.real() / 3};
+	const V y = {x.real(), x.real() / std::cw<3>};
 	t.verify_equal(norm(x), RV([&](int i) { return std::norm(x[i]); }));
 	t.verify_equal(norm(y), RV([&](int i) { return std::norm(y[i]); }));
       }
@@ -42,7 +42,7 @@ template <typename V>
       [](auto& t, const V x) {
 	if !consteval
 	  {
-	    const V y = {x.real(), x.real() / 3};
+	    const V y = {x.real(), x.real() / std::cw<3>};
 	    t.verify_equal(abs(x), RV([&](int i) { return std::abs(x[i]); }));
 	    t.verify_equal(abs(y), RV([&](int i) { return std::abs(y[i]); }));
 	  }
