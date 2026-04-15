@@ -29,7 +29,7 @@
 | [P3983R0](https://wg21.link/P3983R0) simd object representation                                | 🔴 open (still in design phase) |
 | [P3985R0](https://wg21.link/P3985R0) Concepts for std::simd                                    | 🔴 open (still in design phase) |
 | [P3844R4](https://wg21.link/P3844R4) Reword [simd.math] for consteval conversions              | ✅ done         |
-| [P4012R1](https://wg21.link/P4012R1) value-preserving consteval broadcast to simd::vec         | 🔴 open |
+| [P4012R1](https://wg21.link/P4012R1) value-preserving consteval broadcast to simd::vec         | ✅ done         |
 | [P4042R0](https://wg21.link/P4042R0) Fix LWG4543: incorrect cast between `simd::vec` and `simd::mask` [...] | ✅ done |
 
 | Issue | Status |

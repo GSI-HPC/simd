@@ -1102,6 +1102,19 @@ namespace simd
       // TODO: conversion extensions
 
       // [simd.ctor] broadcast constructor ------------------------------------
+#if !VIR_CONSTEVAL_BROADCAST
+      template <__broadcast_constructible<value_type> _Up>
+	[[__gnu__::__always_inline__]]
+	constexpr
+	basic_vec(_Up&& __x) noexcept
+	  : _M_data([&](int __i) {
+	      if constexpr (__complex_like<_Up>)
+		return (__i & 1) == 0 ? __x.real() : __x.imag();
+	      else
+		return (__i & 1) == 0 ? __x : _T0();
+	    })
+	{}
+#else
       template <__explicitly_convertible_to<value_type> _Up>
 	[[__gnu__::__always_inline__]]
 	constexpr explicit(!__broadcast_constructible<_Up, value_type>)
@@ -1119,6 +1132,7 @@ namespace simd
 	basic_vec(const _Up& __x)
 	: basic_vec(__value_preserving_cast<value_type>(__x))
 	{}
+#endif
 
       // [simd.ctor] conversion constructor -----------------------------------
       template <__complex_like _Up, typename _UAbi>
@@ -2266,6 +2280,22 @@ namespace simd
       // TODO: conversion extensions
 
       // [simd.ctor] broadcast constructor ------------------------------------
+#if !VIR_CONSTEVAL_BROADCAST
+      template <__broadcast_constructible<value_type> _Up>
+	requires __complex_like<_Up>
+	[[__gnu__::__always_inline__]]
+	constexpr
+	basic_vec(_Up&& __x) noexcept
+	  : _M_real(__x.real()), _M_imag(__x.imag())
+	{}
+
+      template <__broadcast_constructible<value_type> _Up>
+	[[__gnu__::__always_inline__]]
+	constexpr
+	basic_vec(_Up&& __x) noexcept
+	  : _M_real(__x), _M_imag()
+	{}
+#else
       template <__explicitly_convertible_to<value_type> _Up>
 	requires __complex_like<_Up>
 	[[__gnu__::__always_inline__]]
@@ -2286,6 +2316,7 @@ namespace simd
 	basic_vec(const _Up& __x)
 	: _M_real(__x), _M_imag()
 	{}
+#endif
 
       // [simd.ctor] conversion constructor -----------------------------------
       template <__complex_like _Up, typename _UAbi>

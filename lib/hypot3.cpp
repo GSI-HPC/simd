@@ -100,7 +100,7 @@ namespace std::simd
           // slower path to support subnormals
           // if hi is subnormal, avoid scaling by inf & final mul by 0
           // (which yields NaN) by using min()
-          constexpr V subnorm_scale = 1 / norm_min_v<V>;
+	  constexpr V subnorm_scale = cw<1> / norm_min_v<V>;
           // invert exponent w/o error and w/o using the slow divider
           // unit: xor inverts the exponent but off by 1. Multiplication
           // with .5 adjusts for the discrepancy.
@@ -129,7 +129,7 @@ namespace std::simd
           // ISA has FMAs (because h1² + lo is an FMA, but the
           // intermediate
           // h1² must be kept)
-          return select(lo == 0 || isunordered(x, y + z)
+	  return select(lo == cw<0> || isunordered(x, y + z)
                           || isinf(absx) || isinf(absy) || isinf(absz), fixup, r);
         }
     }

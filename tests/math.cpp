@@ -59,7 +59,7 @@ template <typename V>
     };
 
     ADD_TEST(hypot) {
-      std::tuple {(test_iota<V> + 21) / 3},
+      std::tuple {(test_iota<V> + std::cw<21>) / std::cw<3>},
       [](auto& t, V x) {
 	t.verify_equal_to_ulp(hypot(x, x),
 			      V([&](int i) -> T {

@@ -89,7 +89,8 @@ template <typename V>
     };
 
     ADD_TEST(multiplication) {
-      std::tuple {V(), V(RealV(1), RealV()), V(RealV(), RealV(1)), init_vec<V, C(0, 2), C(2, 0), C(-1, 2)>},
+      std::tuple {V(), V(RealV(Real(1)), RealV()), V(RealV(), RealV(Real(1))),
+		  init_vec<V, C(0, 2), C(2, 0), C(-1, 2)>},
       [](auto& t, V x, V one, V I, V z) {
 	t.verify_equal(x * x, x);
 	t.verify_equal(x * z, x);
@@ -181,11 +182,11 @@ template <typename V>
 	t.verify_equal(y, x - T(1));
 	t.verify_equal(x - x, y);
 	t.verify_equal(x = z - x, init_vec<V, 0, 1, 2, 3, 4, 5, 6>);
-	t.verify_equal(x = z - x, V(1));
+	t.verify_equal(x = z - x, T(1));
 	t.verify_equal(z -= x, init_vec<V, 0, 1, 2, 3, 4, 5, 6>);
 	t.verify_equal(z, init_vec<V, 0, 1, 2, 3, 4, 5, 6>);
-	t.verify_equal(z -= z, V(0));
-	t.verify_equal(z, V(0));
+	t.verify_equal(z -= z, V());
+	t.verify_equal(z, V());
       }
     };
 
@@ -291,15 +292,15 @@ template <typename V>
       std::tuple{T(2), init_vec<V, 1, 2, 3, 4, 5, 6, 7>, init_vec<V, T(max), T(norm_min)>,
 		 init_vec<V, T(norm_min), T(max)>, init_vec<V, T(max), T(norm_min) + 1>},
       [](auto& t, V x, V y, V z, V a, V b) {
-	t.verify_equal(x / x, V(1));
-	t.verify_equal(T(3) / x, V(T(3) / T(2)));
-	t.verify_equal(x / T(3), V(T(2) / T(3)));
+	t.verify_equal(x / x, T(1));
+	t.verify_equal(T(3) / x, T(T(3) / T(2)));
+	t.verify_equal(x / T(3), T(T(2) / T(3)));
 	t.verify_equal(y / x, init_vec<V, .5, 1, 1.5, 2, 2.5, 3, 3.5>);
 	V ref = init_vec<V, T(max / 2), T(norm_min / 2)>;
 	t.verify_equal(z / x, ref);
 	ref = init_vec<V, T(norm_min / 2), T(max / 2)>;
 	t.verify_equal(a / x, ref);
-	t.verify_equal(b / b, V(1));
+	t.verify_equal(b / b, T(1));
 	ref = init_vec<V, T(2 / max), T(2 / (norm_min + 1))>;
 	t.verify_equal(x / b, ref);
 	t.verify_equal(x /= b, ref);

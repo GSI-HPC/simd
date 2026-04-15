@@ -10,10 +10,11 @@ set -e
 
 # Source and destination directories
 SRC_DIR="include/bits"
-DEST_DIR="/home/mkretz/src/gcc-simd/libstdc++-v3/include/bits"
+DEST_DIR="/home/mkretz/src/gcc-master/libstdc++-v3/include/bits"
+TEST_DIR="/home/mkretz/src/gcc-master/libstdc++-v3/testsuite/std/simd"
 
-# Create destination directory if it doesn't exist
-mkdir -p "$DEST_DIR"
+if ! test -d "$DEST_DIR"; then echo "$DEST_DIR is missing"; fi
+if ! test -d "$TEST_DIR"; then echo "$TEST_DIR is missing"; fi
 
 filter() {
   invert=0
@@ -146,22 +147,34 @@ EOF
 grep '^$' -A100000
 }
 
+all_filters() {
+  filter VIR_EXTENSIONS \
+    | filter VIR_PATCH_PERMUTE_DYNAMIC \
+    | filter VIR_PATCH_MATH \
+    | filter VIR_PATCH_IMPROVE_CX \
+    | filter VIR_PATCH_MISSED_OPT \
+    | filter VIR_PATCH_TEST_STORES \
+    | filter VIR_ASSERT_SANITY \
+    | filter VIR_CONSTEVAL_BROADCAST \
+    | fix_copyright
+}
+
 # Process each .h file in the source directory
 for file in "$SRC_DIR"/*.h; do
   if [ -f "$file" ]; then
     filename=$(basename "$file")
     echo "Processing $filename..."
-
-    # Use awk to handle VIR_EXTENSIONS conditional blocks
-    cat "$file" | filter VIR_EXTENSIONS \
-      | filter VIR_PATCH_PERMUTE_DYNAMIC \
-      | filter VIR_PATCH_MATH \
-      | filter VIR_PATCH_IMPROVE_CX \
-      | filter VIR_PATCH_MISSED_OPT \
-      | filter VIR_PATCH_TEST_STORES \
-      | filter VIR_ASSERT_SANITY \
-      | fix_copyright > "$DEST_DIR/$filename"
+    cat "$file" | all_filters > "$DEST_DIR/$filename"
   fi
 done
 
-echo "Deployment complete. Processed files copied to $DEST_DIR/"
+cat math-traits_tests.cpp | all_filters > "$TEST_DIR/traits_math.cc"
+cat constexpr_tests.cpp | all_filters > "$TEST_DIR/traits_common.cc"
+cat generic-traits_tests.cpp | all_filters > "$TEST_DIR/traits_impl.cc"
+for file in tests/*.cpp; do
+  filename=$(basename "$file")
+  echo "Processing $filename..."
+  cat "$file" | all_filters > "$TEST_DIR/${filename%.cpp}.cc"
+done
+
+echo "Deployment complete. Processed files copied to $DEST_DIR/ and $TEST_DIR/"

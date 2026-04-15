@@ -50,7 +50,7 @@ V0 test0b(V0::mask_type a)
 { return simd::select(a, char(1), char(0)); }
 
 V0 test0c(V0::mask_type a)
-{ return simd::select(a, V0(1), V0()); }
+{ return simd::select(a, V0(char(1)), V0()); }
 
 V0 test0d(V0 a, V0 b, V0 c)
 { return simd::select(a == a, b, c); }
@@ -92,7 +92,7 @@ V1 test1b(V1::mask_type a)
 { return simd::select(a, T1(1), T1()); }
 
 V1 test1c(V1::mask_type a)
-{ return simd::select(a, V1(1), V1()); }
+{ return simd::select(a, V1(T1(1)), V1()); }
 
 /* codegen
 ^"test2a(
@@ -123,7 +123,7 @@ V2 test2b(V2::mask_type a)
 { return simd::select(a, short(1), short()); }
 
 V2 test2c(V2::mask_type a)
-{ return simd::select(a, V2(1), V2()); }
+{ return simd::select(a, V2(short(1)), V2()); }
 
 V2 test2d(V2 a, V2 b, V2 c)
 { return simd::select(a == a, b, c); }

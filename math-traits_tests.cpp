@@ -27,7 +27,11 @@ namespace math_tests
     concept has_deduced_vec = requires { typename simd::__deduced_vec_t<T>; };
 
   static_assert(!has_common_type<vf2, vf4>);
+#if VIR_CONSTEVAL_BROADCAST
   static_assert( has_common_type<int, vf2>);
+#else
+  static_assert(!has_common_type<int, vf2>);
+#endif
 
   template <typename T, bool Strict = false>
     struct holder
@@ -68,12 +72,16 @@ namespace math_tests
 
   static_assert(lerp_invocable<vf2, float, short>);
 
+#if VIR_CONSTEVAL_BROADCAST
   static_assert( lerp_invocable<vf2, float, int>);
+#else
+  static_assert(!lerp_invocable<vf2, float, int>);
+#endif
   static_assert([] {
     vf2 x = 0.f;
-    int y = 0x2'00'00'04;
+    float y = 0x2'00'00'04;
     return simd::lerp(x, y, 0.5f)[0];
-  }() == 0x1'00'00'02);
+  }() == float(0x1'00'00'02));
 
   template <typename T0, typename... T1>
     concept not_hypot_invocable
@@ -91,7 +99,11 @@ namespace math_tests
   static_assert(hypot_invocable_r<vf2, holder<vf2>, vf2>);
 
   static_assert(not_hypot_invocable<vf2, vf4>);
+#if VIR_CONSTEVAL_BROADCAST
   static_assert(hypot_invocable_r<vf2, int, vf2>);
+#else
+  static_assert(not_hypot_invocable<int, vf2>);
+#endif
 
   static_assert(hypot_invocable_r<vf2, holder<int>, vf2>);
   static_assert(not_hypot_invocable<holder<int, true>, vf2>);
@@ -115,8 +127,10 @@ namespace math_tests
   // the next doesn't work with the P1928 spec, but it can be made to work
   static_assert(simd::hypot(simd::basic_vec(std::array{1.1f}), 1.2f)[0] == std::hypot(1.1f, 1.2f));
   static_assert(simd::hypot(1.1f, 1.2_f1)[0] == std::hypot(1.1f, 1.2f));
+#if VIR_CONSTEVAL_BROADCAST
   static_assert(simd::hypot(1, 1.2_f1)[0] == std::hypot(1.f, 1.2f));
   static_assert(simd::hypot(1.2_f1, 1)[0] == std::hypot(1.f, 1.2f));
+#endif
   static_assert(simd::hypot(holder {1.f}, 1.2_f1)[0] == std::hypot(1.f, 1.2f));
   // the following must not be valid. if you want vec<double> be explicit about it:
   static_assert(not_hypot_invocable<double, simd::vec<float, 1>>);

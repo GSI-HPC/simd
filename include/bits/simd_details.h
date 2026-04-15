@@ -1583,6 +1583,7 @@ namespace simd
       return static_cast<_To>(__x);
     }
 
+#if VIR_CONSTEVAL_BROADCAST
   template <typename _From, typename _To>
     concept __simd_vec_bcast_consteval
       = __explicitly_convertible_to<_From, _To>
@@ -1592,6 +1593,7 @@ namespace simd
 		|| (is_same_v<remove_cvref_t<_From>, int> && is_integral_v<_To>)
 		|| (is_same_v<remove_cvref_t<_From>, unsigned> && unsigned_integral<_To>));
 
+#endif
   /** @internal
    * std::pair is not trivially copyable, this one is
    */

@@ -1333,7 +1333,8 @@ template <typename V>
 			fec.record_second();
 			t2.verify_equal_to_ulp(res, expect, std::cw<1>)
 			  ("inputs: {}, {}", x, y)
-			  ("normal||0: {}, {}", isnormal(x) || x == 0, isnormal(y) || y == 0);
+			  ("normal||0: {}, {}", isnormal(x) || x == std::cw<0>,
+			   isnormal(y) || y == std::cw<0>);
 			fec.verify_equal_state(t2)("inputs: {}, {}", x, y)
 			  ("result: {} == {::a}", res, res);
 			res = test_ref->tester(y, x);

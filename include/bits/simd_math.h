@@ -919,7 +919,7 @@ namespace simd
     __lerp(_Vp __a, _Vp __b, _Vp __t) noexcept
     {
       constexpr _Vp __zero = {};
-      constexpr _Vp __one(1);
+      constexpr _Vp __one(cw<1>);
       using _Mp = typename _Vp::mask_type;
 
       // TODO: benchmark which method of computing the mask is better
