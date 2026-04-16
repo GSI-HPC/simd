@@ -102,8 +102,9 @@ namespace simd
     constexpr rebind_t<make_signed_t<typename _Vp::value_type>, _Vp>
     bit_width(const _Vp& __v) noexcept
     {
-      return rebind_t<make_signed_t<typename _Vp::value_type>, _Vp>([&](int __i) {
-	       return std::bit_width(__v[__i]);
+      using _Ip = make_signed_t<typename _Vp::value_type>;
+      return rebind_t<_Ip, _Vp>([&](int __i) {
+	       return static_cast<_Ip>(std::bit_width(__v[__i]));
 	     });
     }
 
@@ -113,8 +114,9 @@ namespace simd
     constexpr rebind_t<make_signed_t<typename _Vp::value_type>, _Vp>
     countl_zero(const _Vp& __v) noexcept
     {
-      return rebind_t<make_signed_t<typename _Vp::value_type>, _Vp>([&](int __i) {
-	       return std::countl_zero(__v[__i]);
+      using _Ip = make_signed_t<typename _Vp::value_type>;
+      return rebind_t<_Ip, _Vp>([&](int __i) {
+	       return static_cast<_Ip>(std::countl_zero(__v[__i]));
 	     });
     }
 
@@ -124,8 +126,9 @@ namespace simd
     constexpr rebind_t<make_signed_t<typename _Vp::value_type>, _Vp>
     countl_one(const _Vp& __v) noexcept
     {
-      return rebind_t<make_signed_t<typename _Vp::value_type>, _Vp>([&](int __i) {
-	       return std::countl_one(__v[__i]);
+      using _Ip = make_signed_t<typename _Vp::value_type>;
+      return rebind_t<_Ip, _Vp>([&](int __i) {
+	       return static_cast<_Ip>(std::countl_one(__v[__i]));
 	     });
     }
 
@@ -135,8 +138,9 @@ namespace simd
     constexpr rebind_t<make_signed_t<typename _Vp::value_type>, _Vp>
     countr_zero(const _Vp& __v) noexcept
     {
-      return rebind_t<make_signed_t<typename _Vp::value_type>, _Vp>([&](int __i) {
-	       return std::countr_zero(__v[__i]);
+      using _Ip = make_signed_t<typename _Vp::value_type>;
+      return rebind_t<_Ip, _Vp>([&](int __i) {
+	       return static_cast<_Ip>(std::countr_zero(__v[__i]));
 	     });
     }
 
@@ -146,8 +150,9 @@ namespace simd
     constexpr rebind_t<make_signed_t<typename _Vp::value_type>, _Vp>
     countr_one(const _Vp& __v) noexcept
     {
-      return rebind_t<make_signed_t<typename _Vp::value_type>, _Vp>([&](int __i) {
-	       return std::countr_one(__v[__i]);
+      using _Ip = make_signed_t<typename _Vp::value_type>;
+      return rebind_t<_Ip, _Vp>([&](int __i) {
+	       return static_cast<_Ip>(std::countr_one(__v[__i]));
 	     });
     }
 
@@ -157,8 +162,9 @@ namespace simd
     constexpr rebind_t<make_signed_t<typename _Vp::value_type>, _Vp>
     popcount(const _Vp& __v) noexcept
     {
-      return rebind_t<make_signed_t<typename _Vp::value_type>, _Vp>([&](int __i) {
-	       return std::popcount(__v[__i]);
+      using _Ip = make_signed_t<typename _Vp::value_type>;
+      return rebind_t<_Ip, _Vp>([&](int __i) {
+	       return static_cast<_Ip>(std::popcount(__v[__i]));
 	     });
     }
 } // namespace simd

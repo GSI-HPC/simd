@@ -94,12 +94,19 @@ template <typename V>
       }
     };
 
-    ADD_TEST(RotateLeft, std::__unsigned_integer<T>) {
+    ADD_TEST(FullRotate, std::__unsigned_integer<T>) {
       std::tuple {test_iota<V, 0, 0>},
       [](auto& t, const V a) {
-	t.verify_equal(rotl(a, sizeof(T) * CHAR_BIT), a);
-	t.verify_equal(std::rotl(a, sizeof(T) * CHAR_BIT), a);
-	t.verify_equal(std::simd::rotl(a, sizeof(T) * CHAR_BIT), a);
+	constexpr int digits = std::numeric_limits<T>::digits;
+	template for (int n : {0, digits, 5 * digits})
+	  {
+	    t.verify_equal(rotl(a, n), a);
+	    t.verify_equal(std::rotl(a, n), a);
+	    t.verify_equal(std::simd::rotl(a, n), a);
+	    t.verify_equal(rotr(a, n), a);
+	    t.verify_equal(std::rotr(a, n), a);
+	    t.verify_equal(std::simd::rotr(a, n), a);
+	  }
       }
     };
 
@@ -123,6 +130,83 @@ template <typename V>
 	t.verify_equal(rotr(x, rshift), ref);
 	t.verify_equal(rotr(x, I(rshift)), ref);
 	t.verify_equal(rotr(x, I(sizeof(T) * CHAR_BIT) - vshiftx), refx);
+      }
+    };
+
+    // The value-type of reference is always going to be 'int', forcing a conversion in verify_equal
+    // (unless V::value_type is 'unsigned int'). That's intentional, since we thus can find
+    // (hypothetical) cases of value-changing conversions in the implementation.
+#define REFERENCE(x, fun) simd::rebind_t<decltype(fun(x[0])), V>([&](int i) { return fun(x[i]); })
+
+    ADD_TEST(BitWidth, std::__unsigned_integer<T>) {
+      std::tuple {test_iota<V>, msb - test_iota<V>},
+      [](auto& t, const V x, const V y) {
+	t.verify_equal(bit_width(x), REFERENCE(x, std::bit_width));
+	t.verify_equal(std::bit_width(x), REFERENCE(x, std::bit_width));
+	t.verify_equal(simd::bit_width(x), REFERENCE(x, std::bit_width));
+	t.verify_equal(bit_width(y), REFERENCE(y, std::bit_width));
+	t.verify_equal(std::bit_width(y), REFERENCE(y, std::bit_width));
+	t.verify_equal(simd::bit_width(y), REFERENCE(y, std::bit_width));
+      }
+    };
+
+    ADD_TEST(CountLZero, std::__unsigned_integer<T>) {
+      std::tuple {test_iota<V>, msb - test_iota<V>},
+      [](auto& t, const V x, const V y) {
+	t.verify_equal(countl_zero(x), REFERENCE(x, std::countl_zero));
+	t.verify_equal(std::countl_zero(x), REFERENCE(x, std::countl_zero));
+	t.verify_equal(simd::countl_zero(x), REFERENCE(x, std::countl_zero));
+	t.verify_equal(countl_zero(y), REFERENCE(y, std::countl_zero));
+	t.verify_equal(std::countl_zero(y), REFERENCE(y, std::countl_zero));
+	t.verify_equal(simd::countl_zero(y), REFERENCE(y, std::countl_zero));
+      }
+    };
+
+    ADD_TEST(CountLOne, std::__unsigned_integer<T>) {
+      std::tuple {test_iota<V>, msb - test_iota<V>},
+      [](auto& t, const V x, const V y) {
+	t.verify_equal(countl_zero(x), REFERENCE(x, std::countl_zero));
+	t.verify_equal(std::countl_zero(x), REFERENCE(x, std::countl_zero));
+	t.verify_equal(simd::countl_zero(x), REFERENCE(x, std::countl_zero));
+	t.verify_equal(countl_zero(y), REFERENCE(y, std::countl_zero));
+	t.verify_equal(std::countl_zero(y), REFERENCE(y, std::countl_zero));
+	t.verify_equal(simd::countl_zero(y), REFERENCE(y, std::countl_zero));
+      }
+    };
+
+    ADD_TEST(CountRZero, std::__unsigned_integer<T>) {
+      std::tuple {test_iota<V>, msb - test_iota<V>},
+      [](auto& t, const V x, const V y) {
+	t.verify_equal(countr_zero(x), REFERENCE(x, std::countr_zero));
+	t.verify_equal(std::countr_zero(x), REFERENCE(x, std::countr_zero));
+	t.verify_equal(simd::countr_zero(x), REFERENCE(x, std::countr_zero));
+	t.verify_equal(countr_zero(y), REFERENCE(y, std::countr_zero));
+	t.verify_equal(std::countr_zero(y), REFERENCE(y, std::countr_zero));
+	t.verify_equal(simd::countr_zero(y), REFERENCE(y, std::countr_zero));
+      }
+    };
+
+    ADD_TEST(CountROne, std::__unsigned_integer<T>) {
+      std::tuple {test_iota<V>, msb - test_iota<V>},
+      [](auto& t, const V x, const V y) {
+	t.verify_equal(countr_zero(x), REFERENCE(x, std::countr_zero));
+	t.verify_equal(std::countr_zero(x), REFERENCE(x, std::countr_zero));
+	t.verify_equal(simd::countr_zero(x), REFERENCE(x, std::countr_zero));
+	t.verify_equal(countr_zero(y), REFERENCE(y, std::countr_zero));
+	t.verify_equal(std::countr_zero(y), REFERENCE(y, std::countr_zero));
+	t.verify_equal(simd::countr_zero(y), REFERENCE(y, std::countr_zero));
+      }
+    };
+
+    ADD_TEST(PopCount, std::__unsigned_integer<T>) {
+      std::tuple {test_iota<V>, msb - test_iota<V>},
+      [](auto& t, const V x, const V y) {
+	t.verify_equal(popcount(x), REFERENCE(x, std::popcount));
+	t.verify_equal(std::popcount(x), REFERENCE(x, std::popcount));
+	t.verify_equal(simd::popcount(x), REFERENCE(x, std::popcount));
+	t.verify_equal(popcount(y), REFERENCE(y, std::popcount));
+	t.verify_equal(std::popcount(y), REFERENCE(y, std::popcount));
+	t.verify_equal(simd::popcount(y), REFERENCE(y, std::popcount));
       }
     };
   };
