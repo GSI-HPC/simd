@@ -3,6 +3,7 @@
  *                       Matthias Kretz <m.kretz@gsi.de>
  */
 // requires int
+// no-fast-math
 
 #include "unittest_pch.h"
 

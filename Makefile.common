@@ -111,6 +111,9 @@ float_tests ::= $(foreach t,$(tests),\
 complex_tests ::= $(foreach t,$(tests),\
 	$(if $(shell grep -E '// *requires (int|float)' tests/$(t).cpp),,$(t)))
 
+fast_math_tests ::= $(foreach t,$(tests),\
+	$(if $(shell grep -E '// no-fast-math' tests/$(t).cpp),,$(t)))
+
 int_testtypes ::= \
 	signed-char \
 	unsigned-char \
@@ -209,20 +212,18 @@ endef
 $(foreach arch,$(testarchs),\
 	$(eval $(call pch_template,$(arch))))
 
-no_fast_math = $(shell head -n10 tests/$(1).cpp | grep -q no-fast-math && echo 1 || echo 0)
-
 #	@driver.sh $(1) $(2) $$* "$(DIRECT)" "$$(CXX)" "$$(LINK_CXX)" $$(CXXFLAGS)
 # arguments: test, arch
 define exe_template
-check/$(1).$(2)/%: tests/$(1).cpp $(objdir)/$(2).hpp tests/unittest*.h $(objdir)/libsimd.a | $(objdir)/$(2).hpp.gch setup_progress
-	@printf -- '$$(msg_build) $(if $(DIRECT),and link )$$(@:check/%=  $(objdir)/%.exe)\n'
+check/$(3)$(1).$(2)/%: tests/$(1).cpp $(objdir)/$(2).hpp tests/unittest*.h $(objdir)/libsimd.a | $(objdir)/$(2).$(3)hpp.gch setup_progress
+	@printf -- '$$(msg_build) $(if $(DIRECT),and link )$$(@:check/%=  $(objdir)/%.$(if $(DIRECT),exe,o))\n'
 	@mkdir -p $$(dir $$(@:check/%=$(objdir)/%.exe)) $$(dir $$@)
 	@rm -f $$(@:check/%=$(objdir)/%.exe) $$@
 	@./wait_for_memory.sh "$$(NUM_JOBS)"
-	@$$(call call_compiler,$$< -march=$(2) -DUNITTEST_TYPE="$$(call gettype,$$*)" -DUNITTEST_WIDTH=$$(call getwidth,$$*) $$(CXXFLAGS) -include $(objdir)/$(2).hpp $(if $(DIRECT),-o $$(@:check/%=$(objdir)/%.exe),-c -o $$(@:check/%=$(objdir)/%.o)))
+	@$$(call call_compiler,$$< -march=$(2) -DUNITTEST_TYPE="$$(call gettype,$$*)" -DUNITTEST_WIDTH=$$(call getwidth,$$*) $$(CXXFLAGS)$(4) -include $(objdir)/$(2).hpp $(if $(DIRECT),$(objdir)/libsimd.a -o $$(@:check/%=$(objdir)/%.exe),-c -o $$(@:check/%=$(objdir)/%.o)))
 ifeq ($(DIRECT),)
-	@true || printf -- '$$(msg_link) $$@\n'
-	@$$(LINK_CXX) $$(CXXFLAGS) -march=$(2) $(objdir)/libsimd.a -o $$(@:check/%=$(objdir)/%.exe) $$(@:check/%=$(objdir)/%.o)
+	@printf -- '$$(msg_link) $$(@:check/%=  $(objdir)/%.exe)\n'
+	@$$(LINK_CXX) $$(CXXFLAGS)$(4) -march=$(2) -o $$(@:check/%=$(objdir)/%.exe) $$(@:check/%=$(objdir)/%.o) $(objdir)/libsimd.a
 	@touch -r $$(@:check/%=$(objdir)/%.o) $$(@:check/%=$(objdir)/%.exe)
 	@rm $$(@:check/%=$(objdir)/%.o)
 endif
@@ -237,38 +238,13 @@ endif
 		false; \
 	}
 
-check/fast-math/$(1).$(2)/%: tests/$(1).cpp $(objdir)/$(2).fast-math.hpp tests/unittest*.h | $(objdir)/$(2).fast-math.hpp.gch setup_progress
-ifeq ($(call no_fast_math,$(1)),1)
-	@mkdir -p $$(dir $$@)
-	@touch $$@
-else
-	@mkdir -p $$(dir $$(@:check/%=$(objdir)/%.exe)) $$(dir $$@)
-	@printf -- '$$(msg_build) $(if $(DIRECT),and link )$$(@:check/%=  $(objdir)/%.exe)\n'
-	@rm -f $$(@:check/%=$(objdir)/%.exe) $$@
-	@$$(call call_compiler,$$< -march=$(2) -DUNITTEST_TYPE="$$(call gettype,$$*)" -DUNITTEST_WIDTH=$$(call getwidth,$$*) -ffast-math $$(CXXFLAGS) -include $(objdir)/$(2).fast-math.hpp $(if $(DIRECT),-o $$(@:check/%=$(objdir)/%.exe),-c -o $$(@:check/%=$(objdir)/%.o)))
-ifeq ($(DIRECT),)
-	@true || printf -- '$$(msg_link) $$@\n'
-	@$$(LINK_CXX) $$(CXXFLAGS) -ffast-math -march=$(2) -o $$(@:check/%=$(objdir)/%.exe) $$(@:check/%=$(objdir)/%.o)
-	@touch -r $$(@:check/%=$(objdir)/%.o) $$(@:check/%=$(objdir)/%.exe)
-	@rm $$(@:check/%=$(objdir)/%.o)
-endif
-	@rm -f $$@.failed
-	@$$(@:check/%=$(objdir)/%.exe) >$$@ 2>&1 && { \
-		printf -- '$$(msg_run) %-60s %s\n' '$$@' "$$$$($$(print_progress))"; \
-		touch -r $$(@:check/%=$(objdir)/%.exe) $$@; \
-	} || { \
-		printf -- '$$(msg_runf) $$@\n'; \
-		cat $$@; \
-		mv $$@ $$@.failed; \
-		false; \
-	}
-endif
-
 endef
 
 $(foreach arch,$(testarchs),\
 	$(foreach t,$(tests),\
-	$(eval $(call exe_template,$(t),$(arch)))))
+	$(eval $(call exe_template,$(t),$(arch),,)))\
+	$(foreach t,$(fast_math_tests),\
+	$(eval $(call exe_template,$(t),$(arch),fast-math., -ffast-math))))
 
 constexpr_checks ::= $(foreach arch,$(testarchs),$(objdir)/constexpr.$(arch).s $(objdir)/math-traits.$(arch).s) $(objdir)/generic-traits.s
 

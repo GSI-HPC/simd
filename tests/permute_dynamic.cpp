@@ -2,6 +2,7 @@
 /* Copyright © 2026      GSI Helmholtzzentrum fuer Schwerionenforschung GmbH
  *                       Matthias Kretz <m.kretz@gsi.de>
  */
+// no-fast-math
 
 #include "unittest.h"
 #include "complex_init.h"
