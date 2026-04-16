@@ -22,7 +22,7 @@ jobs:
       image: ghcr.io/mattkretz/cplusplus-ci/gcc${{ matrix.version }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Run test suite
         env:
