@@ -585,11 +585,35 @@ namespace simd
 
   _GLIBCXX_SIMD_MATH_2ARG_OVERLOADS(constexpr __deduced_vec_t<_Vp>, copysign)
 
+  template <_TargetTraits _Traits, __vec_builtin _TV>
+    _TV
+    __nextafter(_TV __x, _TV __y)
+    {
+      constexpr auto [...__is] = _IotaArray<__width_of<_TV>>;
+      return _TV{std::nextafter(__x[__is], __y[__is])...};
+    }
+
   template <_TargetTraits _Traits = {}, __math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
     constexpr __deduced_vec_t<_Vp>
     nextafter(const _Vp& __x, const _Vp& __y)
-    { static_assert(false, "TODO"); }
+    {
+      // can't use the _GLIBCXX_SIMD_MATH_2ARG_IMPL macro, because float16_t arguments cannot be
+      // implemented via float
+      if constexpr (!is_same_v<_Vp, __deduced_vec_t<_Vp>>)
+	return nextafter<_Traits, __deduced_vec_t<_Vp>>(__x, __y);
+      else if (__is_const_known(__x, __y))
+	return _Vp([&] [[__gnu__::__always_inline__]] (int __i) {
+		 return std::nextafter(__x[__i], __y[__i]);
+	       });
+      else if constexpr (_Vp::size() == 1)
+	return std::nextafter(__x[0], __y[0]);
+      else if constexpr (_Vp::abi_type::_S_nreg > 1)
+	return _Vp::_S_init(nextafter<_Traits>(__x._M_get_low(), __y._M_get_low()),
+			    nextafter<_Traits>(__x._M_get_high(), __y._M_get_high()));
+      else
+	return __nextafter<_Traits>(__x._M_get(), __y._M_get());
+    }
 
   _GLIBCXX_SIMD_MATH_2ARG_OVERLOADS(constexpr __deduced_vec_t<_Vp>, nextafter)
 

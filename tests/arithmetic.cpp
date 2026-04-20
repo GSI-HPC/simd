@@ -147,6 +147,31 @@ template <typename V>
     static constexpr T norm_min = std::numeric_limits<T>::min();
     static constexpr T max = std::numeric_limits<T>::max();
 
+    ADD_TEST(Ulp)
+    {
+      std::tuple {},
+      [](auto &t) {
+	t.verify_equal(ulp_distance_signed(0x1.p0f, 0x1.p0), 0.f);
+	t.verify_equal(ulp_distance_signed(0x1.000002p0f, 0x1.p0), 1.f);
+	t.verify_equal(ulp_distance_signed(0x1.000002p0f, 0x1.000003p0), -0.5f);
+	t.verify_equal(ulp_distance_signed(0.f, -0.f), 0.f);
+	t.verify_equal(ulp_distance_signed(-0.f, 0.f), 0.f);
+      }
+    };
+
+    ADD_TEST(UlpTesting, std::is_floating_point_v<T>) {
+      std::array {min, norm_min, max, T(1)},
+      [](auto& t, V x) {
+	t.verify_equal(ulp_distance_signed(x, x), V());
+	t.verify_equal(ulp_distance_signed(-x, -x), V());
+	V y = nextafter(x, 2 * norm_min);
+	V ulp = std::cw<1>;
+	ulp = select(x < y, -ulp, ulp);
+	t.verify_equal(ulp_distance_signed(x, y), ulp)("{::a}", x)("{::a}", y);
+	t.verify_equal(ulp_distance_signed(-x, -y), -ulp)("{::a}", -x)("{::a}", -y);
+      }
+    };
+
     ADD_TEST(plus0, requires(T x) { x + x; }) {
       std::tuple{V(), init_vec<V, 1, 2, 3, 4, 5, 6, 7>},
       [](auto& t, V x, V y) {

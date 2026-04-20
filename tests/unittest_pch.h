@@ -350,37 +350,53 @@ template <typename T, typename Abi>
 
 template <typename T0, typename T1>
   constexpr T0
-  ulp_distance_signed(T0 val0, const T1& ref1)
+  ulp_distance_signed(const T0& val0, const T1& ref1)
   {
-    if constexpr (std::is_floating_point_v<T1>)
+    if constexpr (std::is_floating_point_v<T0>)
+      return ulp_distance_signed(simd::vec<T0, 1>(val0), ref1)[0];
+    else if constexpr (std::is_floating_point_v<T1>)
       return ulp_distance_signed(val0, std::simd::rebind_t<T1, T0>(ref1));
-    else if constexpr (std::is_floating_point_v<value_type_t<T0>>)
-      {
-	int fp_exceptions = 0;
-	if !consteval
-	  {
-	    fp_exceptions = std::fetestexcept(FE_ALL_EXCEPT);
-	  }
-	using std::isnan;
-	using std::abs;
-	using T = value_type_t<T0>;
-	using L = std::numeric_limits<T>;
-	constexpr T0 signexp_mask = -L::infinity();
-	T0 ref0(ref1);
-	T1 val1(val0);
-	const auto subnormal = fabs(ref1) < L::min();
-	const T1 eps1 = select(subnormal, L::denorm_min(),
-			       L::epsilon() * (ref1 & signexp_mask));
-	const T0 ulp = select(val0 == ref0 || (isnan(val0) && isnan(ref0)),
-			      T0(), T0((ref1 - val1) / eps1));
-	if !consteval
-	  {
-	    std::feclearexcept(FE_ALL_EXCEPT ^ fp_exceptions);
-	  }
-	return ulp;
-      }
-    else
+    else if constexpr (!std::is_floating_point_v<value_type_t<T0>>)
       return ref1 - val0;
+    else
+      {
+	// Compute ULP distance via unsigned int.
+	// 1. Any input is Nan -> output is NaN
+	// 2. Any input is Inf -> output is Inf
+	// 3. remaining inputs are [0x0000'0000, 0x7f80'0000) and [0x8000'0000, 0xff80'0000)
+	//      val     |     ref     | ULP
+	//  0x0000'0000 | 0x8000'0000 |   0
+	//  0x0000'0000 | 0x0000'0001 |  -1
+	//  0x0000'0000 | 0x8000'0001 |   1
+	//  0x3fff'ffff | 0x4000'0001 |  -2
+	//  0xbfff'ffff | 0xc000'0001 |   2
+	const T0 ref0(ref1);
+	const T1 val1 = val0;
+	using L0 = std::numeric_limits<typename T0::value_type>;
+	using L1 = std::numeric_limits<typename T1::value_type>;
+	static_assert(L1::digits >= L0::digits);
+
+	using M0 = typename T0::mask_type;
+	using U0 = as_unsigned_t<typename T0::value_type>;
+	const auto uinf = std::bit_cast<U0>(L0::infinity());
+	const U0 abs_mask = U0(U0(~U0()) >> 1);
+	const auto uref0 = simd::__bit_cast_as<U0>(ref0);
+	const auto uval0 = simd::__bit_cast_as<U0>(val0);
+	const M0 valid((uref0 & abs_mask) < uinf && (uval0 & abs_mask) < uinf);
+	const M0 is_nan((uref0 & abs_mask) > uinf || (uval0 & abs_mask) > uinf);
+
+	using U1 = as_unsigned_t<typename T1::value_type>;
+	auto uref = simd::__bit_cast_as<U1>(ref1);
+	auto uval = simd::__bit_cast_as<U1>(val1);
+	const U1 signed_zero = U1(U1(U1(~U1()) >> 1) + 1);
+	uref = select(uref >= signed_zero, -uref, uref + U1(signed_zero));
+	uval = select(uval >= signed_zero, -uval, uval + U1(signed_zero));
+	const auto iulp = simd::__bit_cast_as<std::make_signed_t<U1>>(uval - uref);
+	T0 ulp = T0(iulp);
+	if constexpr (L0::digits != L1::digits)
+	  ulp /= std::cw<1 << (L1::digits - L0::digits)>;
+	return select(valid, ulp, select(is_nan, T0(L0::quiet_NaN()), T0(L0::infinity())));
+      }
   }
 
 template <typename T0, typename T1>
@@ -392,10 +408,7 @@ template <typename T0, typename T1>
     if constexpr (std::is_unsigned_v<T>)
       return ulp;
     else
-      {
-	using std::abs;
-	return fabs(ulp);
-      }
+      return simd::select(ulp < T(), -ulp, ulp);
   }
 
 template <typename T>

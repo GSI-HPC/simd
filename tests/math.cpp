@@ -55,6 +55,15 @@ template <typename V>
 	{
 	  t.verify_equal(nearbyint(x), V([&](int i) { return std::nearbyint(x[i]); }));
 	}
+	t.verify_equal(nextafter(x, x), x);
+	if consteval
+	  {
+	    // constexpr nextafter is ill-formed when returning subnormal or zero
+	    x = select(fabs(x) <= norm_min, before_one, x);
+	  }
+	t.verify_equal(nextafter(x, V()), V([&](int i) { return std::nextafter(x[i], T()); }));
+	t.verify_equal(nextafter(x, max), V([&](int i) { return std::nextafter(x[i], max); }));
+	t.verify_equal(nextafter(x, min), V([&](int i) { return std::nextafter(x[i], min); }));
       }
     };
 
