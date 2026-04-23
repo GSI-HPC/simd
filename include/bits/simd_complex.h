@@ -935,13 +935,13 @@ namespace simd
       constexpr const auto&
       _M_get_high() const requires (_Ap::_S_nreg >= 2)
       { return _M_data._M_get_high(); }
-#if VIR_PATCH_PERMUTE_DYNAMIC
 
       template <typename _Up, typename _UAbi>
 	[[__gnu__::__always_inline__]]
 	static constexpr basic_vec
 	_S_recursive_bit_cast(const basic_vec<_Up, _UAbi>& __x)
 	{ return _S_init(_TSimd::_S_recursive_bit_cast(__x)); }
+#if VIR_PATCH_PERMUTE_DYNAMIC
 
       [[__gnu__::__always_inline__]]
       constexpr auto

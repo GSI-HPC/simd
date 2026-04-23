@@ -167,6 +167,16 @@ namespace simd
 	       return static_cast<_Ip>(std::popcount(__v[__i]));
 	     });
     }
+
+  template <typename _Tp, typename _Up, typename _Ap>
+    requires ((sizeof(_Up) * _Ap::_S_size) % sizeof(_Tp) == 0)
+      && __simd_vec_type<__similar_vec<_Tp, sizeof(_Up) * _Ap::_S_size / sizeof(_Tp), _Ap>>
+    constexpr __similar_vec<_Tp, sizeof(_Up) * _Ap::_S_size / sizeof(_Tp), _Ap>
+    __bit_cast_as(const basic_vec<_Up, _Ap>& __v) noexcept
+    {
+      return __similar_vec<_Tp, sizeof(_Up) * _Ap::_S_size / sizeof(_Tp), _Ap>
+	       ::_S_recursive_bit_cast(__v);
+    }
 } // namespace simd
 
   using simd::byteswap;

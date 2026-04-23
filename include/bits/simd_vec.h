@@ -286,7 +286,6 @@ namespace simd
       constexpr const _DataType&
       _M_get() const noexcept
       { return _M_data; }
-#if VIR_PATCH_PERMUTE_DYNAMIC
 
       /** \internal
        * Bit-cast the given object \p __x to basic_vec.
@@ -299,7 +298,6 @@ namespace simd
 	static constexpr basic_vec
 	_S_recursive_bit_cast(const basic_vec<_Up, _UAbi>& __x)
 	{ return __builtin_bit_cast(basic_vec, __x._M_concat_data(false)); }
-#endif
 
       [[__gnu__::__always_inline__]]
       friend constexpr bool
@@ -2020,7 +2018,6 @@ namespace simd
       constexpr const _DataType1&
       _M_get_high() const noexcept
       { return _M_data1; }
-#if VIR_PATCH_PERMUTE_DYNAMIC
 
       template <typename _Up, typename _UAbi>
 	[[__gnu__::__always_inline__]]
@@ -2039,7 +2036,6 @@ namespace simd
 	      return __builtin_bit_cast(_Tmp, __x)._M_data;
 	    }
 	}
-#endif
 
       [[__gnu__::__always_inline__]]
       friend constexpr bool
