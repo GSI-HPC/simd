@@ -311,9 +311,9 @@ template <typename V>
 	// 1/|a| must be >= min). Intel vrcpps and vrcp14ps
 	// need some extra slack (use 1.1 instead of 1).
 	a = select(fabs(a) >= T(1.1) / norm_min, T(1), a);
-	t.verify_equal_to_ulp(a / a, V(std::cw<1>), std::cw<1>)("\na = ", a);
+	t.verify_equal_to_ulp(a / a, V(std::cw<1>), std::cw<1>)("a = {}", a);
 	ref = V([&](int i) { return 2 / a[i]; });
-	t.verify_equal_to_ulp(b / a, ref, std::cw<1>)("\na = ", a);
+	t.verify_equal_to_ulp(b / a, ref, std::cw<1>)("a = {}", a);
 	t.verify_equal_to_ulp(b /= a, ref, std::cw<1>);
 	t.verify_equal_to_ulp(b, ref, std::cw<1>);
       }
