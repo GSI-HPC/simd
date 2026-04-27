@@ -18,21 +18,35 @@ template <typename V>
     using L = std::numeric_limits<T>;
 
     static constexpr T min = L::lowest();
-    static constexpr T denorm_min = L::denorm_min();
     static constexpr T norm_min = L::min();
     static constexpr T max = L::max();
+#if !_GLIBCXX_FAST_MATH
+    static constexpr T denorm_min = L::denorm_min();
+#endif
+#if !__FINITE_MATH_ONLY__
     static constexpr T inf = L::infinity();
     static constexpr T nan = L::quiet_NaN();
+#endif
     static constexpr T zero = 0;
 
     static constexpr T after_one = 1 + L::epsilon();
     static constexpr T before_one = (2 - L::epsilon()) / 2;
 
     ADD_TEST(Roundings) {
-      make_packed_array<V>(+0., -0., 0.5, -0.5, 1, 1.5, -1.5, 2, 2.5, -2.5, 3, -3, 9, -9,
+      make_packed_array<V>(+0.,
+#if !__NO_SIGNED_ZEROS__
+			   -0.,
+#endif
+			   0.5, -0.5, 1, 1.5, -1.5, 2, 2.5, -2.5, 3, -3, 9, -9,
 			   before_one, -before_one, after_one, -after_one,
 			   2 * before_one, -2 * before_one, 2 * after_one, -2 * after_one,
-			   inf, -inf, nan, denorm_min, norm_min / 3, norm_min, max,
+#if !__FINITE_MATH_ONLY__
+			   inf, -inf, nan,
+#endif
+#if !_GLIBCXX_FAST_MATH
+			   denorm_min, norm_min / 3,
+#endif
+			   norm_min, max,
 			   0x1.fffffffffffffp52, -0x1.fffffffffffffp52,
 			   0x1.ffffffffffffep52, -0x1.ffffffffffffep52,
 			   0x1.ffffffffffffdp52, -0x1.ffffffffffffdp52,
@@ -84,7 +98,7 @@ template <typename V>
 	nan, nan, inf, -inf, -zero, denorm_min, norm_min / 3,
 #endif
 	zero, norm_min, T(1), T(2), max / 5, max / 3, max / 2,
-#ifndef __FAST_MATH__
+#if!_GLIBCXX_FAST_MATH
 	max // fast-math hypot is imprecise for the max exponent
 #endif
       },

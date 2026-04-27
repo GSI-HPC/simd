@@ -73,6 +73,7 @@ template <typename V>
     // Because of all these issues, verify_equal is implemented to interpret "an infinity" as equal
     // to another infinity according to the interpretation of C23 Annex G.3.
 
+#ifndef __FINITE_MATH_ONLY__
     ADD_TEST(multiplication_corner_cases) {
       std::array {min, norm_min, denorm_min, max, inf},
       [](auto& t, V x) {
@@ -87,6 +88,7 @@ template <typename V>
 	t.verify_equal(x * x, x[0] * x[0])(x);
       }
     };
+#endif
 
     ADD_TEST(multiplication) {
       std::tuple {V(), V(RealV(Real(1)), RealV()), V(RealV(), RealV(Real(1))),
@@ -117,19 +119,23 @@ template <typename V>
 	// complex(1.) / complex(-DBL_INF, 0.) -> (-0, -0) => θ is wrong
 
 	// (0+i0) * (-0-i0) -> (-0 + 0) + i(-0 + -0) -> 0-i0
+#ifndef __NO_SIGNED_ZEROS__
 	t.verify_bit_equal(x * -x, T() * -T());
 	t.verify_bit_equal(-x * x, -T() * T());
 
 	t.verify_bit_equal(x * conj(x), T() * conj(T()));
 	t.verify_bit_equal(x * -conj(x), T() * -conj(T()));
+#endif
 
 	// real * complex has extra overloads on complex but not on vec<complex>
 	// for vec<complex> the result therefore needs to be "bit equal" only to
 	// complex * complex
 	t.verify_equal(x.real() * -x, T().real() * -T());
+#ifndef __NO_SIGNED_ZEROS__
 	t.verify_bit_equal(x.real() * -x, T() * -T());
 
 	t.verify_bit_equal(z * I, init_vec<V, C(-2, 0), C(0., 2.), C(-2, -1)>);
+#endif
 	t.verify_bit_equal(std::complex{-0., 0.} * std::complex{0., 1.}, std::complex{-0., 0.});
 	t.verify_bit_equal(std::complex{-0., -1.} * std::complex{0., 0.}, std::complex{0., -0.});
 	t.verify_bit_equal(0. + -0., 0.);
