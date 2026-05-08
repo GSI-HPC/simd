@@ -1295,7 +1295,51 @@ template <typename V>
 	    auto tester = test_ref->tester;
 	    constexpr auto [...is] = std::_IotaArray<test_ref->values.size()>;
 	    constexpr std::array arg0s = make_packed_array<V>(test_ref->values[is]...);
-	    if constexpr (requires(V x) { { tester(x, x) } -> std::same_as<V>; })
+	    if constexpr (requires(V x) { { tester(x) } -> std::same_as<V>; })
+	      {
+		const auto before = failed_tests;
+		//constexpr_verifier t0;
+		runtime_verifier t1{"constprop"};
+		runtime_verifier t2{"runtime"};
+		using T = typename V::value_type;
+		try
+		  {
+		    template for (constexpr int a0i : std::_IotaArray<arg0s.size()>)
+		      {
+			constexpr V a0 = arg0s[a0i];
+			//const V x0 = test_ref->tester(a0, a1);
+			const V y0 = V([&](int i) -> T { return test_ref->tester(a0[i]); });
+			//t0.verify_equal_to_ulp(x0, y0, std::cw<1>);
+			t1.verify_equal_to_ulp(test_ref->tester(a0), y0, std::cw<1>);
+		      }
+		      //if (t0.okay)
+		      //++passed_tests;
+		  }
+		catch(const test::precondition_failure& fail)
+		  {
+		    ++failed_tests;
+		  }
+		for (const V& x : arg0s)
+		  {
+		    FloatExceptCompare fec;
+		    fec.ignore_missing = FE_UNDERFLOW | FE_INEXACT;
+		    fec.ignore_spurious = FE_INEXACT;
+		    V res = test_ref->tester(x);
+		    fec.record_first();
+		    // use make_value_unknown to avoid reuse of the result from testfun and thus
+		    // no fp exceptions
+		    V expect = V([&](int i) {
+		      return test_ref->tester(make_value_unknown(x[i]));
+		    });
+		    fec.record_second();
+		    t2.verify_equal_to_ulp(res, expect, std::cw<1>)("inputs: {}", x)
+		      ("normal||0: {}", isnormal(x) || x == std::cw<0>);
+		    fec.verify_equal_state(t2)("inputs: {}", x)("result: {} == {::a}", res, res);
+		  }
+		if (before == failed_tests)
+		  std::println("{}", " ✅ PASS");
+	      }
+	    else if constexpr (requires(V x) { { tester(x, x) } -> std::same_as<V>; })
 	      {
 		const auto before = failed_tests;
 		constexpr std::array arg1s = {V(test_ref->values[is])...};
@@ -1358,6 +1402,8 @@ template <typename V>
 		if (before == failed_tests)
 		  std::println("{}", " ✅ PASS");
 	      }
+	    else
+	      static_assert(false, "TODO");
 	  }
 	else
 	  {
