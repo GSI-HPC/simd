@@ -83,6 +83,14 @@ template <typename V>
 	t.verify_equal(simd::unchecked_load<V>(mem, M(false)), V());
 	t.verify_equal(simd::partial_load<V>(mem, M(true)), ref);
 	t.verify_equal(simd::partial_load<V>(mem, M(false)), V());
+
+	if !consteval
+	  {
+	    std::size_t sz1 = make_value_unknown(0x0'8000'0000uz);
+	    std::size_t sz2 = make_value_unknown(0x1'0000'0000uz);
+	    t.verify_equal(simd::partial_load<V>(mem.begin(), sz1), ref);
+	    t.verify_equal(simd::partial_load<V>(mem.begin(), sz2), ref);
+	  }
       }
     };
 

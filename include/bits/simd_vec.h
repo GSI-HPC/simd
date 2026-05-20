@@ -865,7 +865,7 @@ namespace simd
 		{
 		  const auto __k = __n < _S_size ? mask_type::_S_partial_mask_of_n(int(__n))
 						 : mask_type(true);
-		  return _S_masked_load(__mem, mask_type::_S_partial_mask_of_n(int(__n)));
+		  return _S_masked_load(__mem, __k);
 		}
 #endif
 	      if (__n >= size_t(_S_size)) [[unlikely]]
