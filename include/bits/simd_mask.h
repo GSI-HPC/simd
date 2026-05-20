@@ -582,6 +582,27 @@ namespace simd
 	return __r;
       }
 
+      /** @internal
+       * Generator init from invoking @p __gen starting at @p _Offset.
+       */
+      template <__simd_size_type _Offset = 0>
+	[[__gnu__::__always_inline__]]
+	static constexpr basic_mask
+	_S_gen_with_offset(auto& __gen)
+	{
+	  basic_mask __r;
+	  constexpr auto [...__is] = _IotaArray<_S_size>;
+	  if constexpr (_S_is_scalar)
+	    __r._M_data = __gen(__simd_size_c<_Offset>);
+	  else if constexpr (_S_use_bitmask)
+	    __r._M_data = _DataType(((_DataType(__gen(__simd_size_c<__is + _Offset>)) << __is)
+				       | ...));
+	  else
+	    __r._M_data = _DataType{__vec_value_type<_DataType>(
+				      __gen(__simd_size_c<__is + _Offset>) ? -1 : 0)...};
+	  return __r;
+	}
+
       [[__gnu__::__always_inline__]]
       static constexpr basic_mask
       _S_init(unsigned_integral auto __bits)
@@ -870,17 +891,7 @@ namespace simd
 	[[__gnu__::__always_inline__]]
 	constexpr explicit
 	basic_mask(_Fp&& __gen)
-	  : _M_data([&] [[__gnu__::__always_inline__]] {
-	      constexpr auto [...__is] = _IotaArray<_S_size>;
-	      if constexpr (_S_is_scalar)
-		return __gen(__simd_size_c<0>);
-	      else if constexpr (_S_use_bitmask)
-		return _DataType(((_DataType(__gen(__simd_size_c<__is>)) << __is)
-				    | ...));
-	      else
-		return _DataType{__vec_value_type<_DataType>(
-				   __gen(__simd_size_c<__is>) ? -1 : 0)...};
-	    }())
+	: _M_data(_S_gen_with_offset(__gen)._M_data)
 	{}
 
       // [simd.mask.ctor] bitset constructor ----------------------------------
@@ -1536,6 +1547,20 @@ namespace simd
 	return __r;
       }
 
+      /** @internal
+       * @copydoc basic_mask::_S_gen_with_offset
+       */
+      template <__simd_size_type _Offset = 0>
+	[[__gnu__::__always_inline__]]
+	static constexpr basic_mask
+	_S_gen_with_offset(auto& __gen)
+	{
+	  basic_mask __r;
+	  __r._M_data0 = _Mask0::template _S_gen_with_offset<_Offset>(__gen);
+	  __r._M_data1 = _Mask1::template _S_gen_with_offset<_Offset + _N0>(__gen);
+	  return __r;
+	}
+
       [[__gnu__::__always_inline__]]
       static constexpr basic_mask
       _S_init(unsigned_integral auto __bits)
@@ -1813,9 +1838,8 @@ namespace simd
 	[[__gnu__::__always_inline__]]
 	constexpr explicit
 	basic_mask(_Fp&& __gen)
-	  : _M_data0(__gen), _M_data1([&] [[__gnu__::__always_inline__]] (auto __i) {
-			       return __gen(__simd_size_c<__i + _N0>);
-			     })
+	: _M_data0(_Mask0::template _S_gen_with_offset<0>(__gen)),
+	  _M_data1(_Mask1::template _S_gen_with_offset<_N0>(__gen))
 	{}
 
       // [simd.mask.ctor] bitset constructor ----------------------------------

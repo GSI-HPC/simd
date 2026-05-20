@@ -277,6 +277,21 @@ namespace simd
 	return __r;
       }
 
+      /** @internal
+       * Generator init from invoking @p __gen starting at @p _Offset.
+       */
+      template <__simd_size_type _Offset = 0>
+	[[__gnu__::__always_inline__]]
+	static constexpr basic_vec
+	_S_gen_with_offset(auto& __gen)
+	{
+	  constexpr auto [...__is] = _IotaArray<_S_size>;
+	  basic_vec __r;
+	  __r._M_data = _DataType{static_cast<__canon_value_type>(
+				    __gen(__simd_size_c<__is + _Offset>))...};
+	  return __r;
+	}
+
       [[__gnu__::__always_inline__]]
       constexpr _DataType&
       _M_get() noexcept
@@ -1304,10 +1319,7 @@ namespace simd
 	[[__gnu__::__always_inline__]]
 	constexpr explicit
 	basic_vec(_Fp&& __gen)
-	: _M_data([&] [[__gnu__::__always_inline__]] {
-	    constexpr auto [...__is] = _IotaArray<_S_size>;
-	    return _DataType{static_cast<value_type>(__gen(__simd_size_c<__is>))...};
-	  }())
+	: _M_data(_S_gen_with_offset(__gen)._M_data)
 	{}
 
       // [simd.ctor] load constructor -----------------------------------------
@@ -1999,6 +2011,20 @@ namespace simd
 	return __r;
       }
 
+      /** @internal
+       * @copydoc basic_vec::_S_gen_with_offset
+       */
+      template <__simd_size_type _Offset = 0>
+	[[__gnu__::__always_inline__]]
+	static constexpr basic_vec
+	_S_gen_with_offset(auto& __gen)
+	{
+	  basic_vec __r;
+	  __r._M_data0 = _DataType0::template _S_gen_with_offset<_Offset>(__gen);
+	  __r._M_data1 = _DataType1::template _S_gen_with_offset<_Offset + _N0>(__gen);
+	  return __r;
+	}
+
       [[__gnu__::__always_inline__]]
       constexpr _DataType0&
       _M_get_low() noexcept
@@ -2309,9 +2335,8 @@ namespace simd
 	[[__gnu__::__always_inline__]]
 	constexpr explicit
 	basic_vec(_Fp&& __gen)
-	  : _M_data0(__gen), _M_data1([&] [[__gnu__::__always_inline__]] (auto __i) {
-			       return __gen(__simd_size_c<__i + _N0>);
-			     })
+	: _M_data0(_DataType0::_S_gen_with_offset(__gen)),
+	  _M_data1(_DataType1::template _S_gen_with_offset<_N0>(__gen))
 	{}
 
       // [simd.ctor] load constructor -----------------------------------------
