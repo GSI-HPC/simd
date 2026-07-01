@@ -471,11 +471,11 @@ namespace simd
 	  else if (!__is_const_known(*this))
 	    {
 	      if constexpr (sizeof(_M_data) == 16 && _Shift > 0)
-		return reinterpret_cast<_DataType>(
+		return reinterpret_cast<_NativeVecType>(
 			 __builtin_ia32_psrldqi128(__vec_bit_cast<long long>(_M_data),
 						   _Shift * sizeof(value_type) * 8));
 	      else if constexpr (sizeof(_M_data) == 16 && _Shift < 0)
-		return reinterpret_cast<_DataType>(
+		return reinterpret_cast<_NativeVecType>(
 			 __builtin_ia32_pslldqi128(__vec_bit_cast<long long>(_M_data),
 						   -_Shift * sizeof(value_type) * 8));
 	      else if constexpr (sizeof(_M_data) < 16)
@@ -486,7 +486,7 @@ namespace simd
 		    __x = __builtin_ia32_psrldqi128(__x, _Shift * sizeof(value_type) * 8);
 		  else
 		    __x = __builtin_ia32_pslldqi128(__x, -_Shift * sizeof(value_type) * 8);
-		  return _VecOps<_DataType>::_S_extract(__vec_bit_cast<__canon_value_type>(__x));
+		  return _VecOps<_NativeVecType>::_S_extract(__vec_bit_cast<value_type>(__x));
 		}
 	    }
 #endif
@@ -519,7 +519,8 @@ namespace simd
 	    {
 	      static_assert(sizeof(_Vp) <= 16); // => max. 7 Bytes need to be zeroed
 	      static_assert(sizeof(_M_data) <= sizeof(_Vp));
-	      _Vp __v1 = __vec_zero_pad_to<sizeof(_Vp)>(_M_data);
+	      _Vp __v1;
+	      __v1._M_data = __vec_zero_pad_to<sizeof(_Vp)>(_M_data);
 	      if constexpr (__id == 0 && _S_is_partial)
 		// cheapest solution: shift values to the back while shifting in zeros
 		// This is valid because we shift out padding elements and use all elements in a
@@ -586,7 +587,7 @@ namespace simd
 	    { // extend __rest with identity element for more parallelism
 	      constexpr __canon_value_type __id
 		= __default_identity_element<__canon_value_type, _BinaryOp>();
-	      return __binary_op(_M_data, __rest.template _M_pad_to_T_with_value<basic_vec, __id>())
+	      return __binary_op(*this, __rest.template _M_pad_to_T_with_value<basic_vec, __id>())
 		       ._M_reduce(__binary_op);
 	    }
 	  else
@@ -809,7 +810,7 @@ namespace simd
       [[__gnu__::__always_inline__]]
       constexpr basic_vec
       _M_abs() const requires signed_integral<value_type>
-      { return _M_data < 0 ? -_M_data : _M_data; }
+      { return _S_init(_M_data < 0 ? -_M_data : _M_data); }
 
       [[__gnu__::__always_inline__]]
       constexpr basic_vec
@@ -818,7 +819,7 @@ namespace simd
 	if constexpr (_S_is_scalar)
 	  return std::fabs(_M_data);
 	else
-	  return __vec_and(__vec_not(_S_signmask<_DataType>), _M_data);
+	  return _S_init(__vec_and(__vec_not(_S_signmask<_DataType>), _M_data));
       }
 
       template <_TargetTraits _Traits = {}>
@@ -879,19 +880,19 @@ namespace simd
 #endif
 	      else if constexpr (_S_size > 4)
 		{
-		  alignas(_DataType) byte __dst[sizeof(_DataType)] = {};
+		  alignas(_NativeVecType) byte __dst[sizeof(_NativeVecType)] = {};
 		  const byte* __src = reinterpret_cast<const byte*>(__mem);
-		  __memcpy_chunks<sizeof(_Up), sizeof(_DataType)>(__dst, __src, __n);
-		  return __builtin_bit_cast(_DataType, __dst);
+		  __memcpy_chunks<sizeof(_Up), sizeof(_NativeVecType)>(__dst, __src, __n);
+		  return __builtin_bit_cast(_NativeVecType, __dst);
 		}
 	      else if (__n == 0) [[unlikely]]
 		return basic_vec();
 	      else if constexpr (_S_size == 2)
-		return _DataType {static_cast<value_type>(__mem[0]), 0};
+		return _NativeVecType{static_cast<value_type>(__mem[0]), 0};
 	      else
 		{
 		  constexpr auto [...__is] = _IotaArray<_S_size - 2>;
-		  return _DataType{
+		  return _NativeVecType{
 		    static_cast<value_type>(__mem[0]),
 		    static_cast<value_type>(__is + 1 < __n ? __mem[__is + 1] : 0)...
 		  };
@@ -919,11 +920,11 @@ namespace simd
 	    return __k[0] ? static_cast<value_type>(__mem[0]) : value_type();
 #if _GLIBCXX_X86
 	  else if constexpr (_Traits._M_have_avx512f())
-	    return __x86_masked_load<_DataType>(__mem, __k._M_data);
+	    return _S_init(__x86_masked_load<_DataType>(__mem, __k._M_data));
 	  else if constexpr (_Traits._M_have_avx() && (sizeof(_Up) == 4 || sizeof(_Up) == 8))
 	    {
 	      if constexpr (__converts_trivially<_Up, value_type>)
-		return __x86_masked_load<_DataType>(__mem, __k._M_data);
+		return _S_init(__x86_masked_load<_DataType>(__mem, __k._M_data));
 	      else
 		{
 		  using _UV = rebind_t<_Up, basic_vec>;
@@ -942,7 +943,7 @@ namespace simd
 	      [[assume(__bits != 0)]]; // because of '__k._M_none_of()' branch above
 	      if constexpr (__converts_trivially<_Up, value_type>)
 		{
-		  _DataType __r = {};
+		  _NativeVecType __r = {};
 		  __bit_foreach(__bits, [&] [[__gnu__::__always_inline__]] (int __i) {
 		    __r[__i] = __mem[__i];
 		  });
@@ -1099,12 +1100,13 @@ namespace simd
       basic_vec() = default;
 
       // [simd.overview] p2 impl-def conversions ------------------------------
-      using _NativeVecType = decltype([] {
-	    if constexpr (_S_is_scalar)
-	      return __vec_builtin_type<__canon_value_type, 1>();
-	    else
-	      return _DataType();
-	  }());
+      /** @internal
+       * This is an alias for the corresponding GNU vector type (`[[gnu::vector_size(Bytes)]]`).
+       * This type can be different to _DataType because it doesn't use the canonical_vec_type_t and
+       * for size 1 it is a GNU vector type of size 1.
+       */
+      using _NativeVecType = __vec_builtin_type<value_type, _S_full_size>;
+
       /**
        * @brief Converting constructor from GCC vector builtins.
        *
@@ -1121,9 +1123,9 @@ namespace simd
       basic_vec(_NativeVecType __x)
       : _M_data([&] [[__gnu__::__always_inline__]] {
 	  if constexpr (_S_is_scalar)
-	    return __x[0];
+	    return static_cast<_DataType>(__x[0]);
 	  else
-	    return __x;
+	    return reinterpret_cast<_DataType>(__x);
 	}())
       {}
 
@@ -1142,7 +1144,7 @@ namespace simd
 	if constexpr (_S_is_scalar)
 	  return _NativeVecType{_M_data};
 	else
-	  return _M_data;
+	  return reinterpret_cast<_NativeVecType>(_M_data);
       }
 
 #if _GLIBCXX_X86
@@ -1151,8 +1153,8 @@ namespace simd
        */
       template <__vec_builtin _IV>
 	requires same_as<__x86_intel_intrin_value_type<value_type>, __vec_value_type<_IV>>
-	  && (sizeof(_IV) == sizeof(_DataType) && sizeof(_IV) >= 16
-		 && !is_same_v<_IV, _DataType>)
+	  && (sizeof(_IV) == sizeof(_NativeVecType) && sizeof(_IV) >= 16
+		 && !is_same_v<_IV, _NativeVecType>)
 	constexpr
 	basic_vec(_IV __x)
 	: _M_data(reinterpret_cast<_DataType>(__x))
@@ -1163,8 +1165,8 @@ namespace simd
        */
       template <__vec_builtin _IV>
 	requires same_as<__x86_intel_intrin_value_type<value_type>, __vec_value_type<_IV>>
-	  && (sizeof(_IV) == sizeof(_DataType) && sizeof(_IV) >= 16
-		 && !is_same_v<_IV, _DataType>)
+	  && (sizeof(_IV) == sizeof(_NativeVecType) && sizeof(_IV) >= 16
+		 && !is_same_v<_IV, _NativeVecType>)
 	constexpr
 	operator _IV() const
 	{ return reinterpret_cast<_IV>(_M_data); }
@@ -1411,17 +1413,19 @@ namespace simd
 	  else if constexpr (_S_size <= 2 // __builtin_shuffle (+ _S_extract) is less efficient
 			       || !__can_convert_perm)
 	    {
+	      basic_vec __r;
 	      constexpr auto [...__is] = _IotaArray<_S_size>;
 	      if consteval
 		{
-		  return _DataType{__v[__perm[__is]]...};
+		  __r._M_data = _DataType{__v[__perm[__is]]...};
 		}
 	      else
 		{
 		  using _AliasT [[__gnu__::__may_alias__]] = value_type;
 		  const _AliasT* __src = reinterpret_cast<const _AliasT*>(&__v);
-		  return _DataType{__src[size_t(__perm[__is])]...};
+		  __r._M_data = _DataType{__src[size_t(__perm[__is])]...};
 		}
+	      return __r;
 	    }
 	  else if constexpr (_A0::_S_nreg >= 2)
 	    { // recurse to 
@@ -1442,12 +1446,12 @@ namespace simd
 	      const auto __p0 = rebind_t<_ShufIndexType, _IV>(__perm)._M_concat_data(true);
 	      const auto& __v0 = __v._M_data;
 	      if constexpr (sizeof(__v0) == sizeof(__p0))
-		return __vec_shuffle(__v0, __p0);
+		return _S_init(__vec_shuffle(__v0, __p0));
 	      else if constexpr (sizeof(__v0) < sizeof(__p0))
-		return __vec_shuffle(__vec_zero_pad_to<sizeof(__p0)>(__v0), __p0);
+		return _S_init(__vec_shuffle(__vec_zero_pad_to<sizeof(__p0)>(__v0), __p0));
 	      else
-		return _VecOps<_DataType>::_S_extract(
-			 __vec_shuffle(__v0, __vec_zero_pad_to<sizeof(__v0)>(__p0)));
+		return _S_init(_VecOps<_DataType>::_S_extract(
+				 __vec_shuffle(__v0, __vec_zero_pad_to<sizeof(__v0)>(__p0))));
 	    }
 	}
 #endif
@@ -1595,7 +1599,7 @@ namespace simd
 	      = reinterpret_cast<_DataType>(reinterpret_cast<_UV>(__x._M_data)
 					      + reinterpret_cast<_UV>(__y._M_data));
 	    const auto __positive = __y > value_type();
-	    const auto __overflow = __positive != (__result > __x);
+	    const auto __overflow = __positive != (_S_init(__result) > __x);
 	    if (__overflow._M_any_of())
 	      __builtin_unreachable(); // trigger UBsan
 	    __x._M_data = __result;
@@ -1621,7 +1625,7 @@ namespace simd
 	      = reinterpret_cast<_DataType>(reinterpret_cast<_UV>(__x._M_data)
 					      - reinterpret_cast<_UV>(__y._M_data));
 	    const auto __positive = __y > value_type();
-	    const auto __overflow = __positive != (__result < __x);
+	    const auto __overflow = __positive != (_S_init(__result) < __x);
 	    if (__overflow._M_any_of())
 	      __builtin_unreachable(); // trigger UBsan
 	    __x._M_data = __result;
@@ -1911,14 +1915,14 @@ namespace simd
 	      if (__is_const_known(__k, __t, __f))
 		return basic_vec([&](int __i) { return __k[__i] ? __t[__i] : __f[__i]; });
 	      else
-		return __x86_bitmask_blend(__k._M_data, __t._M_data, __f._M_data);
+		return _S_init(__x86_bitmask_blend(__k._M_data, __t._M_data, __f._M_data));
 #else
 	      static_assert(false, "TODO");
 #endif
 	    }
 	  else if consteval
 	    {
-	      return __k._M_data ? __t._M_data : __f._M_data;
+	      return _S_init(__k._M_data ? __t._M_data : __f._M_data);
 	    }
 	  else
 	    {
@@ -1934,7 +1938,8 @@ namespace simd
 		    // flip all -1 elements to +1 by taking the absolute value.
 		    return basic_vec((-__k)._M_abs());
 		  else
-		    return __vec_and(reinterpret_cast<_DataType>(__k._M_data), __t._M_data);
+		    return _S_init(
+			     __vec_and(reinterpret_cast<_DataType>(__k._M_data), __t._M_data));
 		}
 	      else if (_VecOps<_DataType>::_S_is_const_known_equal_to(__t._M_data, 0))
 		{
@@ -1942,7 +1947,8 @@ namespace simd
 			&& _VO::_S_is_const_known_equal_to(__f._M_data, 1))
 		    return value_type(1) + basic_vec(-__k);
 		  else
-		    return __vec_and(reinterpret_cast<_DataType>(__vec_not(__k._M_data)), __f._M_data);
+		    return _S_init(__vec_and(reinterpret_cast<_DataType>(__vec_not(__k._M_data)),
+					     __f._M_data));
 		}
 	      else
 		{
@@ -1951,9 +1957,9 @@ namespace simd
 		  // This pattern, is recognized to match the x86 blend instructions, which only consider
 		  // the sign bit of the mask register. Also, without SSE4, if the compiler knows that __k
 		  // is a vector-mask, then the '< 0' is elided.
-		  return __k._M_data < 0 ? __t._M_data : __f._M_data;
+		  return _S_init(__k._M_data < 0 ? __t._M_data : __f._M_data);
 #endif
-		  return __k._M_data ? __t._M_data : __f._M_data;
+		  return _S_init(__k._M_data ? __t._M_data : __f._M_data);
 		}
 	    }
 	}
@@ -2277,15 +2283,14 @@ namespace simd
       [[__gnu__::__always_inline__]]
       constexpr
       basic_vec(const _NativeVecType& __x)
-      : _M_data0(_VecOps<__vec_builtin_type<value_type, _N0>>::_S_extract(__x)),
-	_M_data1(_VecOps<__vec_builtin_type<value_type, __bit_ceil(unsigned(_N1))>>
-		   ::_S_extract(__x, integral_constant<int, _N0>()))
+      : _M_data0(_VecOps<typename _DataType0::_NativeVecType>::_S_extract(__x)),
+	_M_data1(_VecOps<typename _DataType1::_NativeVecType>::_S_extract(__x, cw<_N0>))
       {}
 
       [[__gnu__::__always_inline__]]
       constexpr
       operator _NativeVecType() const
-      { return _M_concat_data(); }
+      { return reinterpret_cast<_NativeVecType>(_M_concat_data()); }
 
       // [simd.ctor] broadcast constructor ------------------------------------
 #if !VIR_CONSTEVAL_BROADCAST

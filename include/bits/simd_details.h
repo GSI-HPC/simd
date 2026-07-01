@@ -449,14 +449,22 @@ namespace simd
       static constexpr bool _S_is_cx_ctgus
 	= __filter_abi_variant(_S_variant, _AbiVariant::_CxCtgus) == _AbiVariant::_CxCtgus;
 
+      static constexpr bool _S_is_cx = _S_is_cx_ileav || _S_is_cx_ctgus;
+
       static_assert(!(_S_is_cx_ileav && _S_is_cx_ctgus)); // can't be both
 
       static_assert(_S_size >= _S_nreg || (_S_is_cx_ileav && _S_size * 2 >= _S_nreg));
 
+      /** @internal
+       * A bit-mask defines _MaskDataType as an unsigned integer.
+       */
       static constexpr bool _S_is_bitmask
 	= __filter_abi_variant(_S_variant, _AbiVariant::_BitMask) == _AbiVariant::_BitMask;
 
-      static constexpr bool _S_is_vecmask = !_S_is_bitmask;
+      /** @internal
+       * A vector-mask defines _MaskDataType as a GNU vector builtin.
+       */
+      static constexpr bool _S_is_vecmask = !_S_is_bitmask && _S_size != _S_nreg;
 
       template <typename _Tp>
 	using _DataType = decltype([] {

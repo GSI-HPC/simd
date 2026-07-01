@@ -322,9 +322,10 @@ namespace simd
 	  else if constexpr (__nargs == 1)
 	    { // simple and optimal
 	      if constexpr (__use_bitmask)
-		return _Dst(_Ret(__x0._M_to_uint() >> _Offset.value));
+		return _Dst::_S_init(_Ret(__x0._M_to_uint() >> _Offset.value));
 	      else
-		return _VecOps<_Ret>::_S_extract(__x0._M_concat_data(false), _Offset);
+		return _Dst::_S_init(_VecOps<_Ret>::_S_extract(__x0._M_concat_data(false),
+							       _Offset));
 	    }
 	  else if constexpr (__use_bitmask)
 	    { // fairly simple and optimal bit shifting solution
@@ -348,12 +349,12 @@ namespace simd
 	    { // simple __vec_concat
 	      if constexpr (_Afirst::_S_size == 1)
 		// even simpler init from two values
-		return _Ret{__x0._M_concat_data()[0], __xlast._M_concat_data()[0]};
+		return _Dst::_S_init(_Ret{__x0._M_concat_data()[0], __xlast._M_concat_data()[0]});
 	      else
 		{
 		  const auto __v0 = __x0._M_concat_data();
 		  const auto __v1 = __vec_zero_pad_to<sizeof(__v0)>(__xlast._M_concat_data());
-		  return __vec_concat(__v0, __v1);
+		  return _Dst::_S_init(__vec_concat(__v0, __v1));
 		}
 	    }
 	  else if constexpr (__nargs == 2 && _Adst::_S_nreg == 1 && _Offset == 0
@@ -361,7 +362,7 @@ namespace simd
 	    { // optimize insertion of one element at the end
 	      _Ret __r = __vec_zero_pad_to<sizeof(_Ret)>(__x0._M_get());
 	      __vec_set(__r, _Afirst::_S_size, __xlast._M_concat_data()[0]);
-	      return __r;
+	      return _Dst::_S_init(__r);
 	    }
 	  else if constexpr (__nargs == 2 && _Adst::_S_nreg == 1 && _Offset == 0
 			       && _Afirst::_S_nreg == 1 && _Alast::_S_size == 2)
@@ -383,28 +384,29 @@ namespace simd
 		  __vec_set(__r, _Afirst::_S_size, __x1[0]);
 		  __vec_set(__r, _Afirst::_S_size + 1, __x1[1]);
 		}
-	      return __r;
+	      return _Dst::_S_init(__r);
 	    }
 	  else if constexpr (__nargs == 2 && _Afirst::_S_nreg == 1 && _Alast::_S_nreg == 1)
 	    { // optimize concat of two input vectors (e.g. using palignr)
 	      constexpr auto [...__is] = _IotaArray<__dst_full_size>;
 	      constexpr int __v2_offset = __width_of<decltype(__x0._M_concat_data())>;
-	      return __builtin_shufflevector(
-		       __x0._M_concat_data(), __xlast._M_concat_data(), [](int __i) consteval {
-		       if (__i < _Afirst::_S_size)
-			 return __i;
-		       __i -= _Afirst::_S_size;
-		       if (__i < _Alast::_S_size)
-			 return __i + __v2_offset;
-		       else
-			 return -1;
-		     }(__is + _Offset.value)...);
+	      _Ret __r = __builtin_shufflevector(
+			   __x0._M_concat_data(), __xlast._M_concat_data(), [](int __i) consteval {
+			   if (__i < _Afirst::_S_size)
+			     return __i;
+			   __i -= _Afirst::_S_size;
+			   if (__i < _Alast::_S_size)
+			     return __i + __v2_offset;
+			   else
+			     return -1;
+			 }(__is + _Offset.value)...);
+	      return _Dst::_S_init(__r);
 	    }
 	  else if (__is_const_known(__xs...) || __ninputs == _Adst::_S_size)
 	    { // hard to optimize for the compiler, but necessary in constant expressions
-	      return _VecOps<_Ret>::_S_extract(
-		       __vec_concat_sized<__xs.size.value...>(__xs._M_concat_data(false)...),
-		       _Offset);
+	      return _Dst::_S_init(_VecOps<_Ret>::_S_extract(__vec_concat_sized<__xs.size.value...>(
+							       __xs._M_concat_data(false)...),
+							     _Offset));
 	    }
 	  else
 	    { // fallback to concatenation in memory => load the result
@@ -421,7 +423,7 @@ namespace simd
 		}
 	      _Ret __r;
 	      __builtin_memcpy(&__r, __tmp + _Offset.value, sizeof(_Ret));
-	      return __r;
+	      return _Dst::_S_init(__r);
 	    }
 	}
     }
@@ -774,16 +776,29 @@ namespace simd
       basic_mask() = default;
 
       // [simd.mask.overview] conversion extensions ---------------------------
+      using _NativeMaskType = __vec_builtin_type<__integer_from<_Bytes / (1 + _Ap::_S_is_cx)>,
+						 _S_full_size>;
+
       [[__gnu__::__always_inline__]]
       constexpr
-      basic_mask(_DataType __x) requires(!_S_is_scalar && !_S_use_bitmask)
-	: _M_data(__x)
+      basic_mask(_NativeMaskType __x) requires(!_S_use_bitmask)
+      : _M_data([=] {
+	  if constexpr (_S_is_scalar)
+	    return __x[0] != 0;
+	  else
+	    return __x;
+	}())
       {}
 
       [[__gnu__::__always_inline__]]
       constexpr
-      operator _DataType() requires(!_S_is_scalar && !_S_use_bitmask)
-      { return _M_data; }
+      operator _NativeMaskType() requires(!_S_use_bitmask)
+      {
+	if constexpr (_S_is_scalar)
+	  return _M_data ? _NativeMaskType{-1} : _NativeMaskType();
+	else
+	  return _M_data;
+      }
 
       // [simd.mask.ctor] broadcast constructor -------------------------------
       [[__gnu__::__always_inline__]]
@@ -1725,7 +1740,20 @@ namespace simd
       basic_mask() = default;
 
       // [simd.mask.overview] conversion extensions ---------------------------
-      // TODO: any?
+      using _NativeMaskType
+	= __vec_builtin_type<__integer_from<min(8uz, _Bytes)>, __bit_ceil(unsigned(_S_size))>;
+
+      [[__gnu__::__always_inline__]]
+      constexpr
+      basic_mask(_NativeMaskType __x) requires(!_S_is_scalar && !_S_use_bitmask)
+      : _M_data0(_VecOps<typename _Mask0::_NativeMaskType>::_S_extract(__x)),
+	_M_data1(_VecOps<typename _Mask1::_NativeMaskType>::_S_extract(__x, cw<_N0>))
+      {}
+
+      [[__gnu__::__always_inline__]]
+      constexpr
+      operator _NativeMaskType() requires(!_S_is_scalar && !_S_use_bitmask)
+      { return _M_concat_data(); }
 
       // [simd.mask.ctor] broadcast constructor -------------------------------
       [[__gnu__::__always_inline__]]

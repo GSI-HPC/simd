@@ -262,9 +262,9 @@ namespace simd
       else if constexpr (_Traits.template _M_eval_as_f32<typename _Vp::value_type>())              \
 	return _Vp(fn<_Traits, rebind_t<float, _Vp>>(__x));                                        \
       else if constexpr (_Vp::abi_type::_S_nreg == 1 && _Traits._M_fast_math())                    \
-	return __fast_##fn<_ArchTraits(_Traits)._M_math_abi()>(__x._M_get());                      \
+	return _Vp::_S_init(__fast_##fn<_ArchTraits(_Traits)._M_math_abi()>(__x._M_get()));        \
       else if constexpr (_Vp::abi_type::_S_nreg == 1)                                              \
-	return __##fn<_Traits._M_math_abi()>(__x._M_get());                                        \
+	return _Vp::_S_init(__##fn<_Traits._M_math_abi()>(__x._M_get()));                          \
       else if constexpr (__can_dispatch_2x<_Vp>() && _Traits._M_fast_math()                        \
 			   && !_GLIBCXX_SIMD_HAS_SIMD_CLONE(fn))                                   \
 	{                                                                                          \
@@ -344,9 +344,10 @@ namespace simd
       else if constexpr (_Traits.template _M_eval_as_f32<typename _Vp::value_type>())              \
 	return _Vp(fn<_Traits, rebind_t<float, _Vp>>(__x, __y));                                   \
       else if constexpr (_Vp::abi_type::_S_nreg == 1 && _Traits._M_fast_math())                    \
-	return __fast_##fn<_ArchTraits(_Traits)._M_math_abi()>(__x._M_get(), __y._M_get());        \
+	return _Vp::_S_init(__fast_##fn<_ArchTraits(_Traits)._M_math_abi()>(__x._M_get(),          \
+									    __y._M_get()));        \
       else if constexpr (_Vp::abi_type::_S_nreg == 1)                                              \
-	return __##fn<_Traits._M_math_abi()>(__x._M_get(), __y._M_get());                          \
+	return _Vp::_S_init(__##fn<_Traits._M_math_abi()>(__x._M_get(), __y._M_get()));            \
       _GLIBCXX_SIMD_MATH_CALL2_HANDLE_2X(fn)                                                       \
       else                                                                                         \
 	return _Vp::_S_init(fn<_Traits>(__x._M_get_low(), __y._M_get_low()),                       \
@@ -367,7 +368,7 @@ namespace simd
       else if constexpr (_Vp::abi_type::_S_nreg > 1)                                               \
 	return _Vp::_S_init(fn<_Traits>(__x._M_get_low()), fn<_Traits>(__x._M_get_high()));        \
       else                                                                                         \
-	return __##fn<_Traits>(__x._M_get())
+	return _Vp::_S_init(__##fn<_Traits>(__x._M_get()))
 
 #define _GLIBCXX_SIMD_MATH_2ARG_IMPL(fn)                                                           \
       if constexpr (!is_same_v<_Vp, __deduced_vec_t<_Vp>>)                                         \
@@ -384,7 +385,7 @@ namespace simd
 	return _Vp::_S_init(fn<_Traits>(__x._M_get_low(), __y._M_get_low()),                       \
 			    fn<_Traits>(__x._M_get_high(), __y._M_get_high()));                    \
       else                                                                                         \
-	return __##fn<_Traits>(__x._M_get(), __y._M_get())
+	return _Vp::_S_init(__##fn<_Traits>(__x._M_get(), __y._M_get()))
 
   template <_TargetTraits _Traits = {}, __math_floating_point _Vp>
     [[__gnu__::__always_inline__]]
@@ -612,7 +613,7 @@ namespace simd
 	return _Vp::_S_init(nextafter<_Traits>(__x._M_get_low(), __y._M_get_low()),
 			    nextafter<_Traits>(__x._M_get_high(), __y._M_get_high()));
       else
-	return __nextafter<_Traits>(__x._M_get(), __y._M_get());
+	return _Vp::_S_init(__nextafter<_Traits>(__x._M_get(), __y._M_get()));
     }
 
   _GLIBCXX_SIMD_MATH_2ARG_OVERLOADS(constexpr __deduced_vec_t<_Vp>, nextafter)
@@ -881,10 +882,11 @@ namespace simd
 	  return _Vp::_S_init(__lo, __hi);
 	}
       else if constexpr (_Vp::abi_type::_S_nreg == 1 && _Traits._M_fast_math())
-	return __fast_hypot<_ArchTraits(_Traits)._M_math_abi()>(__x._M_get(), __y._M_get(),
-								__z._M_get());
+	return _Vp::_S_init(__fast_hypot<_ArchTraits(_Traits)._M_math_abi()>(
+			      __x._M_get(), __y._M_get(), __z._M_get()));
       else if constexpr (_Vp::abi_type::_S_nreg == 1)
-	return __hypot<_Traits._M_math_abi()>(__x._M_get(), __y._M_get(), __z._M_get());
+	return _Vp::_S_init(__hypot<_Traits._M_math_abi()>(
+			      __x._M_get(), __y._M_get(), __z._M_get()));
       else
 	static_assert(false);
     }
@@ -1010,7 +1012,7 @@ namespace simd
 	return _Vp::_S_init(lerp<_Traits>(__a._M_get_low(), __b._M_get_low(), __t._M_get_low()),
 			    lerp<_Traits>(__a._M_get_high(), __b._M_get_high(), __t._M_get_high()));
       else
-	return __lerp(__a, __b, __t);
+	return _Vp::_S_init(__lerp(__a, __b, __t));
     }
 
   _GLIBCXX_SIMD_MATH_3ARG_OVERLOADS(constexpr __deduced_vec_t<_Vp>, lerp)
