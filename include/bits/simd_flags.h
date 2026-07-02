@@ -26,9 +26,27 @@ namespace simd
     struct alignment
     {};
 
+  // FIXME: This might be the right implementation. But I'm not certain yet.
+  // Consider the following load strategies:
+  // 1. load a complete vec<U, N> and then convert parts of it to the registers in vec<T, N>
+  // 2. load one vec<U, vec<T>::size()> per register in vec<T, N>
+
+  /**
+   * Non-converting loads and stores require an alignment that matches the alignment of the
+   * `basic_vec` type.
+   */
+  template <typename _Tp, typename _Ap>
+    struct alignment<basic_vec<_Tp, _Ap>, _Tp>
+    : integral_constant<size_t, alignof(basic_vec<_Tp, _Ap>)>
+    {};
+
+  /**
+   * Converting loads and stores act on memory in terms of `rebind_t<_Up, basic_vec<_Tp, _Ap>>`.
+   */
   template <typename _Tp, typename _Ap, __vectorizable _Up>
     struct alignment<basic_vec<_Tp, _Ap>, _Up>
-    : integral_constant<size_t, alignof(basic_vec<_Tp, _Ap>)>
+    // load and store instructions act on vec<_Up>
+    : alignment<__similar_vec<_Up, _Ap::_S_size, _Ap>>
     {};
 
   template <typename _Tp, typename _Up = typename _Tp::value_type>

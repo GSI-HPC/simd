@@ -865,3 +865,13 @@ static_assert(
 static_assert(
   all_of(simd::permute(simd::__iota<simd::vec<int, 7>>, permutations::rotate<-2>)
 	   == simd::vec<int, 7>(std::array {5, 6, 0, 1, 2, 3, 4})));
+
+// simd::alignment_v /////////////////
+
+template <typename T, int N>
+  using vec_n = simd::vec<T, simd::vec<T>::size() * N>;
+
+static_assert(simd::alignment_v<simd::vec<float>> == alignof(simd::vec<float>));
+static_assert(simd::alignment_v<vec_n<float, 2>> == alignof(simd::vec<float>));
+static_assert(simd::alignment_v<simd::vec<float>, double> == alignof(simd::vec<double>));
+static_assert(simd::alignment_v<simd::vec<float>, char> == alignof(simd::vec<char, simd::vec<float>::size()>));
