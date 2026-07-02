@@ -64,10 +64,10 @@ f3(simd::vec<unsigned short, 8> x)
 ^"f4(
 vpaddw
 ?vmovq
-vp(shuflw|srldq)
+vp(shuflw|srl)
 vpaddw
 ?vmovq
-vp(shuflw|srldq)
+vp(shuflw|srl)
 vpaddw
 vpextrw	eax, xmm., 0
 ret

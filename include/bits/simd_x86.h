@@ -346,34 +346,16 @@ namespace simd
 
   template <typename _Tp>
     using __x86_intrin_int
-      = decltype([] {
-	  if constexpr (sizeof(_Tp) == 1)
-	    return char();
-	  else
-	    return __integer_from<sizeof(_Tp)>();
-	}());
+      = __conditional_t<sizeof(_Tp) == 1, char, __integer_from<sizeof(_Tp)>>;
 
   template <typename _Tp>
     using __x86_intrin_type
-      = decltype([] {
-	  if constexpr (is_integral_v<_Tp> || sizeof(_Tp) <= 2)
-	    return __x86_intrin_int<_Tp>();
-	  else
-	    return __canonical_vec_type_t<_Tp>();
-	}());
+      = __conditional_t<is_integral_v<_Tp> || sizeof(_Tp) <= 2,
+			__x86_intrin_int<_Tp>, __canonical_vec_type_t<_Tp>>;
 
   template <typename _Tp>
     using __x86_intel_intrin_value_type
-      = decltype([] {
-	  if constexpr (is_integral_v<_Tp>)
-	    return 0ll;
-	  else if constexpr (sizeof(_Tp) == 8)
-	    return 0.;
-	  else if constexpr (sizeof(_Tp) == 4)
-	    return 0.f;
-	  else if constexpr (sizeof(_Tp) == 2)
-	    return 0.f16;
-	}());
+      = __conditional_t<is_integral_v<_Tp>, long long, __float_from<sizeof(_Tp)>>;
 
 #if !_GLIBCXX_CLANG
   // overload __vec_andnot from simd_detail.h

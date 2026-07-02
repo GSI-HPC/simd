@@ -17,6 +17,11 @@
 // psabi warnings are bogus because the ABI of the internal types never leaks into user code
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpsabi"
+#ifdef _GLIBCXX_CLANG
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-parameter"
+#pragma clang diagnostic ignored "-Wgnu-inline-cpp-without-extern"
+#endif
 
 // [simd.math] ----------------------------------------------------------------
 namespace std _GLIBCXX_VISIBILITY(default)
@@ -69,7 +74,7 @@ namespace simd
   // some reason the body of __fast_fn does not compile to something GCC wants to inline, then the
   // gnu_inline attribute makes a call to the __fast_fn function in the library.
 
-#if _GLIBCXX_X86
+#if _GLIBCXX_X86 && !_GLIBCXX_CLANG
 
   // A pair<V0, V1> would always return via MEMORY, not SSE, according to the AMD64 psABI.
   // However, in this case we *really* could use return via two registers: [xyz]mm0 and [xyz]mm1. It
@@ -1474,6 +1479,9 @@ namespace simd
 _GLIBCXX_END_NAMESPACE_VERSION
 } // namespace std
 
+#ifdef _GLIBCXX_CLANG
+#pragma clang diagnostic pop
+#endif
 #pragma GCC diagnostic pop
 #endif // C++26
 #endif // _GLIBCXX_SIMD_MATH_H

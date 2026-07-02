@@ -172,11 +172,18 @@ namespace simd
 	static constexpr _Up*
 	_S_adjust_pointer(_Up* __ptr)
 	{
+#if __cpp_expansion_statements >= 202411L
 	  template for ([[maybe_unused]] constexpr auto __f : {_Flags()...})
 	    {
 	      if constexpr (requires {__f.template _S_adjust_pointer<_Tp>(__ptr); })
 		__ptr = __f.template _S_adjust_pointer<_Tp>(__ptr);
 	    }
+#else
+	  ([&] {
+	    if constexpr (requires {_Flags::template _S_adjust_pointer<_Tp>(__ptr); })
+	      __ptr = _Flags::template _S_adjust_pointer<_Tp>(__ptr);
+	  }(), ...);
+#endif
 	  return __ptr;
 	}
     };

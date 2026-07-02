@@ -333,6 +333,7 @@ namespace simd
 	      static_assert(_Offset.value < _Afirst::_S_size);
 	      int __offset = -_Offset.value;
 	      _Ret __r;
+#if __cpp_expansion_statements >= 202411L
 	      template for (const auto& __x : {__xs...})
 		{
 		  if (__offset <= 0)
@@ -341,6 +342,15 @@ namespace simd
 		    __r |= _Ret(_Ret(__x._M_to_uint()) << __offset);
 		  __offset += __x.size.value;
 		}
+#else
+	      ([&] {
+		if (__offset <= 0)
+		  __r = _Ret(__xs._M_to_uint() >> -__offset);
+		else if (__offset < _Adst::_S_size)
+		  __r |= _Ret(_Ret(__xs._M_to_uint()) << __offset);
+		__offset += __xs.size.value;
+	      }(), ...);
+#endif
 	      return _Dst(__r);
 	    }
 	  else if constexpr (__nargs == 2 && _Offset == 0 && _Adst::_S_nreg == 1
@@ -413,6 +423,7 @@ namespace simd
 	      alignas(_Ret) __vec_value_type<_Ret>
 		__tmp[std::max(__ninputs, _Offset.value + __dst_full_size)] = {};
 	      int __offset = 0;
+#if __cpp_expansion_statements >= 202411L
 	      template for (const auto& __x : {__xs...})
 		{
 		  if constexpr (__simd_mask_type<_Dst>)
@@ -421,6 +432,15 @@ namespace simd
 		    __x._M_store(__tmp + __offset);
 		  __offset += __x.size.value;
 		}
+#else
+	      ([&] {
+		if constexpr (__simd_mask_type<_Dst>)
+		  (-__xs)._M_store(__tmp + __offset);
+		else
+		  __xs._M_store(__tmp + __offset);
+		__offset += __xs.size.value;
+	      }(), ...);
+#endif
 	      _Ret __r;
 	      __builtin_memcpy(&__r, __tmp + _Offset.value, sizeof(_Ret));
 	      return _Dst::_S_init(__r);

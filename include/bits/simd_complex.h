@@ -2364,12 +2364,21 @@ namespace simd
 	  _M_imag([&] {
 	    _T0 __re[sizeof(_RealSimd) / sizeof(_T0)] = {};
 	    _T0 __im[sizeof(_RealSimd) / sizeof(_T0)] = {};
+#if __cpp_expansion_statements >= 202411L
 	    template for (constexpr int __i : _IotaArray<_S_size>)
 	      {
 		const value_type __c = static_cast<value_type>(__gen(__simd_size_c<__i>));
 		__re[__i] = __c.real();
 		__im[__i] = __c.imag();
 	      }
+#else
+	    constexpr auto [...__is] = _IotaArray<_S_size>;
+	    ([&] {
+	      const value_type __c = static_cast<value_type>(__gen(__simd_size_c<__is>));
+	      __re[__is] = __c.real();
+	      __im[__is] = __c.imag();
+	    }(), ...);
+#endif
 	    _M_real = __builtin_bit_cast(_RealSimd, __re);
 	    return __builtin_bit_cast(_RealSimd, __im);
 	  }())

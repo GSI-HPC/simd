@@ -261,38 +261,29 @@ namespace simd
    * C++26 [simd.expos.defn]
    */
   template <size_t _Bytes>
-    using __integer_from
-#if VIR_EXTENSIONS && __clang__
-      = conditional_t<sizeof(signed char) == _Bytes, signed char,
-		      conditional_t<sizeof(signed short) == _Bytes, signed short,
-				    conditional_t<sizeof(signed int) == _Bytes, signed int,
-						  conditional_t<sizeof(signed long long) == _Bytes,
-								signed long long,
-								_InvalidInteger>>>>;
-#else
-      = decltype([] consteval {
-	  if constexpr (sizeof(signed char) == _Bytes)
-	    return static_cast<signed char>(0);
-	  else if constexpr (sizeof(signed short) == _Bytes)
-	    return static_cast<signed short>(0);
-	  else if constexpr (sizeof(signed int) == _Bytes)
-	    return static_cast<signed int>(0);
-	  else if constexpr (sizeof(signed long long) == _Bytes)
-	    return static_cast<signed long long>(0);
-	  else
-	    return _InvalidInteger();
-	}());
-#endif
+    using __integer_from = __conditional_t<
+			     sizeof(signed char) == _Bytes, signed char,
+			     __conditional_t<
+			       sizeof(signed short) == _Bytes, signed short,
+			       __conditional_t<
+				 sizeof(signed int) == _Bytes, signed int,
+				 __conditional_t<
+				   sizeof(signed long long) == _Bytes, signed long long,
+				   __conditional_t<
+				     sizeof(signed long) == _Bytes, signed long,
+				     _InvalidInteger>>>>>;
 
+  /** @internal
+   * Alias for a floating-point type T such that sizeof(T) equals _Bytes.
+   */
   template <size_t _Bytes>
-    using __float_from = decltype([] consteval {
-			   if constexpr (sizeof(double) == _Bytes)
-			     return double();
-			   else if constexpr (sizeof(float) == _Bytes)
-			     return float();
-			   else if constexpr (sizeof(_Float16) == _Bytes)
-			     return _Float16();
-			 }());
+    using __float_from = __conditional_t<
+			   sizeof(double) == _Bytes, double,
+			   __conditional_t<
+			     sizeof(float) == _Bytes, float,
+			     __conditional_t<
+			       sizeof(_Float16) == _Bytes, _Float16,
+			       _InvalidInteger>>>;
 
   /** @internal
    * Alias for an unsigned integer type T such that sizeof(T) equals _Bytes.
@@ -834,14 +825,16 @@ namespace simd
       // the FP16 flag is implied by passing float16_t vectors
       if ((_M_flags & __v4_mask) == __v4_mask)
 	return _ArchTraits{__v4_mask};
-      if ((_M_flags & __v3b_mask) == __v3b_mask)
+      else if ((_M_flags & __v3b_mask) == __v3b_mask)
 	return _ArchTraits{__v3b_mask};
-      if ((_M_flags & __v3a_mask) == __v3a_mask)
+      else if ((_M_flags & __v3a_mask) == __v3a_mask)
 	return _ArchTraits{__v3a_mask};
-      if ((_M_flags & __v2_mask) == __v2_mask)
+      else if ((_M_flags & __v2_mask) == __v2_mask)
 	return _ArchTraits{__v2_mask};
-      if ((_M_flags & __v1_mask) == __v1_mask)
+      else if ((_M_flags & __v1_mask) == __v1_mask)
 	return _ArchTraits{__v1_mask};
+      else
+	__builtin_unreachable(); // should be impossible
     }
 
 #endif

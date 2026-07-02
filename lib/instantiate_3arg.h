@@ -12,11 +12,13 @@
 
 namespace
 {
+#ifndef _GLIBCXX_CLANG
 using flt16_2 = __vec_builtin_type<_Float16, 2>;
 using flt16_4 = __vec_builtin_type<_Float16, 4>;
 using flt16_8 = __vec_builtin_type<_Float16, 8>;
 using flt16_16 = __vec_builtin_type<_Float16, 16>;
 using flt16_32 = __vec_builtin_type<_Float16, 32>;
+#endif
 
 using flt32_2 = __vec_builtin_type<float, 2>;
 using flt32_4 = __vec_builtin_type<float, 4>;
@@ -28,7 +30,7 @@ using flt64_4 = __vec_builtin_type<double, 4>;
 using flt64_8 = __vec_builtin_type<double, 8>;
 }
 
-#ifdef __AVX512FP16__
+#if defined __AVX512FP16__ && !defined _GLIBCXX_CLANG
 template flt16_2 CONCAT(__fast_, FN)(flt16_2, flt16_2, flt16_2);
 template flt16_4 CONCAT(__fast_, FN)(flt16_4, flt16_4, flt16_4);
 template flt16_8 CONCAT(__fast_, FN)(flt16_8, flt16_8, flt16_8);
