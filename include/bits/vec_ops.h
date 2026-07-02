@@ -351,7 +351,7 @@ namespace simd
 #if __has_builtin(__builtin_shuffle)
       return __builtin_shuffle(__v, __perm);
 #else
-      constexpr int [...__is] = _IotaArray<__width_of<_IV>>;
+      constexpr auto [...__is] = _IotaArray<__width_of<_IV>>;
       return _TV {__v[__perm[__is]]...};
 #endif
     }
