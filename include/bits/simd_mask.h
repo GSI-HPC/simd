@@ -521,10 +521,27 @@ namespace simd
 	_MaskBase(const basic_vec<_Up, _UAbi>&)
 	  = delete("use operator! or a comparison to convert a vec into a mask");
 
+      // [simd.mask.conv] -----------------------------------------------------
       template <typename _Up, typename _UAbi>
 	requires (_Ap::_S_size != _UAbi::_S_size)
 	operator basic_vec<_Up, _UAbi>() const
 	  = delete("size mismatch");
+
+      template <typename _Up, typename _UAbi>
+	requires (_Ap::_S_size == _UAbi::_S_size)
+	[[__gnu__::__always_inline__]]
+	constexpr explicit(sizeof(_Up) != _Bytes)
+	operator basic_vec<_Up, _UAbi>() const noexcept
+	{
+	  const _Mp& __k = static_cast<const _Mp&>(*this);
+	  if constexpr (_Ap::_S_size == 1)
+	    return _Up(__k[0]);
+	  else
+	    {
+	      using _UV = basic_vec<_Up, _UAbi>;
+	      return __select_impl(static_cast<_UV::mask_type>(__k), _Up(1), _UV());
+	    }
+	}
     };
 
   template <size_t _Bytes, __abi_tag _Ap>
@@ -1033,7 +1050,7 @@ namespace simd
       [[__gnu__::__always_inline__]]
       constexpr _VecType
       operator+() const noexcept requires destructible<_VecType>
-      { return operator _VecType(); }
+      { return _Base::operator _VecType(); }
 
       constexpr _VecType
       operator+() const noexcept = delete;
@@ -1075,24 +1092,6 @@ namespace simd
 
       constexpr _VecType
       operator~() const noexcept = delete;
-
-      // [simd.mask.conv] -----------------------------------------------------
-      template <typename _Up, typename _UAbi>
-	requires (_UAbi::_S_size == _S_size)
-	[[__gnu__::__always_inline__]]
-	constexpr explicit(sizeof(_Up) != _Bytes)
-	operator basic_vec<_Up, _UAbi>() const noexcept
-	{
-	  if constexpr (_S_is_scalar)
-	    return _Up(_M_data);
-	  else
-	    {
-	      using _UV = basic_vec<_Up, _UAbi>;
-	      return __select_impl(static_cast<_UV::mask_type>(*this), _Up(1), _UV());
-	    }
-	}
-
-      using _Base::operator basic_vec;
 
       // [simd.mask.namedconv] ------------------------------------------------
       [[__gnu__::__always_inline__]]
@@ -1963,20 +1962,6 @@ namespace simd
 
       constexpr _VecType
       operator~() const noexcept = delete;
-
-      // [simd.mask.conv] -----------------------------------------------------
-      template <typename _Up, typename _UAbi>
-	requires (_UAbi::_S_size == _S_size)
-	[[__gnu__::__always_inline__]]
-	constexpr explicit(sizeof(_Up) != _Bytes)
-	operator basic_vec<_Up, _UAbi>() const noexcept
-	{
-	  using _Rp = basic_vec<_Up, _UAbi>;
-	  return _Rp::_S_init(static_cast<_Rp::_DataType0>(_M_data0),
-			      static_cast<_Rp::_DataType1>(_M_data1));
-	}
-
-      using _Base::operator basic_vec;
 
       // [simd.mask.namedconv] ------------------------------------------------
       [[__gnu__::__always_inline__]]
