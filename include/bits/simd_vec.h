@@ -1666,7 +1666,12 @@ namespace simd
 	  // see PR121274, PR121284, and PR121296 for missed optimizations wrt. conversions
 	  //
 	  // With only 1 or 2 divisions, the conversion to and from fp is too expensive.
+	  //
+	  // This optimization depends on the divp[hsd] instruction. However, with fast-math,
+	  // division is replaced by reciprocal.
+	  // TODO: introduce optimization barrier against reciprocal math (cf. P4231R0)
 	  if constexpr (is_integral_v<value_type> && _S_size > 2
+			  && !_Traits._M_reciprocal_math()
 			  && __value_preserving_convertible_to<value_type, double>)
 	    {
 	      // If the denominator (y) is known to the optimizer, don't convert to fp because the
