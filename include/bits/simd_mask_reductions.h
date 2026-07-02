@@ -84,11 +84,11 @@ namespace simd
   { return __x; }
 
   constexpr __simd_size_type
-  reduce_min_index(same_as<bool> auto __x)
+  reduce_min_index(same_as<bool> auto)
   { return 0; }
 
   constexpr __simd_size_type
-  reduce_max_index(same_as<bool> auto __x)
+  reduce_max_index(same_as<bool> auto)
   { return 0; }
 } // namespace simd
 _GLIBCXX_END_NAMESPACE_VERSION
