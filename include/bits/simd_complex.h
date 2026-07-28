@@ -936,6 +936,39 @@ namespace simd
       { return _M_data._M_concat_data(__do_sanitize); }
 #endif
 
+      template <int _Size = _S_size, int _Offset = 0, typename _A0, typename _Fp>
+	[[__gnu__::__always_inline__]]
+	static constexpr basic_vec
+	_S_static_permute(const basic_vec<value_type, _A0>& __x, _Fp&& __idxmap)
+	{
+	  static_assert(_A0::_S_is_cx_ileav);
+	  if constexpr (sizeof(value_type) <= sizeof(double))
+	    {
+	      using _Up = __float_from<sizeof(value_type)>;
+	      return _S_recursive_bit_cast(
+		       rebind_t<_Up, basic_vec>::template _S_static_permute<_Size, _Offset>(
+			 rebind_t<_Up, basic_vec<value_type, _A0>>::_S_recursive_bit_cast(__x),
+			 __idxmap));
+	    }
+	  else
+	    {
+	      basic_vec __r;
+	      auto __idxmap2 = [=](auto __i) consteval {
+		if constexpr (__index_permutation_function_sized<_Fp>)
+		  return __idxmap(__i / 2, _Size) * 2 + __i % 2;
+		else
+		  return __idxmap(__i / 2) * 2 + __i % 2;
+	      };
+	      if constexpr (_A0::_S_size == 1)
+		__r._M_data = _TSimd::template _S_static_permute<_Size * 2, _Offset * 2>(
+				std::simd::cat(__x._M_real, __x._M_imag), __idxmap2);
+	      else
+		__r._M_data = _TSimd::template _S_static_permute<_Size * 2, _Offset * 2>(
+				__x._M_data, __idxmap2);
+	      return __r;
+	    }
+	}
+
       [[__gnu__::__always_inline__]]
       friend constexpr bool
       __is_const_known(const basic_vec& __x)
@@ -2061,6 +2094,16 @@ namespace simd
 	  _M_real._M_data, _M_imag._M_data
 	};
       }
+
+      template <int _Size = _S_size, int _Offset = 0, typename _A0, typename _Fp>
+	[[__gnu__::__always_inline__]]
+	static constexpr basic_vec
+	_S_static_permute(const basic_vec<value_type, _A0>& __x, _Fp&& __idxmap)
+	{
+	  static_assert(_A0::_S_is_cx_ctgus || _A0::_S_size == 1);
+	  return basic_vec(_RealSimd::_S_static_permute(__x._M_real, __idxmap),
+			   _RealSimd::_S_static_permute(__x._M_imag, __idxmap));
+	}
 
       [[__gnu__::__always_inline__]]
       constexpr auto
