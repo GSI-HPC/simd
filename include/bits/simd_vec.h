@@ -1703,9 +1703,12 @@ namespace simd
 		    __x._M_data[__i] /= __y._M_data[__i];
 		  return __x;
 		}
-	      else
-		__y1 = __select_impl(mask_type::_S_init(mask_type::_S_implicit_mask),
-				     __y, basic_vec(value_type(1)));
+	      else if constexpr (_Traits._M_fp_may_signal() || _Traits._M_fp_may_raise())
+		{ // Division by 0 (in padding elements) is not UB but we can't have spurious fp
+		  // exceptions
+		  __y1 = __select_impl(mask_type::_S_init(mask_type::_S_implicit_mask),
+				       __y, basic_vec(value_type(1)));
+		}
 	    }
 	  __x._M_data /= __y1._M_data;
 	  return __x;
