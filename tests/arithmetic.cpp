@@ -101,9 +101,16 @@ template <typename V>
 	t.verify_equal(one * z, z);
 	t.verify_equal(z * one, z);
 
+#if __NO_SIGNED_ZEROS__
+	// -0+i and 0+i are correct answers
+	t.verify_equal(one * I, I);
+	t.verify_equal(I * one, I);
+	t.verify_equal(I * I, T(-1, 0));
+#else
 	t.verify_bit_equal(one * I, I);
 	t.verify_bit_equal(I * one, I);
 	t.verify_bit_equal(I * I, T(-1, 0));
+#endif
 
 	// Notes:
 	// inf + -inf -> NaN
