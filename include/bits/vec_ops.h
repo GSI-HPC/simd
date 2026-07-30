@@ -280,10 +280,17 @@ namespace simd
     constexpr bool
     __is_const_known(const _Tp& __x)
     {
-      if constexpr (__complex_like<_Tp>)
-	return __is_const_known(__x.real()) && __is_const_known(__x.imag());
+      if consteval
+	{
+	  return true;
+	}
       else
-	return __builtin_constant_p(__x);
+	{
+	  if constexpr (__complex_like<_Tp>)
+	    return __is_const_known(__x.real()) && __is_const_known(__x.imag());
+	  else
+	    return __builtin_constant_p(__x);
+	}
     }
 
   [[__gnu__::__always_inline__]]

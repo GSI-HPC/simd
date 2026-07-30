@@ -1496,7 +1496,16 @@ namespace simd
       [[__gnu__::__always_inline__]]
       friend constexpr bool
       __is_const_known(const basic_mask& __x)
-      { return __builtin_constant_p(__x._M_data); }
+      {
+	if consteval
+	  {
+	    return true;
+	  }
+	else
+	  {
+	    return __builtin_constant_p(__x._M_data);
+	  }
+      }
     };
 
   template <size_t _Bytes, __abi_tag _Ap>

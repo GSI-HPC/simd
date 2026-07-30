@@ -317,7 +317,16 @@ namespace simd
       [[__gnu__::__always_inline__]]
       friend constexpr bool
       __is_const_known(const basic_vec& __x)
-      { return __builtin_constant_p(__x._M_data); }
+      {
+	if consteval
+	  {
+	    return true;
+	  }
+	else
+	  {
+	    return __builtin_constant_p(__x._M_data);
+	  }
+      }
 
       [[__gnu__::__always_inline__]]
       constexpr auto
