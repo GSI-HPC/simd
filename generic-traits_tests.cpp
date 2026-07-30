@@ -16,19 +16,29 @@ using std::complex;
 #ifdef __STDCPP_FLOAT16_T__
 using std::float16_t;
 #endif
+#ifdef __STDCPP_FLOAT32_T__
 using std::float32_t;
+#endif
+#ifdef __STDCPP_FLOAT64_T__
 using std::float64_t;
+#endif
 
 using namespace std::simd;
 
 template <int = 0>
 void test()
 {
-  template for (auto t : {float(), double(),
+  template for (auto t : {float(), double()
 #ifdef __STDCPP_FLOAT16_T__
-			  float16_t(),
+			  , float16_t()
 #endif
-			  float32_t(), float64_t()})
+#ifdef __STDCPP_FLOAT32_T__
+			  , float32_t()
+#endif
+#ifdef __STDCPP_FLOAT64_T__
+			  , float64_t()
+#endif
+			 })
     {
       using T = decltype(t);
       static_assert(__vectorizable<T>);
@@ -109,11 +119,13 @@ void test()
     using ACx2 = _Abi_t<2, 2, _AbiVariant::_CxIleav>;
     static_assert(__abi_tag<ACx2>);
     static_assert(__scalar_abi_tag<ACx2>);
+#ifdef __STDCPP_FLOAT16_T__
     using AM4 = decltype(__abi_rebind<__float_from<2>, ACx2::_S_size * 2, ACx2>());
     static_assert(__abi_tag<AM4>);
     static_assert(__scalar_abi_tag<AM4>);
     static_assert(AM4::_S_size == ACx2::_S_size * 2);
     static_assert(!AM4::_S_is_cx_ileav);
+#endif
   }
 
   static_assert(__streq_to_1("1"));
@@ -175,12 +187,18 @@ void test()
 #ifdef __STDCPP_FLOAT16_T__
   static_assert(__higher_rank_than<float, float16_t>);
 #endif
+#ifdef __STDCPP_FLOAT32_T__
   static_assert(__higher_rank_than<float32_t, float>);
   static_assert(__higher_rank_than<double, float32_t>);
+#endif
   static_assert(__higher_rank_than<double, float>);
+#ifdef __STDCPP_FLOAT64_T__
+#ifdef __STDCPP_FLOAT32_T__
   static_assert(__higher_rank_than<float64_t, float32_t>);
+#endif
   static_assert(__higher_rank_than<float64_t, float>);
   static_assert(__higher_rank_than<float64_t, double>);
+#endif
 
   static_assert(__loadstore_convertible_to<float, double>);
   static_assert(__loadstore_convertible_to<int, double>);
@@ -218,7 +236,9 @@ static_assert(__converts_trivially<long long, long>);
 #elif __SIZEOF_INT__ == __SIZEOF_LONG__
 static_assert(__converts_trivially<int, long>);
 #endif
+#ifdef __STDCPP_FLOAT32_T__
 static_assert(__converts_trivially<float, float32_t>);
+#endif
 
 static_assert([] {
   bool to_find[10] = {0, 1, 1, 1, 0, 1, 0, 0, 1};
