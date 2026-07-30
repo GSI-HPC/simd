@@ -1167,21 +1167,35 @@ namespace simd
 	[[__gnu__::__always_inline__]]
 	constexpr
 	basic_vec(_Up&& __x) noexcept
-	  : _M_data(_DataType() == _DataType() ? static_cast<value_type>(__x) : value_type())
+#if _GLIBCXX_CLANG
+	: _M_data(true ? static_cast<__canon_value_type>(__x) : _DataType())
+#else
+	: _M_data(_DataType() == _DataType()
+		    ? static_cast<__canon_value_type>(__x) : __canon_value_type())
+#endif
 	{}
 #else
       template <__explicitly_convertible_to<value_type> _Up>
 	[[__gnu__::__always_inline__]]
 	constexpr explicit(!__broadcast_constructible<_Up, value_type>)
 	basic_vec(_Up&& __x) noexcept
-	  : _M_data(_DataType() == _DataType() ? static_cast<value_type>(__x) : value_type())
+#if _GLIBCXX_CLANG
+	: _M_data(true ? static_cast<__canon_value_type>(__x) : _DataType())
+#else
+	: _M_data(_DataType() == _DataType()
+		    ? static_cast<__canon_value_type>(__x) : __canon_value_type())
+#endif
 	{}
 
       template <__simd_vec_bcast_consteval<value_type> _Up>
 	consteval
 	basic_vec(_Up&& __x)
+#if _GLIBCXX_CLANG
+	: _M_data(true ? __value_preserving_cast<__canon_value_type>(__x) : _DataType())
+#else
 	: _M_data(_DataType() == _DataType()
-		    ? __value_preserving_cast<value_type>(__x) : value_type())
+		    ? __value_preserving_cast<__canon_value_type>(__x) : __canon_value_type())
+#endif
 	{}
 #endif
 
