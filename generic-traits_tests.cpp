@@ -28,6 +28,7 @@ using namespace std::simd;
 template <int = 0>
 void test()
 {
+#if __cpp_expansion_statements >= 202411L
   template for (auto t : {float(), double()
 #ifdef __STDCPP_FLOAT16_T__
 			  , float16_t()
@@ -46,6 +47,7 @@ void test()
       static_assert(__complex_like<const complex<T>&>);
       static_assert(__vectorizable<complex<T>>);
     }
+#endif
 
   static_assert(!__vectorizable<const float>);
   static_assert(!__vectorizable<float&>);
@@ -53,6 +55,7 @@ void test()
   static_assert(!__vectorizable<std::bfloat16_t>);
 #endif
 
+#if __cpp_expansion_statements >= 202411L
   template for (constexpr int N : {1, 2, 4, 8})
     {
       static_assert(std::signed_integral<__integer_from<N>>);
@@ -69,6 +72,7 @@ void test()
       static_assert(sizeof(__float_from<N>) == N);
       static_assert(__vectorizable<__float_from<N>>);
     }
+#endif
 
   static_assert(__div_ceil(5, 3) == 2);
 
