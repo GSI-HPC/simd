@@ -328,8 +328,8 @@ namespace simd
 	    if (__nan[__i] && __nan[__i + 1])
 	      {
 		using _Tc = typename _Cx::value_type;
-		const _Cx __cx(_Tc(__x[__i]), _Tc(__x[__i + 1]));
-		const _Cx __cy(_Tc(__y[__i]), _Tc(__y[__i + 1]));
+		const _Cx __cx(static_cast<_Tc>(__x[__i]), static_cast<_Tc>(__x[__i + 1]));
+		const _Cx __cy(static_cast<_Tc>(__y[__i]), static_cast<_Tc>(__y[__i + 1]));
 		const _Cx __cr = __cx * __cy;
 		__vec_set(__r, __i, __cr.real());
 		__vec_set(__r, __i + 1, __cr.imag());
