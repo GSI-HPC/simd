@@ -219,6 +219,7 @@ void test()
 
 template void test<>();
 
+#if __cpp_constexpr_exceptions >= 202411L
 consteval bool
 throws(auto f)
 {
@@ -233,6 +234,7 @@ static_assert(throws([] { __value_preserving_cast<float>(0x5EAF00D); }));
 static_assert(throws([] { __value_preserving_cast<unsigned>(-1); }));
 static_assert(!throws([] { __value_preserving_cast<unsigned short>(0xffff); }));
 static_assert(throws([] { __value_preserving_cast<unsigned short>(0x10000); }));
+#endif
 
 static_assert(__converts_trivially<int, unsigned>);
 #if __SIZEOF_LONG__ == __SIZEOF_LONG_LONG__
