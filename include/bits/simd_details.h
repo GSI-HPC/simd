@@ -459,7 +459,8 @@ namespace simd
 
       template <typename _Tp>
 	using _DataType = decltype([] {
-			    static_assert(_S_nreg == 1);
+			    // needs dependency on _Tp:
+			    static_assert(_S_nreg == (sizeof(_Tp) ? 1 : 0));
 			    if constexpr (_S_size == 1)
 			      return __canonical_vec_type_t<_Tp>();
 			    else
@@ -474,7 +475,8 @@ namespace simd
       template <size_t _Bytes>
 	using _MaskDataType
 	  = decltype([] {
-	      static_assert(_S_nreg == 1);
+	      // needs dependency on _Bytes:
+	      static_assert(_S_nreg == (_Bytes ? 1 : 0));
 	      if constexpr (_S_size == 1)
 		return bool();
 	      else if constexpr (_S_is_vecmask)
