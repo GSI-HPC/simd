@@ -30,13 +30,22 @@ namespace simd
     reduce(const basic_vec<_Tp, _Ap>& __x, _BinaryOperation __binary_op = {})
     { return __x._M_reduce(__binary_op); }
 
-  template <typename _Tp, typename _Ap, __reduction_binary_operation<_Tp> _BinaryOperation = plus<>>
+  template <typename _Tp, typename _Ap, __reduction_binary_operation<_Tp> _BinaryOperation>
     [[__gnu__::__always_inline__]]
     constexpr _Tp
     reduce(const basic_vec<_Tp, _Ap>& __x, const typename basic_vec<_Tp, _Ap>::mask_type& __mask,
-	   _BinaryOperation __binary_op = {}, type_identity_t<_Tp> __identity_element
-	     = __default_identity_element<_Tp, _BinaryOperation>())
+	   _BinaryOperation __binary_op, type_identity_t<_Tp> __identity_element)
     { return reduce(__select_impl(__mask, __x, __identity_element), __binary_op); }
+
+  template <typename _Tp, typename _Ap, __reduction_binary_operation<_Tp> _BinaryOperation = plus<>>
+    requires requires { __default_identity_element<_Tp, _BinaryOperation>(); }
+    [[__gnu__::__always_inline__]]
+    constexpr _Tp
+    reduce(const basic_vec<_Tp, _Ap>& __x, const typename basic_vec<_Tp, _Ap>::mask_type& __mask,
+	   _BinaryOperation __binary_op = {})
+    {
+      return reduce(__x, __mask, __binary_op, __default_identity_element<_Tp, _BinaryOperation>());
+    }
 
   template <totally_ordered _Tp, typename _Ap>
     [[__gnu__::__always_inline__]]
