@@ -189,12 +189,14 @@ namespace simd
 	{ proj(__x) } -> same_as<_Tp>;
       }
 	  && is_same_v<__rebind_complex_t<typename _Tp::value_type, _Tp>, _Tp>
+#if !_GLIBCXX_CLANG // Clang fails on constexpr _Complex operations (Issue 55370)
 	  && (__complex_object<_Tp, 1, 2> + _Tp {} == __complex_object<_Tp, 1, 2>)
 	  && (__complex_object<_Tp, -1, 5> - __complex_object<_Tp, -1, 5> == _Tp {})
 	  && (__complex_object<_Tp, 2, 3> * __complex_object<_Tp, 1, 1>
 		 == __complex_object<_Tp, -1, 5>)
 	  && (__complex_object<_Tp, 5, 5> / __complex_object<_Tp, 1, 2>
 		 == __complex_object<_Tp, 3, -1>)
+#endif
 	  && (conj(__complex_object<_Tp, 5, 3>) == __complex_object<_Tp, 5, -3>)
 	  // not constexpr: && (abs(__complex_object<_Tp, 3, 4>) == typename _Tp::value_type(5))
 	  && (norm(__complex_object<_Tp, 5, 5>) == typename _Tp::value_type(50))
