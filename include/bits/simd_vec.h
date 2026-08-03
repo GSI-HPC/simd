@@ -397,13 +397,13 @@ namespace simd
 	      constexpr auto [...__is_full] = _IotaArray<_S_full_size>;
 	      if constexpr (_A0::_S_nreg == 2 && !__needs_zero_element)
 		{
-		  __r._M_data = __builtin_shufflevector(
+		  __r._M_data = __glibcxx_shufflevector(
 				  __x._M_data0._M_data, __x._M_data1._M_concat_data(),
 				  __adj_idx(__idxmap2(__simd_size_c<__is_full>)).value...);
 		}
 	      else
 		{
-		  __r._M_data = __builtin_shufflevector(
+		  __r._M_data = __glibcxx_shufflevector(
 				  __x._M_concat_data(), decltype(__x._M_concat_data())(),
 				  __adj_idx(__idxmap2(__simd_size_c<__is_full>)).value...);
 		}

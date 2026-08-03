@@ -399,17 +399,22 @@ namespace simd
 	  else if constexpr (__nargs == 2 && _Afirst::_S_nreg == 1 && _Alast::_S_nreg == 1)
 	    { // optimize concat of two input vectors (e.g. using palignr)
 	      constexpr auto [...__is] = _IotaArray<__dst_full_size>;
-	      constexpr int __v2_offset = __width_of<decltype(__x0._M_concat_data())>;
-	      _Ret __r = __builtin_shufflevector(
-			   __x0._M_concat_data(), __xlast._M_concat_data(), [](int __i) consteval {
-			   if (__i < _Afirst::_S_size)
-			     return __i;
-			   __i -= _Afirst::_S_size;
-			   if (__i < _Alast::_S_size)
-			     return __i + __v2_offset;
-			   else
-			     return -1;
-			 }(__is + _Offset.value)...);
+	      constexpr int __o = _Offset.value;
+#if _GLIBCXX_CLANG
+	      // Clang requires equal size for both shufflevector arguments
+	      constexpr size_t __dbytes = std::max(sizeof(__x0._M_concat_data()),
+						   sizeof(__xlast._M_concat_data()));
+	      const auto __d0 = __vec_zero_pad_to<__dbytes>(__x0._M_concat_data());
+#else
+	      const auto& __d0 = __x0._M_concat_data();
+#endif
+	      _Ret __r = __glibcxx_shufflevector(
+			   __d0, __xlast._M_concat_data(),
+			   (__is + __o < _Afirst::_S_size
+			      ? __is + __o
+			      : (__is + __o < _Afirst::_S_size + _Alast::_S_size
+				   ? __is + __o - _Afirst::_S_size + __width_of<decltype(__d0)>
+				   : -1))...);
 	      return _Dst::_S_init(__r);
 	    }
 	  else if (__is_const_known(__xs...) || __ninputs == _Adst::_S_size)

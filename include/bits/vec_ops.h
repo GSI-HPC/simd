@@ -80,6 +80,12 @@ namespace simd
     requires __vec_builtin<_Tp>
     inline constexpr __simd_size_type __width_of<_Tp> = sizeof(_Tp) / sizeof(__vec_value_type<_Tp>);
 
+  template <typename _Tp>
+    inline constexpr __simd_size_type __width_of<const _Tp> = __width_of<_Tp>;
+
+  template <typename _Tp>
+    inline constexpr __simd_size_type __width_of<_Tp &> = __width_of<_Tp>;
+
   /**
    * Alias for a vector builtin with equal value type and new width @p _Np.
    */
@@ -558,6 +564,43 @@ namespace simd
     requires std::floating_point<__vec_value_type<_V>>
     constexpr _V _S_signmask = __vec_xor(_V() + 1, _V() - 1);
 
+#if _GLIBCXX_CLANG
+  /** @internal
+   * Calls `__builtin_shufflevector` with `-1` indices replaced in constant expressions.
+   */
+  template <typename _TV, integral auto... _Is>
+    [[__gnu__::__always_inline__]]
+    constexpr decltype(__builtin_shufflevector(_TV(), _TV(), _Is...))
+    __vec_clang_shufflevector(_TV __x, _TV __y) noexcept
+    {
+      static_assert(__vec_builtin<_TV>);
+      if consteval
+	{
+	  // Clang doesn't allow -1 in constant expressions. The last element of __y is most likely
+	  // to be zero (from zero-padding). But really, we don't care.
+	  return __builtin_shufflevector(__x, __y, (_Is == -1 ? __width_of<_TV> * 2 - 1 : _Is)...);
+	}
+      else
+	{
+	  return __builtin_shufflevector(__x, __y, _Is...);
+	}
+    }
+#endif
+
+  /** @internal
+   * @brief Wrapper for `__builtin_shufflevector`.
+   *
+   * Transparent for GCC. For Clang it zero-pads the second argument and calls
+   * `__vec_clang_shufflevector`.
+   */
+#if _GLIBCXX_CLANG
+#define __glibcxx_shufflevector(v0, v1, ...)                            \
+  __vec_clang_shufflevector<remove_cvref_t<decltype(v0)>, __VA_ARGS__>( \
+    v0, __vec_zero_pad_to<sizeof(v0)>(v1))
+#else
+#define __glibcxx_shufflevector(v0, v1, ...) __builtin_shufflevector(v0, v1, __VA_ARGS__)
+#endif
+
   template <__vec_builtin _TV, int _Np = __width_of<_TV>,
 	    typename = make_integer_sequence<int, _Np>>
     struct _VecOps;
@@ -628,13 +671,7 @@ namespace simd
       _S_overwrite_even_elements(_TV& __x, _HV __y) requires (_Np > 1)
       {
 	constexpr __simd_size_type __n = __width_of<_TV>;
-	__x = __builtin_shufflevector(__x,
-#ifdef _GLIBCXX_CLANG
-				      __vec_concat(__y, __y),
-#else
-				      __y,
-#endif
-				      ((_Is & 1) == 0 ? __n + _Is / 2 : _Is)...);
+	__x = __glibcxx_shufflevector(__x, __y, ((_Is & 1) == 0 ? __n + _Is / 2 : _Is)...);
       }
 
       [[__gnu__::__always_inline__]]
@@ -652,13 +689,7 @@ namespace simd
       _S_overwrite_odd_elements(_TV& __x, _HV __y) requires (_Np > 1)
       {
 	constexpr __simd_size_type __n = __width_of<_TV>;
-	__x = __builtin_shufflevector(__x,
-#ifdef _GLIBCXX_CLANG
-				      __vec_concat(__y, __y),
-#else
-				      __y,
-#endif
-				      ((_Is & 1) == 1 ? __n + _Is / 2 : _Is)...);
+	__x = __glibcxx_shufflevector(__x, __y, ((_Is & 1) == 1 ? __n + _Is / 2 : _Is)...);
       }
 
       [[__gnu__::__always_inline__]]
@@ -737,6 +768,7 @@ namespace simd
 	    return (((_Is & 1) == 0 || __is_const_known_equal_to(__x[_Is], _Tp())) && ...);
 	}
     };
+
 } // namespace simd
 _GLIBCXX_END_NAMESPACE_VERSION
 } // namespace std
