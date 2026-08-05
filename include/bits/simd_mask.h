@@ -1317,14 +1317,24 @@ namespace simd
       {
 	if constexpr (!_S_use_bitmask)
 	  {
-#if _GLIBCXX_X86
-	    // this works around bad code-gen when the compiler can't see that __k is a vector-mask.
-	    // This pattern, is recognized to match the x86 blend instructions, which only consider
-	    // the sign bit of the mask register. Also, without SSE4, if the compiler knows that __k
-	    // is a vector-mask, then the '< 0' is elided.
-	    return __k._M_data < 0 ? __t._M_data : __f._M_data;
+#if _GLIBCXX_CLANG
+	    if consteval
+	      {
+		constexpr auto [...__is] = _IotaArray<_S_full_size>;
+		return _DataType{(__k._M_data[__is] ? __t._M_data[__is] : __f._M_data[__is])...};
+	      }
+	    else
 #endif
-	    return __k._M_data ? __t._M_data : __f._M_data;
+	      {
+#if _GLIBCXX_X86
+		// this works around bad code-gen when the compiler can't see that __k is a
+		// vector-mask. This pattern, is recognized to match the x86 blend instructions,
+		// which only consider the sign bit of the mask register. Also, without SSE4, if the
+		// compiler knows that __k is a vector-mask, then the '< 0' is elided.
+		return __k._M_data < 0 ? __t._M_data : __f._M_data;
+#endif
+		return __k._M_data ? __t._M_data : __f._M_data;
+	      }
 	  }
 	else
 	  return (__k._M_data & __t._M_data) | (~__k._M_data & __f._M_data);

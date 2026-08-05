@@ -797,7 +797,20 @@ namespace simd
       [[__gnu__::__always_inline__]]
       constexpr basic_vec
       _M_abs() const requires signed_integral<value_type>
-      { return _S_init(_M_data < 0 ? -_M_data : _M_data); }
+      {
+#if _GLIBCXX_CLANG
+	if consteval
+	  {
+	    return basic_vec([&](int __i) -> __canon_value_type {
+		     return operator[](__i) < 0 ? -operator[](__i) : operator[](__i);
+		   });
+	  }
+	else
+#endif
+	  {
+	    return _S_init(_M_data < 0 ? -_M_data : _M_data);
+	  }
+      }
 
       [[__gnu__::__always_inline__]]
       constexpr basic_vec
@@ -1931,7 +1944,13 @@ namespace simd
 	    }
 	  else if consteval
 	    {
+#if _GLIBCXX_CLANG
+	      constexpr auto [...__is] = _IotaArray<_S_full_size>;
+	      return _S_init(_DataType{(__k._M_data[__is] ? __t._M_data[__is]
+							  : __f._M_data[__is])...});
+#else
 	      return _S_init(__k._M_data ? __t._M_data : __f._M_data);
+#endif
 	    }
 	  else
 	    {
