@@ -153,6 +153,9 @@ namespace test02
   static_assert(!has_type_member<common_type<int, simd::vec<float>>>);
 #endif
 
+#ifdef __clang__
+#pragma clang diagnostic ignored "-Wunused-const-variable"
+#endif
   constexpr simd::vec<complex<double>>::mask_type k = {};
 }
 

@@ -9,7 +9,9 @@
 #include "unittest_pch.h"
 #include <stdfloat>
 
+#ifdef __STDCPP_FLOAT16_T__
 using std::float16_t;
+#endif
 
 #ifndef UNITTEST_TYPE
 #define UNITTEST_TYPE int

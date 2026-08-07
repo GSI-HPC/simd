@@ -7,6 +7,14 @@
 #define TESTS_UNITTEST_PCH_H_
 
 #include "../include/bits/simd_details.h"
+#if _GLIBCXX_CLANG
+// work around is_trivial_v usage in <inplace_vector>
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+
+// avoid error on using infinity with -ffinite-math
+#pragma clang diagnostic ignored "-Wnan-infinity-disabled"
+#endif
+
 #include <string_view>
 #include <climits>
 
@@ -191,6 +199,11 @@ template <any_type_of<wchar_t, char8_t, char16_t, char32_t> T>
 
     std::formatter<U, char> f_ = {};
   };
+
+template <typename T>
+  concept is_string_type
+    = std::is_integral_v<std::ranges::range_value_t<T>>
+	&& std::is_convertible_v<T, std::basic_string_view<std::ranges::range_value_t<T>>>;
 
 struct additional_info
 {
@@ -539,7 +552,9 @@ struct constexpr_verifier
       else
 #endif
 	msg += "TODO\n";
+#if __has_builtin(__builtin_constexpr_diag)
       __builtin_constexpr_diag(0, "test", std::string_view(msg));
+#endif
       return {};
     }
 
@@ -550,14 +565,18 @@ struct constexpr_verifier
       {
 	f();
 	++failed;
+#if __has_builtin(__builtin_constexpr_diag)
 	__builtin_constexpr_diag(0, "test", "precondition failure not detected");
+#endif
       }
     catch (const test::precondition_failure& failure)
       {
 	if (failure.msg != expected_msg)
 	  {
 	    ++failed;
+#if __has_builtin(__builtin_constexpr_diag)
 	    __builtin_constexpr_diag(0, "test", "unexpected exception");
+#endif
 	  }
 	else
 	  ++passed;
@@ -565,7 +584,9 @@ struct constexpr_verifier
     catch (...)
       {
 	++failed;
+#if __has_builtin(__builtin_constexpr_diag)
 	__builtin_constexpr_diag(0, "test", "unexpected exception");
+#endif
       }
     return {};
   }
@@ -608,7 +629,9 @@ struct constexpr_verifier
       else
 	{
 	  ++failed;
+#if __has_builtin(__builtin_constexpr_diag)
 	  __builtin_constexpr_diag(0, "test", "verify_bit_equal failed");
+#endif
 	}
       return {};
     }
@@ -630,7 +653,9 @@ struct constexpr_verifier
     else
       {
 	++failed;
+#if __has_builtin(__builtin_constexpr_diag)
 	__builtin_constexpr_diag(0, "test", "verify_not_equal failed");
+#endif
       }
     return {};
   }
@@ -645,7 +670,9 @@ struct constexpr_verifier
     else
       {
 	++failed;
+#if __has_builtin(__builtin_constexpr_diag)
 	__builtin_constexpr_diag(0, "test", "verify_equal_to_ulp failed");
+#endif
       }
     return {};
   }
@@ -706,7 +733,7 @@ struct runtime_verifier
 	{
 	  if constexpr (std::is_floating_point_v<std::ranges::range_value_t<T>>)
 	    std::println(std::dynamic_format("|{:>9} | {::a}"), what, val);
-	  else if constexpr (display_string_of(^^T).contains("string"))
+	  else if constexpr (is_string_type<T>)
 	    std::println(std::dynamic_format("|{:>9} | {}"), what, val);
 	  else if constexpr (std::is_integral_v<std::ranges::range_value_t<T>>)
 	    std::println(std::dynamic_format("|{:>9} | {::d}"), what, val);
@@ -1123,6 +1150,7 @@ struct dummy_test
 {
   static constexpr std::array<int, 0> args = {};
   static constexpr auto fun = [](auto&, auto...) {};
+  static constexpr int max_n = -1;
 };
 
 template <auto test_ref, int... is, std::size_t... arg_idx>
@@ -1130,11 +1158,14 @@ template <auto test_ref, int... is, std::size_t... arg_idx>
   invoke_test_impl(std::index_sequence<arg_idx...>)
   {
     first_fail = true;
+#if !_GLIBCXX_CLANG
     const auto before = failed_tests;
+#endif
     constexpr auto fun = test_ref->fun;
     [[maybe_unused]] constexpr auto args = test_ref->args;
     constprop_test<is...>(fun, std::get<arg_idx>(args)...);
     runtime_test<is...>(fun, std::get<arg_idx>(args)...);
+#if !_GLIBCXX_CLANG // clang is too buggy/behind wrt. constexpr
     constexpr auto pf = constexpr_test<is...>(fun, std::get<arg_idx>(args)...);
     passed_tests += pf.first;
     if (pf.second > 0)
@@ -1146,6 +1177,7 @@ template <auto test_ref, int... is, std::size_t... arg_idx>
       }
     if (before == failed_tests)
       std::println("{}", " ✅ PASS");
+#endif
   }
 
 #define ADD_TEST(name, ...)                                                                        \
@@ -1216,6 +1248,7 @@ template <typename T, int N = sizeof(0ll) * CHAR_BIT * 4>
     { return size_; }
   };
 
+#if __cpp_impl_reflection >= 202603L
 struct test_info
 {
   std::meta::info obj;
@@ -1246,6 +1279,7 @@ template <typename T>
       }
     return r;
   }
+#endif
 
 template <typename V, typename... Ts>
   consteval std::array<V, simd::__div_ceil(int(sizeof...(Ts)), V::size())>
@@ -1271,6 +1305,7 @@ template <typename V, typename... Ts>
     return r;
   }
 
+#if __cpp_impl_reflection >= 202603L
 template <typename V>
   void
   invoke_test_members()
@@ -1435,6 +1470,68 @@ template <typename V>
 	  }
       }
   }
+#else
+
+#include <functional>
+
+std::vector<void(*)()> g_tests = {};
+
+template <typename V>
+  void
+  invoke_test_members()
+  {
+    ::Tests<V>();
+    for (auto test_fun : g_tests)
+      test_fun();
+  }
+
+template <auto test_ref>
+  void
+  invoke_one_test()
+  {
+    constexpr std::string_view test_name = "<test name>";
+    constexpr auto args = test_ref->args;
+    using A = std::remove_const_t<decltype(args)>;
+    if constexpr (test_ref->max_n >= 0)
+      {
+	static_assert(!array_specialization<A>, "this would be too expensive to compile");
+	constexpr auto [...is] = std::_IotaArray<test_ref->max_n>;
+	([&] {
+	  std::print("|{:>25} |{:>3} |", test_name, is);
+	  invoke_test_impl<test_ref, is>(std::make_index_sequence<std::tuple_size_v<A>>());
+	}(), ...);
+      }
+    else if constexpr (array_specialization<A>)
+      { // call for each element
+	constexpr auto [...is] = std::_IotaArray<args.size()>;
+	([&] {
+	  std::print("|{:>25} |{:>3}: {} |", test_name, is, args[is]);
+	  invoke_test_impl<test_ref>(std::index_sequence<is>());
+	}(), ...);
+      }
+    else
+      {
+	std::print("|{:>25} |  - |", test_name);
+	invoke_test_impl<test_ref>(std::make_index_sequence<std::tuple_size_v<A>>());
+      }
+  }
+
+#undef ADD_TEST
+
+#define ADD_TEST(name, ...)                                                                        \
+    template <int>                                                                                 \
+      static constexpr dummy_test test_obj_##name = {};                                            \
+												   \
+    const int register_test_##name = [] {                                                          \
+      g_tests.push_back(&invoke_one_test<&test_obj_##name<0>>);                                    \
+      return 0;                                                                                    \
+    }();                                                                                           \
+												   \
+    template <int Tmp>                                                                             \
+      requires (Tmp == 0) __VA_OPT__(&& (__VA_ARGS__))                                             \
+      static constexpr add_test test_obj_##name<Tmp> =
+
+#endif // reflection
 
 template <typename = void>
 void test_runner();

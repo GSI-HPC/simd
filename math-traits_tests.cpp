@@ -119,6 +119,9 @@ namespace math_tests
     operator""_f4(long double x)
   { return float(x); }
 
+#define HAVE_CONSTEXPR_CMATH !_GLIBCXX_CLANG
+
+#if HAVE_CONSTEXPR_CMATH
   static_assert(simd::floor(1.1_f1)[0] == std::floor(1.1f));
   static_assert(simd::floor(simd::basic_vec(std::array{1.1f, 1.2f, 2.f, 3.f}))[0] == std::floor(1.1f));
   static_assert(simd::floor(holder {1.1_f1})[0] == std::floor(1.1f));
@@ -132,6 +135,7 @@ namespace math_tests
   static_assert(simd::hypot(1.2_f1, 1)[0] == std::hypot(1.f, 1.2f));
 #endif
   static_assert(simd::hypot(holder {1.f}, 1.2_f1)[0] == std::hypot(1.f, 1.2f));
+#endif
   // the following must not be valid. if you want vec<double> be explicit about it:
   static_assert(not_hypot_invocable<double, simd::vec<float, 1>>);
   static_assert(not_hypot_invocable<double, simd::vec<float, 1>, simd::vec<float, 1>>);

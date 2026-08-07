@@ -7,6 +7,13 @@
 #define LIB_SUPPORT_H_
 
 #define VIR_EXTENSIONS 1
+#include <bits/simd_details.h>
+
+#ifdef _GLIBCXX_CLANG
+// avoid error on using infinity with -ffinite-math
+#pragma clang diagnostic ignored "-Wnan-infinity-disabled"
+#endif
+
 #include <bits/simd_math.h>
 #include <bits/simd_alg.h>
 #include <bits/simd_mask_reductions.h>
