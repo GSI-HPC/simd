@@ -2073,7 +2073,7 @@ namespace simd
       constexpr auto
       _M_get_low() const requires (_Ap::_S_nreg >= 2)
       {
-	return resize_t<_M_real._N0, basic_vec>(
+	return resize_t<_RealSimd::_N0, basic_vec>(
 		 _M_real._M_get_low(), _M_imag._M_get_low());
       }
 
@@ -2081,7 +2081,7 @@ namespace simd
       constexpr auto
       _M_get_high() const requires (_Ap::_S_nreg >= 2)
       {
-	return resize_t<_M_real._N1, basic_vec>(
+	return resize_t<_RealSimd::_N1, basic_vec>(
 		 _M_real._M_get_high(), _M_imag._M_get_high());
       }
 

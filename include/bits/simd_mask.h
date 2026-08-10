@@ -1939,7 +1939,7 @@ namespace simd
 	__glibcxx_simd_precondition(__i >= 0 && __i < _S_size, "subscript is out of bounds");
 	if (__is_const_known(__i))
 	  return __i < _N0 ? _M_data0[__i] : _M_data1[__i - _N0];
-	else if constexpr (_M_data1._S_has_bool_member)
+	else if constexpr (_Mask1::_S_has_bool_member)
 	  // in some cases the last element can be 'bool' instead of bit-/vector-mask;
 	  // e.g. mask<short, 17> is {mask<short, 16>, mask<short, 1>}, where the latter uses
 	  // _Abi<1, 1>, which is stored as 'bool'
