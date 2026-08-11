@@ -1093,7 +1093,15 @@ namespace simd
       [[__gnu__::__always_inline__]]
       inline basic_vec
       _M_assoc_barrier() const
-      { return __builtin_assoc_barrier(_M_data); }
+      {
+#if __has_builtin(__builtin_assoc_barrier)
+	return __builtin_assoc_barrier(_M_data);
+#else
+	basic_vec __r = *this;
+	asm("":"+x"(__r._M_data));
+	return __r;
+#endif
+      }
 
 #endif
       // [simd.overview] default constructor ----------------------------------
