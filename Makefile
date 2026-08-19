@@ -220,7 +220,9 @@ $(check_targets): $(objdir)/compile_commands.json $(wildcard tests/*.cpp) Makefi
 	$(foreach t,$(tests),$(foreach w,$(testwidths),$(foreach y,$(call testtypes_for_test,$(t)),$(foreach a,$(testarchs),\
 		$(file >>$@,check/$t.$a/$y.$w)\
 	))))
-#		$(file >>$@,check/fast-math/$t.$a/$y.$w)\
+	$(foreach t,$(fast_math_tests),$(foreach w,$(testwidths),$(foreach y,$(call testtypes_for_test,$(t)),$(foreach a,$(testarchs),\
+		$(file >>$@,check/fast-math.$t.$a/$y.$w)\
+	))))
 
 REPORTFLAGS=-fmem-report -ftime-report -Q
 

@@ -215,12 +215,12 @@ $(foreach arch,$(testarchs),\
 #	@driver.sh $(1) $(2) $$* "$(DIRECT)" "$$(CXX)" "$$(LINK_CXX)" $$(CXXFLAGS)
 # arguments: test, arch
 define exe_template
-check/$(3)$(1).$(2)/%: tests/$(1).cpp $(objdir)/$(2).hpp tests/unittest*.h $(objdir)/libsimd.a | $(objdir)/$(2).$(3)hpp.gch setup_progress
+check/$(3)$(1).$(2)/%: tests/$(1).cpp $(objdir)/$(2).$(3)hpp tests/unittest*.h $(objdir)/libsimd.a | $(objdir)/$(2).$(3)hpp.gch setup_progress
 	@printf -- '$$(msg_build) $(if $(DIRECT),and link )$$(@:check/%=  $(objdir)/%.$(if $(DIRECT),exe,o))\n'
 	@mkdir -p $$(dir $$(@:check/%=$(objdir)/%.exe)) $$(dir $$@)
 	@rm -f $$(@:check/%=$(objdir)/%.exe) $$@
 	@./wait_for_memory.sh "$$(NUM_JOBS)"
-	@$$(call call_compiler,$$< -march=$(2) -DUNITTEST_TYPE="$$(call gettype,$$*)" -DUNITTEST_WIDTH=$$(call getwidth,$$*) $$(CXXFLAGS)$(4) -include $(objdir)/$(2).hpp $(if $(DIRECT),$(objdir)/libsimd.a -o $$(@:check/%=$(objdir)/%.exe),-c -o $$(@:check/%=$(objdir)/%.o)))
+	@$$(call call_compiler,$$< -march=$(2) -DUNITTEST_TYPE="$$(call gettype,$$*)" -DUNITTEST_WIDTH=$$(call getwidth,$$*) $$(CXXFLAGS)$(4) -include $(objdir)/$(2).$(3)hpp $(if $(DIRECT),$(objdir)/libsimd.a -o $$(@:check/%=$(objdir)/%.exe),-c -o $$(@:check/%=$(objdir)/%.o)))
 ifeq ($(DIRECT),)
 	@printf -- '$$(msg_link) $$(@:check/%=  $(objdir)/%.exe)\n'
 	@$$(LINK_CXX) $$(CXXFLAGS)$(4) -march=$(2) -o $$(@:check/%=$(objdir)/%.exe) $$(@:check/%=$(objdir)/%.o) $(objdir)/libsimd.a
