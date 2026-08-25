@@ -770,13 +770,29 @@ namespace simd
 
       template <_TargetTraits _Traits = {}>
 	[[__gnu__::__always_inline__]]
+	constexpr basic_vec
+	_M_set_sign_bit() const requires is_floating_point_v<value_type>
+	{
+	  if constexpr (_S_is_scalar)
+	    {
+	      auto __v = _M_concat_data();
+	      return _S_init(__vec_or(__v, _S_signmask<decltype(__v)>)[0]);
+	    }
+	  else
+	    return _S_init(__vec_or(_M_data, _S_signmask<_DataType>));
+	}
+
+      template <_TargetTraits _Traits = {}>
+	[[__gnu__::__always_inline__]]
 	constexpr mask_type
 	_M_isinf() const requires is_floating_point_v<value_type>
 	{
 	  if constexpr (_Traits._M_finite_math_only())
 	    return mask_type(false);
 	  else if constexpr (_S_is_scalar)
-	    return mask_type(std::isinf(_M_data));
+	    // PR127177: GCC incorrectly vectorizes 'u<=' into 'vcmpnltp[sd]' => don't use isinf
+	    //return mask_type(std::isinf(_M_data));
+	    return _M_set_sign_bit() == -numeric_limits<value_type>::infinity();
 	  else if (__is_const_known(_M_data))
 	    return mask_type([&](int __i) { return std::isinf(_M_data[__i]); });
 #ifdef _GLIBCXX_X86
@@ -788,9 +804,22 @@ namespace simd
 #endif
 	  else
 	    {
+#if 0 // See PR127177
+	      constexpr auto [...__is] = _IotaArray<_S_full_size>;
+	      return typename mask_type::_DataType {
+		-__builtin_isinf(_M_data[__is])...
+	      };
+#else
+	      constexpr basic_vec __neg_inf = -numeric_limits<value_type>::infinity();
 	      using _Ip = __integer_from<sizeof(value_type)>;
-	      return __vec_bit_cast<_Ip>(_M_fabs()._M_data)
-		       == __builtin_bit_cast(_Ip, numeric_limits<value_type>::infinity());
+	      using _IV = __similar_vec<_Ip, _S_size, _Ap>;
+	      // we could do fp compare against __neg_inf, but:
+	      // 1. that's incorrect for SNaN (cf. _Traits._M_support_snan())
+	      // 2. benchmarking shows that integer compare is generally more efficient
+	      const auto __r = __builtin_bit_cast(_IV, _M_set_sign_bit())
+				 == __builtin_bit_cast(_IV, __neg_inf);
+	      return __r._M_concat_data(); // necessary for AVX w/o AVX2
+#endif
 	    }
 	}
 

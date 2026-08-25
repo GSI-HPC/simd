@@ -81,6 +81,41 @@ template <typename V>
       }
     };
 
+    static constexpr auto round_special_value = make_math_test {
+      std::array {T(+0.),
+#if !__NO_SIGNED_ZEROS__
+		  T(-0.),
+#endif
+		  T(0.45), T(0.5), T(0.55),
+		  T(-0.45), T(-0.5), T(-0.55),
+		  T(1.45), T(1.5), T(1.55),
+		  T(-1.45), T(-1.5), T(-1.55),
+		  T(2), T(2.5), T(-2.5),
+		  T(3), T(-3), T(9), T(-9),
+		  before_one, -before_one, after_one, -after_one,
+		  2 * before_one, -2 * before_one, 2 * after_one, -2 * after_one,
+#if !__FINITE_MATH_ONLY__
+		  inf, -inf, nan,
+#endif
+#if !_GLIBCXX_FAST_MATH
+		  denorm_min, norm_min / 3,
+#endif
+		  norm_min, max,
+		  T(0x1.fffffffffffffp52), T(-0x1.fffffffffffffp52),
+		  T(0x1.ffffffffffffep52), T(-0x1.ffffffffffffep52),
+		  T(0x1.ffffffffffffdp52), T(-0x1.ffffffffffffdp52),
+		  T(0x1.fffffep21), T(-0x1.fffffep21),
+		  T(0x1.fffffcp21), T(-0x1.fffffcp21),
+		  T(0x1.fffffep22), T(-0x1.fffffep22),
+		  T(0x1.fffffcp22), T(-0x1.fffffcp22),
+		  T(0x1.fffffep23), T(-0x1.fffffep23),
+		  T(0x1.fffffcp23), T(-0x1.fffffcp23),
+		  T(0x1.8p23), T(-0x1.8p23)},
+      10000,
+      [](const auto& x) { return std::round(x); },
+      require_exact_fpexcept
+    };
+
     ADD_TEST(hypot) {
       std::tuple {(test_iota<V> + std::cw<21>) / std::cw<3>},
       [](auto& t, V x) {

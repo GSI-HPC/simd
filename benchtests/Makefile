@@ -24,8 +24,8 @@ data:
 
 targets=
 define maketarget
-bin/$1-$2-$3: $1.cpp bench.h ../obj/libsimd.so bin/compile_commands.json | bin
-	$$(CXX) $$(CXXFLAGS) $$($2) -march=$3 -lmvec ../obj/libsimd.so $1.cpp -o $$@
+bin/$1-$2-$3: $1.cpp bench.h ../obj/libsimd.a bin/compile_commands.json | bin
+	$$(CXX) $$(CXXFLAGS) $$($2) -march=$3 -lmvec $1.cpp ../obj/libsimd.a -o $$@
 
 data/$1-$2-$3.out: bin/$1-$2-$3 | data
 	@./benchmark-mode.sh on
@@ -68,5 +68,5 @@ help: bin/compile_commands.json
 	@echo "benchmark"
 	@echo "all"
 
-../obj/libsimd.so: ../lib/*.* ../include/bits/*.h
-	$(MAKE) -C .. obj/libsimd.so
+../obj/libsimd.a: ../lib/*.* ../include/bits/*.h
+	$(MAKE) -C .. obj/libsimd.a

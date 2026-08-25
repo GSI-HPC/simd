@@ -76,10 +76,20 @@ $(objdir)/$(1)/%.o: lib/%.cpp include/bits/*.h lib/*.h
 	@mkdir -p $$(dir $$@)
 	@$$(call call_compiler,$$(CXXFLAGS) -U_GLIBCXX_ASSERTIONS $(arch$(1)) -I include -c -o $$@ $$<)
 
+$(objdir)/$(1)/%_fast.o: lib/%_fast.cpp include/bits/*.h lib/*.h
+	@printf -- '$$(msg_build) $$@\n'
+	@mkdir -p $$(dir $$@)
+	@$$(call call_compiler,$$(CXXFLAGS) -U_GLIBCXX_ASSERTIONS $(arch$(1)) -Ofast -I include -c -o $$@ $$<)
+
 $(objdir)/$(1)/finite-%.o: lib/%.cpp include/bits/*.h lib/*.h
 	@printf -- '$$(msg_build) $$@\n'
 	@mkdir -p $$(dir $$@)
 	@$$(call call_compiler,$$(CXXFLAGS) -U_GLIBCXX_ASSERTIONS $(arch$(1)) -ffinite-math-only -I include -c -o $$@ $$<)
+
+$(objdir)/$(1)/finite-%_fast.o: lib/%_fast.cpp include/bits/*.h lib/*.h
+	@printf -- '$$(msg_build) $$@\n'
+	@mkdir -p $$(dir $$@)
+	@touch $$@
 
 endef
 

@@ -23,6 +23,7 @@
 #include <sched.h>
 #include <cerrno>
 #include <cstring>
+#include <random>
 
 namespace simd = std::simd;
 
@@ -175,6 +176,15 @@ struct TimeResults
   friend TimeResults
   operator*(double b, TimeResults a)
   { return TimeResults{a.addr, a.cycles_per_call * b}; }
+
+  friend bool
+  operator<(TimeResults a, double b)
+  { return a.cycles_per_call < b; }
+
+  friend bool
+  operator>(TimeResults a, double b)
+  { return a.cycles_per_call > b; }
+
 };
 
 [[gnu::always_inline]]
@@ -344,7 +354,7 @@ template <class T, class... ExtraFlags>
     static_assert((std::same_as<decltype(ExtraFlags::name[0]), const char&> and ...));
     using B = Benchmark<0, ExtraFlags...>;
     constexpr std::size_t value_type_field = 6;
-    constexpr std::size_t abi_field = 24;
+    constexpr std::size_t abi_field = 8;
     constexpr std::size_t type_field = value_type_field + 2 + abi_field;
     constexpr std::size_t id_size = type_field + (1 + ... + (1 + sizeof(ExtraFlags::name)));
     char id[id_size];
@@ -575,7 +585,7 @@ constexpr int DefaultRetries = 30;
 constexpr long DefaultIterations = 50'000;
 
 template <long Iterations = DefaultIterations, int Retries = DefaultRetries>
-  [[gnu::noinline]]
+  [[gnu::noipa]]
   double
   time_mean2(auto&& fun)
   {
@@ -630,6 +640,7 @@ template <long Iterations = DefaultIterations, int Retries = DefaultRetries>
   }
 
 template <typename Stat, long Iterations = DefaultIterations, int Retries = DefaultRetries>
+  [[gnu::flatten]]
   TimeResults
   time_generic(auto&& fun, auto&&... args)
   {
@@ -743,41 +754,56 @@ template <long Iterations = DefaultIterations, int Retries = DefaultRetries>
 template <typename T, std::size_t N>
   using carray = T[N];
 
+[[gnu::noipa]]
+static auto
+nop_fun(auto x)
+{ return x; }
+
+template <class T, class P, class Fake>
+  struct TimeLatencyStep
+  {
+    T d0;
+    const P process_one;
+    const Fake fake;
+
+    [[gnu::always_inline]]
+    void
+    operator()()
+    {
+      d0 = process_one(fake, nop_fun(d0));
+      vir::fake_read_one(d0);
+    }
+  };
+
 template <long Iterations = DefaultIterations, int Retries = 20, typename T, std::size_t N>
-  [[gnu::noinline]]
-  double
+  [[gnu::noipa]]
+  TimeResults
   time_latency(carray<T, N>& data, auto&& process_one)
   {
     for (auto& x : data)
       vir::fake_modify_one(x);
-    double dt = 0.;
-    do
+    for (;;)
       {
-        auto&& d0 = data[0];
-        dt = time_mean<Iterations, Retries>([=] [[gnu::always_inline]] mutable {
-               d0 = process_one(std::false_type(), d0);
-               vir::fake_read_one(d0);
-             }) - time_mean<Iterations, Retries>([=] [[gnu::always_inline]] mutable {
-                    d0 = process_one(std::true_type(), d0);
-                    vir::fake_read_one(d0);
-                  });
+	TimeLatencyStep not_fake {data[0], process_one, std::false_type()};
+	TimeLatencyStep     fake {data[0], process_one, std::true_type()};
+	TimeResults dt = time_median<Iterations, Retries>(not_fake)
+			   - time_median<Iterations, Retries>(fake);
+	if (dt > 0.98)
+	  return dt;
       }
-    while (dt < 0.98);
-    return dt;
   }
 
 template <long Iterations = DefaultIterations, int Retries = 20, typename T, std::size_t N>
-  [[gnu::noinline]]
-  double
+  [[gnu::noipa]]
+  TimeResults
   time_throughput(carray<T, N>& init_data, auto&& process_one)
   {
     for (auto& x : init_data)
       vir::fake_modify_one(x);
 
-    double dt;
-    do
+    for (;;)
       {
-        dt = (time_mean2<Iterations, Retries>([&](auto& need_more) {
+	double dt = (time_mean2<Iterations, Retries>([&](auto& need_more) {
                 T data[N];
                 std::ranges::copy(init_data, data);
                 while (need_more)
@@ -799,10 +825,9 @@ template <long Iterations = DefaultIterations, int Retries = 20, typename T, std
                        vir::fake_read_one(data[i]);
                    }))
                / N;
+	if (dt > 0.2)
+	  return {determine_ip(), dt};
       }
-    while (dt < 0.2);
-
-    return dt;
   }
 
 template <typename T>
@@ -830,6 +855,19 @@ template <class T>
         std::memcpy(&r, mem.data() + offset, sizeof(r));
         return r;
       }
+  }
+
+template <class T>
+  [[gnu::always_inline]]
+  inline void
+  store(const T& x, std::span<value_type_t<T>> mem, int offset)
+  {
+    if constexpr (simd::__simd_vec_type<T>)
+      simd::unchecked_store(x, mem.subspan(offset, T::size()));
+    else if constexpr (std::is_scalar_v<T>)
+      mem[offset] = x;
+    else
+      std::memcpy(mem.data() + offset, &x, sizeof(x));
   }
 
 template <typename T>
@@ -951,5 +989,28 @@ main(int argc, char** argv)
   bench_main();
   return 0;
 }
+
+static std::mt19937 rnd_gen = std::mt19937(1);
+
+template <class T>
+  T
+  random()
+  {
+    if constexpr (std::is_floating_point_v<T>)
+      {
+	using L = std::numeric_limits<T>;
+	std::normal_distribution<T> dis(T(), T(1ull << L::digits));
+        return dis(rnd_gen);
+      }
+    else if constexpr (vec_builtin<T>)
+      {
+        T r = {};
+        for (unsigned i = 0; i < sizeof(T) / sizeof(r[0]); ++i)
+          r[i] = random<std::remove_reference_t<decltype(r[0])>>();
+        return r;
+      }
+    else
+      return T([](int) { return random<typename T::value_type>(); });
+  }
 
 #endif  // BENCH_H_

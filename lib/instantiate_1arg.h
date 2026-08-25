@@ -31,18 +31,23 @@ using flt64_8 = __vec_builtin_type<double, 8>;
 }
 
 #if defined __AVX512FP16__ && !defined _GLIBCXX_CLANG
+#ifndef NO_FAST
 template flt16_2 CONCAT(__fast_, FN)(flt16_2);
 template flt16_4 CONCAT(__fast_, FN)(flt16_4);
 template flt16_8 CONCAT(__fast_, FN)(flt16_8);
 template flt16_16 CONCAT(__fast_, FN)(flt16_16);
 template flt16_32 CONCAT(__fast_, FN)(flt16_32);
+#endif
 
+#ifndef ONLY_FAST
 template flt16_2 CONCAT(__, FN)(flt16_2);
 template flt16_4 CONCAT(__, FN)(flt16_4);
 template flt16_8 CONCAT(__, FN)(flt16_8);
 template flt16_16 CONCAT(__, FN)(flt16_16);
 template flt16_32 CONCAT(__, FN)(flt16_32);
+#endif
 
+#ifndef NO_FAST
 template _GLIBCXX_SIMD_MATH_RET_TYPE(flt16_32, flt16_2)
 CONCAT(__fast_2x_, FN)(flt16_32, flt16_2);
 template _GLIBCXX_SIMD_MATH_RET_TYPE(flt16_32, flt16_4)
@@ -53,7 +58,9 @@ template _GLIBCXX_SIMD_MATH_RET_TYPE(flt16_32, flt16_16)
 CONCAT(__fast_2x_, FN)(flt16_32, flt16_16);
 template _GLIBCXX_SIMD_MATH_RET_TYPE(flt16_32, flt16_32)
 CONCAT(__fast_2x_, FN)(flt16_32, flt16_32);
+#endif
 
+#ifndef ONLY_FAST
 template _GLIBCXX_SIMD_MATH_RET_TYPE(flt16_32, flt16_2)
 CONCAT(__2x_, FN)(flt16_32, flt16_2);
 template _GLIBCXX_SIMD_MATH_RET_TYPE(flt16_32, flt16_4)
@@ -65,7 +72,9 @@ CONCAT(__2x_, FN)(flt16_32, flt16_16);
 template _GLIBCXX_SIMD_MATH_RET_TYPE(flt16_32, flt16_32)
 CONCAT(__2x_, FN)(flt16_32, flt16_32);
 #endif
+#endif
 
+#ifndef NO_FAST
 template flt32_2 CONCAT(__fast_, FN)(flt32_2);
 template flt32_4 CONCAT(__fast_, FN)(flt32_4);
 template flt64_2 CONCAT(__fast_, FN)(flt64_2);
@@ -77,7 +86,9 @@ template flt64_4 CONCAT(__fast_, FN)(flt64_4);
 template flt32_16 CONCAT(__fast_, FN)(flt32_16);
 template flt64_8  CONCAT(__fast_, FN)(flt64_8);
 #endif
+#endif
 
+#ifndef ONLY_FAST
 template flt32_2 CONCAT(__, FN)(flt32_2);
 template flt32_4 CONCAT(__, FN)(flt32_4);
 template flt64_2 CONCAT(__, FN)(flt64_2);
@@ -89,8 +100,10 @@ template flt64_4 CONCAT(__, FN)(flt64_4);
 template flt32_16 CONCAT(__, FN)(flt32_16);
 template flt64_8  CONCAT(__, FN)(flt64_8);
 #endif
+#endif
 
 #ifdef __AVX512F__
+#ifndef NO_FAST
 template _GLIBCXX_SIMD_MATH_RET_TYPE(flt32_16, flt32_2)
 CONCAT(__fast_2x_, FN)(flt32_16, flt32_2);
 template _GLIBCXX_SIMD_MATH_RET_TYPE(flt32_16, flt32_4)
@@ -106,7 +119,9 @@ template _GLIBCXX_SIMD_MATH_RET_TYPE(flt64_8, flt64_4)
 CONCAT(__fast_2x_, FN)(flt64_8, flt64_4);
 template _GLIBCXX_SIMD_MATH_RET_TYPE(flt64_8, flt64_8)
 CONCAT(__fast_2x_, FN)(flt64_8, flt64_8);
+#endif
 
+#ifndef ONLY_FAST
 template _GLIBCXX_SIMD_MATH_RET_TYPE(flt32_16, flt32_2)
 CONCAT(__2x_, FN)(flt32_16, flt32_2);
 template _GLIBCXX_SIMD_MATH_RET_TYPE(flt32_16, flt32_4)
@@ -122,7 +137,9 @@ template _GLIBCXX_SIMD_MATH_RET_TYPE(flt64_8, flt64_4)
 CONCAT(__2x_, FN)(flt64_8, flt64_4);
 template _GLIBCXX_SIMD_MATH_RET_TYPE(flt64_8, flt64_8)
 CONCAT(__2x_, FN)(flt64_8, flt64_8);
+#endif
 #elif defined __AVX__
+#ifndef NO_FAST
 template _GLIBCXX_SIMD_MATH_RET_TYPE(flt32_8, flt32_2)
 CONCAT(__fast_2x_, FN)(flt32_8, flt32_2);
 template _GLIBCXX_SIMD_MATH_RET_TYPE(flt32_8, flt32_4)
@@ -134,7 +151,9 @@ template _GLIBCXX_SIMD_MATH_RET_TYPE(flt64_4, flt64_2)
 CONCAT(__fast_2x_, FN)(flt64_4, flt64_2);
 template _GLIBCXX_SIMD_MATH_RET_TYPE(flt64_4, flt64_4)
 CONCAT(__fast_2x_, FN)(flt64_4, flt64_4);
+#endif
 
+#ifndef ONLY_FAST
 template _GLIBCXX_SIMD_MATH_RET_TYPE(flt32_8, flt32_2)
 CONCAT(__2x_, FN)(flt32_8, flt32_2);
 template _GLIBCXX_SIMD_MATH_RET_TYPE(flt32_8, flt32_4)
@@ -146,7 +165,9 @@ template _GLIBCXX_SIMD_MATH_RET_TYPE(flt64_4, flt64_2)
 CONCAT(__2x_, FN)(flt64_4, flt64_2);
 template _GLIBCXX_SIMD_MATH_RET_TYPE(flt64_4, flt64_4)
 CONCAT(__2x_, FN)(flt64_4, flt64_4);
+#endif
 #else
+#ifndef NO_FAST
 template _GLIBCXX_SIMD_MATH_RET_TYPE(flt32_4, flt32_2)
 CONCAT(__fast_2x_, FN)(flt32_4, flt32_2);
 template _GLIBCXX_SIMD_MATH_RET_TYPE(flt32_4, flt32_4)
@@ -154,7 +175,9 @@ CONCAT(__fast_2x_, FN)(flt32_4, flt32_4);
 
 template _GLIBCXX_SIMD_MATH_RET_TYPE(flt64_2, flt64_2)
 CONCAT(__fast_2x_, FN)(flt64_2, flt64_2);
+#endif
 
+#ifndef ONLY_FAST
 template _GLIBCXX_SIMD_MATH_RET_TYPE(flt32_4, flt32_2)
 CONCAT(__2x_, FN)(flt32_4, flt32_2);
 template _GLIBCXX_SIMD_MATH_RET_TYPE(flt32_4, flt32_4)
@@ -162,5 +185,6 @@ CONCAT(__2x_, FN)(flt32_4, flt32_4);
 
 template _GLIBCXX_SIMD_MATH_RET_TYPE(flt64_2, flt64_2)
 CONCAT(__2x_, FN)(flt64_2, flt64_2);
+#endif
 #endif
 

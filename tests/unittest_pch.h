@@ -205,6 +205,23 @@ template <typename T>
     = std::is_integral_v<std::ranges::range_value_t<T>>
 	&& std::is_convertible_v<T, std::basic_string_view<std::ranges::range_value_t<T>>>;
 
+[[gnu::always_inline]]
+inline size_t
+determine_ip()
+{
+  size_t _ip = 0;
+#ifdef __x86_64__
+  asm volatile("lea 0(%%rip),%0" : "=r"(_ip));
+#elif defined __i386__
+  asm volatile("1: movl $1b,%0" : "=r"(_ip));
+#elif defined __arm__
+  asm volatile("mov %0,pc" : "=r"(_ip));
+#elif defined __aarch64__
+  asm volatile("adr %0,." : "=r"(_ip));
+#endif
+  return _ip;
+}
+
 struct additional_info
 {
   const bool failed = false;
@@ -231,6 +248,7 @@ class FloatExceptCompare
 {
 public:
   static inline bool ignore = false;
+  static inline bool expect_nothing = false;
   static inline int ignore_spurious = 0;
   static inline int ignore_missing = 0;
 
@@ -261,7 +279,7 @@ public:
   {
     if (!ignore)
       {
-	second_state = std::fetestexcept(FE_ALL_EXCEPT);
+	second_state = expect_nothing ? 0 : std::fetestexcept(FE_ALL_EXCEPT);
 	std::feclearexcept(FE_ALL_EXCEPT);
       }
   }
@@ -273,6 +291,7 @@ public:
   {
     if (!ignore)
       {
+	const auto ip = determine_ip();
 	const int difference = second_state ^ first_state;
 	if (difference != 0 && ((second_state | (first_state & ignore_spurious))
 				  ^ (first_state | (second_state & ignore_missing))))
@@ -288,7 +307,7 @@ public:
 	      names.push_back("FE_DIVBYZERO");
 	    if (difference & FE_INVALID)
 	      names.push_back("FE_INVALID");
-	    return t.log_failure(first_state, second_state, loc, 0, "FloatExceptCompare")
+	    return t.log_failure(first_state, second_state, loc, ip, "FloatExceptCompare")
 		     ("difference = {} {}", difference, names);
 	  }
       }
@@ -762,23 +781,6 @@ struct runtime_verifier
       return additional_info {true};
     }
 
-  [[gnu::always_inline]] static inline
-  size_t
-  determine_ip()
-  {
-    size_t _ip = 0;
-#ifdef __x86_64__
-    asm volatile("lea 0(%%rip),%0" : "=r"(_ip));
-#elif defined __i386__
-    asm volatile("1: movl $1b,%0" : "=r"(_ip));
-#elif defined __arm__
-    asm volatile("mov %0,pc" : "=r"(_ip));
-#elif defined __aarch64__
-    asm volatile("adr %0,." : "=r"(_ip));
-#endif
-    return _ip;
-  }
-
   [[gnu::always_inline]]
   additional_info
   verify_precondition_failure(std::string_view expected_msg, auto&& f,
@@ -1196,6 +1198,22 @@ template <auto test_ref, int... is, std::size_t... arg_idx>
       requires (Tmp == 0) __VA_OPT__(&& (__VA_ARGS__))                                             \
       static constexpr repeat_n_times<N>::add_test test_n_obj_##name<Tmp> =
 
+void
+default_fec_adjust(FloatExceptCompare& fec)
+{
+  fec.ignore_missing = FE_UNDERFLOW | FE_INEXACT;
+  fec.ignore_spurious = FE_INEXACT;
+}
+
+void
+require_exact_fpexcept(FloatExceptCompare&)
+{
+}
+
+void
+require_no_fpexcept(FloatExceptCompare& fec)
+{ fec.expect_nothing = true; }
+
 /**
  * Define a set of input values in @p values (as a std::array) that the test framework passes
  * to the math function given via a lambda to @p tester. The framework will determine whether the
@@ -1207,12 +1225,13 @@ template <auto test_ref, int... is, std::size_t... arg_idx>
  * Besides testing for equal results (compared with the scalar @c <cmath> functions), the framework
  * also tests for equal floating-point exceptions.
  */
-template <array_specialization ArgArray, typename Tester>
+template <array_specialization ArgArray, typename Tester, typename AdjustFec = void(&)(FloatExceptCompare&)>
   struct make_math_test
   {
     const ArgArray values;
     const int n_random;
     Tester tester;
+    AdjustFec adjust = default_fec_adjust;
   };
 
 template <typename T, int N = sizeof(0ll) * CHAR_BIT * 4>
@@ -1357,8 +1376,7 @@ template <typename V>
 		for (const V& x : arg0s)
 		  {
 		    FloatExceptCompare fec;
-		    fec.ignore_missing = FE_UNDERFLOW | FE_INEXACT;
-		    fec.ignore_spurious = FE_INEXACT;
+		    test_ref->adjust(fec);
 		    V res = test_ref->tester(x);
 		    fec.record_first();
 		    // use make_value_unknown to avoid reuse of the result from testfun and thus
@@ -1369,7 +1387,8 @@ template <typename V>
 		    fec.record_second();
 		    t2.verify_equal_to_ulp(res, expect, std::cw<1>)("inputs: {}", x)
 		      ("normal||0: {}", isnormal(x) || x == std::cw<0>);
-		    fec.verify_equal_state(t2)("inputs: {}", x)("result: {} == {::a}", res, res);
+		    fec.verify_equal_state(t2)("inputs: {} == {::a}", x, x)
+		      ("result: {} == {::a}", res, res);
 		  }
 		if (before == failed_tests)
 		  std::println("{}", " ✅ PASS");
