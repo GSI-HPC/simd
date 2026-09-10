@@ -888,10 +888,12 @@ namespace simd
     inline _TV
     __sqrt(_TV __x)
     {
+#if __has_builtin(__builtin_elementwise_sqrt)
+      return __builtin_elementwise_sqrt(__x);
+#elif _GLIBCXX_X86
       constexpr bool __is_double = is_same_v<__vec_value_type<_TV>, double>;
       constexpr bool __is_float = is_same_v<__vec_value_type<_TV>, float>;
       constexpr bool __is_flt16 = is_same_v<__vec_value_type<_TV>, _Float16>;
-#if _GLIBCXX_X86
       if constexpr (sizeof(__x) < 16)
 	return _VecOps<_TV>::_S_extract(__sqrt<_Traits>(__vec_zero_pad_to_16(__x)));
       else if constexpr (__is_double && sizeof(__x) == 16)
@@ -914,6 +916,9 @@ namespace simd
 	return __builtin_ia32_sqrtph512_mask_round (__x, _TV(), -1, 0x04);
       else
 	static_assert(false);
+#else
+      constexpr auto [...__is] = _IotaArray<__width_of<_TV>>;
+      return _TV {std::sqrt(__x[__is])...};
 #endif
     }
 
