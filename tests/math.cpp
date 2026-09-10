@@ -146,6 +146,25 @@ template <typename V>
       [](const auto& x) { return std::cos(x); }
     };
 
+    ADD_TEST(sin) {
+      std::tuple {(test_iota<V> + std::cw<21>) / std::cw<3>},
+      [](auto& t, V x) {
+	t.verify_equal_to_ulp(sin(x), V([&](int i) -> T { return std::sin(x[i]); }), std::cw<1>)
+	  ("input: {}", x);
+      }
+    };
+
+    static constexpr auto sin_special_values = make_math_test {
+      std::array{
+#ifdef __STDC_IEC_559__
+	nan, nan, inf, -inf, -zero, denorm_min, norm_min / 3,
+#endif
+	zero, norm_min, T(1), T(2), max / 5, max / 3, max / 2, max
+      },
+      10000,
+      [](const auto& x) { return std::sin(x); }
+    };
+
     static constexpr auto hypot_special_values = make_math_test {
       std::array{
 #ifdef __STDC_IEC_559__
