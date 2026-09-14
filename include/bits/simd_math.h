@@ -70,9 +70,7 @@ namespace simd
   // might call __fast_sin).
   //
   // The _GLIBCXX_SIMD_HAS_SIMD_CLONE macro determines whether a simd-clone is declared for the
-  // fn(double) math function. We assume that a float simd-clone exists then, too. However, if for
-  // some reason the body of __fast_fn does not compile to something GCC wants to inline, then the
-  // gnu_inline attribute makes a call to the __fast_fn function in the library.
+  // fn(double) math function. We assume that a float simd-clone exists then, too.
 
 #if _GLIBCXX_X86 && !_GLIBCXX_CLANG
 
@@ -224,18 +222,19 @@ namespace simd
     }
 
 #define _GLIBCXX_SIMD_MATH_CALL(fn, call_directly, attr)                                           \
-  template <_ArchTraits, __simd_clonable _TV>                                                      \
-    requires (_GLIBCXX_SIMD_HAS_SIMD_CLONE(fn))                                                    \
-    [[__gnu__::__gnu_inline__]] attr                                                               \
-    inline _TV                                                                                     \
+  template <typename _TV>                                                                          \
+    concept __##fn##_has_simd_clone = __simd_clonable<_TV> && _GLIBCXX_SIMD_HAS_SIMD_CLONE(fn);    \
+                                                                                                   \
+  template <_ArchTraits, __##fn##_has_simd_clone _TV>                                              \
+    attr inline _TV                                                                                \
     __fast_##fn(_TV __x)                                                                           \
     {                                                                                              \
       constexpr auto [...__is] = _IotaArray<__width_of<_TV>>;                                      \
       return _TV{std::fn(__x[__is])...};                                                           \
     }                                                                                              \
+                                                                                                   \
 												   \
   template <_ArchTraits, typename _Vp>                                                             \
-    requires (!__simd_clonable<_Vp> || !_GLIBCXX_SIMD_HAS_SIMD_CLONE(fn))                          \
     attr extern _Vp                                                                                \
     __fast_##fn(_Vp);                                                                              \
 												   \
@@ -304,9 +303,11 @@ namespace simd
 #endif
 
 #define _GLIBCXX_SIMD_MATH_CALL2(fn, allow_clone)                                                  \
-  template <_ArchTraits, __simd_clonable _TV>                                                      \
-    requires (allow_clone && _GLIBCXX_SIMD_HAS_SIMD_CLONE(fn))                                     \
-    [[__gnu__::__gnu_inline__]]                                                                    \
+  template <typename _TV>                                                                          \
+    concept __##fn##_has_simd_clone                                                                \
+      = allow_clone && __simd_clonable<_TV> && _GLIBCXX_SIMD_HAS_SIMD_CLONE(fn);                   \
+                                                                                                   \
+  template <_ArchTraits, __##fn##_has_simd_clone _TV>                                              \
     inline _TV                                                                                     \
     __fast_##fn(_TV __x0, _TV __x1) noexcept                                                       \
     {                                                                                              \
@@ -315,7 +316,6 @@ namespace simd
     }                                                                                              \
 												   \
   template <_ArchTraits, typename _TV>                                                             \
-    requires (!allow_clone || !__simd_clonable<_TV> || !_GLIBCXX_SIMD_HAS_SIMD_CLONE(fn))          \
     [[__gnu__::__const__]]                                                                         \
     extern _TV                                                                                     \
     __fast_##fn(_TV, _TV) noexcept;                                                                \
