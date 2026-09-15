@@ -1,0 +1,52 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright © 2026      GSI Helmholtzzentrum fuer Schwerionenforschung GmbH
+#                       Matthias Kretz <m.kretz@gsi.de>
+
+usage() {
+  cat <<EOF
+Usage $0 <hostname> <executable> [arguments]
+
+Copies <executable> to <hostname>, executes it and cleans up again.
+EOF
+}
+
+case "$1" in
+  -h|--help)
+    usage
+    exit
+    ;;
+esac
+
+[ $# -lt 2 ] && usage && exit 1
+host="$1"
+exe="$2"
+shift 2
+
+# Copy executable locally to strip it before scp to remote host
+local_tmpdir=$(mktemp -d)
+cp "$exe" $local_tmpdir
+cd $local_tmpdir
+exe="${exe##*/}"
+strip "$exe"
+
+ssh_controlpath=~/.local/run_on/$host
+if [ ! -S $ssh_controlpath ]; then
+  mkdir -p ~/.local/run_on
+  (
+    flock -n 9
+    if [ ! -S $ssh_controlpath ]; then
+      ssh -o ControlMaster=yes -o ControlPath=$ssh_controlpath -o ControlPersist=10m $host true
+    fi
+  ) 9> ~/.local/run_on/lockfile
+fi
+opts="-o ControlPath=$ssh_controlpath"
+
+remote_tmpdir=$(ssh $opts $host mktemp -d -p .)
+scp $opts -C -q "$exe" $host:$remote_tmpdir/
+cd
+rm -r "$local_tmpdir" &
+ssh $opts $host $remote_tmpdir/$exe "$@"
+ret=$?
+ssh $opts $host rm -r $remote_tmpdir &
+exit $ret

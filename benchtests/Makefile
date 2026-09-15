@@ -3,7 +3,7 @@
 #                       Matthias Kretz <m.kretz@gsi.de>
 
 benchmarks=$(patsubst %.cpp,%,$(wildcard *.cpp))
-archs=native ivybridge westmere x86-64 x86-64-v2
+archs=x86-64 x86-64-v2 ivybridge x86-64-v3 x86-64-v4
 CXXFLAGS=-g0 -O2 -std=gnu++26 -Wall -Wextra -Wno-psabi -fmax-errors=2 -D VIR_PATCH_MATH -DVIR_EXTENSIONS
 
 fastmath=-ffast-math
@@ -22,15 +22,34 @@ bin:
 data:
 	@mkdir -p data
 
+BENCH_ARGS=--no-speedup
+
+REMOTE_HOSTS=proxima3.tunnel virgo.tunnel
+
+x86-64=.
+x86-64-v2=sse4
+ivybridge=avx
+x86-64-v3=avx2
+x86-64-v4=avx512
+
 targets=
 define maketarget
 bin/$1-$2-$3: $1.cpp bench.h ../obj/libsimd.a bin/compile_commands.json | bin
-	$$(CXX) $$(CXXFLAGS) $$($2) -march=$3 -lmvec $1.cpp ../obj/libsimd.a -o $$@
+	$$(CXX) $$(CXXFLAGS) $$($2) -march=$3 -static $1.cpp ../obj/libsimd.a -o $$@
 
 data/$1-$2-$3.out: bin/$1-$2-$3 | data
-	@./benchmark-mode.sh on
-	@$$< | tee $$@
-	@./benchmark-mode.sh off
+	@if grep -qi "$$($3)" /proc/cpuinfo; then \
+		grep -m1 'model name' /proc/cpuinfo | tee $$@; \
+		./benchmark-mode.sh on || true; \
+		$$< $(BENCH_ARGS) | tee -a $$@; \
+		./benchmark-mode.sh off || true; \
+	fi
+	$(foreach h,$(REMOTE_HOSTS),
+	@if ssh $h grep -qi \"$$($3)\" /proc/cpuinfo; then \
+		ssh $h grep -m1 'model\ name' /proc/cpuinfo | tee -a $$@; \
+		./run_on_host $h $$< $(BENCH_ARGS) | tee -a $$@; \
+	fi
+	)
 
 .PHONY: $1-$2-$3
 $1-$2-$3: bin/$1-$2-$3
@@ -55,8 +74,7 @@ define ccjson
     "file": "$3" },
 endef
 
-bin/compile_commands.json: Makefile run.sh bin
-	@echo "Setting up 'compilation database' for Clang tooling."
+bin/compile_commands.json: Makefile | bin
 	$(file >$@,[)
 	$(foreach v,$(variants),$(foreach b,$(benchmarks),$(foreach a,$(archs),$(file >>$@,$(call ccjson,$a,$(CXXFLAGS) $($v),$b.cpp)))))
 	@truncate --size=-2 "$@"
