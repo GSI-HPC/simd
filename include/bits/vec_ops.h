@@ -176,78 +176,6 @@ namespace simd
     }
 
   /** @internal
-   * Concatenate the first @p _N0 elements from @p __a with the first @p _N1 elements from @p __b
-   * with the elements from applying this function recursively to @p __rest.
-   *
-   * @pre _N0 <= __width_of<_TV0> && _N1 <= __width_of<_TV1> && _Ns <= __width_of<_TVs> && ...
-   *
-   * Strategy: Aim for a power-of-2 tree concat. E.g.
-   * - cat(2, 2, 2, 2) -> cat(4, 2, 2) -> cat(4, 4)
-   * - cat(2, 2, 2, 2, 8) -> cat(4, 2, 2, 8) -> cat(4, 4, 8) -> cat(8, 8)
-   */
-  template <int _N0, int _N1, int... _Ns, __vec_builtin _TV0, __vec_builtin _TV1,
-	   __vec_builtin... _TVs>
-    [[__gnu__::__always_inline__]]
-    constexpr __vec_builtin_type<__vec_value_type<_TV0>,
-				 __bit_ceil(unsigned(_N0 + (_N1 + ... + _Ns)))>
-    __vec_concat_sized(const _TV0& __a, const _TV1& __b, const _TVs&... __rest);
-
-  template <int _N0, int _N1, int _N2, int... _Ns, __vec_builtin _TV0, __vec_builtin _TV1,
-	    __vec_builtin _TV2, __vec_builtin... _TVs>
-    requires (__has_single_bit(unsigned(_N0))) && (_N0 >= (_N1 + _N2))
-    [[__gnu__::__always_inline__]]
-    constexpr __vec_builtin_type<__vec_value_type<_TV0>,
-				 __bit_ceil(unsigned(_N0 + _N1 + (_N2 + ... + _Ns)))>
-    __vec_concat_sized(const _TV0& __a, const _TV1& __b, const _TV2& __c, const _TVs&... __rest)
-    {
-      return __vec_concat_sized<_N0, _N1 + _N2, _Ns...>(
-	       __a, __vec_concat_sized<_N1, _N2>(__b, __c), __rest...);
-    }
-
-  template <int _N0, int _N1, int... _Ns, __vec_builtin _TV0, __vec_builtin _TV1,
-	   __vec_builtin... _TVs>
-    [[__gnu__::__always_inline__]]
-    constexpr __vec_builtin_type<__vec_value_type<_TV0>,
-				 __bit_ceil(unsigned(_N0 + (_N1 + ... + _Ns)))>
-    __vec_concat_sized(const _TV0& __a, const _TV1& __b, const _TVs&... __rest)
-    {
-      // __is is rounded up because we need to generate a power-of-2 vector:
-      constexpr auto [...__is] = _IotaArray<__bit_ceil(unsigned(_N0 + _N1)), int>;
-      const auto __ab = __builtin_shufflevector(__a, __b, [](int __i) consteval {
-			  if (__i < _N0) // copy from __a
-			    return __i;
-			  else if (__i < _N0 + _N1) // copy from __b
-			    return __i - _N0 + __width_of<_TV0>; // _N0 <= __width_of<_TV0>
-			  else // can't index into __rest
-			    return -1; // don't care
-			}(__is)...);
-      if constexpr (sizeof...(__rest) == 0)
-	return __ab;
-      else
-	return __vec_concat_sized<_N0 + _N1, _Ns...>(__ab, __rest...);
-    }
-
-  template <__vec_builtin _TV>
-    [[__gnu__::__always_inline__]]
-    constexpr __half_vec_builtin_t<_TV>
-    __vec_split_lo(_TV __v)
-    {
-      constexpr int __n = __width_of<_TV> / 2;
-      constexpr auto [...__is] = _IotaArray<__n>;
-      return __builtin_shufflevector(__v, __v, __is...);
-    }
-
-  template <__vec_builtin _TV>
-    [[__gnu__::__always_inline__]]
-    constexpr __half_vec_builtin_t<_TV>
-    __vec_split_hi(_TV __v)
-    {
-      constexpr int __n = __width_of<_TV> / 2;
-      constexpr auto [...__is] = _IotaArray<__n>;
-      return __builtin_shufflevector(__v, __v, (__n + __is)...);
-    }
-
-  /** @internal
    * Return @p __x zero-padded to @p _Bytes bytes.
    *
    * Use this function when you need two objects of the same size (e.g. for __vec_concat).
@@ -283,6 +211,119 @@ namespace simd
     {
       static_assert(sizeof(_TV) < 16);
       return __vec_zero_pad_to<16>(__x);
+    }
+
+#if _GLIBCXX_CLANG
+  /** @internal
+   * Calls `__builtin_shufflevector` with `-1` indices replaced in constant expressions.
+   */
+  template <typename _TV, integral auto... _Is>
+    [[__gnu__::__always_inline__]]
+    constexpr decltype(__builtin_shufflevector(_TV(), _TV(), _Is...))
+    __vec_clang_shufflevector(_TV __x, _TV __y) noexcept
+    {
+      static_assert(__vec_builtin<_TV>);
+      if consteval
+	{
+	  // Clang doesn't allow -1 in constant expressions. The last element of __y is most likely
+	  // to be zero (from zero-padding). But really, we don't care.
+	  return __builtin_shufflevector(__x, __y, (_Is == -1 ? __width_of<_TV> * 2 - 1 : _Is)...);
+	}
+      else
+	{
+	  return __builtin_shufflevector(__x, __y, _Is...);
+	}
+    }
+#endif
+
+  /** @internal
+   * @brief Wrapper for `__builtin_shufflevector`.
+   *
+   * Transparent for GCC. For Clang it zero-pads the second argument and calls
+   * `__vec_clang_shufflevector`.
+   */
+#if _GLIBCXX_CLANG
+#define __glibcxx_shufflevector(v0, v1, ...)                            \
+  __vec_clang_shufflevector<remove_cvref_t<decltype(v0)>, __VA_ARGS__>( \
+    v0, __vec_zero_pad_to<sizeof(v0)>(v1))
+#else
+#define __glibcxx_shufflevector(v0, v1, ...) __builtin_shufflevector(v0, v1, __VA_ARGS__)
+#endif
+
+  /** @internal
+   * Concatenate the first @p _N0 elements from @p __a with the first @p _N1 elements from @p __b
+   * with the elements from applying this function recursively to @p __rest.
+   *
+   * @pre _N0 <= __width_of<_TV0> && _N1 <= __width_of<_TV1> && _Ns <= __width_of<_TVs> && ...
+   *
+   * Strategy: Aim for a power-of-2 tree concat. E.g.
+   * - cat(2, 2, 2, 2) -> cat(4, 2, 2) -> cat(4, 4)
+   * - cat(2, 2, 2, 2, 8) -> cat(4, 2, 2, 8) -> cat(4, 4, 8) -> cat(8, 8)
+   */
+  template <int _N0, int _N1, int... _Ns, __vec_builtin _TV0, __vec_builtin _TV1,
+	   __vec_builtin... _TVs>
+    [[__gnu__::__always_inline__]]
+    constexpr __vec_builtin_type<__vec_value_type<_TV0>,
+				 __bit_ceil(unsigned(_N0 + (_N1 + ... + _Ns)))>
+    __vec_concat_sized(const _TV0& __a, const _TV1& __b, const _TVs&... __rest);
+
+  template <int _N0, int _N1, int _N2, int... _Ns, __vec_builtin _TV0, __vec_builtin _TV1,
+	    __vec_builtin _TV2, __vec_builtin... _TVs>
+    requires (__has_single_bit(unsigned(_N0))) && (_N0 >= (_N1 + _N2))
+    [[__gnu__::__always_inline__]]
+    constexpr __vec_builtin_type<__vec_value_type<_TV0>,
+				 __bit_ceil(unsigned(_N0 + _N1 + (_N2 + ... + _Ns)))>
+    __vec_concat_sized(const _TV0& __a, const _TV1& __b, const _TV2& __c, const _TVs&... __rest)
+    {
+      return __vec_concat_sized<_N0, _N1 + _N2, _Ns...>(
+	       __a, __vec_concat_sized<_N1, _N2>(__b, __c), __rest...);
+    }
+
+  template <int _N0, int _N1, int... _Ns, __vec_builtin _TV0, __vec_builtin _TV1,
+	   __vec_builtin... _TVs>
+    [[__gnu__::__always_inline__]]
+    constexpr __vec_builtin_type<__vec_value_type<_TV0>,
+				 __bit_ceil(unsigned(_N0 + (_N1 + ... + _Ns)))>
+    __vec_concat_sized(const _TV0& __a0, const _TV1& __b, const _TVs&... __rest)
+    {
+#if _GLIBCXX_CLANG
+      constexpr size_t __bytes = max(sizeof(_TV0), sizeof(_TV1));
+      const auto __a = __vec_zero_pad_to<__bytes>(__a0);
+#else
+      const auto& __a = __a0;
+#endif
+      // __is is rounded up because we need to generate a power-of-2 vector:
+      constexpr auto [...__is] = _IotaArray<__bit_ceil(unsigned(_N0 + _N1)), int>;
+      const auto __ab = __glibcxx_shufflevector(__a, __b, (
+			  __is < _N0 // copy from __a
+			    ? __is
+			    : (__is < _N0 + _N1 // copy from __b
+				 ? __is - _N0 + __width_of<decltype(__a)>
+				 : -1))...); // can't index into __rest => don't care
+      if constexpr (sizeof...(__rest) == 0)
+	return __ab;
+      else
+	return __vec_concat_sized<_N0 + _N1, _Ns...>(__ab, __rest...);
+    }
+
+  template <__vec_builtin _TV>
+    [[__gnu__::__always_inline__]]
+    constexpr __half_vec_builtin_t<_TV>
+    __vec_split_lo(_TV __v)
+    {
+      constexpr int __n = __width_of<_TV> / 2;
+      constexpr auto [...__is] = _IotaArray<__n>;
+      return __builtin_shufflevector(__v, __v, __is...);
+    }
+
+  template <__vec_builtin _TV>
+    [[__gnu__::__always_inline__]]
+    constexpr __half_vec_builtin_t<_TV>
+    __vec_split_hi(_TV __v)
+    {
+      constexpr int __n = __width_of<_TV> / 2;
+      constexpr auto [...__is] = _IotaArray<__n>;
+      return __builtin_shufflevector(__v, __v, (__n + __is)...);
     }
 
   // work around __builtin_constant_p returning false unless passed a variable
@@ -569,43 +610,6 @@ namespace simd
   template <__vec_builtin _V>
     requires std::floating_point<__vec_value_type<_V>>
     constexpr _V _S_signmask = __vec_xor(_V() + 1, _V() - 1);
-
-#if _GLIBCXX_CLANG
-  /** @internal
-   * Calls `__builtin_shufflevector` with `-1` indices replaced in constant expressions.
-   */
-  template <typename _TV, integral auto... _Is>
-    [[__gnu__::__always_inline__]]
-    constexpr decltype(__builtin_shufflevector(_TV(), _TV(), _Is...))
-    __vec_clang_shufflevector(_TV __x, _TV __y) noexcept
-    {
-      static_assert(__vec_builtin<_TV>);
-      if consteval
-	{
-	  // Clang doesn't allow -1 in constant expressions. The last element of __y is most likely
-	  // to be zero (from zero-padding). But really, we don't care.
-	  return __builtin_shufflevector(__x, __y, (_Is == -1 ? __width_of<_TV> * 2 - 1 : _Is)...);
-	}
-      else
-	{
-	  return __builtin_shufflevector(__x, __y, _Is...);
-	}
-    }
-#endif
-
-  /** @internal
-   * @brief Wrapper for `__builtin_shufflevector`.
-   *
-   * Transparent for GCC. For Clang it zero-pads the second argument and calls
-   * `__vec_clang_shufflevector`.
-   */
-#if _GLIBCXX_CLANG
-#define __glibcxx_shufflevector(v0, v1, ...)                            \
-  __vec_clang_shufflevector<remove_cvref_t<decltype(v0)>, __VA_ARGS__>( \
-    v0, __vec_zero_pad_to<sizeof(v0)>(v1))
-#else
-#define __glibcxx_shufflevector(v0, v1, ...) __builtin_shufflevector(v0, v1, __VA_ARGS__)
-#endif
 
   template <__vec_builtin _TV, int _Np = __width_of<_TV>,
 	    typename = make_integer_sequence<int, _Np>>
