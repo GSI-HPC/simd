@@ -1822,6 +1822,16 @@ namespace simd
 				    "negative shift is undefined behavior");
 	__glibcxx_simd_precondition(all_of(__y < __max_shift<value_type>),
 				    "too large shift invokes undefined behavior");
+#if _GLIBCXX_CLANG
+	if constexpr (sizeof(__canon_value_type) < sizeof(int))
+	  { // Clang doesn't handle vector shifts larger than the number of bits in the LHS element
+	    // type.
+	    const auto __zero = __y >= cw<numeric_limits<__canon_value_type>::digits
+					    + is_signed_v<__canon_value_type>>;
+	    if (__zero._M_any_of())
+	      return __x = __select_impl(__zero, basic_vec(), _S_init(__x._M_data << __y._M_data));
+	  }
+#endif
 	__x._M_data <<= __y._M_data;
 	return __x;
       }
@@ -1835,6 +1845,27 @@ namespace simd
 				    "negative shift is undefined behavior");
 	__glibcxx_simd_precondition(all_of(__y < __max_shift<value_type>),
 				    "too large shift invokes undefined behavior");
+#if _GLIBCXX_CLANG
+	if constexpr (sizeof(__canon_value_type) < sizeof(int))
+	  { // Clang doesn't handle vector shifts larger than the number of bits in the LHS element
+	    // type.
+	    const __canon_value_type __max_shift = numeric_limits<__canon_value_type>::digits
+						     + is_signed_v<__canon_value_type> - 1;
+	    const auto __zero = __y > __max_shift;
+	    if (__zero._M_any_of())
+	      {
+		if constexpr (is_unsigned_v<__canon_value_type>)
+		  return __x = __select_impl(__zero, basic_vec(),
+					     _S_init(__x._M_data >> __y._M_data));
+		else
+		  { // if __x is positive, the MSB is zero and shift by __max_shift produces a 0
+		    // if __x is negative, the MSB is shifted into all bits to produce a -1
+		    __x._M_data >>= __select_impl(__zero, __max_shift, __y)._M_data;
+		    return __x;
+		  }
+	      }
+	  }
+#endif
 	__x._M_data >>= __y._M_data;
 	return __x;
       }
@@ -1859,6 +1890,24 @@ namespace simd
 	__glibcxx_simd_precondition(__y >= 0, "negative shift is undefined behavior");
 	__glibcxx_simd_precondition(__y < int(__max_shift<value_type>),
 				    "too large shift invokes undefined behavior");
+#if _GLIBCXX_CLANG
+	if constexpr (sizeof(__canon_value_type) < sizeof(int))
+	  { // Clang doesn't handle vector shifts larger than the number of bits in the LHS element
+	    // type.
+	    const __canon_value_type __max_shift = numeric_limits<__canon_value_type>::digits
+						     + is_signed_v<__canon_value_type> - 1;
+	    if (__y > __max_shift)
+	      {
+		if constexpr (is_unsigned_v<__canon_value_type>)
+		  return __x = basic_vec();
+		else
+		  {
+		    __x._M_data >>= __max_shift;
+		    return __x;
+		  }
+	      }
+	  }
+#endif
 	__x._M_data >>= __y;
 	return __x;
       }
