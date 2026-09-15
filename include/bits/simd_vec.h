@@ -524,7 +524,7 @@ namespace simd
 		  constexpr __canon_value_type __idn[__n] = {((void)__is, __id)...};
 		  auto __vn = __vec_bit_cast<_Ip>(__v1._M_data);
 		  __vec_set(__vn, _Vp::_S_size / __n - 1, __builtin_bit_cast(_Ip, __idn));
-		  __v1._M_data = reinterpret_cast<typename _Vp::_DataType>(__vn);
+		  __v1._M_data = __glibcxx_vec_bit_cast<typename _Vp::_DataType>(__vn);
 		}
 	      else if constexpr (__id != 0 && !_S_is_partial)
 		{ // if __vec_zero_pad_to added zeros in all the places where we need __id, a
@@ -1162,7 +1162,7 @@ namespace simd
 	  if constexpr (_S_is_scalar)
 	    return static_cast<_DataType>(__x[0]);
 	  else
-	    return reinterpret_cast<_DataType>(__x);
+	    return __glibcxx_vec_bit_cast<_DataType>(__x);
 	}())
       {}
 
@@ -1181,7 +1181,7 @@ namespace simd
 	if constexpr (_S_is_scalar)
 	  return _NativeVecType{_M_data};
 	else
-	  return reinterpret_cast<_NativeVecType>(_M_data);
+	  return __glibcxx_vec_bit_cast<_NativeVecType>(_M_data);
       }
 
 #if _GLIBCXX_X86
@@ -1194,7 +1194,7 @@ namespace simd
 		 && !is_same_v<_IV, _NativeVecType>)
 	constexpr
 	basic_vec(_IV __x)
-	: _M_data(reinterpret_cast<_DataType>(__x))
+	: _M_data(__glibcxx_vec_bit_cast<_DataType>(__x))
 	{}
 
       /**
@@ -1206,7 +1206,7 @@ namespace simd
 		 && !is_same_v<_IV, _NativeVecType>)
 	constexpr
 	operator _IV() const
-	{ return reinterpret_cast<_IV>(_M_data); }
+	{ return __glibcxx_vec_bit_cast<_IV>(_M_data); }
 #endif
 
       // [simd.ctor] broadcast constructor ------------------------------------
@@ -1281,9 +1281,9 @@ namespace simd
 		  return basic_vec(rebind_t<int, basic_vec>(__x))._M_data;
 		else
 		  {
-		    auto __a = reinterpret_cast<_DataType>( // a.b.c.d.
+		    auto __a = __glibcxx_vec_bit_cast<_DataType>( // a.b.c.d.
 				 __x._M_data0._M_data);
-		    auto __b = reinterpret_cast<_DataType>( // e.f.g.h.
+		    auto __b = __glibcxx_vec_bit_cast<_DataType>( // e.f.g.h.
 				 __vec_zero_pad_to<16>(__x._M_data1._M_concat_data()));
 		    auto __c = __vec_interleave_lo(__a, __b); // ae..bf..
 		    auto __d = __vec_interleave_hi(__a, __b); // cg..dh..
@@ -1301,8 +1301,8 @@ namespace simd
 		else
 		  {
 		    using _TV = __vec_builtin_type_bytes<__canon_value_type, 16>;
-		    _TV __a = reinterpret_cast<_TV>(__x._M_data0._M_data);
-		    _TV __b = reinterpret_cast<_TV>(
+		    _TV __a = __glibcxx_vec_bit_cast<_TV>(__x._M_data0._M_data);
+		    _TV __b = __glibcxx_vec_bit_cast<_TV>(
 				__vec_zero_pad_to<16>(__x._M_data1._M_concat_data()));
 		    auto __c = __vec_interleave_lo(__a, __b); // aeim....bfjn....
 		    auto __d = __vec_interleave_hi(__a, __b); // cgko....dhlp....
@@ -1328,17 +1328,17 @@ namespace simd
 		    // .m...n...o...p..
 		    if constexpr (_UAbi::_S_nreg == 3)
 		      {
-			__a = reinterpret_cast<_DataType>( // ai..bj..ck..dl..
+			__a = __glibcxx_vec_bit_cast<_DataType>( // ai..bj..ck..dl..
 				(__x._M_data0._M_data0 & 0xff)._M_data
 				  | __vec_zero_pad_to<16>((__x._M_data1 << 8)._M_concat_data()));
-			__b = reinterpret_cast<_DataType>(__x._M_data0._M_data1._M_data);
+			__b = __glibcxx_vec_bit_cast<_DataType>(__x._M_data0._M_data1._M_data);
 		      }
 		    else if constexpr (_UAbi::_S_nreg == 4)
 		      {
-			__a = reinterpret_cast<_DataType>( // ai..bj..ck..dl..
+			__a = __glibcxx_vec_bit_cast<_DataType>( // ai..bj..ck..dl..
 				(__x._M_data0._M_data0 & 0xff)._M_data
 				  | (__x._M_data1._M_data0 << 8)._M_data);
-			__b = reinterpret_cast<_DataType>( // em..fn..go..hp..
+			__b = __glibcxx_vec_bit_cast<_DataType>( // em..fn..go..hp..
 				(__x._M_data0._M_data1 & 0xff)._M_data
 				  | __vec_zero_pad_to<16>(
 				      (__x._M_data1._M_data1 << 8)._M_concat_data()));
@@ -1647,8 +1647,8 @@ namespace simd
 	    //   optimization purposes (e.g. for better instruction selection)
 	    using _UV = typename _Ap::template _DataType<make_unsigned_t<value_type>>;
 	    const _DataType __result
-	      = reinterpret_cast<_DataType>(reinterpret_cast<_UV>(__x._M_data)
-					      + reinterpret_cast<_UV>(__y._M_data));
+	      = __glibcxx_vec_bit_cast<_DataType>(__glibcxx_vec_bit_cast<_UV>(__x._M_data)
+						    + __glibcxx_vec_bit_cast<_UV>(__y._M_data));
 	    const auto __positive = __y > value_type();
 	    const auto __overflow = __positive != (_S_init(__result) > __x);
 	    if (__overflow._M_any_of())
@@ -1673,8 +1673,8 @@ namespace simd
 	  { // see comment on operator+=
 	    using _UV = typename _Ap::template _DataType<make_unsigned_t<value_type>>;
 	    const _DataType __result
-	      = reinterpret_cast<_DataType>(reinterpret_cast<_UV>(__x._M_data)
-					      - reinterpret_cast<_UV>(__y._M_data));
+	      = __glibcxx_vec_bit_cast<_DataType>(__glibcxx_vec_bit_cast<_UV>(__x._M_data)
+						    - __glibcxx_vec_bit_cast<_UV>(__y._M_data));
 	    const auto __positive = __y > value_type();
 	    const auto __overflow = __positive != (_S_init(__result) < __x);
 	    if (__overflow._M_any_of())
@@ -1703,8 +1703,9 @@ namespace simd
 		  __builtin_unreachable();
 	      }
 	    using _UV = typename _Ap::template _DataType<make_unsigned_t<value_type>>;
-	    __x._M_data = reinterpret_cast<_DataType>(reinterpret_cast<_UV>(__x._M_data)
-							* reinterpret_cast<_UV>(__y._M_data));
+	    __x._M_data = __glibcxx_vec_bit_cast<_DataType>(
+			    __glibcxx_vec_bit_cast<_UV>(__x._M_data)
+			      * __glibcxx_vec_bit_cast<_UV>(__y._M_data));
 	  }
 
 	// 'uint16 * uint16' promotes to int and can therefore lead to UB. The standard does not
@@ -2003,8 +2004,8 @@ namespace simd
 		    // flip all -1 elements to +1 by taking the absolute value.
 		    return basic_vec((-__k)._M_abs());
 		  else
-		    return _S_init(
-			     __vec_and(reinterpret_cast<_DataType>(__k._M_data), __t._M_data));
+		    return _S_init(__vec_and(__glibcxx_vec_bit_cast<_DataType>(__k._M_data),
+					     __t._M_data));
 		}
 	      else if (_VecOps<_DataType>::_S_is_const_known_equal_to(__t._M_data, 0))
 		{
@@ -2012,8 +2013,8 @@ namespace simd
 			&& _VO::_S_is_const_known_equal_to(__f._M_data, 1))
 		    return value_type(1) + basic_vec(-__k);
 		  else
-		    return _S_init(__vec_and(reinterpret_cast<_DataType>(__vec_not(__k._M_data)),
-					     __f._M_data));
+		    return _S_init(__vec_and(__glibcxx_vec_bit_cast<_DataType>(
+					       __vec_not(__k._M_data)), __f._M_data));
 		}
 	      else
 		{
@@ -2355,7 +2356,7 @@ namespace simd
       [[__gnu__::__always_inline__]]
       constexpr
       operator _NativeVecType() const
-      { return reinterpret_cast<_NativeVecType>(_M_concat_data()); }
+      { return __glibcxx_vec_bit_cast<_NativeVecType>(_M_concat_data()); }
 
       // [simd.ctor] broadcast constructor ------------------------------------
 #if !VIR_CONSTEVAL_BROADCAST

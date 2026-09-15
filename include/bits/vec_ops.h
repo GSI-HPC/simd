@@ -99,11 +99,17 @@ namespace simd
   template <__vec_builtin _TV>
     using __double_vec_builtin_t = __resize_vec_builtin_t<__width_of<_TV> * 2, _TV>;
 
+#if _GLIBCXX_CLANG
+#define __glibcxx_vec_bit_cast std::bit_cast
+#else
+#define __glibcxx_vec_bit_cast reinterpret_cast
+#endif
+
   template <typename _Up, __vec_builtin _TV>
     [[__gnu__::__always_inline__]]
     constexpr __vec_builtin_type_bytes<_Up, sizeof(_TV)>
     __vec_bit_cast(_TV __v)
-    { return reinterpret_cast<__vec_builtin_type_bytes<_Up, sizeof(_TV)>>(__v); }
+    { return __glibcxx_vec_bit_cast<__vec_builtin_type_bytes<_Up, sizeof(_TV)>>(__v); }
 
   template <int _Np, __vec_builtin _TV>
     requires signed_integral<__vec_value_type<_TV>>
