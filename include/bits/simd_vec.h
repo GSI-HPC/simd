@@ -1697,11 +1697,13 @@ namespace simd
       {
 	if constexpr (_S_is_partial && is_integral_v<value_type> && is_signed_v<value_type>)
 	  { // see comment on operator+=
+#if __has_builtin(__builtin_mul_overflow_p)
 	    for (int __i = 0; __i < _S_size; ++__i)
 	      {
 		if (__builtin_mul_overflow_p(__x._M_data[__i], __y._M_data[__i], value_type()))
 		  __builtin_unreachable();
 	      }
+#endif
 	    using _UV = typename _Ap::template _DataType<make_unsigned_t<value_type>>;
 	    __x._M_data = __glibcxx_vec_bit_cast<_DataType>(
 			    __glibcxx_vec_bit_cast<_UV>(__x._M_data)
