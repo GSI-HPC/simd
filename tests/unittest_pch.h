@@ -538,6 +538,31 @@ template <typename V>
   equal_with_nan_and_inf_fixup(const V& a, const V& b)
   { return std::simd::all_of(equal_with_nan_and_inf_fixup_mask(a, b)); }
 
+template <typename V, typename Fn>
+  struct VerifyEq1
+  {
+    const V& x;
+    const Fn& ref;
+
+    [[gnu::always_inline]]
+    constexpr decltype(auto)
+    operator()(int i) const
+    { return ref(x[i]); }
+  };
+
+template <typename V1, typename V2, typename Fn>
+  struct VerifyEq2
+  {
+    const V1& x;
+    const V2& y;
+    const Fn& ref;
+
+    [[gnu::always_inline]]
+    constexpr decltype(auto)
+    operator()(int i) const
+    { return ref(x[i], y[i]); }
+  };
+
 struct constexpr_verifier
 {
   struct ignore_the_rest
@@ -576,6 +601,16 @@ struct constexpr_verifier
 #endif
       return {};
     }
+
+  template <typename V, typename Rv = V, typename Rt = typename V::value_type>
+    consteval ignore_the_rest
+    verify_equal_fun(const V& x, auto func) &
+    { return verify_equal(func(x), simd::rebind_t<Rt, Rv>(VerifyEq1{x, func})); }
+
+  template <typename V, typename Rv = V, typename Rt = typename V::value_type>
+    consteval ignore_the_rest
+    verify_equal_fun(const V& x, const V& y, auto func) &
+    { return verify_equal(func(x, y), simd::rebind_t<Rt, Rv>(VerifyEq2{x, y, func})); }
 
   consteval ignore_the_rest
   verify_precondition_failure(std::string_view expected_msg, auto&& f) &
@@ -850,6 +885,18 @@ struct runtime_verifier
       else
 	return log_failure(v, ref, loc, ip, "verify_equal");
     }
+
+  template <typename V, typename Rv = V, typename Rt = typename V::value_type>
+    [[gnu::always_inline]]
+    additional_info
+    verify_equal_fun(const V& x, auto func) &
+    { return verify_equal(func(x), simd::rebind_t<Rt, Rv>(VerifyEq1{x, func}))("input: {}", x); }
+
+  template <typename V, typename Rv = V, typename Rt = typename V::value_type>
+    [[gnu::always_inline]]
+    additional_info
+    verify_equal_fun(const V& x, const V& y, auto func) &
+    { return verify_equal(func(x, y), simd::rebind_t<Rt, Rv>(VerifyEq2{x, y, func}))("inp: {}\nuts: {}", x, y); }
 
   template <typename V, typename Ref>
     [[gnu::always_inline]]

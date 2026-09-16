@@ -6,6 +6,26 @@
 
 #include "unittest.h"
 
+#define MAKE_ADRESSABLE(fun)                                                                       \
+  static constexpr struct fun##Wrap                                                                \
+  {                                                                                                \
+    static constexpr auto                                                                          \
+    operator()(const auto& x) -> decltype(std::fun(x))                                             \
+    { return std::fun(x); }                                                                        \
+                                                                                                   \
+    static constexpr auto                                                                          \
+    operator()(const auto& x, const auto& y) -> decltype(std::fun(x, y))                           \
+    { return std::fun(x, y); }                                                                     \
+  } fun##Obj
+
+MAKE_ADRESSABLE(fabs);
+MAKE_ADRESSABLE(trunc);
+MAKE_ADRESSABLE(ceil);
+MAKE_ADRESSABLE(floor);
+MAKE_ADRESSABLE(nearbyint);
+MAKE_ADRESSABLE(rint);
+MAKE_ADRESSABLE(nextafter);
+
 #if VIR_PATCH_MATH
 template <typename V>
   struct Tests
@@ -58,16 +78,16 @@ template <typename V>
 			   0x1.fffffcp23, -0x1.fffffcp23,
 			   0x1.8p23, -0x1.8p23),
       [](auto& t, V x) {
-	t.verify_equal(fabs(x), V([&](int i) { return std::fabs(x[i]); }));
+	t.verify_equal_fun(x, fabsObj);
 	t.verify_equal(copysign(x, x), x);
 	t.verify_equal(copysign(-x, x), x);
 	t.verify_equal(copysign(fabs(x), x), x);
-	t.verify_equal(trunc(x), V([&](int i) { return std::trunc(x[i]); }));
-	t.verify_equal(ceil(x), V([&](int i) { return std::ceil(x[i]); }));
-	t.verify_equal(floor(x), V([&](int i) { return std::floor(x[i]); }));
+	t.verify_equal_fun(x, truncObj);
+	t.verify_equal_fun(x, ceilObj);
+	t.verify_equal_fun(x, floorObj);
 	if !consteval
 	{
-	  t.verify_equal(nearbyint(x), V([&](int i) { return std::nearbyint(x[i]); }));
+	  t.verify_equal_fun(x, nearbyintObj);
 	}
 	t.verify_equal(nextafter(x, x), x);
 	if consteval
@@ -75,9 +95,9 @@ template <typename V>
 	    // constexpr nextafter is ill-formed when returning subnormal or zero
 	    x = select(fabs(x) <= norm_min, before_one, x);
 	  }
-	t.verify_equal(nextafter(x, V()), V([&](int i) { return std::nextafter(x[i], T()); }));
-	t.verify_equal(nextafter(x, max), V([&](int i) { return std::nextafter(x[i], max); }));
-	t.verify_equal(nextafter(x, min), V([&](int i) { return std::nextafter(x[i], min); }));
+	t.verify_equal_fun(x,    V(), nextafterObj);
+	t.verify_equal_fun(x, V(max), nextafterObj);
+	t.verify_equal_fun(x, V(min), nextafterObj);
       }
     };
 
