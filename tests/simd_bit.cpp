@@ -95,6 +95,7 @@ template <typename V>
       }
     };
 
+#if __cpp_expansion_statements >= 202411L
     ADD_TEST(FullRotate, std::__unsigned_integer<T>) {
       std::tuple {test_iota<V, 0, 0>},
       [](auto& t, const V a) {
@@ -110,6 +111,7 @@ template <typename V>
 	  }
       }
     };
+#endif
 
     using I = std::make_signed_t<T>;
     using IV = std::simd::rebind_t<I, V>;

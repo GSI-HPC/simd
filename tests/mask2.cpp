@@ -16,6 +16,7 @@ template <typename V>
     static constexpr M k010 = M([](int i) { return 1 == (i % 3); });
     static constexpr M k00111 = M([](int i) { return 2 < (i % 5); });
 
+#if __cpp_expansion_statements >= 202411L
     ADD_TEST(mask_conversion) {
       std::array {alternating, k010, k00111},
       [](auto& t, M k) {
@@ -39,6 +40,7 @@ template <typename V>
 	  }
       }
     };
+#endif
 
     ADD_TEST(mask_reductions_sanity) {
       std::tuple {M(true)},
