@@ -16,6 +16,20 @@ cxx_version := $(shell $(CXX) --version | head -n1)
 
 ifneq ($(findstring clang,$(cxx_version)),)
 compiler:=clang
+ifeq ($(CLANG_GCC_TOOLCHAIN),)
+CLANG_GCC_TOOLCHAIN := $(shell for p in ~/.local/gcc*/bin/g++ /usr/local/bin/g++* /usr/bin/g++*; do \
+		       [ -x "$$p" ] || continue; \
+		       ver=$$($$p -dumpversion); \
+		       [ "$${ver%%.*}" -ge 16 ] || continue; \
+		       datestr=$$($$p --version | head -n1 | grep -oE '[0-9]{8}'); \
+		       echo "$$ver $$datestr $$p"; \
+		       done | sort -rV -k1,1 -k2,2r | head -n1 | cut -d' ' -f3)
+endif
+ifneq ($(CLANG_GCC_TOOLCHAIN),)
+CXXFLAGS_clang += --gcc-toolchain=$(abspath $(shell $(CLANG_GCC_TOOLCHAIN) -print-prog-name=cc1plus | sed 's,/libexec/gcc/.*/cc1plus$$,,'))
+else
+$(warning No GCC >= 16 found for clang. Set CLANG_GCC_TOOLCHAIN to a suitable g++ path.)
+endif
 else ifneq ($(findstring g++,$(cxx_version))$(findstring GCC,$(cxx_version)),)
 compiler:=gcc
 CXXFLAGS_clang += --gcc-toolchain=$(abspath $(shell $(CXX) -print-prog-name=cc1plus | sed 's,/libexec/gcc/.*/cc1plus$$,,'))
@@ -47,6 +61,9 @@ endif
 print_compiler_info:
 	@echo "Compiler: $(CXX) $(ICECC_CXX)"
 	@echo "          $(cxx_version)"
+ifeq ($(compiler),clang)
+	@echo "GCC Toolchain: $(CLANG_GCC_TOOLCHAIN)"
+endif
 	@echo "-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-"
 
 CXXFLAGS += $(CXXFLAGS_$(compiler))
