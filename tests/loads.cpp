@@ -55,7 +55,20 @@ template <typename V>
     {
       aligned_array<U, V::size * 2, simd::alignment_v<V, U>> arr = {};
       U init = 0;
+#if _GLIBCXX_CLANG
+      for (auto& x : arr)
+	{
+	  if constexpr (complex_like<U>)
+	    { // std::complex::operator+= is not a constant expression with Clang 🤦
+	      init.real(init.real() + 1);
+	      x = init;
+	    }
+	  else
+	    x = (init += U(1));
+	}
+#else
       for (auto& x : arr) x = (init += U(1));
+#endif
       return arr;
     }
 
