@@ -88,6 +88,7 @@ template <typename V>
 	if !consteval
 	{
 	  t.verify_equal_fun(x, nearbyintObj);
+	  t.verify_equal_fun(x, rintObj);
 	}
 	t.verify_equal(nextafter(x, x), x);
 	if consteval
