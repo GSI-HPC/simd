@@ -23,7 +23,8 @@ template <typename From, typename To>
       return min;
     else if (static_cast<To>(r) == x) // guard against UB on conversion
       return r;
-    // unreachable
+    else
+      __builtin_unreachable();
   }
 
 template <typename V, typename To>
