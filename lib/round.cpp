@@ -194,6 +194,9 @@ double, 32                76.2           73.1           74.6
     TV
     __round(TV x)
     {
+#if __has_builtin(__builtin_elementwise_round)
+      return __builtin_elementwise_round(x);
+#else
       using T = __vec_value_type<TV>;
       if constexpr (__width_of<TV> == 2)
 	return TV {T(__builtin_round(x[0])), T(__builtin_round(x[1]))};
@@ -232,6 +235,7 @@ double, 32                76.2           73.1           74.6
       const TV r_abs = t_abs + __builtin_bit_cast(
 				     TV, diff < threshold ? I() : one_bits);
       return __vec_or(sign_bit, r_abs);
+#endif
     }
 
   template <_TargetTraits _Traits = _TargetTraits()._M_math_abi(), typename V0, typename V1>
@@ -239,9 +243,14 @@ double, 32                76.2           73.1           74.6
     _GLIBCXX_SIMD_MATH_RET_TYPE(V0, V1)
     __2x_round(V0 x, V1 y)
     {
+#if __has_builtin(__builtin_elementwise_round)
+      V0 lo = __builtin_elementwise_round(x);
+      V1 hi = __builtin_elementwise_round(y);
+#else
       // __round_alt has better throughput and is therefore more efficient in the 2x case
       V0 lo = __round_alt<_Traits, V0>(x);
       V1 hi = __round_alt<_Traits, V1>(y);
+#endif
       _GLIBCXX_SIMD_MATH_RETURN(lo, hi);
     }
 

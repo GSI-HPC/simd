@@ -13,6 +13,9 @@ namespace std::simd
     TV
     __sin(TV x)
     {
+#if __has_builtin(__builtin_elementwise_sin)
+      return __builtin_elementwise_sin(x);
+#else
       constexpr int N = __width_of<TV>;
       using T = __vec_value_type<TV>;
       if constexpr (is_same_v<T, float>)
@@ -68,6 +71,7 @@ namespace std::simd
 	  constexpr auto [...is] = _IotaArray<N>;
 	  return TV{std::sin(x[is])...};
 	}
+#endif
     }
 
   template <_TargetTraits _Traits = _TargetTraits()._M_math_abi(), typename V0, typename V1>

@@ -13,9 +13,13 @@ namespace std::simd
     TV
     __fast_round(TV x)
     {
+#if __has_builtin(__builtin_elementwise_round)
+      return __builtin_elementwise_round(x);
+#else
       using T = __vec_value_type<TV>;
       constexpr auto [...is] = _IotaArray<__width_of<TV>>;
       return TV{T(__builtin_round(x[is]))...};
+#endif
     }
 
   template <_ArchTraits _Traits = _ArchTraits()._M_math_abi(), typename V0, typename V1>
@@ -23,11 +27,16 @@ namespace std::simd
     _GLIBCXX_SIMD_MATH_RET_TYPE(V0, V1)
     __fast_2x_round(V0 x, V1 y)
     {
+#if __has_builtin(__builtin_elementwise_round)
+      V0 lo = __builtin_elementwise_round(x);
+      V1 hi = __builtin_elementwise_round(y);
+#else
       using T = __vec_value_type<V0>;
       constexpr auto [...is] = _IotaArray<__width_of<V0>>;
       constexpr auto [...js] = _IotaArray<__width_of<V1>>;
       V0 lo{T(__builtin_round(x[is]))...};
       V1 hi{T(__builtin_round(y[js]))...};
+#endif
       _GLIBCXX_SIMD_MATH_RETURN(lo, hi);
     }
 
