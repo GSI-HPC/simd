@@ -664,6 +664,16 @@ namespace simd
 	static_assert(false);
     }
 
+#if __has_feature(ext_vector_type_boolean)
+  template <unsigned_integral _Kp, __vec_builtin _TV, _ArchTraits _Traits = {}>
+    [[__gnu__::__always_inline__]]
+    constexpr inline _TV
+    __x86_bitmask_blend(_Kp __k, _TV __t, _TV __f)
+    {
+      using _KV [[__clang__::__ext_vector_type__(__width_of<_TV>)]] = bool;
+      return __builtin_bit_cast(_KV, __k) ? __vec_as_ext(__t) : __vec_as_ext(__f);
+    }
+#else // has ext_vector_type_boolean
   template <unsigned_integral _Kp, __vec_builtin _TV, _ArchTraits _Traits = {}>
     requires is_integral_v<__vec_value_type<_TV>>
     [[__gnu__::__always_inline__]]
@@ -737,6 +747,7 @@ namespace simd
       else
 	static_assert(false);
     }
+#endif // has ext_vector_type_boolean
 
   template <int _OutputBits = 4, _ArchTraits _Traits = {}>
     constexpr _Bitmask<1>
@@ -1174,6 +1185,14 @@ namespace simd
 	    = __x86_masked_load<__vec_builtin_type<__canonical_vec_type_t<_Up>, __n>>(__mem, __k);
 	  return __vec_cast<_TV>(__uvec);
 	}
+#if __has_feature(ext_vector_type_boolean) && __has_builtin(__builtin_masked_load)
+      else
+	{
+	  using _KV [[__clang__::__ext_vector_type__(__width_of<_TV>)]] = bool;
+	  return __glibcxx_vec_bit_cast<_TV>(
+		   __ext_as_vec(__builtin_masked_load(__builtin_bit_cast(_KV, __k), __mem)));
+	}
+#else
       else if constexpr (sizeof(_TV) < 16)
 	{
 	  return _VecOps<_TV>::_S_extract(
@@ -1245,6 +1264,7 @@ namespace simd
 	}
       else
 	static_assert(false);
+#endif
     }
 
   /** @internal
@@ -1255,6 +1275,11 @@ namespace simd
     inline _TV
     __x86_masked_load(const _Up* __mem, const _KV __k)
     {
+#if __has_feature(ext_vector_type_boolean) && __has_builtin(__builtin_masked_load)
+      using _Kx [[__clang__::__ext_vector_type__(__width_of<_KV>)]] = bool;
+      const _Kx __kx = __vec_as_ext(__k) < 0;
+      return __glibcxx_vec_bit_cast<_TV>(__ext_as_vec(__builtin_masked_load(__kx, __mem)));
+#else
       using _Tp = __vec_value_type<_TV>;
       static_assert(_Traits._M_have_avx() && __converts_trivially<_Up, _Tp> && sizeof(_Up) >= 4);
       constexpr int __n = __width_of<_TV>;
@@ -1298,6 +1323,7 @@ namespace simd
 	  else
 	    static_assert(false);
 	}
+#endif
     }
 
   /** @internal
@@ -1310,6 +1336,11 @@ namespace simd
     inline void
     __x86_masked_store(const _TV __v, _Up* __mem, unsigned_integral auto __k)
     {
+#if __has_feature(ext_vector_type_boolean) && __has_builtin(__builtin_masked_store)
+      using _KV [[__clang__::__ext_vector_type__(__width_of<_TV>)]] = bool;
+      __builtin_masked_store(__builtin_bit_cast(_KV, __k),
+			     __vec_as_ext(__vec_cast<_Up>(__v)), __mem);
+#else
       using _Tp = __vec_value_type<_TV>;
       constexpr int __n = __width_of<_TV>;
       [[maybe_unused]] const auto __w = __vec_bit_cast<__x86_intrin_type<_Tp>>(__v);
@@ -1479,6 +1510,7 @@ namespace simd
 	}
       else
 	__x86_masked_store(__vec_zero_pad_to_16(__v), __mem, __k);
+#endif
     }
 
   /** @internal
@@ -1489,6 +1521,10 @@ namespace simd
     inline void
     __x86_masked_store(const _TV __v, _Up* __mem, const _KV __k)
     {
+#if __has_feature(ext_vector_type_boolean) && __has_builtin(__builtin_masked_store)
+      using _Kx [[__clang__::__ext_vector_type__(__width_of<_KV>)]] = bool;
+      __builtin_masked_store(_Kx(__vec_as_ext(__k) < 0), __vec_as_ext(__vec_cast<_Up>(__v)), __mem);
+#else
       using _Tp = __vec_value_type<_TV>;
       constexpr int __n = __width_of<_TV>;
       static_assert(sizeof(_Tp) == 4 || sizeof(_Tp) == 8);
@@ -1535,6 +1571,7 @@ namespace simd
 	  else
 	    static_assert(false);
 	}
+#endif
     }
 } // namespace simd
 _GLIBCXX_END_NAMESPACE_VERSION

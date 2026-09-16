@@ -779,6 +779,24 @@ namespace simd
 	}
     };
 
+#if __has_attribute(ext_vector_type)
+  template <__vec_builtin _TV>
+    constexpr auto
+    __vec_as_ext(_TV __v)
+    {
+      using _EX [[__clang__::__ext_vector_type__(__width_of<_TV>)]] = __vec_value_type<_TV>;
+      return static_cast<_EX>(__v);
+    }
+
+  template <typename _EX>
+    constexpr auto
+    __ext_as_vec(_EX __v)
+    {
+      using _TV [[__gnu__::__vector_size__(sizeof(_EX))]] = remove_cvref_t<decltype(__v[0])>;
+      return static_cast<_TV>(__v);
+    }
+#endif
+
 } // namespace simd
 _GLIBCXX_END_NAMESPACE_VERSION
 } // namespace std
