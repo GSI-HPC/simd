@@ -51,67 +51,67 @@ namespace std::simd
   template <typename T>
     using IncreasePrecision = typename IncreasePrecisionImpl<T>::type;
 
-  template <typename V>
+  template <__simd_vec_type V>
     [[gnu::always_inline]]
     inline V
     operator&(V x, V y) noexcept
     { return __vec_and(x._M_get(), y._M_get()); }
 
-  template <typename V>
+  template <__simd_vec_type V>
     [[gnu::always_inline]]
     inline V
     operator&(V x, type_identity_t<V> y) noexcept
     { return __vec_and(x._M_get(), y._M_get()); }
 
-  template <typename V>
+  template <__simd_vec_type V>
     [[gnu::always_inline]]
     inline V
     operator&(type_identity_t<V> x, V y) noexcept
     { return __vec_and(x._M_get(), y._M_get()); }
 
-  template <typename V>
+  template <__simd_vec_type V>
     [[gnu::always_inline]]
     inline V
     operator|(V x, V y) noexcept
     { return __vec_or(x._M_get(), y._M_get()); }
 
-  template <typename V>
+  template <__simd_vec_type V>
     [[gnu::always_inline]]
     inline V
     operator|(V x, type_identity_t<V> y) noexcept
     { return __vec_or(x._M_get(), y._M_get()); }
 
-  template <typename V>
+  template <__simd_vec_type V>
     [[gnu::always_inline]]
     inline V
     operator|(type_identity_t<V> x, V y) noexcept
     { return __vec_or(x._M_get(), y._M_get()); }
 
-  template <typename V>
+  template <__simd_vec_type V>
     [[gnu::always_inline]]
     inline V
     operator^(V x, V y) noexcept
     { return __vec_xor(x._M_get(), y._M_get()); }
 
-  template <typename V>
+  template <__simd_vec_type V>
     [[gnu::always_inline]]
     inline V
     operator^(V x, type_identity_t<V> y) noexcept
     { return __vec_xor(x._M_get(), y._M_get()); }
 
-  template <typename V>
+  template <__simd_vec_type V>
     [[gnu::always_inline]]
     inline V
     operator^(type_identity_t<V> x, V y) noexcept
     { return __vec_xor(x._M_get(), y._M_get()); }
 
-  template <typename T, typename V>
+  template <typename T, __simd_vec_type V>
     [[gnu::always_inline]]
     constexpr rebind_t<T, V>
     value_bit_cast(const V& x) noexcept
     { return bit_cast<rebind_t<T, V>>(x); }
 
-  template <typename V>
+  template <__simd_vec_type V>
     [[gnu::always_inline]]
     constexpr auto
     int_bit_cast(const V& x) noexcept
@@ -165,7 +165,7 @@ namespace std::simd
    * @note The condition is sufficient but not necessary (values below threshold might still round
    * correctly).
    */
-  template <typename V>
+  template <__simd_vec_type V>
     [[gnu::always_inline]]
     constexpr typename V::mask_type
     is_large_diff(const V& x, const V& y)
@@ -181,7 +181,7 @@ namespace std::simd
    * Adjusts all given arguments by @f$2^n@f$ and returns @f$2^-n@f$.
    * @f$n = 1-\floor log_2 \mathtt{hi} \rfloor@f$
    */
-  template <typename V>
+  template <__simd_vec_type V>
     [[gnu::always_inline]]
     inline V
     rescale_factors(V& hi, auto&... to_scale)
