@@ -107,6 +107,22 @@ template <typename V>
       }
     };
 
+    ADD_TEST(partial_load_every_size, requires {T() + T(1);}) {
+      std::tuple {make_iota_array<T>()},
+      [](auto& t, auto mem) {
+	for (int n = 0; n <= V::size; ++n)
+	  {
+	    const V ref_n = select(M([&](int i) { return i < n; }), ref, T());
+	    std::size_t sz = n;
+	    if !consteval
+	      {
+		sz = make_value_unknown(sz);
+	      }
+	    t.verify_equal(simd::partial_load<V>(mem.begin(), sz), ref_n);
+	  }
+      }
+    };
+
     static constexpr M alternating = M([](int i) { return 1 == (i & 1); });
     static constexpr V ref_k = select(alternating, ref, T());
     static constexpr V ref_2 = select(M([](int i) { return i < 2; }), ref, T());

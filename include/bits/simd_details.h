@@ -1663,58 +1663,26 @@ namespace simd
       else if (__bytes > 16 && _Max > 16)
 	{
 	  __builtin_memcpy(__dst, __src, 16);
-	  if constexpr (_Chunk == 8)
-	    {
-	      __bytes -= 8;
-	      __builtin_memcpy(__dst + __bytes, __src + __bytes, 8);
-	    }
-	  else
-	    {
-	      __bytes -= 16;
-	      __builtin_memcpy(__dst + __bytes, __src + __bytes, 16);
-	    }
+	  __bytes -= 16;
+	  __builtin_memcpy(__dst + __bytes, __src + __bytes, 16);
 	}
       else if (__bytes > 8 && _Max > 8)
 	{
 	  __builtin_memcpy(__dst, __src, 8);
-	  if constexpr (_Chunk == 4)
-	    {
-	      __bytes -= 4;
-	      __builtin_memcpy(__dst + __bytes, __src + __bytes, 4);
-	    }
-	  else if constexpr (_Chunk < 4)
-	    {
-	      __bytes -= 8;
-	      __builtin_memcpy(__dst + __bytes, __src + __bytes, 8);
-	    }
+	  __bytes -= 8;
+	  __builtin_memcpy(__dst + __bytes, __src + __bytes, 8);
 	}
       else if (__bytes > 4 && _Max > 4)
 	{
 	  __builtin_memcpy(__dst, __src, 4);
-	  if constexpr (_Chunk == 2)
-	    {
-	      __bytes -= 2;
-	      __builtin_memcpy(__dst + __bytes, __src + __bytes, 2);
-	    }
-	  else if constexpr (_Chunk == 1)
-	    {
-	      __bytes -= 4;
-	      __builtin_memcpy(__dst + __bytes, __src + __bytes, 4);
-	    }
+	  __bytes -= 4;
+	  __builtin_memcpy(__dst + __bytes, __src + __bytes, 4);
 	}
       else if (__bytes >= 2)
 	{
 	  __builtin_memcpy(__dst, __src, 2);
-	  if constexpr (_Chunk == 2)
-	    {
-	      __bytes -= 2;
-	      __builtin_memcpy(__dst + __bytes, __src + __bytes, 2);
-	    }
-	  else if constexpr (_Chunk == 1)
-	    {
-	      __bytes -= 1;
-	      __builtin_memcpy(__dst + __bytes, __src + __bytes, 1);
-	    }
+	  __bytes -= 2;
+	  __builtin_memcpy(__dst + __bytes, __src + __bytes, 2);
 	}
       else if (__bytes == 1)
 	__builtin_memcpy(__dst, __src, 1);
